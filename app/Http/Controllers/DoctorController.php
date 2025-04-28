@@ -60,9 +60,6 @@ class DoctorController extends Controller
      */
     public function create(Request $request)
     {
-        if (!Gate::allows('manage-doctors')) {
-            abort(403);
-        }
 
         $userId = $request->query('user_id');
         $user = null;
@@ -93,9 +90,6 @@ class DoctorController extends Controller
      */
     public function store(Request $request)
     {
-        if (!Gate::allows('manage-doctors')) {
-            abort(403);
-        }
 
         $request->validate([
             'user_id' => 'required|exists:users,id',
@@ -133,10 +127,6 @@ class DoctorController extends Controller
     {
         $doctor = $this->doctorRepository->findById($id);
 
-        if (!$doctor) {
-            abort(404, 'Doctor not found');
-        }
-
         // Load today's appointments
         $doctor->load([
             'appointments' => function ($query) {
@@ -159,9 +149,6 @@ class DoctorController extends Controller
      */
     public function edit($id)
     {
-        if (!Gate::allows('manage-doctors')) {
-            abort(403);
-        }
 
         $doctor = $this->doctorRepository->findById($id);
 
@@ -183,9 +170,6 @@ class DoctorController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if (!Gate::allows('manage-doctors')) {
-            abort(403);
-        }
 
         $doctor = $this->doctorRepository->findById($id);
 
@@ -231,9 +215,6 @@ class DoctorController extends Controller
      */
     public function updateAvailability(Request $request, $id)
     {
-        if (!Gate::allows('manage-doctors')) {
-            abort(403);
-        }
 
         $doctor = $this->doctorRepository->findById($id);
 
@@ -262,9 +243,6 @@ class DoctorController extends Controller
      */
     public function destroy($id)
     {
-        if (!Gate::allows('manage-doctors')) {
-            abort(403);
-        }
 
         $success = $this->doctorRepository->delete($id);
 

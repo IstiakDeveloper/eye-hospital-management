@@ -24,7 +24,6 @@ class MedicineController extends Controller
     public function __construct(MedicineRepository $medicineRepository)
     {
         $this->medicineRepository = $medicineRepository;
-        $this->middleware('can:manage-medicines');
     }
 
     /**

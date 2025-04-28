@@ -68,6 +68,8 @@ class Patient extends Model
         return $this->hasMany(VisionTest::class);
     }
 
+
+
     /**
      * Get the appointments for this patient.
      */

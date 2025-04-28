@@ -7,6 +7,7 @@ use App\Repositories\MedicineRepository;
 use App\Repositories\PatientRepository;
 use App\Repositories\PrescriptionRepository;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class PrescriptionController extends Controller
@@ -67,6 +68,7 @@ class PrescriptionController extends Controller
      * @param  int|null  $appointmentId
      * @return \Inertia\Response
      */
+
     public function create($patientId, $appointmentId = null)
     {
         $patient = $this->patientRepository->findById($patientId);
@@ -84,7 +86,6 @@ class PrescriptionController extends Controller
             }
         }
 
-        // Load patient's vision tests and previous prescriptions
         $patient->load([
             'visionTests' => function ($query) {
                 $query->orderBy('test_date', 'desc');
@@ -97,12 +98,16 @@ class PrescriptionController extends Controller
 
         $medicines = $this->medicineRepository->getAllActive();
 
+        $doctor = Auth::user();
+
         return Inertia::render('Prescriptions/Create', [
             'patient' => $patient,
             'appointment' => $appointment,
             'medicines' => $medicines,
+            'doctor' => $doctor,
         ]);
     }
+
 
     /**
      * Store a newly created prescription in storage.

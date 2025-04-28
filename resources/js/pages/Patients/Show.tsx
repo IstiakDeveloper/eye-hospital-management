@@ -33,6 +33,7 @@ import {
     Plus,
     ChevronRight
 } from 'lucide-react';
+import { log } from 'console';
 
 interface Patient {
     id: number;
@@ -100,14 +101,28 @@ interface Prescription {
 }
 
 interface PatientShowProps {
-    patient: Patient;
-    visionTests: VisionTest[];
-    appointments: Appointment[];
-    prescriptions: Prescription[];
+    patient: {
+        id: number;
+        patient_id: string;
+        name: string;
+        phone: string;
+        email: string | null;
+        address: string | null;
+        date_of_birth: string | null;
+        gender: string | null;
+        medical_history: string | null;
+        created_at: string;
+        vision_tests: VisionTest[];
+        appointments: Appointment[];
+        prescriptions: Prescription[];
+    };
 }
 
-export default function PatientShow({ patient, visionTests, appointments, prescriptions }: PatientShowProps) {
+export default function PatientShow({ patient }: PatientShowProps) {
     const [activeTab, setActiveTab] = useState('overview');
+    const visionTests = patient.vision_tests || [];
+    const appointments = patient.appointments || [];
+    const prescriptions = patient.prescriptions || [];
 
     return (
         <AdminLayout title={`Patient: ${patient.name}`}>
@@ -518,7 +533,7 @@ export default function PatientShow({ patient, visionTests, appointments, prescr
                         </CardHeader>
 
                         <CardContent>
-                            {visionTests?.length > 0 ? (
+                            {visionTests.length > 0 ? (
                                 <div className="overflow-x-auto">
                                     <Table>
                                         <TableHeader>
@@ -540,7 +555,7 @@ export default function PatientShow({ patient, visionTests, appointments, prescr
                                                     <TableCell>{test.left_eye_vision || 'N/A'}</TableCell>
                                                     <TableCell>{test.right_eye_power !== null ? test.right_eye_power : 'N/A'}</TableCell>
                                                     <TableCell>{test.left_eye_power !== null ? test.left_eye_power : 'N/A'}</TableCell>
-                                                    <TableCell>{test.performed_by.name}</TableCell>
+                                                    <TableCell>{test.performed_by?.name || 'N/A'}</TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end space-x-2">
                                                             <Button
@@ -598,7 +613,7 @@ export default function PatientShow({ patient, visionTests, appointments, prescr
                         </CardHeader>
 
                         <CardContent>
-                            {appointments.length > 0 ? (
+                            {appointments?.length > 0 ? (
                                 <div className="overflow-x-auto">
                                     <Table>
                                         <TableHeader>
@@ -693,7 +708,7 @@ export default function PatientShow({ patient, visionTests, appointments, prescr
                         </CardHeader>
 
                         <CardContent>
-                            {prescriptions.length > 0 ? (
+                            {prescriptions?.length > 0 ? (
                                 <div className="space-y-6">
                                     {prescriptions.map((prescription) => (
                                         <div key={prescription.id} className="border rounded-md overflow-hidden">

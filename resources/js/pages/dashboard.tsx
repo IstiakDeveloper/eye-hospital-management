@@ -202,7 +202,7 @@ export default function Dashboard({ stats, todayAppointments, recentPatients }: 
                             <div className="text-xs text-gray-500">{appointment.patient.patient_id}</div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{appointment.doctor.user.name}</div>
+                            <div className="text-sm text-gray-900">{appointment.doctor?.user.name}</div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="text-sm text-gray-900 flex items-center">

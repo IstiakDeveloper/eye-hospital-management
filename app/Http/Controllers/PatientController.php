@@ -91,8 +91,6 @@ class PatientController extends Controller
         if (!$patient) {
             abort(404, 'Patient not found');
         }
-
-        // Load related data
         $patient->load([
             'visionTests' => function ($query) {
                 $query->orderBy('test_date', 'desc');
@@ -107,6 +105,8 @@ class PatientController extends Controller
                     ->orderBy('created_at', 'desc');
             }
         ]);
+
+        // dd($patient);
 
         return Inertia::render('Patients/Show', [
             'patient' => $patient

@@ -47,9 +47,6 @@ class UserController extends Controller
      */
     public function index()
     {
-        if (!Gate::allows('manage-users')) {
-            abort(403);
-        }
 
         $users = $this->userRepository->getAllPaginated();
 
@@ -65,9 +62,6 @@ class UserController extends Controller
      */
     public function create()
     {
-        if (!Gate::allows('manage-users')) {
-            abort(403);
-        }
 
         $roles = Role::all();
 
@@ -84,9 +78,6 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        if (!Gate::allows('manage-users')) {
-            abort(403);
-        }
 
         $request->validate([
             'name' => 'required|string|max:255',
@@ -116,9 +107,6 @@ class UserController extends Controller
      */
     public function edit($id)
     {
-        if (!Gate::allows('manage-users')) {
-            abort(403);
-        }
 
         $user = $this->userRepository->findById($id);
 
@@ -190,9 +178,6 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
-        if (!Gate::allows('manage-users')) {
-            abort(403);
-        }
 
         if ($id === auth()->id()) {
             return back()->with('error', 'You cannot delete your own account.');

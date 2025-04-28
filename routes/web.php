@@ -60,14 +60,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/prescriptions/{prescription}/print', [PrescriptionController::class, 'print'])->name('prescriptions.print');
 
     // Super Admin Routes
-    Route::middleware(['can:manage-system'])->group(function () {
+    Route::middleware(['auth', 'super-admin'])->group(function () {
         // Users
         Route::resource('users', UserController::class);
-
         // Doctors
         Route::put('/doctors/{doctor}/availability', [DoctorController::class, 'updateAvailability'])->name('doctors.availability');
         Route::resource('doctors', DoctorController::class);
-
         // Medicines
         Route::put('/medicines/{medicine}/toggle-status', [MedicineController::class, 'toggleStatus'])->name('medicines.toggle');
         Route::resource('medicines', MedicineController::class);
