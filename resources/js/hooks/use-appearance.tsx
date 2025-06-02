@@ -1,73 +1,46 @@
 import { useCallback, useEffect, useState } from 'react';
 
+// We still define the type for potential future use, but we'll only use 'light'
 export type Appearance = 'light' | 'dark' | 'system';
 
-const prefersDark = () => {
-    if (typeof window === 'undefined') {
-        return false;
-    }
+// No longer need these functions since we're always using light theme
+// const prefersDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+// const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+// const handleSystemThemeChange = () => {...}
 
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-};
-
-const setCookie = (name: string, value: string, days = 365) => {
-    if (typeof document === 'undefined') {
-        return;
-    }
-
-    const maxAge = days * 24 * 60 * 60;
-    document.cookie = `${name}=${value};path=/;max-age=${maxAge};SameSite=Lax`;
-};
-
-const applyTheme = (appearance: Appearance) => {
-    const isDark = appearance === 'dark' || (appearance === 'system' && prefersDark());
-
-    document.documentElement.classList.toggle('dark', isDark);
-};
-
-const mediaQuery = () => {
-    if (typeof window === 'undefined') {
-        return null;
-    }
-
-    return window.matchMedia('(prefers-color-scheme: dark)');
-};
-
-const handleSystemThemeChange = () => {
-    const currentAppearance = localStorage.getItem('appearance') as Appearance;
-    applyTheme(currentAppearance || 'system');
+const applyLightTheme = () => {
+  // Remove 'dark' class to ensure light theme
+  document.documentElement.classList.remove('dark');
 };
 
 export function initializeTheme() {
-    const savedAppearance = (localStorage.getItem('appearance') as Appearance) || 'system';
+  // Always apply light theme, ignore saved preference
+  applyLightTheme();
 
-    applyTheme(savedAppearance);
+  // Store 'light' as the preference
+  localStorage.setItem('appearance', 'light');
 
-    // Add the event listener for system theme changes...
-    mediaQuery()?.addEventListener('change', handleSystemThemeChange);
+  // No need for event listeners anymore
 }
 
 export function useAppearance() {
-    const [appearance, setAppearance] = useState<Appearance>('system');
+  // Always initialize with 'light'
+  const [appearance, setAppearance] = useState<Appearance>('light');
 
-    const updateAppearance = useCallback((mode: Appearance) => {
-        setAppearance(mode);
+  const updateAppearance = useCallback(() => {
+    // Force light theme regardless of what's passed
+    setAppearance('light');
+    localStorage.setItem('appearance', 'light');
+    applyLightTheme();
+  }, []);
 
-        // Store in localStorage for client-side persistence...
-        localStorage.setItem('appearance', mode);
+  useEffect(() => {
+    // Always set to light on component mount
+    updateAppearance();
 
-        // Store in cookie for SSR...
-        setCookie('appearance', mode);
+    // No cleanup needed since we don't have event listeners
+  }, [updateAppearance]);
 
-        applyTheme(mode);
-    }, []);
-
-    useEffect(() => {
-        const savedAppearance = localStorage.getItem('appearance') as Appearance | null;
-        updateAppearance(savedAppearance || 'system');
-
-        return () => mediaQuery()?.removeEventListener('change', handleSystemThemeChange);
-    }, [updateAppearance]);
-
-    return { appearance, updateAppearance } as const;
+  // We still return both values for API compatibility
+  return { appearance, updateAppearance } as const;
 }

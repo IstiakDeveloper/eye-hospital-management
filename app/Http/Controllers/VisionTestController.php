@@ -84,6 +84,12 @@ class VisionTestController extends Controller
             'left_eye_power' => 'nullable|numeric',
             'right_eye_pressure' => 'nullable|string|max:20',
             'left_eye_pressure' => 'nullable|string|max:20',
+            'right_eye_sphere' => 'nullable|numeric|between:-20,20',
+            'left_eye_sphere' => 'nullable|numeric|between:-20,20',
+            'right_eye_cylinder' => 'nullable|numeric|between:-10,10',
+            'left_eye_cylinder' => 'nullable|numeric|between:-10,10',
+            'right_eye_axis' => 'nullable|integer|between:0,180',
+            'left_eye_axis' => 'nullable|integer|between:0,180',
             'additional_notes' => 'nullable|string',
         ]);
 
@@ -162,6 +168,12 @@ class VisionTestController extends Controller
             'left_eye_power' => 'nullable|numeric',
             'right_eye_pressure' => 'nullable|string|max:20',
             'left_eye_pressure' => 'nullable|string|max:20',
+            'right_eye_sphere' => 'nullable|numeric|between:-20,20',
+            'left_eye_sphere' => 'nullable|numeric|between:-20,20',
+            'right_eye_cylinder' => 'nullable|numeric|between:-10,10',
+            'left_eye_cylinder' => 'nullable|numeric|between:-10,10',
+            'right_eye_axis' => 'nullable|integer|between:0,180',
+            'left_eye_axis' => 'nullable|integer|between:0,180',
             'additional_notes' => 'nullable|string',
         ]);
 

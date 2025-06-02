@@ -5,22 +5,12 @@ namespace App\Repositories;
 use App\Models\Appointment;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class AppointmentRepository
 {
-    /**
-     * The appointment model instance.
-     *
-     * @var \App\Models\Appointment
-     */
     protected $appointment;
 
-    /**
-     * Create a new repository instance.
-     *
-     * @param  \App\Models\Appointment  $appointment
-     * @return void
-     */
     public function __construct(Appointment $appointment)
     {
         $this->appointment = $appointment;
@@ -28,8 +18,6 @@ class AppointmentRepository
 
     /**
      * Get all appointments for today.
-     *
-     * @return Collection
      */
     public function getTodayAppointments(): Collection
     {
@@ -40,10 +28,18 @@ class AppointmentRepository
     }
 
     /**
+     * Get today's appointments with detailed information.
+     */
+    public function getTodayAppointmentsWithDetails(): Collection
+    {
+        return $this->appointment->with(['patient', 'doctor.user'])
+            ->where('appointment_date', today())
+            ->orderBy('appointment_time')
+            ->get();
+    }
+
+    /**
      * Get today's appointments for a doctor.
-     *
-     * @param  int  $doctorId
-     * @return Collection
      */
     public function getTodayAppointmentsForDoctor(int $doctorId): Collection
     {
@@ -55,10 +51,48 @@ class AppointmentRepository
     }
 
     /**
+     * Get upcoming appointments for a doctor.
+     */
+    public function getUpcomingAppointmentsForDoctor(int $doctorId, int $limit = 10): Collection
+    {
+        return $this->appointment->with(['patient'])
+            ->where('doctor_id', $doctorId)
+            ->where('appointment_date', '>', today())
+            ->orderBy('appointment_date')
+            ->orderBy('appointment_time')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get recent appointments for a doctor.
+     */
+    public function getRecentAppointmentsForDoctor(int $doctorId, int $limit = 5): Collection
+    {
+        return $this->appointment->with(['patient'])
+            ->where('doctor_id', $doctorId)
+            ->where('appointment_date', '<=', today())
+            ->orderBy('appointment_date', 'desc')
+            ->orderBy('appointment_time', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get upcoming appointments.
+     */
+    public function getUpcomingAppointments(int $limit = 10): Collection
+    {
+        return $this->appointment->with(['patient', 'doctor.user'])
+            ->where('appointment_date', '>', today())
+            ->orderBy('appointment_date')
+            ->orderBy('appointment_time')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
      * Get all appointments for a patient.
-     *
-     * @param  int  $patientId
-     * @return Collection
      */
     public function getAllForPatient(int $patientId): Collection
     {
@@ -71,9 +105,6 @@ class AppointmentRepository
 
     /**
      * Get all appointments with pagination.
-     *
-     * @param  int  $perPage
-     * @return LengthAwarePaginator
      */
     public function getAllPaginated(int $perPage = 10): LengthAwarePaginator
     {
@@ -85,9 +116,6 @@ class AppointmentRepository
 
     /**
      * Get appointment by ID.
-     *
-     * @param  int  $id
-     * @return Appointment|null
      */
     public function findById(int $id): ?Appointment
     {
@@ -96,9 +124,6 @@ class AppointmentRepository
 
     /**
      * Create a new appointment.
-     *
-     * @param  array  $data
-     * @return Appointment
      */
     public function create(array $data): Appointment
     {
@@ -107,10 +132,6 @@ class AppointmentRepository
 
     /**
      * Update an appointment.
-     *
-     * @param  int  $id
-     * @param  array  $data
-     * @return bool
      */
     public function update(int $id, array $data): bool
     {
@@ -125,10 +146,6 @@ class AppointmentRepository
 
     /**
      * Update appointment status.
-     *
-     * @param  int  $id
-     * @param  string  $status
-     * @return bool
      */
     public function updateStatus(int $id, string $status): bool
     {
@@ -142,10 +159,15 @@ class AppointmentRepository
     }
 
     /**
+     * Mark appointment as completed.
+     */
+    public function markAsCompleted(int $id): bool
+    {
+        return $this->updateStatus($id, 'completed');
+    }
+
+    /**
      * Delete an appointment.
-     *
-     * @param  int  $id
-     * @return bool
      */
     public function delete(int $id): bool
     {
@@ -156,5 +178,143 @@ class AppointmentRepository
         }
 
         return $appointment->delete();
+    }
+
+    // ========== Dashboard Specific Methods ==========
+
+    /**
+     * Get today's appointments count.
+     */
+    public function getTodayAppointmentsCount(): int
+    {
+        return $this->appointment->where('appointment_date', today())->count();
+    }
+
+    /**
+     * Get today's appointments count for a doctor.
+     */
+    public function getTodayAppointmentsCountForDoctor(int $doctorId): int
+    {
+        return $this->appointment
+            ->where('appointment_date', today())
+            ->where('doctor_id', $doctorId)
+            ->count();
+    }
+
+    /**
+     * Get pending appointments count.
+     */
+    public function getPendingAppointmentsCount(): int
+    {
+        return $this->appointment->where('status', 'pending')->count();
+    }
+
+    /**
+     * Get completed appointments count.
+     */
+    public function getCompletedAppointmentsCount(): int
+    {
+        return $this->appointment->where('status', 'completed')->count();
+    }
+
+    /**
+     * Get completed appointments today for a doctor.
+     */
+    public function getCompletedTodayForDoctor(int $doctorId): int
+    {
+        return $this->appointment
+            ->where('appointment_date', today())
+            ->where('doctor_id', $doctorId)
+            ->where('status', 'completed')
+            ->count();
+    }
+
+    /**
+     * Get pending appointments today for a doctor.
+     */
+    public function getPendingTodayForDoctor(int $doctorId): int
+    {
+        return $this->appointment
+            ->where('appointment_date', today())
+            ->where('doctor_id', $doctorId)
+            ->where('status', 'pending')
+            ->count();
+    }
+
+    /**
+     * Get total patients for a doctor.
+     */
+    public function getTotalPatientsForDoctor(int $doctorId): int
+    {
+        return $this->appointment
+            ->where('doctor_id', $doctorId)
+            ->distinct('patient_id')
+            ->count('patient_id');
+    }
+
+    /**
+     * Get monthly patients for a doctor.
+     */
+    public function getMonthlyPatientsForDoctor(int $doctorId): int
+    {
+        return $this->appointment
+            ->where('doctor_id', $doctorId)
+            ->whereMonth('appointment_date', now()->month)
+            ->whereYear('appointment_date', now()->year)
+            ->distinct('patient_id')
+            ->count('patient_id');
+    }
+
+    /**
+     * Get average consultation time for a doctor.
+     */
+    public function getAverageConsultationTime(int $doctorId): int
+    {
+        // This is a placeholder - you might need to add consultation_duration to appointments table
+        // For now, returning a default value
+        return 15; // 15 minutes average
+    }
+
+    /**
+     * Get monthly revenue.
+     */
+    public function getMonthlyRevenue(): float
+    {
+        return $this->appointment
+            ->join('doctors', 'appointments.doctor_id', '=', 'doctors.id')
+            ->where('appointments.status', 'completed')
+            ->whereMonth('appointments.appointment_date', now()->month)
+            ->whereYear('appointments.appointment_date', now()->year)
+            ->sum('doctors.consultation_fee');
+    }
+
+    /**
+     * Get waiting patients count.
+     */
+    public function getWaitingPatientsCount(): int
+    {
+        return $this->appointment
+            ->where('appointment_date', today())
+            ->where('status', 'pending')
+            ->count();
+    }
+
+    /**
+     * Get today's appointments by doctor.
+     */
+    public function getTodayAppointmentsByDoctor(): array
+    {
+        return $this->appointment
+            ->select([
+                'users.name as doctor_name',
+                DB::raw('COUNT(*) as appointments_count'),
+                DB::raw('COUNT(CASE WHEN status = "completed" THEN 1 END) as completed_count')
+            ])
+            ->join('doctors', 'appointments.doctor_id', '=', 'doctors.id')
+            ->join('users', 'doctors.user_id', '=', 'users.id')
+            ->where('appointment_date', today())
+            ->groupBy('doctors.id', 'users.name')
+            ->get()
+            ->toArray();
     }
 }

@@ -11,27 +11,9 @@ use Illuminate\Support\Facades\Hash;
 
 class DoctorRepository
 {
-    /**
-     * The doctor model instance.
-     *
-     * @var \App\Models\Doctor
-     */
     protected $doctor;
-
-    /**
-     * The user model instance.
-     *
-     * @var \App\Models\User
-     */
     protected $user;
 
-    /**
-     * Create a new repository instance.
-     *
-     * @param  \App\Models\Doctor  $doctor
-     * @param  \App\Models\User  $user
-     * @return void
-     */
     public function __construct(Doctor $doctor, User $user)
     {
         $this->doctor = $doctor;
@@ -40,8 +22,6 @@ class DoctorRepository
 
     /**
      * Get all doctors.
-     *
-     * @return Collection
      */
     public function getAll(): Collection
     {
@@ -50,8 +30,6 @@ class DoctorRepository
 
     /**
      * Get all active doctors.
-     *
-     * @return Collection
      */
     public function getAllActive(): Collection
     {
@@ -62,9 +40,6 @@ class DoctorRepository
 
     /**
      * Get all doctors with pagination.
-     *
-     * @param  int  $perPage
-     * @return LengthAwarePaginator
      */
     public function getAllPaginated(int $perPage = 10): LengthAwarePaginator
     {
@@ -73,9 +48,6 @@ class DoctorRepository
 
     /**
      * Get doctor by ID.
-     *
-     * @param  int  $id
-     * @return Doctor|null
      */
     public function findById(int $id): ?Doctor
     {
@@ -84,9 +56,6 @@ class DoctorRepository
 
     /**
      * Get doctor by user ID.
-     *
-     * @param  int  $userId
-     * @return Doctor|null
      */
     public function findByUserId(int $userId): ?Doctor
     {
@@ -95,10 +64,6 @@ class DoctorRepository
 
     /**
      * Create a new doctor with user.
-     *
-     * @param  array  $userData
-     * @param  array  $doctorData
-     * @return Doctor|null
      */
     public function createWithUser(array $userData, array $doctorData): ?Doctor
     {
@@ -125,11 +90,6 @@ class DoctorRepository
 
     /**
      * Update a doctor with user.
-     *
-     * @param  int  $id
-     * @param  array  $userData
-     * @param  array  $doctorData
-     * @return bool
      */
     public function updateWithUser(int $id, array $userData, array $doctorData): bool
     {
@@ -165,10 +125,6 @@ class DoctorRepository
 
     /**
      * Update doctor availability.
-     *
-     * @param  int  $id
-     * @param  bool  $isAvailable
-     * @return bool
      */
     public function updateAvailability(int $id, bool $isAvailable): bool
     {
@@ -183,9 +139,6 @@ class DoctorRepository
 
     /**
      * Delete a doctor with user.
-     *
-     * @param  int  $id
-     * @return bool
      */
     public function deleteWithUser(int $id): bool
     {
@@ -215,9 +168,153 @@ class DoctorRepository
         }
     }
 
-
+    /**
+     * Get total doctor count.
+     */
     public function getCount(): int
     {
         return $this->doctor->count();
+    }
+
+    // ========== Dashboard Specific Methods ==========
+
+    /**
+     * Get active doctor count.
+     */
+    public function getActiveCount(): int
+    {
+        return $this->doctor->where('is_available', true)->count();
+    }
+
+    /**
+     * Get doctor performance statistics.
+     */
+    public function getDoctorStats(): array
+    {
+        return $this->doctor
+            ->select([
+                'users.name as doctor_name',
+                'doctors.specialization',
+                DB::raw('COUNT(DISTINCT appointments.patient_id) as total_patients'),
+                DB::raw('COUNT(CASE WHEN MONTH(appointments.appointment_date) = MONTH(NOW()) AND YEAR(appointments.appointment_date) = YEAR(NOW()) THEN appointments.id END) as monthly_patients'),
+                DB::raw('ROUND(AVG(CASE WHEN appointments.status = "completed" THEN 100 ELSE 0 END), 2) as completion_rate'),
+                DB::raw('15 as average_consultation_time') // Placeholder - adjust based on your needs
+            ])
+            ->join('users', 'doctors.user_id', '=', 'users.id')
+            ->leftJoin('appointments', 'doctors.id', '=', 'appointments.doctor_id')
+            ->where('doctors.is_available', true)
+            ->groupBy('doctors.id', 'users.name', 'doctors.specialization')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Get doctors with their appointment counts.
+     */
+    public function getDoctorsWithAppointmentCounts(): Collection
+    {
+        return $this->doctor
+            ->select([
+                'doctors.*',
+                'users.name as doctor_name',
+                DB::raw('COUNT(appointments.id) as total_appointments'),
+                DB::raw('COUNT(CASE WHEN appointments.status = "completed" THEN 1 END) as completed_appointments'),
+                DB::raw('COUNT(CASE WHEN appointments.status = "pending" THEN 1 END) as pending_appointments')
+            ])
+            ->join('users', 'doctors.user_id', '=', 'users.id')
+            ->leftJoin('appointments', 'doctors.id', '=', 'appointments.doctor_id')
+            ->groupBy('doctors.id', 'users.name')
+            ->get();
+    }
+
+    /**
+     * Get top performing doctors.
+     */
+    public function getTopPerformingDoctors(int $limit = 5): Collection
+    {
+        return $this->doctor
+            ->select([
+                'doctors.*',
+                'users.name as doctor_name',
+                DB::raw('COUNT(DISTINCT appointments.patient_id) as unique_patients'),
+                DB::raw('COUNT(appointments.id) as total_appointments'),
+                DB::raw('ROUND(AVG(CASE WHEN appointments.status = "completed" THEN 100 ELSE 0 END), 2) as completion_rate')
+            ])
+            ->join('users', 'doctors.user_id', '=', 'users.id')
+            ->leftJoin('appointments', 'doctors.id', '=', 'appointments.doctor_id')
+            ->where('doctors.is_available', true)
+            ->groupBy('doctors.id', 'users.name')
+            ->orderBy('completion_rate', 'desc')
+            ->orderBy('unique_patients', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get doctors by specialization.
+     */
+    public function getDoctorsBySpecialization(): array
+    {
+        return $this->doctor
+            ->select([
+                'specialization',
+                DB::raw('COUNT(*) as count')
+            ])
+            ->whereNotNull('specialization')
+            ->groupBy('specialization')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Get monthly revenue by doctor.
+     */
+    public function getMonthlyRevenueByDoctor(): array
+    {
+        return $this->doctor
+            ->select([
+                'users.name as doctor_name',
+                'doctors.consultation_fee',
+                DB::raw('COUNT(CASE WHEN appointments.status = "completed" AND MONTH(appointments.appointment_date) = MONTH(NOW()) THEN 1 END) as completed_appointments'),
+                DB::raw('(doctors.consultation_fee * COUNT(CASE WHEN appointments.status = "completed" AND MONTH(appointments.appointment_date) = MONTH(NOW()) THEN 1 END)) as monthly_revenue')
+            ])
+            ->join('users', 'doctors.user_id', '=', 'users.id')
+            ->leftJoin('appointments', 'doctors.id', '=', 'appointments.doctor_id')
+            ->groupBy('doctors.id', 'users.name', 'doctors.consultation_fee')
+            ->orderBy('monthly_revenue', 'desc')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Search doctors with filters.
+     */
+    public function searchDoctors(array $filters): Collection
+    {
+        $query = $this->doctor->with('user');
+
+        if (!empty($filters['name'])) {
+            $query->whereHas('user', function($q) use ($filters) {
+                $q->where('name', 'like', '%' . $filters['name'] . '%');
+            });
+        }
+
+        if (!empty($filters['specialization'])) {
+            $query->where('specialization', 'like', '%' . $filters['specialization'] . '%');
+        }
+
+        if (!empty($filters['is_available'])) {
+            $query->where('is_available', $filters['is_available']);
+        }
+
+        if (!empty($filters['min_fee'])) {
+            $query->where('consultation_fee', '>=', $filters['min_fee']);
+        }
+
+        if (!empty($filters['max_fee'])) {
+            $query->where('consultation_fee', '<=', $filters['max_fee']);
+        }
+
+        return $query->get();
     }
 }

@@ -19,6 +19,12 @@ return new class extends Migration {
             $table->float('left_eye_power')->nullable();
             $table->string('right_eye_pressure')->nullable();
             $table->string('left_eye_pressure')->nullable();
+            $table->decimal('right_eye_sphere', 5, 2)->nullable(); // SPH
+            $table->decimal('left_eye_sphere', 5, 2)->nullable();
+            $table->decimal('right_eye_cylinder', 5, 2)->nullable(); // CYL
+            $table->decimal('left_eye_cylinder', 5, 2)->nullable();
+            $table->integer('right_eye_axis')->nullable(); // Axis
+            $table->integer('left_eye_axis')->nullable();
             $table->text('additional_notes')->nullable();
             $table->foreignId('performed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->dateTime('test_date');

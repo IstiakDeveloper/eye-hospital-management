@@ -5,22 +5,12 @@ namespace App\Repositories;
 use App\Models\Patient;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class PatientRepository
 {
-    /**
-     * The patient model instance.
-     *
-     * @var \App\Models\Patient
-     */
     protected $patient;
 
-    /**
-     * Create a new repository instance.
-     *
-     * @param  \App\Models\Patient  $patient
-     * @return void
-     */
     public function __construct(Patient $patient)
     {
         $this->patient = $patient;
@@ -28,14 +18,15 @@ class PatientRepository
 
     /**
      * Get all patients.
-     *
-     * @return Collection
      */
     public function getAll(): Collection
     {
         return $this->patient->orderBy('created_at', 'desc')->get();
     }
 
+    /**
+     * Get recent patients.
+     */
     public function getRecent(int $limit = 5): Collection
     {
         return $this->patient->orderBy('created_at', 'desc')
@@ -45,20 +36,14 @@ class PatientRepository
 
     /**
      * Get the total count of patients.
-     *
-     * @return int
      */
     public function getCount(): int
     {
         return $this->patient->count();
     }
 
-
     /**
      * Get all patients with pagination.
-     *
-     * @param  int  $perPage
-     * @return LengthAwarePaginator
      */
     public function getAllPaginated(int $perPage = 10): LengthAwarePaginator
     {
@@ -67,9 +52,6 @@ class PatientRepository
 
     /**
      * Get patient by ID.
-     *
-     * @param  int  $id
-     * @return Patient|null
      */
     public function findById(int $id): ?Patient
     {
@@ -78,9 +60,6 @@ class PatientRepository
 
     /**
      * Get patient by patient_id.
-     *
-     * @param  string  $patientId
-     * @return Patient|null
      */
     public function findByPatientId(string $patientId): ?Patient
     {
@@ -89,9 +68,6 @@ class PatientRepository
 
     /**
      * Search patients by name, phone or patient_id.
-     *
-     * @param  string  $term
-     * @return Collection
      */
     public function search(string $term): Collection
     {
@@ -104,9 +80,6 @@ class PatientRepository
 
     /**
      * Create a new patient.
-     *
-     * @param  array  $data
-     * @return Patient
      */
     public function create(array $data): Patient
     {
@@ -115,10 +88,6 @@ class PatientRepository
 
     /**
      * Update a patient.
-     *
-     * @param  int  $id
-     * @param  array  $data
-     * @return bool
      */
     public function update(int $id, array $data): bool
     {
@@ -133,9 +102,6 @@ class PatientRepository
 
     /**
      * Delete a patient.
-     *
-     * @param  int  $id
-     * @return bool
      */
     public function delete(int $id): bool
     {
@@ -146,5 +112,224 @@ class PatientRepository
         }
 
         return $patient->delete();
+    }
+
+    // ========== Dashboard Specific Methods ==========
+
+    /**
+     * Get today's patient registrations count.
+     */
+    public function getTodayCount(): int
+    {
+        return $this->patient->whereDate('created_at', today())->count();
+    }
+
+    /**
+     * Get monthly patient registrations count.
+     */
+    public function getMonthlyCount(): int
+    {
+        return $this->patient
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+    }
+
+    /**
+     * Get recent patients with vision test status.
+     */
+    public function getRecentWithVisionTestStatus(int $limit = 10): Collection
+    {
+        return $this->patient
+            ->select([
+                'patients.*',
+                DB::raw('(SELECT COUNT(*) FROM vision_tests WHERE vision_tests.patient_id = patients.id) as vision_tests_count'),
+                DB::raw('(SELECT MAX(test_date) FROM vision_tests WHERE vision_tests.patient_id = patients.id) as latest_vision_test_date')
+            ])
+            ->with(['visionTests' => function($query) {
+                $query->latest('test_date')->first();
+            }])
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get patients without recent vision test.
+     */
+    public function getPatientsWithoutRecentVisionTest(int $limit = 8): Collection
+    {
+        $threeMonthsAgo = now()->subMonths(3);
+
+        return $this->patient
+            ->leftJoin('vision_tests', 'patients.id', '=', 'vision_tests.patient_id')
+            ->select('patients.*')
+            ->where(function($query) use ($threeMonthsAgo) {
+                $query->whereNull('vision_tests.test_date')
+                      ->orWhere('vision_tests.test_date', '<', $threeMonthsAgo);
+            })
+            ->groupBy('patients.id')
+            ->orderBy('patients.created_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get patients with their latest vision test.
+     */
+    public function getPatientsWithLatestVisionTest(): Collection
+    {
+        return $this->patient
+            ->with(['visionTests' => function($query) {
+                $query->latest('test_date')->limit(1);
+            }])
+            ->get();
+    }
+
+    /**
+     * Get patient statistics by month.
+     */
+    public function getMonthlyStatistics(): array
+    {
+        return $this->patient
+            ->select([
+                DB::raw('MONTH(created_at) as month'),
+                DB::raw('YEAR(created_at) as year'),
+                DB::raw('COUNT(*) as count')
+            ])
+            ->whereYear('created_at', now()->year)
+            ->groupBy('year', 'month')
+            ->orderBy('month')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Get patients by gender distribution.
+     */
+    public function getGenderDistribution(): array
+    {
+        return $this->patient
+            ->select([
+                'gender',
+                DB::raw('COUNT(*) as count')
+            ])
+            ->whereNotNull('gender')
+            ->groupBy('gender')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Get patients by age groups.
+     */
+    public function getAgeGroupDistribution(): array
+    {
+        return $this->patient
+            ->select([
+                DB::raw('
+                    CASE
+                        WHEN YEAR(NOW()) - YEAR(date_of_birth) < 18 THEN "Under 18"
+                        WHEN YEAR(NOW()) - YEAR(date_of_birth) BETWEEN 18 AND 30 THEN "18-30"
+                        WHEN YEAR(NOW()) - YEAR(date_of_birth) BETWEEN 31 AND 50 THEN "31-50"
+                        WHEN YEAR(NOW()) - YEAR(date_of_birth) BETWEEN 51 AND 70 THEN "51-70"
+                        ELSE "Over 70"
+                    END as age_group
+                '),
+                DB::raw('COUNT(*) as count')
+            ])
+            ->whereNotNull('date_of_birth')
+            ->groupBy('age_group')
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Get recently registered patients with basic info.
+     */
+    public function getRecentWithBasicInfo(int $limit = 10): Collection
+    {
+        return $this->patient
+            ->select(['id', 'patient_id', 'name', 'phone', 'email', 'created_at'])
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get patients who need follow-up appointments.
+     */
+    public function getPatientsNeedingFollowUp(): Collection
+    {
+        return $this->patient
+            ->join('prescriptions', 'patients.id', '=', 'prescriptions.patient_id')
+            ->select('patients.*', 'prescriptions.followup_date', 'prescriptions.diagnosis')
+            ->where('prescriptions.followup_date', '<=', today())
+            ->whereNull('prescriptions.followup_completed_at') // Assuming you have this field
+            ->orderBy('prescriptions.followup_date')
+            ->get();
+    }
+
+    /**
+     * Search patients with advanced filters.
+     */
+    public function advancedSearch(array $filters): Collection
+    {
+        $query = $this->patient->newQuery();
+
+        if (!empty($filters['name'])) {
+            $query->where('name', 'like', '%' . $filters['name'] . '%');
+        }
+
+        if (!empty($filters['phone'])) {
+            $query->where('phone', 'like', '%' . $filters['phone'] . '%');
+        }
+
+        if (!empty($filters['patient_id'])) {
+            $query->where('patient_id', 'like', '%' . $filters['patient_id'] . '%');
+        }
+
+        if (!empty($filters['gender'])) {
+            $query->where('gender', $filters['gender']);
+        }
+
+        if (!empty($filters['age_from']) && !empty($filters['age_to'])) {
+            $query->whereRaw('YEAR(NOW()) - YEAR(date_of_birth) BETWEEN ? AND ?',
+                [$filters['age_from'], $filters['age_to']]);
+        }
+
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
+        return $query->orderBy('created_at', 'desc')->get();
+    }
+
+    /**
+     * Get patient count by registration date range.
+     */
+    public function getCountByDateRange(string $startDate, string $endDate): int
+    {
+        return $this->patient
+            ->whereDate('created_at', '>=', $startDate)
+            ->whereDate('created_at', '<=', $endDate)
+            ->count();
+    }
+
+    /**
+     * Get patients registered this week.
+     */
+    public function getThisWeekCount(): int
+    {
+        return $this->patient
+            ->whereBetween('created_at', [
+                now()->startOfWeek(),
+                now()->endOfWeek()
+            ])
+            ->count();
     }
 }
