@@ -66,16 +66,30 @@ interface Doctor {
 
 interface DoctorShowProps {
     doctor: Doctor;
-    todayAppointments: Appointment[];
-    upcomingAppointments: Appointment[];
-    stats: {
+    todayAppointments?: Appointment[];
+    upcomingAppointments?: Appointment[];
+    stats?: {
         totalAppointments: number;
         completedAppointments: number;
         todayAppointments: number;
     };
 }
 
-export default function DoctorShow({ doctor, todayAppointments, upcomingAppointments, stats }: DoctorShowProps) {
+export default function DoctorShow({
+    doctor,
+    todayAppointments = [],
+    upcomingAppointments = [],
+    stats
+}: DoctorShowProps) {
+    // Default stats if not provided
+    const defaultStats = {
+        totalAppointments: 0,
+        completedAppointments: 0,
+        todayAppointments: 0
+    };
+
+    const appointmentStats = stats || defaultStats;
+
     const toggleAvailability = () => {
         router.put(route('doctors.availability', doctor.id), {
             is_available: !doctor.is_available
@@ -158,7 +172,7 @@ export default function DoctorShow({ doctor, todayAppointments, upcomingAppointm
 
                             <div className="flex items-start">
                                 <div className="h-5 w-5 flex items-center justify-center text-gray-400 mt-0.5 mr-2">
-                                    <span className="text-lg font-semibold">₹</span>
+                                    <span className="text-lg font-semibold">৳</span>
                                 </div>
                                 <div>
                                     <p className="text-sm font-medium text-gray-500">Consultation Fee</p>
@@ -207,17 +221,17 @@ export default function DoctorShow({ doctor, todayAppointments, upcomingAppointm
                     <CardContent className="space-y-4">
                         <div className="bg-blue-50 p-4 rounded-md">
                             <p className="text-blue-700 font-medium">Total Appointments</p>
-                            <p className="text-3xl font-bold text-blue-900">{stats.totalAppointments}</p>
+                            <p className="text-3xl font-bold text-blue-900">{appointmentStats.totalAppointments}</p>
                         </div>
 
                         <div className="bg-green-50 p-4 rounded-md">
                             <p className="text-green-700 font-medium">Completed Appointments</p>
-                            <p className="text-3xl font-bold text-green-900">{stats.completedAppointments}</p>
+                            <p className="text-3xl font-bold text-green-900">{appointmentStats.completedAppointments}</p>
                         </div>
 
                         <div className="bg-purple-50 p-4 rounded-md">
                             <p className="text-purple-700 font-medium">Today's Appointments</p>
-                            <p className="text-3xl font-bold text-purple-900">{stats.todayAppointments}</p>
+                            <p className="text-3xl font-bold text-purple-900">{appointmentStats.todayAppointments}</p>
                         </div>
 
                         <div className="mt-4">
@@ -242,12 +256,12 @@ export default function DoctorShow({ doctor, todayAppointments, upcomingAppointm
                             Today's Appointments
                         </CardTitle>
                         <CardDescription>
-                            {todayAppointments.length} appointments scheduled for today.
+                            {todayAppointments?.length || 0} appointments scheduled for today.
                         </CardDescription>
                     </CardHeader>
 
                     <CardContent>
-                        {todayAppointments.length > 0 ? (
+                        {todayAppointments && todayAppointments.length > 0 ? (
                             <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>
@@ -336,12 +350,12 @@ export default function DoctorShow({ doctor, todayAppointments, upcomingAppointm
                             Upcoming Appointments
                         </CardTitle>
                         <CardDescription>
-                            Next {upcomingAppointments.length} upcoming appointments.
+                            Next {upcomingAppointments?.length || 0} upcoming appointments.
                         </CardDescription>
                     </CardHeader>
 
                     <CardContent>
-                        {upcomingAppointments.length > 0 ? (
+                        {upcomingAppointments && upcomingAppointments.length > 0 ? (
                             <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>

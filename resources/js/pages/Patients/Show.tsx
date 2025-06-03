@@ -213,6 +213,11 @@ export default function PatientShow({ patient }: PatientShowProps) {
         return 'text-red-600';
     };
 
+    const handleDownload = () => {
+        const url = route('visiontests.print', visionTests[0].id)
+        window.open(url, '_blank', 'noopener,noreferrer')
+    }
+
     return (
         <AdminLayout title={`Patient: ${patient.name}`}>
             <Head title={`Patient: ${patient.name}`} />
@@ -702,11 +707,13 @@ export default function PatientShow({ patient }: PatientShowProps) {
                                                     View Details
                                                 </Link>
                                             </Button>
-                                            <Button variant="outline" className="flex-1 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300" asChild>
-                                                <Link href={route('visiontests.print', visionTests[0].id)}>
-                                                    <Printer className="h-4 w-4 mr-2" />
-                                                    Print Report
-                                                </Link>
+                                            <Button
+                                                variant="outline"
+                                                className="flex-1 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300"
+                                                onClick={handleDownload}
+                                            >
+                                                <Printer className="h-4 w-4 mr-2" />
+                                                Print Report
                                             </Button>
                                         </div>
                                     </CardFooter>

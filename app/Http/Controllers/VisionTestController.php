@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Patient;
 use App\Repositories\PatientRepository;
 use App\Repositories\VisionTestRepository;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -203,11 +204,39 @@ class VisionTestController extends Controller
 
         $visionTest->load(['patient', 'performedBy']);
 
-        // Logic for printing vision test report
-        // This could be returning a PDF view or other printable format
-
-        return view('vision-tests.print', [
+        // Generate PDF with precise settings
+        $pdf = Pdf::loadView('vision-tests.print', [
             'visionTest' => $visionTest
         ]);
+
+        // Set exact A4 portrait with no margins
+        $pdf->setPaper('A4', 'portrait');
+
+        // Optimize DomPDF settings for single page
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'Arial',
+            'dpi' => 96,
+            'defaultPaperSize' => 'A4',
+            'orientation' => 'portrait',
+            'isRemoteEnabled' => false,
+            'debugKeepTemp' => false,
+            'chroot' => public_path(),
+            'fontDir' => storage_path('fonts/'),
+            'fontCache' => storage_path('fonts/'),
+            'tempDir' => sys_get_temp_dir(),
+            'rootDir' => public_path(),
+            'isJavascriptEnabled' => false,
+            'defaultMediaType' => 'print',
+            'isFontSubsettingEnabled' => true,
+            'isPhpEnabled' => false
+        ]);
+
+        // Set proper filename
+        $filename = 'vision-test-' . $visionTest->patient->name . '-' . $visionTest->patient->patient_id . '-' . date('Y-m-d') . '.pdf';
+
+        // For download
+        return $pdf->download($filename);
     }
 }

@@ -44,7 +44,7 @@ class PrescriptionRepository
     public function findById(int $id): ?Prescription
     {
         return $this->prescription
-            ->with(['patient', 'doctor.user', 'appointment', 'medicines'])
+            ->with(['patient', 'doctor.user', 'appointment', 'prescriptionMedicines.medicine'])
             ->find($id);
     }
 
@@ -54,7 +54,7 @@ class PrescriptionRepository
     public function getAllForPatient(int $patientId): Collection
     {
         return $this->prescription
-            ->with(['doctor.user', 'appointment', 'medicines'])
+            ->with(['doctor.user', 'appointment', 'prescriptionMedicines.medicine'])
             ->where('patient_id', $patientId)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -66,7 +66,7 @@ class PrescriptionRepository
     public function getAllForDoctor(int $doctorId): Collection
     {
         return $this->prescription
-            ->with(['patient', 'appointment', 'medicines'])
+            ->with(['patient', 'appointment', 'prescriptionMedicines.medicine'])
             ->where('doctor_id', $doctorId)
             ->orderBy('created_at', 'desc')
             ->get();
@@ -81,6 +81,36 @@ class PrescriptionRepository
     }
 
     /**
+     * Create a new prescription with medicines.
+     */
+    public function createWithMedicines(array $prescriptionData, array $medicines): ?Prescription
+    {
+        try {
+            DB::beginTransaction();
+
+            // Create prescription
+            $prescription = $this->prescription->create($prescriptionData);
+
+            // Add medicines to prescription
+            foreach ($medicines as $medicineData) {
+                $prescription->prescriptionMedicines()->create([
+                    'medicine_id' => $medicineData['medicine_id'],
+                    'dosage' => $medicineData['dosage'],
+                    'duration' => $medicineData['duration'] ?? null,
+                    'instructions' => $medicineData['instructions'] ?? null,
+                ]);
+            }
+
+            DB::commit();
+
+            return $prescription->fresh(['patient', 'doctor.user', 'appointment', 'prescriptionMedicines.medicine']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return null;
+        }
+    }
+
+    /**
      * Update a prescription.
      */
     public function update(int $id, array $data): bool
@@ -92,6 +122,45 @@ class PrescriptionRepository
         }
 
         return $prescription->update($data);
+    }
+
+    /**
+     * Update a prescription with medicines.
+     */
+    public function updateWithMedicines(int $id, array $prescriptionData, array $medicines): bool
+    {
+        try {
+            DB::beginTransaction();
+
+            $prescription = $this->findById($id);
+
+            if (!$prescription) {
+                return false;
+            }
+
+            // Update prescription
+            $prescription->update($prescriptionData);
+
+            // Delete existing prescription medicines
+            $prescription->prescriptionMedicines()->delete();
+
+            // Add new medicines to prescription
+            foreach ($medicines as $medicineData) {
+                $prescription->prescriptionMedicines()->create([
+                    'medicine_id' => $medicineData['medicine_id'],
+                    'dosage' => $medicineData['dosage'],
+                    'duration' => $medicineData['duration'] ?? null,
+                    'instructions' => $medicineData['instructions'] ?? null,
+                ]);
+            }
+
+            DB::commit();
+
+            return true;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return false;
+        }
     }
 
     /**

@@ -89,7 +89,20 @@ export default function MedicineCreate({ types }: MedicineCreateProps) {
                                     error={errors.type}
                                     options={[
                                         { value: '', label: 'Select medicine type' },
-                                        ...(types ? types.map(type => ({ value: type, label: type })) : []),
+                                        { value: 'antibiotic_eye_drops', label: 'Antibiotic Eye Drops' },
+                                        { value: 'lubricating_eye_drops', label: 'Lubricating Eye Drops' },
+                                        { value: 'anti_inflammatory', label: 'Anti-inflammatory Drops' },
+                                        { value: 'antiviral', label: 'Antiviral Eye Drops/Ointments' },
+                                        { value: 'antifungal', label: 'Antifungal Eye Drops' },
+                                        { value: 'mydriatics', label: 'Mydriatics/Cycloplegics' },
+                                        { value: 'glaucoma_medications', label: 'Glaucoma Medications' },
+                                        { value: 'anti_allergic', label: 'Anti-allergic Eye Drops' },
+                                        { value: 'decongestant', label: 'Decongestant Eye Drops' },
+                                        { value: 'ophthalmic_ointment', label: 'Ophthalmic Ointments' },
+                                        { value: 'steroid_eye_drops', label: 'Steroid Eye Drops' },
+                                        { value: 'nsaid_eye_drops', label: 'NSAID Eye Drops' },
+                                        { value: 'combo_drops', label: 'Antibiotic + Steroid Combination Drops' },
+                                        { value: 'anti_glaucoma_combo', label: 'Anti-glaucoma Combinations' },
                                         { value: 'other', label: 'Other' }
                                     ]}
                                 />

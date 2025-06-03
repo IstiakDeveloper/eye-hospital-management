@@ -6,6 +6,7 @@ use App\Models\Doctor;
 use App\Repositories\AppointmentRepository;
 use App\Repositories\DoctorRepository;
 use App\Repositories\PatientRepository;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -225,12 +226,44 @@ class AppointmentController extends Controller
             abort(404, 'Appointment not found');
         }
 
-        // Logic for printing appointment slip
-        // This could be returning a PDF view or other printable format
+        $appointment->load(['patient', 'doctor', 'doctor.user']);
 
-        return view('appointments.print', [
+        // Generate PDF with receipt-specific settings
+        $pdf = Pdf::loadView('appointments.print', [
             'appointment' => $appointment
         ]);
+
+        // Set custom receipt size (80mm x 120mm)
+        $pdf->setPaper([0, 0, 226.77, 340.16], 'portrait'); // 80mm x 120mm in points
+
+        // Optimize DomPDF settings for receipt printing
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'Arial',
+            'dpi' => 96,
+            'orientation' => 'portrait',
+            'isRemoteEnabled' => false,
+            'debugKeepTemp' => false,
+            'chroot' => public_path(),
+            'fontDir' => storage_path('fonts/'),
+            'fontCache' => storage_path('fonts/'),
+            'tempDir' => sys_get_temp_dir(),
+            'rootDir' => public_path(),
+            'isJavascriptEnabled' => false,
+            'defaultMediaType' => 'print',
+            'isFontSubsettingEnabled' => true,
+            'isPhpEnabled' => false
+        ]);
+
+        // Set proper filename
+        $filename = 'appointment-slip-' . $appointment->patient->patient_id . '-' . $appointment->id . '.pdf';
+
+        // For download
+        return $pdf->download($filename);
+
+        // OR for direct print (uncomment below and comment above)
+        // return $pdf->stream($filename);
     }
 
     /**

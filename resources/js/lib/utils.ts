@@ -68,11 +68,10 @@ export function generateId(length: number = 8) {
  * Format currency
  */
 export function formatCurrency(amount: number) {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'BDT',
+    const formatted = new Intl.NumberFormat('en-US', {
         minimumFractionDigits: 0,
     }).format(amount);
+    return `৳${formatted}`;
 }
 /**
  * Calculate age from date of birth

@@ -173,7 +173,7 @@ export default function ReceptionistDashboard({
               <Button
                 asChild
                 variant="outline"
-                className="bg-white text-blue-600 hover:text-blue-500"
+                 className="bg-white text-blue-600 hover:text-blue-500"
               >
                 <Link href={route('appointments.create')}>
                   <Calendar className="h-4 w-4 mr-2" />

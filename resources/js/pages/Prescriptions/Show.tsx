@@ -76,6 +76,19 @@ interface PrescriptionShowProps {
 }
 
 export default function PrescriptionShow({ prescription }: PrescriptionShowProps) {
+    const handlePrint = () => {
+        // Open in new tab
+        window.open(route('prescriptions.print', prescription.id), '_blank');
+    };
+
+    // Or for download
+    const handleDownload = () => {
+        // Create download link
+        const link = document.createElement('a');
+        link.href = route('prescriptions.print', prescription.id);
+        link.download = `prescription-${prescription.patient.name}.pdf`;
+        link.click();
+    };
     return (
         <AdminLayout title="Prescription Details">
             <Head title="Prescription Details" />
@@ -104,11 +117,11 @@ export default function PrescriptionShow({ prescription }: PrescriptionShowProps
                     </Button>
 
                     <Button
-                        href={route('prescriptions.print', prescription.id)}
+                        onClick={handleDownload}
                         variant="default"
                         icon={<Printer className="h-4 w-4" />}
                     >
-                        Print Prescription
+                        Download Prescription
                     </Button>
                 </div>
             </div>
@@ -295,7 +308,7 @@ export default function PrescriptionShow({ prescription }: PrescriptionShowProps
 
                 <CardFooter className="flex justify-center border-t">
                     <Button
-                        href={route('prescriptions.print', prescription.id)}
+                        onClick={handlePrint}
                         className="w-full max-w-xs"
                         icon={<Printer className="h-4 w-4" />}
                     >

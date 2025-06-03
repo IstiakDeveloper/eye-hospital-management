@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class DoctorRepository
 {
@@ -62,21 +63,95 @@ class DoctorRepository
         return $this->doctor->where('user_id', $userId)->with('user')->first();
     }
 
-    /**
-     * Create a new doctor with user.
-     */
     public function createWithUser(array $userData, array $doctorData): ?Doctor
     {
         try {
             DB::beginTransaction();
 
+            // Validate required fields
+            if (empty($userData['name']) || empty($userData['email'])) {
+                throw new \Exception('Name and email are required');
+            }
+
+            // Check if email already exists
+            $existingUser = $this->user->where('email', $userData['email'])->first();
+            if ($existingUser) {
+                throw new \Exception('Email already exists');
+            }
+
+            // Set default password if not provided
+            if (empty($userData['password'])) {
+                $userData['password'] = 'doctor123'; // Default password
+            }
+
             // Create user
             $userData['password'] = Hash::make($userData['password']);
             $userData['role_id'] = 2; // Doctor role
+
+            Log::info('Creating user with data:', $userData);
             $user = $this->user->create($userData);
 
-            // Create doctor profile
+            if (!$user) {
+                throw new \Exception('Failed to create user');
+            }
+
+            // Prepare doctor data
             $doctorData['user_id'] = $user->id;
+
+            // Set default values for required fields
+            $doctorData['specialization'] = $doctorData['specialization'] ?? 'General Practitioner';
+            $doctorData['consultation_fee'] = $doctorData['consultation_fee'] ?? 500;
+            $doctorData['is_available'] = $doctorData['is_available'] ?? true;
+
+            Log::info('Creating doctor with data:', $doctorData);
+            $doctor = $this->doctor->create($doctorData);
+
+            if (!$doctor) {
+                throw new \Exception('Failed to create doctor profile');
+            }
+
+            DB::commit();
+
+            return $doctor->fresh('user');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Doctor creation failed: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            throw $e; // Re-throw to handle in controller
+        }
+    }
+
+    /**
+     * Create doctor from existing user.
+     */
+    public function createFromExistingUser(int $userId, array $doctorData): ?Doctor
+    {
+        try {
+            DB::beginTransaction();
+
+            // Find the user
+            $user = $this->user->find($userId);
+            if (!$user) {
+                throw new \Exception('User not found');
+            }
+
+            // Check if user already has doctor profile
+            $existingDoctor = $this->doctor->where('user_id', $userId)->first();
+            if ($existingDoctor) {
+                throw new \Exception('User already has a doctor profile');
+            }
+
+            // Update user role to doctor
+            $user->update(['role_id' => 2]);
+
+            // Create doctor profile
+            $doctorData['user_id'] = $userId;
+
+            // Set default values
+            $doctorData['specialization'] = $doctorData['specialization'] ?? 'General Practitioner';
+            $doctorData['consultation_fee'] = $doctorData['consultation_fee'] ?? 500;
+            $doctorData['is_available'] = $doctorData['is_available'] ?? true;
+
             $doctor = $this->doctor->create($doctorData);
 
             DB::commit();
@@ -84,7 +159,8 @@ class DoctorRepository
             return $doctor->fresh('user');
         } catch (\Exception $e) {
             DB::rollBack();
-            return null;
+            Log::error('Doctor profile creation failed: ' . $e->getMessage());
+            throw $e;
         }
     }
 
@@ -294,7 +370,7 @@ class DoctorRepository
         $query = $this->doctor->with('user');
 
         if (!empty($filters['name'])) {
-            $query->whereHas('user', function($q) use ($filters) {
+            $query->whereHas('user', function ($q) use ($filters) {
                 $q->where('name', 'like', '%' . $filters['name'] . '%');
             });
         }

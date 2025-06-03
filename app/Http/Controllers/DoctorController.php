@@ -60,7 +60,6 @@ class DoctorController extends Controller
      */
     public function create(Request $request)
     {
-
         $userId = $request->query('user_id');
         $user = null;
 
@@ -90,31 +89,45 @@ class DoctorController extends Controller
      */
     public function store(Request $request)
     {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+                'phone' => 'nullable|string|max:20',
+                'password' => 'nullable|string|min:6',
+                'specialization' => 'nullable|string|max:255',
+                'qualification' => 'nullable|string',
+                'experience_years' => 'nullable|integer|min:0',
+                'consultation_fee' => 'nullable|numeric|min:0',
+                'registration_number' => 'nullable|string|max:100',
+                'chamber_address' => 'nullable|string',
+                'visiting_hours' => 'nullable|string',
+                'is_available' => 'boolean'
+            ]);
 
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'specialization' => 'required|string|max:255',
-            'qualification' => 'required|string|max:255',
-            'bio' => 'nullable|string',
-            'consultation_fee' => 'required|numeric|min:0',
-            'is_available' => 'boolean',
-        ]);
+            // Check if creating from existing user
+            $userId = $request->input('user_id');
 
-        $user = $this->userRepository->findById($request->user_id);
+            if ($userId) {
+                // Create doctor profile for existing user
+                $doctorData = collect($validated)->except(['name', 'email', 'phone', 'password'])->toArray();
+                $doctor = $this->doctorRepository->createFromExistingUser($userId, $doctorData);
+            } else {
+                // Create new user and doctor
+                $userData = collect($validated)->only(['name', 'email', 'phone', 'password'])->toArray();
+                $doctorData = collect($validated)->except(['name', 'email', 'phone', 'password'])->toArray();
 
-        if (!$user) {
-            return back()->with('error', 'User not found.');
+                $doctor = $this->doctorRepository->createWithUser($userData, $doctorData);
+            }
+
+            return redirect()->route('doctors.index')
+                ->with('success', 'Doctor created successfully!');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to create doctor: ' . $e->getMessage())->withInput();
         }
-
-        // If user is not a doctor yet, update role
-        if (!$user->isDoctor()) {
-            $this->userRepository->update($user->id, ['role_id' => 2]); // Doctor role ID
-        }
-
-        $doctor = $this->doctorRepository->create($request->all());
-
-        return redirect()->route('doctors.index')
-            ->with('success', 'Doctor profile created successfully!');
     }
 
     /**
@@ -127,17 +140,43 @@ class DoctorController extends Controller
     {
         $doctor = $this->doctorRepository->findById($id);
 
-        // Load today's appointments
-        $doctor->load([
-            'appointments' => function ($query) {
-                $query->where('appointment_date', today())
-                    ->with('patient')
-                    ->orderBy('appointment_time');
-            }
-        ]);
+        if (!$doctor) {
+            abort(404, 'Doctor not found');
+        }
+
+        // Get today's appointments
+        $todayAppointments = $doctor->appointments()
+            ->where('appointment_date', today())
+            ->with(['patient'])
+            ->orderBy('appointment_time')
+            ->get();
+
+        // Get upcoming appointments (next 7 days, excluding today)
+        $upcomingAppointments = $doctor->appointments()
+            ->where('appointment_date', '>', today())
+            ->where('appointment_date', '<=', today()->addDays(7))
+            ->with(['patient'])
+            ->orderBy('appointment_date')
+            ->orderBy('appointment_time')
+            ->limit(10)
+            ->get();
+
+        // Calculate statistics
+        $totalAppointments = $doctor->appointments()->count();
+        $completedAppointments = $doctor->appointments()->where('status', 'completed')->count();
+        $todayAppointmentsCount = $todayAppointments->count();
+
+        $stats = [
+            'totalAppointments' => $totalAppointments,
+            'completedAppointments' => $completedAppointments,
+            'todayAppointments' => $todayAppointmentsCount,
+        ];
 
         return Inertia::render('Doctors/Show', [
-            'doctor' => $doctor
+            'doctor' => $doctor,
+            'todayAppointments' => $todayAppointments,
+            'upcomingAppointments' => $upcomingAppointments,
+            'stats' => $stats
         ]);
     }
 
@@ -149,7 +188,6 @@ class DoctorController extends Controller
      */
     public function edit($id)
     {
-
         $doctor = $this->doctorRepository->findById($id);
 
         if (!$doctor) {
@@ -170,7 +208,6 @@ class DoctorController extends Controller
      */
     public function update(Request $request, $id)
     {
-
         $doctor = $this->doctorRepository->findById($id);
 
         if (!$doctor) {
@@ -178,6 +215,10 @@ class DoctorController extends Controller
         }
 
         $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'email' => 'sometimes|required|email|unique:users,email,' . $doctor->user_id,
+            'phone' => 'nullable|string|max:20',
+            'registration_number' => 'nullable|string|max:50',
             'specialization' => 'required|string|max:255',
             'qualification' => 'required|string|max:255',
             'bio' => 'nullable|string',
@@ -194,15 +235,23 @@ class DoctorController extends Controller
             }
         }
 
-        $success = $this->doctorRepository->update($id, $request->only([
-            'specialization', 'qualification', 'bio', 'consultation_fee', 'is_available'
-        ]));
+        // Update doctor details
+        $doctorData = $request->only([
+            'specialization',
+            'qualification',
+            'bio',
+            'consultation_fee',
+            'is_available',
+            'registration_number'
+        ]);
+
+        $success = $this->doctorRepository->update($id, $doctorData);
 
         if (!$success) {
             return back()->with('error', 'Failed to update doctor profile.');
         }
 
-        return redirect()->route('doctors.index')
+        return redirect()->route('doctors.show', $id)
             ->with('success', 'Doctor profile updated successfully!');
     }
 
@@ -215,7 +264,6 @@ class DoctorController extends Controller
      */
     public function updateAvailability(Request $request, $id)
     {
-
         $doctor = $this->doctorRepository->findById($id);
 
         if (!$doctor) {
@@ -243,7 +291,6 @@ class DoctorController extends Controller
      */
     public function destroy($id)
     {
-
         $success = $this->doctorRepository->delete($id);
 
         if (!$success) {
