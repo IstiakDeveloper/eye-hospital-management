@@ -1,64 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appointment Slip - {{ $appointment->patient->name }}</title>
+    <title>Appointment Slip</title>
     <style>
-        /* Reset and Base */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        /* Page Setup - Compact Receipt Size */
         @page {
-            size: 80mm 100mm;
-            margin: 0;
+            size: A5 portrait;
+            margin: 15mm;
         }
 
-        html, body {
-            width: 80mm;
-            height: 100mm;
-            margin: 0;
-            padding: 0;
-            font-family: 'Arial', sans-serif;
+        body {
+            font-family: Arial, sans-serif;
             font-size: 8px;
-            line-height: 1.1;
+            line-height: 1.2;
             color: #333;
             background: white;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 10mm 0;
         }
 
-        /* Receipt Container */
-        .receipt-container {
-            width: 80mm;
-            height: 100mm;
-            padding: 2mm;
-            position: relative;
-            overflow: hidden;
+        .slip-container {
+            width: 70mm;
+            max-width: 70mm;
+            border: 2px dashed #666;
+            padding: 4mm;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-        /* Header Section */
-        .receipt-header {
+        .header {
             text-align: center;
-            margin-bottom: 2mm;
-            padding-bottom: 1mm;
             border-bottom: 1px solid #333;
+            padding-bottom: 2mm;
+            margin-bottom: 3mm;
         }
 
-        .clinic-name {
-            font-size: 10px;
+        .hospital-name {
+            font-size: 11px;
             font-weight: bold;
             color: #2c5aa0;
-            margin-bottom: 0.5mm;
+            letter-spacing: 1px;
         }
 
         .slip-title {
             font-size: 9px;
             font-weight: bold;
-            color: #333;
-            margin-bottom: 0.5mm;
+            margin: 1mm 0;
         }
 
         .slip-meta {
@@ -66,281 +62,234 @@
             color: #666;
         }
 
-        /* Compact Info Sections */
-        .info-section {
-            margin-bottom: 2mm;
+        .section {
+            margin-bottom: 3mm;
         }
 
         .section-title {
             font-size: 7px;
             font-weight: bold;
-            background: #f0f0f0;
-            padding: 0.5mm 1mm;
-            margin-bottom: 1mm;
-            text-transform: uppercase;
+            background: #f5f5f5;
+            padding: 1mm;
             text-align: center;
-        }
-
-        /* Patient Info - Compact Table */
-        .patient-table {
-            width: 100%;
-            font-size: 7px;
+            border: 1px solid #ddd;
             margin-bottom: 2mm;
         }
 
-        .patient-table td {
-            padding: 0.5mm 1mm;
-            border-bottom: 1px dotted #ddd;
+        .patient-info {
+            font-size: 6px;
         }
 
-        .patient-label {
+        .info-row {
+            display: flex;
+            margin-bottom: 1mm;
+        }
+
+        .info-left, .info-right {
+            flex: 1;
+        }
+
+        .label {
             font-weight: bold;
-            width: 15mm;
             color: #555;
+            margin-right: 2mm;
         }
 
-        .patient-value {
+        .value {
             color: #333;
         }
 
-        /* Serial Number - Compact */
-        .serial-section {
+        .serial-box {
             text-align: center;
-            margin: 2mm 0;
-            background: #f0f8ff;
-            border: 1px solid #2c5aa0;
-            padding: 1mm;
+            background: linear-gradient(135deg, #e3f2fd, #f0f8ff);
+            border: 2px solid #2c5aa0;
+            padding: 3mm;
+            margin: 3mm 0;
+            border-radius: 2mm;
         }
 
         .serial-number {
-            font-size: 11px;
+            font-size: 14px;
             font-weight: bold;
             color: #2c5aa0;
-            margin-bottom: 0.5mm;
+            letter-spacing: 1px;
         }
 
         .serial-label {
             font-size: 6px;
             color: #666;
+            margin-top: 1mm;
         }
 
-        /* Appointment Card - Compact */
-        .appointment-card {
-            border: 1px solid #2c5aa0;
-            padding: 1mm;
-            background: #f8f9fa;
+        .appointment-box {
+            border: 2px solid #2c5aa0;
+            padding: 2mm;
             text-align: center;
-            margin-bottom: 2mm;
+            background: #f8f9fa;
+            border-radius: 2mm;
         }
 
-        .appointment-date {
+        .apt-date {
             font-size: 8px;
             font-weight: bold;
             color: #2c5aa0;
-            margin-bottom: 0.5mm;
+            margin-bottom: 1mm;
         }
 
-        .appointment-time {
+        .apt-time {
             font-size: 8px;
             font-weight: bold;
             color: #d32f2f;
-            margin-bottom: 0.5mm;
+            margin-bottom: 1mm;
         }
 
-        .appointment-status {
+        .apt-status {
             font-size: 6px;
-            padding: 0.5mm 1mm;
+            background: #fff3cd;
+            color: #856404;
+            padding: 1mm 2mm;
             border-radius: 1mm;
             display: inline-block;
-            text-transform: uppercase;
             font-weight: bold;
         }
 
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status-confirmed {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-completed {
-            background: #cce5ff;
-            color: #004085;
-        }
-
-        .status-cancelled {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        /* Doctor Info - Compact */
-        .doctor-card {
-            border: 1px solid #28a745;
-            padding: 1mm;
+        .doctor-box {
+            border: 2px solid #28a745;
+            padding: 2mm;
             background: #f1f8e9;
-            margin-bottom: 2mm;
+            border-radius: 2mm;
         }
 
         .doctor-name {
             font-size: 8px;
             font-weight: bold;
             color: #2e7d32;
-            margin-bottom: 0.5mm;
+            margin-bottom: 1mm;
         }
 
-        .doctor-specialization {
+        .doctor-spec {
             font-size: 6px;
             color: #388e3c;
             font-style: italic;
-            margin-bottom: 0.5mm;
+            margin-bottom: 1mm;
         }
 
-        .consultation-fee {
+        .doctor-fee {
             font-size: 7px;
             color: #1976d2;
             font-weight: bold;
         }
 
-        /* Instructions - Very Compact */
-        .instructions-compact {
+        .instructions {
             font-size: 6px;
-            line-height: 1.2;
             color: #666;
-            border: 1px dashed #ccc;
-            padding: 1mm;
+            border: 1px dashed #999;
+            padding: 2mm;
             background: #fafafa;
-            margin-bottom: 1mm;
+            margin: 2mm 0;
+            line-height: 1.3;
+            border-radius: 1mm;
         }
 
-        /* Footer - Fixed at Bottom */
-        .receipt-footer {
-            position: absolute;
-            bottom: 1mm;
-            left: 2mm;
-            right: 2mm;
+        .footer {
             text-align: center;
             font-size: 5px;
             color: #999;
             border-top: 1px dotted #ccc;
-            padding-top: 0.5mm;
+            padding-top: 1mm;
+            margin-top: 2mm;
         }
 
-        /* Print Styles */
+        /* Print specific styles */
         @media print {
-            html, body {
-                width: 80mm !important;
-                height: 100mm !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            .receipt-container {
-                width: 80mm !important;
-                height: 100mm !important;
-                padding: 2mm !important;
-                overflow: hidden !important;
-            }
-
-            /* Force single page */
             body {
-                page-break-after: avoid !important;
+                margin: 0;
+                padding: 0;
+                display: block;
             }
 
-            .info-section {
-                page-break-inside: avoid;
+            .slip-container {
+                margin: 0 auto;
+                box-shadow: none;
             }
         }
     </style>
 </head>
 <body>
-    <div class="receipt-container">
-        <!-- Header -->
-        <div class="receipt-header">
-            <div class="clinic-name">EYE HOSPITAL</div>
+    <div class="slip-container">
+        <div class="header">
+            <div class="hospital-name">EYE HOSPITAL</div>
             <div class="slip-title">APPOINTMENT SLIP</div>
-            <div class="slip-meta">
-                Slip #{{ str_pad($appointment->id, 4, '0', STR_PAD_LEFT) }} • {{ \Carbon\Carbon::now()->format('d/m/Y h:i A') }}
+            <div class="slip-meta">#{{ str_pad($appointment->id, 4, '0', STR_PAD_LEFT) }} • {{ \Carbon\Carbon::now()->format('d/m/Y h:i A') }}</div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">PATIENT DETAILS</div>
+            <div class="patient-info">
+                <div class="info-row">
+                    <div class="info-left">
+                        <span class="label">Name:</span>
+                        <span class="value">{{ Str::limit($appointment->patient->name, 14, '') }}</span>
+                    </div>
+                    <div class="info-right">
+                        <span class="label">Age:</span>
+                        <span class="value">
+                            @if($appointment->patient->date_of_birth)
+                                {{ \Carbon\Carbon::parse($appointment->patient->date_of_birth)->age }}Y
+                            @else
+                                N/A
+                            @endif
+                        </span>
+                    </div>
+                </div>
+                <div class="info-row">
+                    <div class="info-left">
+                        <span class="label">ID:</span>
+                        <span class="value">{{ $appointment->patient->patient_id }}</span>
+                    </div>
+                    <div class="info-right">
+                        <span class="label">Phone:</span>
+                        <span class="value">{{ Str::limit($appointment->patient->phone ?? 'N/A', 10, '') }}</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Patient Information -->
-        <div class="info-section">
-            <div class="section-title">Patient Details</div>
-            <table class="patient-table">
-                <tr>
-                    <td class="patient-label">Name:</td>
-                    <td class="patient-value">{{ $appointment->patient->name }}</td>
-                </tr>
-                <tr>
-                    <td class="patient-label">ID:</td>
-                    <td class="patient-value">{{ $appointment->patient->patient_id }}</td>
-                </tr>
-                <tr>
-                    <td class="patient-label">Phone:</td>
-                    <td class="patient-value">{{ $appointment->patient->phone ?? 'N/A' }}</td>
-                </tr>
-                <tr>
-                    <td class="patient-label">Age:</td>
-                    <td class="patient-value">
-                        @if($appointment->patient->date_of_birth)
-                            {{ \Carbon\Carbon::parse($appointment->patient->date_of_birth)->age }}Y
-                        @else
-                            N/A
-                        @endif
-                    </td>
-                </tr>
-            </table>
-        </div>
-
-        <!-- Serial Number -->
-        <div class="serial-section">
+        <div class="serial-box">
             <div class="serial-number">{{ $appointment->serial_number ?? str_pad($appointment->id, 3, '0', STR_PAD_LEFT) }}</div>
             <div class="serial-label">YOUR SERIAL NUMBER</div>
         </div>
 
-        <!-- Appointment Details -->
-        <div class="info-section">
-            <div class="section-title">Appointment Details</div>
-            <div class="appointment-card">
-                <div class="appointment-date">
-                    {{ \Carbon\Carbon::parse($appointment->appointment_date)->format('D, d M Y') }}
-                </div>
-                <div class="appointment-time">
-                    {{ \Carbon\Carbon::parse($appointment->appointment_time)->format('h:i A') }}
-                </div>
-                <div class="appointment-status status-{{ strtolower($appointment->status) }}">
-                    {{ ucfirst($appointment->status) }}
-                </div>
+        <div class="section">
+            <div class="section-title">APPOINTMENT</div>
+            <div class="appointment-box">
+                <div class="apt-date">{{ \Carbon\Carbon::parse($appointment->appointment_date)->format('D, d M Y') }}</div>
+                <div class="apt-time">{{ \Carbon\Carbon::parse($appointment->appointment_time)->format('h:i A') }}</div>
+                <div class="apt-status">{{ strtoupper($appointment->status) }}</div>
             </div>
         </div>
 
-        <!-- Doctor Information -->
-        <div class="info-section">
-            <div class="section-title">Doctor Details</div>
-            <div class="doctor-card">
-                <div class="doctor-name">Dr. {{ $appointment->doctor->user->name }}</div>
+        <div class="section">
+            <div class="section-title">DOCTOR</div>
+            <div class="doctor-box">
+                <div class="doctor-name">Dr. {{ Str::limit($appointment->doctor->user->name, 18, '') }}</div>
                 @if($appointment->doctor->specialization)
-                    <div class="doctor-specialization">{{ $appointment->doctor->specialization }}</div>
+                    <div class="doctor-spec">{{ Str::limit($appointment->doctor->specialization, 16, '') }}</div>
                 @endif
-                <div class="consultation-fee">
-                    Fee: ৳{{ number_format($appointment->doctor->consultation_fee, 0) }}
-                </div>
+                <div class="doctor-fee">Consultation: ৳{{ number_format($appointment->doctor->consultation_fee, 0) }}</div>
             </div>
         </div>
 
-        <!-- Compact Instructions -->
-        <div class="instructions-compact">
-            <strong>Instructions:</strong> Arrive 15 min early • Bring medical records • Contact: 01XXXXXXXX for changes
+        <div class="instructions">
+            <strong>Instructions:</strong><br>
+            • Arrive 15 minutes early<br>
+            • Bring previous medical records<br>
+            • Contact: 01XXXXXXXX for changes
         </div>
 
-        <!-- Footer -->
-        <div class="receipt-footer">
-            Generated: {{ \Carbon\Carbon::now()->format('d/m/Y h:i A') }} | Valid for scheduled date only
+        <div class="footer">
+            Generated: {{ \Carbon\Carbon::now()->format('d/m/Y h:i A') }}<br>
+            Valid for scheduled appointment date only
         </div>
     </div>
 </body>

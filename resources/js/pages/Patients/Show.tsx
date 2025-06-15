@@ -218,6 +218,22 @@ export default function PatientShow({ patient }: PatientShowProps) {
         window.open(url, '_blank', 'noopener,noreferrer')
     }
 
+
+    const handleApntDownload = (appointmentId) => {
+        // Create download link
+        const downloadUrl = route('appointments.print', appointmentId);
+
+        // Create temporary anchor element for download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `appointment-slip-${appointmentId}.pdf`;
+
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <AdminLayout title={`Patient: ${patient.name}`}>
             <Head title={`Patient: ${patient.name}`} />
@@ -966,8 +982,10 @@ export default function PatientShow({ patient }: PatientShowProps) {
                                                                     <Edit className="h-4 w-4" />
                                                                 </Link>
                                                             </Button>
-                                                            <Button size="sm" variant="ghost" className="hover:bg-blue-100 transition-all duration-300 group-hover:scale-110" asChild>
-                                                                <Link href={route('visiontests.print', test.id)}>
+                                                            <Button
+                                                            onClick={handleDownload}
+                                                            size="sm" variant="ghost" className="hover:bg-blue-100 transition-all duration-300 group-hover:scale-110" asChild>
+                                                                <Link href="#">
                                                                     <Printer className="h-4 w-4" />
                                                                 </Link>
                                                             </Button>
@@ -1090,8 +1108,11 @@ export default function PatientShow({ patient }: PatientShowProps) {
                                                                     </Link>
                                                                 </Button>
                                                             )}
-                                                            <Button size="sm" variant="ghost" className="hover:bg-green-100 transition-all duration-300 group-hover:scale-110" asChild>
-                                                                <Link href={route('appointments.print', appointment.id)}>
+                                                            <Button size="sm" variant="ghost" className="hover:bg-green-100 transition-all duration-300 group-hover:scale-110"
+                                                                onClick={() => handleApntDownload(appointment.id)}
+                                                                asChild
+                                                            >
+                                                                <Link href='#'>
                                                                     <Printer className="h-4 w-4" />
                                                                 </Link>
                                                             </Button>

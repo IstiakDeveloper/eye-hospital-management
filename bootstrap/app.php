@@ -1,7 +1,11 @@
 <?php
 
+use App\Http\Middleware\DoctorMiddleware;
+use App\Http\Middleware\DoctorOrReceptionistMiddleware;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
+use App\Http\Middleware\ReceptionistMiddleware;
+use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\SuperAdminMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,6 +29,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'super-admin' => SuperAdminMiddleware::class,
+            'doctor' => DoctorMiddleware::class,
+            'receptionist' => ReceptionistMiddleware::class,
+            'doctor-or-receptionist' => DoctorOrReceptionistMiddleware::class,
+            'role' => RoleMiddleware::class,
         ]);
     })
 

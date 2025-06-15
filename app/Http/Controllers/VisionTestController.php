@@ -101,8 +101,8 @@ class VisionTestController extends Controller
 
         $visionTest = $this->visionTestRepository->create($data);
 
-        return redirect()->route('patients.show', $patientId)
-            ->with('success', 'Vision test recorded successfully!');
+        return redirect()->route('appointments.create.patient', $patientId)
+            ->with('success', 'Vision test recorded successfully! Now you can schedule an appointment.');
     }
 
     /**

@@ -63,7 +63,7 @@ class AppointmentController extends Controller
     /**
      * Show the form for creating a new appointment.
      *
-     * @param  int|null  $patientId
+     * @param  int|string|null  $patientId
      * @return \Inertia\Response
      */
     public function create($patientId = null)
@@ -71,6 +71,8 @@ class AppointmentController extends Controller
         $patient = null;
 
         if ($patientId) {
+            // Cast string to integer
+            $patientId = (int) $patientId;
             $patient = $this->patientRepository->findById($patientId);
 
             if (!$patient) {
@@ -114,11 +116,13 @@ class AppointmentController extends Controller
     /**
      * Display the specified appointment.
      *
-     * @param  int  $id
+     * @param  string  $id
      * @return \Inertia\Response
      */
     public function show($id)
     {
+        // Cast string to integer
+        $id = (int) $id;
         $appointment = $this->appointmentRepository->findById($id);
 
         if (!$appointment) {
@@ -133,11 +137,13 @@ class AppointmentController extends Controller
     /**
      * Show the form for editing the specified appointment.
      *
-     * @param  int  $id
+     * @param  string  $id
      * @return \Inertia\Response
      */
     public function edit($id)
     {
+        // Cast string to integer
+        $id = (int) $id;
         $appointment = $this->appointmentRepository->findById($id);
 
         if (!$appointment) {
@@ -156,11 +162,13 @@ class AppointmentController extends Controller
      * Update the specified appointment in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
+     * @param  string  $id
      * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, $id)
     {
+        // Cast string to integer
+        $id = (int) $id;
         $appointment = $this->appointmentRepository->findById($id);
 
         if (!$appointment) {
@@ -184,14 +192,42 @@ class AppointmentController extends Controller
     }
 
     /**
+     * Remove the specified appointment from storage.
+     *
+     * @param  string  $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function destroy($id)
+    {
+        // Cast string to integer
+        $id = (int) $id;
+        $appointment = $this->appointmentRepository->findById($id);
+
+        if (!$appointment) {
+            abort(404, 'Appointment not found');
+        }
+
+        $success = $this->appointmentRepository->delete($id);
+
+        if (!$success) {
+            return back()->with('error', 'Failed to delete appointment.');
+        }
+
+        return redirect()->route('appointments.index')
+            ->with('success', 'Appointment deleted successfully!');
+    }
+
+    /**
      * Update the status of the specified appointment.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
+     * @param  string  $id
      * @return \Illuminate\Http\RedirectResponse
      */
     public function updateStatus(Request $request, $id)
     {
+        // Cast string to integer
+        $id = (int) $id;
         $appointment = $this->appointmentRepository->findById($id);
 
         if (!$appointment) {
@@ -212,14 +248,11 @@ class AppointmentController extends Controller
             ->with('success', 'Appointment status updated successfully!');
     }
 
-    /**
-     * Print the appointment slip.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
+    // Alternative method - Directly control PDF generation
     public function print($id)
     {
+        // Cast string to integer
+        $id = (int) $id;
         $appointment = $this->appointmentRepository->findById($id);
 
         if (!$appointment) {
@@ -228,42 +261,31 @@ class AppointmentController extends Controller
 
         $appointment->load(['patient', 'doctor', 'doctor.user']);
 
-        // Generate PDF with receipt-specific settings
-        $pdf = Pdf::loadView('appointments.print', [
-            'appointment' => $appointment
-        ]);
+        // Get the HTML content
+        $html = view('appointments.print', ['appointment' => $appointment])->render();
 
-        // Set custom receipt size (80mm x 120mm)
-        $pdf->setPaper([0, 0, 226.77, 340.16], 'portrait'); // 80mm x 120mm in points
+        // Clean HTML - remove any extra whitespace that might cause blank pages
+        $html = preg_replace('/\s+/', ' ', $html);
+        $html = trim($html);
 
-        // Optimize DomPDF settings for receipt printing
+        // Create PDF with minimal settings
+        $pdf = Pdf::loadHTML($html);
+
+        // Set paper with exact dimensions
+        $pdf->setPaper([0, 0, 215.43, 255.12], 'portrait');
+
+        // Minimal options to prevent blank pages
         $pdf->setOptions([
-            'isHtml5ParserEnabled' => true,
-            'isPhpEnabled' => true,
             'defaultFont' => 'Arial',
-            'dpi' => 96,
-            'orientation' => 'portrait',
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => false,
             'isRemoteEnabled' => false,
-            'debugKeepTemp' => false,
-            'chroot' => public_path(),
-            'fontDir' => storage_path('fonts/'),
-            'fontCache' => storage_path('fonts/'),
-            'tempDir' => sys_get_temp_dir(),
-            'rootDir' => public_path(),
-            'isJavascriptEnabled' => false,
-            'defaultMediaType' => 'print',
-            'isFontSubsettingEnabled' => true,
-            'isPhpEnabled' => false
+            'defaultMediaType' => 'print'
         ]);
 
-        // Set proper filename
         $filename = 'appointment-slip-' . $appointment->patient->patient_id . '-' . $appointment->id . '.pdf';
 
-        // For download
         return $pdf->download($filename);
-
-        // OR for direct print (uncomment below and comment above)
-        // return $pdf->stream($filename);
     }
 
     /**
