@@ -7,6 +7,7 @@ use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VisionTestController;
 use Illuminate\Foundation\Application;
@@ -84,5 +85,18 @@ Route::middleware(['auth'])->group(function () {
     });
 });
 
-require __DIR__.'/settings.php';
-require __DIR__.'/auth.php';
+
+Route::middleware(['auth'])->prefix('reports')->name('reports.')->group(function () {
+    Route::get('/', [ReportController::class, 'index'])->name('index');
+    Route::get('/dashboard', [ReportController::class, 'dashboard'])->name('dashboard');
+    Route::get('/patients', [ReportController::class, 'patients'])->name('patients');
+    Route::get('/doctors', [ReportController::class, 'doctors'])->name('doctors');
+    Route::get('/appointments', [ReportController::class, 'appointments'])->name('appointments');
+    Route::get('/vision-tests', [ReportController::class, 'visionTests'])->name('vision-tests');
+    Route::get('/prescriptions', [ReportController::class, 'prescriptions'])->name('prescriptions');
+    Route::get('/revenue', [ReportController::class, 'revenue'])->name('revenue');
+    Route::get('/medicines', [ReportController::class, 'medicines'])->name('medicines');
+});
+
+require __DIR__ . '/settings.php';
+require __DIR__ . '/auth.php';

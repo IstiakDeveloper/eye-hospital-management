@@ -45,6 +45,7 @@ class PatientController extends Controller
     public function index()
     {
         $user = auth()->user();
+        $searchTerm = request('search');
 
         // Check user role and get appropriate patients
         if ($user->role_id == 2) { // Doctor role
@@ -54,16 +55,25 @@ class PatientController extends Controller
                 abort(403, 'Doctor profile not found');
             }
 
-            // Get only doctor's patients (patients who have appointments with this doctor)
-            $patients = $this->patientRepository->getDoctorPatientsPaginated($doctor->id);
+            // Get doctor's patients with or without search
+            if ($searchTerm) {
+                $patients = $this->patientRepository->searchDoctorPatientsPaginated($doctor->id, $searchTerm);
+            } else {
+                $patients = $this->patientRepository->getDoctorPatientsPaginated($doctor->id);
+            }
         } else {
             // Admin or other roles can see all patients
-            $patients = $this->patientRepository->getAllPaginated();
+            if ($searchTerm) {
+                $patients = $this->patientRepository->searchPaginated($searchTerm);
+            } else {
+                $patients = $this->patientRepository->getAllPaginated();
+            }
         }
 
         return Inertia::render('Patients/Index', [
             'patients' => $patients,
-            'userRole' => $user->role_id
+            'userRole' => $user->role_id,
+            'search' => $searchTerm,
         ]);
     }
 

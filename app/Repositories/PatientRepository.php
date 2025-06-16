@@ -584,4 +584,40 @@ class PatientRepository
             ])
             ->count();
     }
+
+
+    /**
+     * Search all patients with pagination.
+     */
+    public function searchPaginated(string $term, int $perPage = 10): LengthAwarePaginator
+    {
+        return $this->patient->where('name', 'like', '%' . $term . '%')
+            ->orWhere('phone', 'like', '%' . $term . '%')
+            ->orWhere('patient_id', 'like', '%' . $term . '%')
+            ->orWhere('email', 'like', '%' . $term . '%')
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+    }
+
+    /**
+     * Search doctor's patients with pagination.
+     */
+    public function searchDoctorPatientsPaginated(int $doctorId, string $term, int $perPage = 10): LengthAwarePaginator
+    {
+        return $this->patient
+            ->whereExists(function ($query) use ($doctorId) {
+                $query->select(DB::raw(1))
+                    ->from('appointments')
+                    ->whereColumn('appointments.patient_id', 'patients.id')
+                    ->where('appointments.doctor_id', $doctorId);
+            })
+            ->where(function ($query) use ($term) {
+                $query->where('name', 'like', '%' . $term . '%')
+                    ->orWhere('phone', 'like', '%' . $term . '%')
+                    ->orWhere('patient_id', 'like', '%' . $term . '%')
+                    ->orWhere('email', 'like', '%' . $term . '%');
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+    }
 }

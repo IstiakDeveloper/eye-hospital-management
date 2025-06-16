@@ -32,7 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'doctor' => DoctorMiddleware::class,
             'receptionist' => ReceptionistMiddleware::class,
             'doctor-or-receptionist' => DoctorOrReceptionistMiddleware::class,
-            'role' => RoleMiddleware::class,
+            
         ]);
     })
 

@@ -20,7 +20,8 @@ import {
   Activity,
   Shield,
   Search,
-  Plus
+  Plus,
+  Proportions
 } from 'lucide-react';
 
 interface PageProps {
@@ -123,6 +124,13 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
       href: route('medicines.index'),
       icon: Pill,
       current: 'medicines.*',
+      roles: ['Super Admin']
+    },
+    {
+      name: 'Reports',
+      href: route('reports.index'),
+      icon: Proportions,
+      current: 'reports.*',
       roles: ['Super Admin']
     }
   ];
