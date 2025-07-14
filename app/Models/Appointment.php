@@ -66,6 +66,16 @@ class Appointment extends Model
         return $this->belongsTo(Patient::class);
     }
 
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(PatientInvoice::class, 'invoice_id');
+    }
+
+    public function getIsPaidAttribute(): bool
+    {
+        return $this->invoice && $this->invoice->status === 'paid';
+    }
+
     /**
      * Get the doctor for this appointment.
      */

@@ -12,16 +12,22 @@ return new class extends Migration {
     {
         Schema::create('patients', function (Blueprint $table) {
             $table->id();
-            $table->string('patient_id')->unique(); // Auto-generated unique ID
+            $table->string('patient_id')->unique();
             $table->string('name');
-            $table->string('phone')->nullable();
+            $table->string('phone')->unique(); // Make phone unique
+            $table->string('nid_card')->unique()->nullable(); // Add NID card
             $table->string('email')->nullable();
             $table->text('address')->nullable();
             $table->date('date_of_birth')->nullable();
             $table->string('gender')->nullable();
             $table->text('medical_history')->nullable();
             $table->foreignId('registered_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('qr_code')->unique()->nullable();
             $table->timestamps();
+
+            // Index for searching
+            $table->index(['phone', 'nid_card']);
+            $table->index('created_at');
         });
     }
 

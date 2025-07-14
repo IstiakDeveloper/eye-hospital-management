@@ -15,7 +15,7 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create Super Admin
+
         $superAdmin = User::create([
             'name' => 'Super Admin',
             'email' => 'admin@eyehospital.com',
@@ -25,7 +25,6 @@ class UserSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // Create Doctor
         $doctor = User::create([
             'name' => 'Dr. Example',
             'email' => 'doctor@eyehospital.com',
@@ -35,7 +34,6 @@ class UserSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // Create Doctor Profile
         Doctor::create([
             'user_id' => $doctor->id,
             'specialization' => 'Ophthalmologist',
@@ -45,7 +43,6 @@ class UserSeeder extends Seeder
             'is_available' => true,
         ]);
 
-        // Create Receptionist
         User::create([
             'name' => 'Receptionist',
             'email' => 'receptionist@eyehospital.com',
@@ -54,5 +51,15 @@ class UserSeeder extends Seeder
             'phone' => '01700000002',
             'is_active' => true,
         ]);
+
+        User::create([
+            'name' => 'Refractionist',
+            'email' => 'refractionist@eyehospital.com',
+            'password' => Hash::make('password'),
+            'role_id' => 4,
+            'phone' => '01700000003',
+            'is_active' => true,
+        ]);
+
     }
 }

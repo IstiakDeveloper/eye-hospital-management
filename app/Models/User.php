@@ -131,4 +131,34 @@ class User extends Authenticatable
     {
         return $this->role->name === 'Super Admin';
     }
+
+    public function createdTransactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class, 'created_by');
+    }
+
+    public function receivedPayments(): HasMany
+    {
+        return $this->hasMany(PatientPayment::class, 'received_by');
+    }
+
+    public function createdInvoices(): HasMany
+    {
+        return $this->hasMany(PatientInvoice::class, 'created_by');
+    }
+
+    public function createdExpenses(): HasMany
+    {
+        return $this->hasMany(Expense::class, 'created_by');
+    }
+
+    public function approvedExpenses(): HasMany
+    {
+        return $this->hasMany(Expense::class, 'approved_by');
+    }
+
+    public function auditLogs(): HasMany
+    {
+        return $this->hasMany(AuditLog::class);
+    }
 }

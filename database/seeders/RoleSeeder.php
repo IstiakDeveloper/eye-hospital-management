@@ -24,7 +24,11 @@ class RoleSeeder extends Seeder
             ],
             [
                 'name' => 'Receptionist',
-                'description' => 'Can register patients, record vision tests, and manage appointments',
+                'description' => 'Can register patients, manage appointments, and handle payments',
+            ],
+            [
+                'name' => 'Refractionist',
+                'description' => 'Can conduct vision tests, manage test equipment, and generate test reports',
             ],
         ];
 

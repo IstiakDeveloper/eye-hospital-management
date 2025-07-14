@@ -75,4 +75,15 @@ class VisionTest extends Model
     {
         return $this->belongsTo(User::class, 'performed_by');
     }
+
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(PatientInvoice::class, 'invoice_id');
+    }
+
+    public function getIsPaidAttribute(): bool
+    {
+        return $this->invoice && $this->invoice->status === 'paid';
+    }
+
 }

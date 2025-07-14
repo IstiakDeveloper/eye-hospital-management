@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\DB;
 
 class PatientRepository
 {
-
-
     protected $patient;
 
     public function __construct(Patient $patient)
@@ -37,8 +35,10 @@ class PatientRepository
     /**
      * Get doctor's patients with pagination.
      */
-    public function getDoctorPatientsPaginated(int $doctorId, int $perPage = 10): LengthAwarePaginator
+    public function getDoctorPatientsPaginated(string|int $doctorId, int $perPage = 10): LengthAwarePaginator
     {
+        $doctorId = (int) $doctorId;
+
         return $this->patient
             ->whereExists(function ($query) use ($doctorId) {
                 $query->select(DB::raw(1))
@@ -53,8 +53,10 @@ class PatientRepository
     /**
      * Get doctor's patients (all).
      */
-    public function getDoctorPatients(int $doctorId): Collection
+    public function getDoctorPatients(string|int $doctorId): Collection
     {
+        $doctorId = (int) $doctorId;
+
         return $this->patient
             ->whereExists(function ($query) use ($doctorId) {
                 $query->select(DB::raw(1))
@@ -69,19 +71,21 @@ class PatientRepository
     /**
      * Check if doctor has access to patient.
      */
-    public function doctorHasAccessToPatient(int $doctorId, int $patientId): bool
+    public function doctorHasAccessToPatient(string|int $doctorId, string|int $patientId): bool
     {
         return DB::table('appointments')
-            ->where('doctor_id', $doctorId)
-            ->where('patient_id', $patientId)
+            ->where('doctor_id', (int) $doctorId)
+            ->where('patient_id', (int) $patientId)
             ->exists();
     }
 
     /**
      * Search doctor's patients.
      */
-    public function searchDoctorPatients(int $doctorId, string $term): Collection
+    public function searchDoctorPatients(string|int $doctorId, string $term): Collection
     {
+        $doctorId = (int) $doctorId;
+
         return $this->patient
             ->whereExists(function ($query) use ($doctorId) {
                 $query->select(DB::raw(1))
@@ -101,8 +105,10 @@ class PatientRepository
     /**
      * Get doctor's recent patients.
      */
-    public function getDoctorRecentPatients(int $doctorId, int $limit = 5): Collection
+    public function getDoctorRecentPatients(string|int $doctorId, int $limit = 5): Collection
     {
+        $doctorId = (int) $doctorId;
+
         return $this->patient
             ->select('patients.*')
             ->join('appointments', 'patients.id', '=', 'appointments.patient_id')
@@ -116,8 +122,10 @@ class PatientRepository
     /**
      * Get doctor's patient count.
      */
-    public function getDoctorPatientCount(int $doctorId): int
+    public function getDoctorPatientCount(string|int $doctorId): int
     {
+        $doctorId = (int) $doctorId;
+
         return $this->patient
             ->whereExists(function ($query) use ($doctorId) {
                 $query->select(DB::raw(1))
@@ -131,10 +139,10 @@ class PatientRepository
     /**
      * Get doctor's today's patient count.
      */
-    public function getDoctorTodayPatientCount(int $doctorId): int
+    public function getDoctorTodayPatientCount(string|int $doctorId): int
     {
         return DB::table('appointments')
-            ->where('doctor_id', $doctorId)
+            ->where('doctor_id', (int) $doctorId)
             ->whereDate('appointment_date', today())
             ->distinct('patient_id')
             ->count('patient_id');
@@ -143,10 +151,10 @@ class PatientRepository
     /**
      * Get doctor's monthly patient count.
      */
-    public function getDoctorMonthlyPatientCount(int $doctorId): int
+    public function getDoctorMonthlyPatientCount(string|int $doctorId): int
     {
         return DB::table('appointments')
-            ->where('doctor_id', $doctorId)
+            ->where('doctor_id', (int) $doctorId)
             ->whereMonth('appointment_date', now()->month)
             ->whereYear('appointment_date', now()->year)
             ->distinct('patient_id')
@@ -156,8 +164,10 @@ class PatientRepository
     /**
      * Get doctor's patients with latest appointment.
      */
-    public function getDoctorPatientsWithLatestAppointment(int $doctorId, int $limit = 10): Collection
+    public function getDoctorPatientsWithLatestAppointment(string|int $doctorId, int $limit = 10): Collection
     {
+        $doctorId = (int) $doctorId;
+
         return $this->patient
             ->select([
                 'patients.*',
@@ -190,14 +200,16 @@ class PatientRepository
     /**
      * Get doctor's patients needing follow-up.
      */
-    public function getDoctorPatientsNeedingFollowUp(int $doctorId): Collection
+    public function getDoctorPatientsNeedingFollowUp(string|int $doctorId): Collection
     {
+        $doctorId = (int) $doctorId;
+
         return $this->patient
             ->join('prescriptions', 'patients.id', '=', 'prescriptions.patient_id')
             ->select('patients.*', 'prescriptions.followup_date', 'prescriptions.diagnosis')
             ->where('prescriptions.doctor_id', $doctorId)
             ->where('prescriptions.followup_date', '<=', today())
-            ->whereNull('prescriptions.followup_completed_at') // Assuming you have this field
+            ->whereNull('prescriptions.followup_completed_at')
             ->orderBy('prescriptions.followup_date')
             ->get();
     }
@@ -205,8 +217,10 @@ class PatientRepository
     /**
      * Get doctor's patient statistics.
      */
-    public function getDoctorPatientStatistics(int $doctorId): array
+    public function getDoctorPatientStatistics(string|int $doctorId): array
     {
+        $doctorId = (int) $doctorId;
+
         $baseQuery = $this->patient
             ->whereExists(function ($query) use ($doctorId) {
                 $query->select(DB::raw(1))
@@ -227,8 +241,10 @@ class PatientRepository
     /**
      * Get doctor's patient gender distribution.
      */
-    public function getDoctorPatientGenderDistribution(int $doctorId): array
+    public function getDoctorPatientGenderDistribution(string|int $doctorId): array
     {
+        $doctorId = (int) $doctorId;
+
         return $this->patient
             ->select([
                 'gender',
@@ -249,8 +265,10 @@ class PatientRepository
     /**
      * Get doctor's patient age distribution.
      */
-    public function getDoctorPatientAgeDistribution(int $doctorId): array
+    public function getDoctorPatientAgeDistribution(string|int $doctorId): array
     {
+        $doctorId = (int) $doctorId;
+
         return $this->patient
             ->select([
                 DB::raw('
@@ -276,7 +294,7 @@ class PatientRepository
             ->toArray();
     }
 
-    // ========== Original Methods (Keep all existing methods) ==========
+    // ========== Original Methods ==========
 
     /**
      * Get recent patients.
@@ -299,9 +317,9 @@ class PatientRepository
     /**
      * Get patient by ID.
      */
-    public function findById(int $id): ?Patient
+    public function findById(string|int $id): ?Patient
     {
-        return $this->patient->find($id);
+        return $this->patient->find((int) $id);
     }
 
     /**
@@ -335,7 +353,7 @@ class PatientRepository
     /**
      * Update a patient.
      */
-    public function update(int $id, array $data): bool
+    public function update(string|int $id, array $data): bool
     {
         $patient = $this->findById($id);
 
@@ -349,7 +367,7 @@ class PatientRepository
     /**
      * Delete a patient.
      */
-    public function delete(int $id): bool
+    public function delete(string|int $id): bool
     {
         $patient = $this->findById($id);
 
@@ -359,8 +377,6 @@ class PatientRepository
 
         return $patient->delete();
     }
-
-
 
     /**
      * Get today's patient registrations count.
@@ -410,13 +426,25 @@ class PatientRepository
         $threeMonthsAgo = now()->subMonths(3);
 
         return $this->patient
-            ->leftJoin('vision_tests', 'patients.id', '=', 'vision_tests.patient_id')
-            ->select('patients.*')
-            ->where(function ($query) use ($threeMonthsAgo) {
-                $query->whereNull('vision_tests.test_date')
-                    ->orWhere('vision_tests.test_date', '<', $threeMonthsAgo);
+            ->leftJoin('vision_tests', function ($join) use ($threeMonthsAgo) {
+                $join->on('patients.id', '=', 'vision_tests.patient_id')
+                    ->where('vision_tests.test_date', '>=', $threeMonthsAgo);
             })
-            ->groupBy('patients.id')
+            ->select([
+                'patients.id',
+                'patients.patient_id',
+                'patients.name',
+                'patients.phone',
+                'patients.email',
+                'patients.address',
+                'patients.date_of_birth',
+                'patients.gender',
+                'patients.medical_history',
+                'patients.created_at',
+                'patients.updated_at',
+                'patients.registered_by'
+            ])
+            ->whereNull('vision_tests.patient_id')
             ->orderBy('patients.created_at', 'desc')
             ->limit($limit)
             ->get();
@@ -515,7 +543,7 @@ class PatientRepository
             ->join('prescriptions', 'patients.id', '=', 'prescriptions.patient_id')
             ->select('patients.*', 'prescriptions.followup_date', 'prescriptions.diagnosis')
             ->where('prescriptions.followup_date', '<=', today())
-            ->whereNull('prescriptions.followup_completed_at') // Assuming you have this field
+            ->whereNull('prescriptions.followup_completed_at')
             ->orderBy('prescriptions.followup_date')
             ->get();
     }
@@ -585,7 +613,6 @@ class PatientRepository
             ->count();
     }
 
-
     /**
      * Search all patients with pagination.
      */
@@ -602,8 +629,10 @@ class PatientRepository
     /**
      * Search doctor's patients with pagination.
      */
-    public function searchDoctorPatientsPaginated(int $doctorId, string $term, int $perPage = 10): LengthAwarePaginator
+    public function searchDoctorPatientsPaginated(string|int $doctorId, string $term, int $perPage = 10): LengthAwarePaginator
     {
+        $doctorId = (int) $doctorId;
+
         return $this->patient
             ->whereExists(function ($query) use ($doctorId) {
                 $query->select(DB::raw(1))

@@ -11,27 +11,9 @@ use Inertia\Inertia;
 
 class VisionTestController extends Controller
 {
-    /**
-     * The vision test repository instance.
-     *
-     * @var \App\Repositories\VisionTestRepository
-     */
     protected $visionTestRepository;
-
-    /**
-     * The patient repository instance.
-     *
-     * @var \App\Repositories\PatientRepository
-     */
     protected $patientRepository;
 
-    /**
-     * Create a new controller instance.
-     *
-     * @param  \App\Repositories\VisionTestRepository  $visionTestRepository
-     * @param  \App\Repositories\PatientRepository  $patientRepository
-     * @return void
-     */
     public function __construct(
         VisionTestRepository $visionTestRepository,
         PatientRepository $patientRepository
@@ -41,21 +23,40 @@ class VisionTestController extends Controller
     }
 
     /**
-     * Show the form for creating a new vision test.
-     *
-     * @param  int  $patientId
-     * @return \Inertia\Response
+     * Display a listing of vision tests
      */
-    public function create($patientId)
+    public function index()
     {
-        $patient = $this->patientRepository->findById($patientId);
+        $visionTests = $this->visionTestRepository->getRecentWithPatientDetails(20);
+        $stats = $this->visionTestRepository->getVisionTestStatistics();
 
-        if (!$patient) {
-            abort(404, 'Patient not found');
+        return Inertia::render('VisionTests/Index', [
+            'visionTests' => $visionTests,
+            'stats' => $stats,
+        ]);
+    }
+
+    /**
+     * Show the form for creating a new vision test.
+     */
+    public function create(Patient $patient)
+    {
+        // Check if patient payment is completed
+        if ($patient->payment_status !== 'paid') {
+            return redirect()->route('refractionist.dashboard')->withErrors([
+                'error' => 'Patient payment is not completed yet.'
+            ]);
+        }
+
+        // Check if vision test already completed
+        if ($patient->vision_test_status === 'completed') {
+            return redirect()->route('refractionist.dashboard')->withErrors([
+                'error' => 'Vision test already completed for this patient.'
+            ]);
         }
 
         // Get the latest vision test for pre-filling form
-        $latestTest = $this->visionTestRepository->getLatestForPatient($patientId);
+        $latestTest = $this->visionTestRepository->getLatestForPatient($patient->id);
 
         return Inertia::render('VisionTests/Create', [
             'patient' => $patient,
@@ -65,17 +66,14 @@ class VisionTestController extends Controller
 
     /**
      * Store a newly created vision test in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $patientId
-     * @return \Illuminate\Http\RedirectResponse
      */
-    public function store(Request $request, $patientId)
+    public function store(Request $request, Patient $patient)
     {
-        $patient = $this->patientRepository->findById($patientId);
-
-        if (!$patient) {
-            abort(404, 'Patient not found');
+        // Check if patient payment is completed
+        if ($patient->payment_status !== 'paid') {
+            return back()->withErrors([
+                'error' => 'Patient payment is not completed yet.'
+            ]);
         }
 
         $request->validate([
@@ -95,21 +93,78 @@ class VisionTestController extends Controller
         ]);
 
         $data = $request->all();
-        $data['patient_id'] = $patientId;
+        $data['patient_id'] = $patient->id;
         $data['performed_by'] = auth()->id();
         $data['test_date'] = now();
 
+        // Create vision test
         $visionTest = $this->visionTestRepository->create($data);
 
-        return redirect()->route('appointments.create.patient', $patientId)
-            ->with('success', 'Vision test recorded successfully! Now you can schedule an appointment.');
+        // Update patient progression - Complete vision test stage
+        $patient->update([
+            'vision_test_status' => 'completed',
+            'overall_status' => 'prescription',
+            'vision_test_completed_at' => now(),
+        ]);
+
+        // Auto-create appointment with selected doctor
+        \Log::info('Attempting to create appointment', [
+            'patient_id' => $patient->id,
+            'selected_doctor_id' => $patient->selected_doctor_id,
+            'has_selected_doctor' => !empty($patient->selected_doctor_id)
+        ]);
+
+        $appointment = $this->createAppointmentWithSelectedDoctor($patient);
+
+        $message = 'Vision test completed successfully!';
+        if ($appointment) {
+            $message .= ' Appointment has been automatically scheduled with Dr. ' . $appointment->doctor->user->name;
+        } else {
+            $message .= ' Patient is ready for doctor consultation.';
+        }
+
+        return redirect()->route('refractionist.dashboard')
+            ->with('success', $message);
+    }
+
+    /**
+     * Create appointment with the doctor selected during patient registration
+     */
+    private function createAppointmentWithSelectedDoctor(Patient $patient)
+    {
+        try {
+            $schedulingService = app(\App\Services\AppointmentSchedulingService::class);
+            $appointment = $schedulingService->createPostVisionTestAppointment($patient);
+
+            if ($appointment) {
+                \Log::info('Appointment created successfully', [
+                    'appointment_id' => $appointment->id,
+                    'patient_id' => $patient->id,
+                    'doctor_id' => $patient->selected_doctor_id
+                ]);
+
+                // Load the doctor relationship
+                $appointment->load('doctor.user');
+                return $appointment;
+            } else {
+                \Log::warning('No appointment created', [
+                    'patient_id' => $patient->id,
+                    'selected_doctor_id' => $patient->selected_doctor_id
+                ]);
+                return null;
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to create appointment', [
+                'error' => $e->getMessage(),
+                'patient_id' => $patient->id,
+                'selected_doctor_id' => $patient->selected_doctor_id
+            ]);
+            return null;
+        }
     }
 
     /**
      * Display the specified vision test.
-     *
-     * @param  int  $id
-     * @return \Inertia\Response
      */
     public function show($id)
     {
@@ -128,9 +183,6 @@ class VisionTestController extends Controller
 
     /**
      * Show the form for editing the specified vision test.
-     *
-     * @param  int  $id
-     * @return \Inertia\Response
      */
     public function edit($id)
     {
@@ -149,10 +201,6 @@ class VisionTestController extends Controller
 
     /**
      * Update the specified vision test in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, $id)
     {
@@ -184,15 +232,12 @@ class VisionTestController extends Controller
             return back()->with('error', 'Failed to update vision test.');
         }
 
-        return redirect()->route('patients.show', $visionTest->patient_id)
+        return redirect()->route('visiontests.show', $id)
             ->with('success', 'Vision test updated successfully!');
     }
 
     /**
      * Print the vision test report.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
      */
     public function print($id)
     {
@@ -209,10 +254,7 @@ class VisionTestController extends Controller
             'visionTest' => $visionTest
         ]);
 
-        // Set exact A4 portrait with no margins
         $pdf->setPaper('A4', 'portrait');
-
-        // Optimize DomPDF settings for single page
         $pdf->setOptions([
             'isHtml5ParserEnabled' => true,
             'isPhpEnabled' => true,
@@ -220,23 +262,10 @@ class VisionTestController extends Controller
             'dpi' => 96,
             'defaultPaperSize' => 'A4',
             'orientation' => 'portrait',
-            'isRemoteEnabled' => false,
-            'debugKeepTemp' => false,
-            'chroot' => public_path(),
-            'fontDir' => storage_path('fonts/'),
-            'fontCache' => storage_path('fonts/'),
-            'tempDir' => sys_get_temp_dir(),
-            'rootDir' => public_path(),
-            'isJavascriptEnabled' => false,
-            'defaultMediaType' => 'print',
-            'isFontSubsettingEnabled' => true,
-            'isPhpEnabled' => false
         ]);
 
-        // Set proper filename
         $filename = 'vision-test-' . $visionTest->patient->name . '-' . $visionTest->patient->patient_id . '-' . date('Y-m-d') . '.pdf';
 
-        // For download
         return $pdf->download($filename);
     }
 }

@@ -85,4 +85,16 @@ class Prescription extends Model
             ->withPivot('dosage', 'duration', 'instructions')
             ->withTimestamps();
     }
+
+
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(PatientInvoice::class, 'invoice_id');
+    }
+
+    public function getIsPaidAttribute(): bool
+    {
+        return $this->invoice && $this->invoice->status === 'paid';
+    }
+
 }

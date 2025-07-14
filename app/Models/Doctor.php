@@ -51,6 +51,22 @@ class Doctor extends Model
         return $this->hasMany(Appointment::class);
     }
 
+    public function commissions(): HasMany
+    {
+        return $this->hasMany(DoctorCommission::class);
+    }
+
+    public function getPendingCommissionsAttribute()
+    {
+        return $this->commissions()->pending()->sum('commission_amount');
+    }
+
+    public function getTotalEarningsAttribute()
+    {
+        return $this->commissions()->sum('commission_amount');
+    }
+
+
     /**
      * Get the prescriptions created by this doctor.
      */
