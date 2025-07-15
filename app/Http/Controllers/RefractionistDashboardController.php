@@ -16,8 +16,10 @@ class RefractionistDashboardController extends Controller
      */
     public function index()
     {
-        // Get patient visits ready for vision test
-        $visitsForVisionTest = PatientVisit::readyForVisionTest()
+        // Get patient visits ready for vision test (including in-progress ones)
+        $visitsForVisionTest = PatientVisit::where('payment_status', 'paid')
+            ->where('vision_test_status', '!=', 'completed') // Show all except completed
+            ->where('overall_status', 'vision_test')
             ->with(['patient', 'selectedDoctor.user', 'createdBy'])
             ->orderBy('payment_completed_at', 'asc') // First paid, first served
             ->get()
@@ -26,6 +28,7 @@ class RefractionistDashboardController extends Controller
                     'id' => $visit->id,
                     'visit_id' => $visit->visit_id,
                     'patient_id' => $visit->patient->patient_id,
+                    'patient_database_id' => $visit->patient->id, // Add this for route
                     'patient_name' => $visit->patient->name,
                     'patient_phone' => $visit->patient->phone,
                     'age' => $visit->patient->date_of_birth ? Carbon::parse($visit->patient->date_of_birth)->age : null,
@@ -42,6 +45,8 @@ class RefractionistDashboardController extends Controller
                     'total_amount' => $visit->final_amount,
                     'total_paid' => $visit->total_paid,
                     'visit_notes' => $visit->visit_notes,
+                    'vision_test_status' => $visit->vision_test_status,
+                    'is_in_progress' => $visit->vision_test_status === 'in_progress',
                 ];
             });
 
@@ -144,9 +149,6 @@ class RefractionistDashboardController extends Controller
             return back()->withErrors(['error' => 'Vision test already completed for this visit']);
         }
 
-        if ($visit->vision_test_status === 'in_progress') {
-            return back()->withErrors(['error' => 'Vision test is already in progress']);
-        }
 
         try {
             // Update status to in_progress
@@ -160,8 +162,10 @@ class RefractionistDashboardController extends Controller
                 'patient_name' => $visit->patient->name,
             ]);
 
-            return redirect()->route('visiontests.create', ['visit' => $visit->id])
-                ->with('success', 'Vision test started for ' . $visit->patient->name);
+            return redirect()->route('visiontests.create', ['patient' => $visit->patient_id])
+                ->with('success', 'Vision test started for ' . $visit->patient->name)
+                ->with('visit_id', $visit->id); // Pass visit ID in session
+
         } catch (\Exception $e) {
             \Log::error('Failed to start vision test', [
                 'visit_id' => $visit->visit_id,

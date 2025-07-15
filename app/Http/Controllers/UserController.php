@@ -166,6 +166,18 @@ class UserController extends Controller
                 ->with('success', 'User updated successfully! Please complete the doctor profile.');
         }
 
+        // If user is a doctor and already has a doctor profile, redirect to edit
+        if ($isDoctor && $user->doctor) {
+            return redirect()->route('doctors.edit', $user->doctor->id)
+                ->with('info', 'This user already has a doctor profile.');
+        }
+
+        // If user is a doctor but doesn't have a doctor profile, redirect to create
+        if ($isDoctor && !$user->doctor) {
+            return redirect()->route('doctors.create', ['user_id' => $id])
+                ->with('info', 'Please complete the doctor profile.');
+        }
+
         return redirect()->route('users.index')
             ->with('success', 'User updated successfully!');
     }

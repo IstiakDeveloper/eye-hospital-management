@@ -3,6 +3,7 @@
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DoctorController;
+use App\Http\Controllers\DoctorDashboardController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PrescriptionController;
@@ -56,7 +57,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/refractionist/start-vision-test', [RefractionistDashboardController::class, 'startVisionTest'])
         ->name('refractionist.start-vision-test');
 
-    Route::middleware(['auth', 'refractionist'])->group(function () {
+    // Vision Test Routes - Accessible by Refractionist and Doctor
+    Route::middleware(['auth'])->group(function () {
         Route::get('/vision-tests', [VisionTestController::class, 'index'])->name('visiontests.index');
         Route::get('/vision-tests/{visiontest}', [VisionTestController::class, 'show'])->name('visiontests.show');
         Route::get('/vision-tests/{visiontest}/print', [VisionTestController::class, 'print'])->name('visiontests.print');
@@ -64,10 +66,34 @@ Route::middleware(['auth'])->group(function () {
 
     // Refractionist only routes
     Route::middleware(['auth', 'refractionist'])->group(function () {
+        // Vision Test Routes
         Route::get('/patients/{patient}/vision-tests/create', [VisionTestController::class, 'create'])->name('visiontests.create');
         Route::post('/patients/{patient}/vision-tests', [VisionTestController::class, 'store'])->name('visiontests.store');
         Route::get('/vision-tests/{visiontest}/edit', [VisionTestController::class, 'edit'])->name('visiontests.edit');
         Route::put('/vision-tests/{visiontest}', [VisionTestController::class, 'update'])->name('visiontests.update');
+
+        // Refractionist Dashboard Routes
+        Route::get('/refractionist/dashboard', [RefractionistDashboardController::class, 'index'])->name('refractionist.dashboard');
+        Route::post('/refractionist/start-vision-test/{visit}', [RefractionistDashboardController::class, 'startVisionTest'])->name('refractionist.start-vision-test');
+        Route::post('/refractionist/mark-priority/{visit}', [RefractionistDashboardController::class, 'markAsPriority'])->name('refractionist.mark-priority');
+        Route::get('/refractionist/queue-updates', [RefractionistDashboardController::class, 'getQueueUpdates'])->name('refractionist.queue-updates');
+        Route::get('/refractionist/performance', [RefractionistDashboardController::class, 'getTodayPerformance'])->name('refractionist.performance');
+    });
+
+    // Doctor Routes
+    Route::middleware(['auth', 'doctor'])->prefix('doctor')->name('doctor.')->group(function () {
+        Route::get('/dashboard', [DoctorDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/patients/{patient}', [DoctorDashboardController::class, 'viewPatient'])->name('view-patient');
+        Route::post('/appointments/{appointment}/complete', [DoctorDashboardController::class, 'completeAppointment'])->name('complete-appointment');
+        Route::get('/next-patient', [DoctorDashboardController::class, 'getNextPatient'])->name('next-patient');
+        Route::get('/performance-stats', [DoctorDashboardController::class, 'getPerformanceStats'])->name('performance-stats');
+        Route::get('/search-patients', [DoctorDashboardController::class, 'searchPatients'])->name('search-patients');
+        Route::put('/appointments/{appointment}/status', [DoctorDashboardController::class, 'updateAppointmentStatus'])->name('update-appointment-status');
+
+        // Doctor Vision Test Access (Read Only)
+        Route::get('/vision-tests', [VisionTestController::class, 'index'])->name('vision-tests.index');
+        Route::get('/vision-tests/{visiontest}', [VisionTestController::class, 'show'])->name('vision-tests.show');
+        Route::get('/vision-tests/{visiontest}/print', [VisionTestController::class, 'print'])->name('vision-tests.print');
     });
 
     // Refractionist Dashboard Routes
@@ -75,7 +101,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [RefractionistDashboardController::class, 'index'])->name('dashboard');
         Route::post('/start-vision-test/{patient}', [RefractionistDashboardController::class, 'startVisionTest'])->name('start-vision-test');
         Route::post('/mark-priority/{patient}', [RefractionistDashboardController::class, 'markAsPriority'])->name('mark-priority');
+        Route::get('/queue-position/{patient}', [RefractionistDashboardController::class, 'getQueuePosition'])->name('queue-position');
+        Route::get('/queue-updates', [RefractionistDashboardController::class, 'getQueueUpdates'])->name('queue-updates');
+        Route::get('/today-performance', [RefractionistDashboardController::class, 'getTodayPerformance'])->name('today-performance');
+        Route::get('/performance', [RefractionistDashboardController::class, 'performanceReport'])->name('performance');
     });
+
     // Appointments - All can view, Receptionist & Super Admin can create/edit/delete
     Route::get('/appointments/today', [AppointmentController::class, 'today'])->name('appointments.today');
     Route::get('/patients/{patient}/appointments/create', [AppointmentController::class, 'create'])->name('appointments.create.patient')->middleware('receptionist');
@@ -110,16 +141,6 @@ Route::middleware(['auth'])->group(function () {
     });
 });
 
-Route::middleware(['auth', 'refractionist'])->prefix('refractionist')->name('refractionist.')->group(function () {
-    Route::get('/dashboard', [RefractionistDashboardController::class, 'index'])->name('dashboard');
-    Route::post('/start-vision-test/{patient}', [RefractionistDashboardController::class, 'startVisionTest'])->name('start-vision-test');
-    Route::get('/queue-position/{patient}', [RefractionistDashboardController::class, 'getQueuePosition'])->name('queue-position');
-    Route::get('/queue-updates', [RefractionistDashboardController::class, 'getQueueUpdates'])->name('queue-updates');
-    Route::post('/mark-priority/{patient}', [RefractionistDashboardController::class, 'markAsPriority'])->name('mark-priority');
-    Route::get('/today-performance', [RefractionistDashboardController::class, 'getTodayPerformance'])->name('today-performance');
-    Route::get('/performance', [RefractionistDashboardController::class, 'performanceReport'])->name('performance');
-});
-
 Route::middleware(['auth'])->prefix('receptionist')->name('receptionist.')->group(function () {
     Route::get('/dashboard', [ReceptionistDashboardController::class, 'index'])->name('dashboard');
     Route::post('/quick-search', [ReceptionistDashboardController::class, 'quickSearch'])->name('quick-search');
@@ -129,7 +150,6 @@ Route::middleware(['auth'])->prefix('receptionist')->name('receptionist.')->grou
     Route::post('/mark-completed/{patient}', [ReceptionistDashboardController::class, 'markPatientCompleted'])->name('mark-completed');
     Route::get('/hourly-stats', [ReceptionistDashboardController::class, 'getTodayHourlyStats'])->name('hourly-stats');
 });
-
 
 Route::middleware(['auth'])->prefix('reports')->name('reports.')->group(function () {
     Route::get('/', [ReportController::class, 'index'])->name('index');

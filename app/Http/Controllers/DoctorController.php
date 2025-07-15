@@ -6,6 +6,7 @@ use App\Repositories\DoctorRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class DoctorController extends Controller
@@ -70,7 +71,7 @@ class DoctorController extends Controller
                 abort(404, 'User not found');
             }
 
-            if ($user->isDoctor()) {
+            if ($user->isDoctor() && $user->doctor) {
                 return redirect()->route('doctors.edit', $user->doctor->id)
                     ->with('info', 'This user already has a doctor profile.');
             }
@@ -89,12 +90,19 @@ class DoctorController extends Controller
      */
     public function store(Request $request)
     {
+        // dd($request->all());
         try {
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
-                'email' => 'required|string|email|max:255|unique:users',
+                'email' => [
+                    'required',
+                    'string',
+                    'email',
+                    'max:255',
+                    Rule::unique('users')->ignore($request->user_id), // Laravel use Illuminate\Validation\Rule
+                ],
                 'phone' => 'nullable|string|max:20',
-                'password' => 'nullable|string|min:6',
+               'password' => 'nullable|string|min:6',
                 'specialization' => 'nullable|string|max:255',
                 'qualification' => 'nullable|string',
                 'experience_years' => 'nullable|integer|min:0',
@@ -122,7 +130,6 @@ class DoctorController extends Controller
 
             return redirect()->route('doctors.index')
                 ->with('success', 'Doctor created successfully!');
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {

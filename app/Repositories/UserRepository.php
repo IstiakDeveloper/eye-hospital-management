@@ -34,7 +34,7 @@ class UserRepository
      */
     public function getAll(): Collection
     {
-        return $this->user->with('role')->get();
+        return $this->user->with(['role', 'doctor'])->get();
     }
 
     /**
@@ -45,7 +45,7 @@ class UserRepository
      */
     public function getAllPaginated(int $perPage = 10): LengthAwarePaginator
     {
-        return $this->user->with('role')->paginate($perPage);
+        return $this->user->with(['role', 'doctor'])->paginate($perPage);
     }
 
     /**
@@ -56,7 +56,7 @@ class UserRepository
      */
     public function findById(int $id): ?User
     {
-        return $this->user->with('role')->find($id);
+        return $this->user->with(['role', 'doctor'])->find($id);
     }
 
     /**

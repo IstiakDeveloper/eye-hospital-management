@@ -19,6 +19,7 @@ class Appointment extends Model
     protected $fillable = [
         'patient_id',
         'doctor_id',
+        'visit_id',
         'appointment_date',
         'appointment_time',
         'serial_number',
@@ -130,5 +131,10 @@ class Appointment extends Model
     public function scopeToday($query)
     {
         return $query->where('appointment_date', today());
+    }
+
+    public function visit()
+    {
+        return $this->belongsTo(PatientVisit::class, 'visit_id');
     }
 }
