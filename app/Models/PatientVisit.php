@@ -273,4 +273,48 @@ class PatientVisit extends Model
             $this->updateQuietly(['payment_status' => 'pending']);
         }
     }
+
+
+
+
+
+    public function getFormattedVisitDateAttribute()
+    {
+        return $this->created_at->format('M d, Y');
+    }
+
+    public function getFormattedVisitTimeAttribute()
+    {
+        return $this->created_at->format('h:i A');
+    }
+
+    public function getStatusBadgeColorAttribute()
+    {
+        switch ($this->overall_status) {
+            case 'payment':
+                return 'red';
+            case 'vision_test':
+                return 'yellow';
+            case 'prescription':
+                return 'blue';
+            case 'completed':
+                return 'green';
+            default:
+                return 'gray';
+        }
+    }
+
+    public function prescriptions()
+    {
+        // If prescriptions table has visit_id column
+        return $this->hasMany(Prescription::class, 'visit_id');
+
+    }
+
+    public function todaysPrescriptions()
+    {
+        return $this->hasMany(Prescription::class, 'patient_id', 'patient_id')
+            ->where('doctor_id', $this->selected_doctor_id)
+            ->whereDate('created_at', $this->created_at->toDateString());
+    }
 }

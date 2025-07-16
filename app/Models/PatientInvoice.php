@@ -137,4 +137,5 @@ class PatientInvoice extends Model
     {
         return $this->belongsTo(PatientVisit::class, 'visit_id');
     }
+
 }

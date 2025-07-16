@@ -6,6 +6,7 @@ use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\DoctorDashboardController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\PatientController;
+use App\Http\Controllers\PatientVisitController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReceptionistDashboardController;
@@ -42,6 +43,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/patients/create', [PatientController::class, 'create'])->name('patients.create')->middleware('receptionist');
     Route::post('/patients', [PatientController::class, 'store'])->name('patients.store')->middleware('receptionist');
     Route::get('/patients/{patient}', [PatientController::class, 'show'])->name('patients.show');
+
     Route::get('/patients/{patient}/edit', [PatientController::class, 'edit'])->name('patients.edit')->middleware('receptionist');
     Route::put('/patients/{patient}', [PatientController::class, 'update'])->name('patients.update')->middleware('receptionist');
     Route::delete('/patients/{patient}', [PatientController::class, 'destroy'])->name('patients.destroy')->middleware('receptionist');
@@ -123,7 +125,7 @@ Route::middleware(['auth'])->group(function () {
     // Prescriptions - All can view, Doctor & Super Admin can create/edit
     Route::get('/patients/{patient}/prescriptions/create', [PrescriptionController::class, 'create'])->name('prescriptions.create.patient')->middleware('doctor');
     Route::post('/patients/{patient}/prescriptions', [PrescriptionController::class, 'store'])->name('prescriptions.store')->middleware('doctor');
-    Route::get('/prescriptions/{prescription}', [PrescriptionController::class, 'show'])->name('prescriptions.show');
+    Route::get('/prescriptions/{prescription}', [PrescriptionController::class, 'show'])->name('prescriptions.show')->middleware('doctor');
     Route::get('/prescriptions/{prescription}/edit', [PrescriptionController::class, 'edit'])->name('prescriptions.edit')->middleware('doctor');
     Route::put('/prescriptions/{prescription}', [PrescriptionController::class, 'update'])->name('prescriptions.update')->middleware('doctor');
     Route::get('/prescriptions/{prescription}/print', [PrescriptionController::class, 'print'])->name('prescriptions.print');
@@ -149,6 +151,18 @@ Route::middleware(['auth'])->prefix('receptionist')->name('receptionist.')->grou
     Route::get('/payment-method-breakdown', [ReceptionistDashboardController::class, 'getTodayPaymentMethodBreakdown'])->name('payment-method-breakdown');
     Route::post('/mark-completed/{patient}', [ReceptionistDashboardController::class, 'markPatientCompleted'])->name('mark-completed');
     Route::get('/hourly-stats', [ReceptionistDashboardController::class, 'getTodayHourlyStats'])->name('hourly-stats');
+});
+
+Route::prefix('visits')->name('visits.')->group(function () {
+    Route::get('/', [PatientVisitController::class, 'index'])->name('index');
+    Route::post('/', [PatientVisitController::class, 'store'])->name('store');
+    Route::get('/{visit}', [PatientVisitController::class, 'show'])->name('show');
+    Route::get('/{visit}/receipt', [PatientVisitController::class, 'receipt'])->name('receipt');
+    Route::patch('/{visit}/status', [PatientVisitController::class, 'updateStatus'])->name('update-status');
+
+    // Queue management
+    Route::get('/queue/vision-test', [PatientVisitController::class, 'readyForVisionTest'])->name('ready-for-vision-test');
+    Route::get('/queue/prescription', [PatientVisitController::class, 'readyForPrescription'])->name('ready-for-prescription');
 });
 
 Route::middleware(['auth'])->prefix('reports')->name('reports.')->group(function () {

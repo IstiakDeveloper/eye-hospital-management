@@ -209,52 +209,24 @@ const DoctorPatientView: React.FC<Props> = ({
     doctor
 }) => {
     const [activeTab, setActiveTab] = useState('overview');
-    const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
-        'medical-history': true,
-        'chief-complaint': true,
-        'vision-test': true,
-    });
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterStatus, setFilterStatus] = useState('all');
 
     // Helper Functions
-    const toggleSection = (section: string) => {
-        setExpandedSections(prev => ({
-            ...prev,
-            [section]: !prev[section]
-        }));
-    };
-
     const goBack = () => {
         router.visit(route('doctor.dashboard'));
     };
 
     const createPrescription = () => {
-        router.visit(route('prescriptions.create.patient', patient.id));
+        if (latestVisit) {
+            router.visit(route('prescriptions.create.patient', patient.id));
+        }
     };
 
     const printVisionTest = (visionTestId: number) => {
-        window.open(route('visiontests.print', visionTestId), '_blank');
+        window.open(route('vision-test.print', visionTestId), '_blank');
     };
 
     const printPrescription = (prescriptionId: number) => {
         window.open(route('prescriptions.print', prescriptionId), '_blank');
-    };
-
-    const viewPrescription = (prescriptionId: number) => {
-        router.visit(route('prescriptions.show', prescriptionId));
-    };
-
-    const editPrescription = (prescriptionId: number) => {
-        router.visit(route('prescriptions.edit', prescriptionId));
-    };
-
-    const formatDate = (dateString: string): string => {
-        return new Date(dateString).toLocaleDateString('en-BD', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
     };
 
     const formatCurrency = (amount: number): string => {
@@ -263,13 +235,15 @@ const DoctorPatientView: React.FC<Props> = ({
 
     const getStatusColor = (status: string): string => {
         switch (status?.toLowerCase()) {
-            case 'completed': return 'text-green-600 bg-green-100';
-            case 'paid': return 'text-green-600 bg-green-100';
-            case 'partial': return 'text-yellow-600 bg-yellow-100';
-            case 'pending': return 'text-red-600 bg-red-100';
-            case 'cancelled': return 'text-gray-600 bg-gray-100';
-            case 'in_progress': return 'text-blue-600 bg-blue-100';
-            default: return 'text-gray-600 bg-gray-100';
+            case 'completed': return 'text-green-600 bg-green-100 border-green-200';
+            case 'paid': return 'text-green-600 bg-green-100 border-green-200';
+            case 'partial': return 'text-yellow-600 bg-yellow-100 border-yellow-200';
+            case 'pending': return 'text-red-600 bg-red-100 border-red-200';
+            case 'prescription': return 'text-blue-600 bg-blue-100 border-blue-200';
+            case 'vision_test': return 'text-purple-600 bg-purple-100 border-purple-200';
+            case 'cancelled': return 'text-gray-600 bg-gray-100 border-gray-200';
+            case 'in_progress': return 'text-blue-600 bg-blue-100 border-blue-200';
+            default: return 'text-gray-600 bg-gray-100 border-gray-200';
         }
     };
 
@@ -281,7 +255,7 @@ const DoctorPatientView: React.FC<Props> = ({
         }
     };
 
-    // Safe stats object with fallbacks
+    // Safe stats with fallbacks
     const safeStats = patient.stats || {
         total_visits: patient.visits?.length || 0,
         total_prescriptions: patient.prescriptions?.length || 0,
@@ -294,248 +268,458 @@ const DoctorPatientView: React.FC<Props> = ({
         last_vision_test_date: patient.visionTests?.[0]?.formatted_date || null,
     };
 
-    // Filter functions
-    const filteredVisits = patient.visits?.filter(visit =>
-        searchTerm === '' ||
-        visit.visit_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        visit.chief_complaint?.toLowerCase().includes(searchTerm.toLowerCase())
-    ).filter(visit =>
-        filterStatus === 'all' || visit.overall_status === filterStatus
-    ) || [];
-
-    const filteredPrescriptions = patient.prescriptions?.filter(prescription =>
-        searchTerm === '' ||
-        prescription.doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        prescription.prescription_medicines.some(med =>
-            med.medicine.name.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-    ) || [];
-
     return (
         <AdminLayout title={`Patient: ${patient.name}`}>
             <Head title={`Patient: ${patient.name}`} />
 
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
-                <div className="max-w-7xl mx-auto space-y-6">
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 p-6">
+                <div className="max-w-6xl mx-auto space-y-6">
 
-                    {/* Header Section */}
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={goBack}
-                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                            <ArrowLeft className="h-5 w-5 text-gray-600" />
-                        </button>
-                        <div className="flex-1">
-                            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                                <span className="text-2xl">{getGenderIcon(patient.gender)}</span>
-                                {patient.name}
-                            </h1>
-                            <p className="text-gray-600 mt-1">
-                                Patient ID: {patient.patient_id} • Dr. {doctor.name} • Registered: {patient.formatted_registration_date}
-                            </p>
+                    {/* Header */}
+                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <button
+                                onClick={goBack}
+                                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                Back to Dashboard
+                            </button>
+                            <div className="text-sm text-gray-500">
+                                Dr. {doctor.name} • {doctor.specialization}
+                            </div>
                         </div>
-                        <div className="flex items-center gap-3">
+
+                        {/* Patient Basic Info */}
+                        <div className="flex items-center gap-6">
+                            <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl">
+                                <User className="h-10 w-10 text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                                    <span className="text-2xl">{getGenderIcon(patient.gender)}</span>
+                                    {patient.name}
+                                </h1>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm text-gray-600">
+                                    <div className="flex items-center gap-2">
+                                        <User className="h-4 w-4" />
+                                        <span>ID: {patient.patient_id}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Phone className="h-4 w-4" />
+                                        <span>{patient.phone}</span>
+                                    </div>
+                                    {patient.age && (
+                                        <div className="flex items-center gap-2">
+                                            <Calendar className="h-4 w-4" />
+                                            <span>Age: {patient.age} years</span>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                        <Activity className="h-4 w-4" />
+                                        <span>Visits: {safeStats.total_visits}</span>
+                                    </div>
+                                </div>
+                            </div>
                             {todaysAppointment && (
                                 <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-medium">
-                                    Serial: {todaysAppointment.serial_number} • {todaysAppointment.appointment_time}
+                                    Today's Serial: {todaysAppointment.serial_number}
                                 </div>
                             )}
-                            <button
-                                onClick={createPrescription}
-                                className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-2"
-                            >
-                                <Plus className="h-5 w-5" />
-                                Write Prescription
-                            </button>
                         </div>
+
+                        {/* Medical History Alert */}
+                        {patient.medical_history && (
+                            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Heart className="h-4 w-4 text-red-500" />
+                                    <span className="font-medium text-red-800">Medical History</span>
+                                </div>
+                                <p className="text-sm text-gray-700">{patient.medical_history}</p>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Patient Statistics Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                    {/* Current Visit Status */}
+                    {latestVisit && (
+                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                    <Activity className="h-6 w-6 text-blue-600" />
+                                    Current Visit - {latestVisit.visit_id}
+                                </h2>
+                                <div className="flex items-center gap-2">
+                                    <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(latestVisit.overall_status)}`}>
+                                        {latestVisit.overall_status.replace('_', ' ').toUpperCase()}
+                                    </span>
+                                    <span className="text-sm text-gray-500">{latestVisit.formatted_date}</span>
+                                </div>
+                            </div>
 
-                        {/* Basic Info Card */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <User className="h-5 w-5 text-blue-600" />
-                                Basic Info
-                            </h3>
-                            <div className="space-y-3 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Age:</span>
-                                    <span className="font-medium">{patient.age || 'N/A'} years</span>
+                            {/* Visit Progress Steps */}
+                            <div className="mb-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="font-semibold text-gray-900">Visit Progress</h3>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Gender:</span>
-                                    <span className="font-medium capitalize">{patient.gender || 'N/A'}</span>
+                                <div className="flex items-center">
+                                    {/* Payment Step */}
+                                    <div className="flex items-center">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                            latestVisit.payment_status === 'paid' ? 'bg-green-500' : 'bg-gray-300'
+                                        }`}>
+                                            {latestVisit.payment_status === 'paid' ? (
+                                                <CheckCircle className="h-4 w-4 text-white" />
+                                            ) : (
+                                                <DollarSign className="h-4 w-4 text-white" />
+                                            )}
+                                        </div>
+                                        <span className={`ml-2 text-sm font-medium ${
+                                            latestVisit.payment_status === 'paid' ? 'text-green-600' : 'text-gray-500'
+                                        }`}>
+                                            Payment
+                                        </span>
+                                    </div>
+
+                                    <div className={`flex-1 h-0.5 mx-4 ${
+                                        latestVisit.payment_status === 'paid' ? 'bg-green-500' : 'bg-gray-300'
+                                    }`}></div>
+
+                                    {/* Vision Test Step */}
+                                    <div className="flex items-center">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                            latestVisit.vision_test_status === 'completed' ? 'bg-green-500' :
+                                            latestVisit.payment_status === 'paid' ? 'bg-blue-500' : 'bg-gray-300'
+                                        }`}>
+                                            <Eye className="h-4 w-4 text-white" />
+                                        </div>
+                                        <span className={`ml-2 text-sm font-medium ${
+                                            latestVisit.vision_test_status === 'completed' ? 'text-green-600' :
+                                            latestVisit.payment_status === 'paid' ? 'text-blue-600' : 'text-gray-500'
+                                        }`}>
+                                            Vision Test
+                                        </span>
+                                    </div>
+
+                                    <div className={`flex-1 h-0.5 mx-4 ${
+                                        latestVisit.vision_test_status === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                                    }`}></div>
+
+                                    {/* Prescription Step */}
+                                    <div className="flex items-center">
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                            latestVisit.overall_status === 'completed' ? 'bg-green-500' :
+                                            latestVisit.overall_status === 'prescription' ? 'bg-blue-500' : 'bg-gray-300'
+                                        }`}>
+                                            <Stethoscope className="h-4 w-4 text-white" />
+                                        </div>
+                                        <span className={`ml-2 text-sm font-medium ${
+                                            latestVisit.overall_status === 'completed' ? 'text-green-600' :
+                                            latestVisit.overall_status === 'prescription' ? 'text-blue-600' : 'text-gray-500'
+                                        }`}>
+                                            Prescription
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Phone:</span>
-                                    <span className="font-medium text-xs">{patient.phone}</span>
-                                </div>
-                                {patient.email && (
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Email:</span>
-                                        <span className="font-medium text-xs">{patient.email}</span>
+                            </div>
+
+                            {/* Visit Details Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                {/* Chief Complaint */}
+                                {latestVisit.chief_complaint && (
+                                    <div className="md:col-span-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <AlertCircle className="h-4 w-4 text-yellow-600" />
+                                            <span className="font-medium text-yellow-800">Chief Complaint</span>
+                                        </div>
+                                        <p className="text-gray-700">{latestVisit.chief_complaint}</p>
                                     </div>
                                 )}
-                            </div>
-                        </div>
 
-                        {/* Visit Statistics Card */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <Activity className="h-5 w-5 text-green-600" />
-                                Visit Stats
-                            </h3>
-                            <div className="space-y-3 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Total Visits:</span>
-                                    <span className="font-medium">{safeStats.total_visits}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Last Visit:</span>
-                                    <span className="font-medium text-xs">{safeStats.last_visit_date || 'None'}</span>
-                                </div>
-                                {latestVisit && (
-                                    <>
+                                {/* Payment Status */}
+                                <div className="p-4 bg-green-50 rounded-lg">
+                                    <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                                        <DollarSign className="h-4 w-4" />
+                                        Payment Details
+                                    </h4>
+                                    <div className="space-y-2 text-sm">
                                         <div className="flex justify-between">
-                                            <span className="text-gray-600">Status:</span>
-                                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(latestVisit.overall_status)}`}>
-                                                {latestVisit.overall_status.replace('_', ' ').toUpperCase()}
+                                            <span className="text-green-700">Total:</span>
+                                            <span className="font-medium">{formatCurrency(latestVisit.final_amount)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-green-700">Paid:</span>
+                                            <span className="font-medium text-green-600">{formatCurrency(latestVisit.total_paid)}</span>
+                                        </div>
+                                        {latestVisit.total_due > 0 && (
+                                            <div className="flex justify-between">
+                                                <span className="text-green-700">Due:</span>
+                                                <span className="font-medium text-red-600">{formatCurrency(latestVisit.total_due)}</span>
+                                            </div>
+                                        )}
+                                        <div className="pt-2">
+                                            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(latestVisit.payment_status)}`}>
+                                                {latestVisit.payment_status.toUpperCase()}
                                             </span>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Amount:</span>
-                                            <span className="font-medium text-xs">{formatCurrency(latestVisit.final_amount)}</span>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
+                                    </div>
+                                </div>
 
-                        {/* Vision Test Card */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <Eye className="h-5 w-5 text-purple-600" />
-                                Vision Tests
-                            </h3>
-                            <div className="space-y-3 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Total Tests:</span>
-                                    <span className="font-medium">{safeStats.total_vision_tests}</span>
+                                {/* Vision Test Status */}
+                                <div className="p-4 bg-purple-50 rounded-lg">
+                                    <h4 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                                        <Eye className="h-4 w-4" />
+                                        Vision Test
+                                    </h4>
+                                    <div className="space-y-2 text-sm">
+                                        <div>
+                                            <span className="text-purple-700">Status:</span>
+                                            <span className={`px-2 py-1 rounded text-xs font-medium ml-2 ${getStatusColor(latestVisit.vision_test_status)}`}>
+                                                {latestVisit.vision_test_status.toUpperCase()}
+                                            </span>
+                                        </div>
+                                        {latestVisionTest && (
+                                            <>
+                                                <div className="flex justify-between">
+                                                    <span className="text-purple-700">Right Eye:</span>
+                                                    <span className="font-medium">{latestVisionTest.right_eye_vision || 'N/A'}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-purple-700">Left Eye:</span>
+                                                    <span className="font-medium">{latestVisionTest.left_eye_vision || 'N/A'}</span>
+                                                </div>
+                                                <div className="pt-2">
+                                                    <span className="text-xs text-purple-600">
+                                                        By: {latestVisionTest.performed_by.name}
+                                                    </span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Last Test:</span>
-                                    <span className="font-medium text-xs">{safeStats.last_vision_test_date || 'None'}</span>
-                                </div>
-                                {latestVisionTest && (
-                                    <>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Right Eye:</span>
-                                            <span className="font-medium text-xs">{latestVisionTest.right_eye_vision || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Left Eye:</span>
-                                            <span className="font-medium text-xs">{latestVisionTest.left_eye_vision || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">By:</span>
-                                            <span className="font-medium text-xs">{latestVisionTest.performed_by.name}</span>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        </div>
 
-                        {/* Prescription Card */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <Pill className="h-5 w-5 text-orange-600" />
-                                Prescriptions
-                            </h3>
-                            <div className="space-y-3 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Total:</span>
-                                    <span className="font-medium">{safeStats.total_prescriptions}</span>
+                                {/* Prescription Status */}
+                                <div className="p-4 bg-blue-50 rounded-lg">
+                                    <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                                        <Pill className="h-4 w-4" />
+                                        Prescription
+                                    </h4>
+                                    <div className="space-y-2 text-sm">
+                                        <div>
+                                            <span className="text-blue-700">My Prescriptions:</span>
+                                            <span className="font-medium ml-2">{safeStats.my_prescriptions}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-blue-700">Total Prescriptions:</span>
+                                            <span className="font-medium ml-2">{safeStats.total_prescriptions}</span>
+                                        </div>
+                                        {safeStats.my_prescriptions > 0 && (
+                                            <div className="pt-2">
+                                                <span className="px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs font-medium">
+                                                    Has Previous Prescriptions
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">By Me:</span>
-                                    <span className="font-medium">{safeStats.my_prescriptions}</span>
-                                </div>
-                                {patient.prescriptions && patient.prescriptions.length > 0 && (
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Latest:</span>
-                                        <span className="font-medium text-xs">
-                                            {patient.prescriptions[0].formatted_date}
-                                        </span>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center justify-center gap-4">
+                                {/* Ready for Prescription */}
+                                {latestVisit.overall_status === 'prescription' &&
+                                 latestVisit.payment_status === 'paid' &&
+                                 latestVisit.vision_test_status === 'completed' && (
+                                    <button
+                                        onClick={createPrescription}
+                                        className="px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-2 shadow-lg"
+                                    >
+                                        <Plus className="h-5 w-5" />
+                                        Write Prescription
+                                    </button>
+                                )}
+
+                                {/* Status Messages */}
+                                {latestVisit.payment_status !== 'paid' && (
+                                    <div className="flex items-center gap-2 px-6 py-3 bg-red-100 text-red-700 rounded-lg">
+                                        <AlertCircle className="h-5 w-5" />
+                                        <span>Waiting for payment completion</span>
                                     </div>
                                 )}
+
+                                {latestVisit.payment_status === 'paid' && latestVisit.vision_test_status !== 'completed' && (
+                                    <div className="flex items-center gap-2 px-6 py-3 bg-purple-100 text-purple-700 rounded-lg">
+                                        <Clock className="h-5 w-5" />
+                                        <span>Waiting for vision test</span>
+                                    </div>
+                                )}
+
+                                {latestVisit.overall_status === 'completed' && (
+                                    <div className="flex items-center gap-2 px-6 py-3 bg-green-100 text-green-700 rounded-lg">
+                                        <CheckCircle className="h-5 w-5" />
+                                        <span>Visit completed successfully</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Vision Test Results - Detailed */}
+                    {latestVisionTest && latestVisit?.vision_test_status === 'completed' && (
+                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                    <Eye className="h-6 w-6 text-purple-600" />
+                                    Latest Vision Test Results
+                                </h2>
                                 <button
-                                    onClick={createPrescription}
-                                    className="w-full mt-3 py-2 px-3 bg-orange-100 text-orange-800 rounded-lg text-xs font-medium hover:bg-orange-200 transition-colors"
+                                    onClick={() => printVisionTest(latestVisionTest.id)}
+                                    className="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
                                 >
-                                    + New Prescription
+                                    <Printer className="h-4 w-4" />
+                                    Print Report
                                 </button>
                             </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="p-4 border border-purple-200 rounded-lg">
+                                    <h3 className="font-semibold text-purple-900 mb-4">Right Eye (OD)</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Vision:</span>
+                                            <span className="font-medium">{latestVisionTest.right_eye_vision || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Sphere (SPH):</span>
+                                            <span className="font-medium">{latestVisionTest.right_eye_sphere || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Cylinder (CYL):</span>
+                                            <span className="font-medium">{latestVisionTest.right_eye_cylinder || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Axis:</span>
+                                            <span className="font-medium">{latestVisionTest.right_eye_axis || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 border border-purple-200 rounded-lg">
+                                    <h3 className="font-semibold text-purple-900 mb-4">Left Eye (OS)</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Vision:</span>
+                                            <span className="font-medium">{latestVisionTest.left_eye_vision || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Sphere (SPH):</span>
+                                            <span className="font-medium">{latestVisionTest.left_eye_sphere || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Cylinder (CYL):</span>
+                                            <span className="font-medium">{latestVisionTest.left_eye_cylinder || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Axis:</span>
+                                            <span className="font-medium">{latestVisionTest.left_eye_axis || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {latestVisionTest.pupillary_distance && (
+                                <div className="mt-4 p-3 bg-purple-50 rounded-lg">
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-medium text-purple-800">Pupillary Distance (PD):</span>
+                                        <span className="font-bold text-purple-900">{latestVisionTest.pupillary_distance}mm</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {latestVisionTest.additional_notes && (
+                                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                    <h4 className="font-medium text-yellow-800 mb-2">Additional Notes:</h4>
+                                    <p className="text-gray-700 text-sm">{latestVisionTest.additional_notes}</p>
+                                </div>
+                            )}
+
+                            <div className="mt-4 text-sm text-gray-600 text-center">
+                                Performed by: {latestVisionTest.performed_by.name} on {latestVisionTest.formatted_date}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Patient Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-semibold text-gray-900">Total Visits</h3>
+                                <Activity className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <p className="text-2xl font-bold text-blue-600">{safeStats.total_visits}</p>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Last: {safeStats.last_visit_date || 'None'}
+                            </p>
                         </div>
 
-                        {/* Financial Card */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <DollarSign className="h-5 w-5 text-emerald-600" />
-                                Financial
-                            </h3>
-                            <div className="space-y-3 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Total Paid:</span>
-                                    <span className="font-medium text-green-600">{formatCurrency(patient.stats.total_amount_paid)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Total Due:</span>
-                                    <span className="font-medium text-red-600">{formatCurrency(patient.stats.total_amount_due)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Appointments:</span>
-                                    <span className="font-medium">{patient.stats.total_appointments}</span>
-                                </div>
-                                {latestVisit && (
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Payment:</span>
-                                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(latestVisit.payment_status)}`}>
-                                            {latestVisit.payment_status.toUpperCase()}
-                                        </span>
-                                    </div>
-                                )}
+                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-semibold text-gray-900">Vision Tests</h3>
+                                <Eye className="h-5 w-5 text-purple-600" />
                             </div>
+                            <p className="text-2xl font-bold text-purple-600">{safeStats.total_vision_tests}</p>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Last: {safeStats.last_vision_test_date || 'None'}
+                            </p>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-semibold text-gray-900">Prescriptions</h3>
+                                <Pill className="h-5 w-5 text-green-600" />
+                            </div>
+                            <p className="text-2xl font-bold text-green-600">{safeStats.total_prescriptions}</p>
+                            <p className="text-sm text-gray-500 mt-1">
+                                By me: {safeStats.my_prescriptions}
+                            </p>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-semibold text-gray-900">Financial</h3>
+                                <DollarSign className="h-5 w-5 text-orange-600" />
+                            </div>
+                            <p className="text-lg font-bold text-green-600">{formatCurrency(safeStats.total_amount_paid)}</p>
+                            <p className="text-sm text-red-500">
+                                Due: {formatCurrency(safeStats.total_amount_due)}
+                            </p>
                         </div>
                     </div>
 
-                    {/* Main Tabs Section */}
+                    {/* Tabs Section */}
                     <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
                         <div className="border-b border-gray-200">
-                            <nav className="flex space-x-8 px-6" aria-label="Tabs">
+                            <nav className="flex space-x-8 px-6">
                                 {[
-                                    { id: 'overview', name: 'Overview', icon: Info, count: null },
+                                    { id: 'overview', name: 'Quick Overview', icon: Info },
                                     { id: 'history', name: 'Visit History', icon: History, count: safeStats.total_visits },
                                     { id: 'vision', name: 'Vision Tests', icon: Eye, count: safeStats.total_vision_tests },
                                     { id: 'prescriptions', name: 'Prescriptions', icon: Pill, count: safeStats.total_prescriptions },
-                                    { id: 'appointments', name: 'Appointments', icon: Calendar, count: safeStats.total_appointments },
                                 ].map((tab) => {
                                     const Icon = tab.icon;
                                     return (
                                         <button
                                             key={tab.id}
                                             onClick={() => setActiveTab(tab.id)}
-                                            className={`${activeTab === tab.id
+                                            className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
+                                                activeTab === tab.id
                                                     ? 'border-blue-500 text-blue-600'
-                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2`}
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                                            }`}
                                         >
                                             <Icon className="h-4 w-4" />
                                             {tab.name}
-                                            {tab.count !== null && tab.count > 0 && (
-                                                <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full ml-1">
+                                            {tab.count !== undefined && tab.count > 0 && (
+                                                <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
                                                     {tab.count}
                                                 </span>
                                             )}
@@ -546,454 +730,200 @@ const DoctorPatientView: React.FC<Props> = ({
                         </div>
 
                         <div className="p-6">
-
-                            {/* OVERVIEW TAB */}
+                            {/* Overview Tab */}
                             {activeTab === 'overview' && (
                                 <div className="space-y-6">
-
-                                    {/* Chief Complaint Section */}
-                                    {latestVisit?.chief_complaint && (
-                                        <div className="border border-gray-200 rounded-xl overflow-hidden">
-                                            <button
-                                                onClick={() => toggleSection('chief-complaint')}
-                                                className="w-full px-6 py-4 bg-yellow-50 flex items-center justify-between text-left hover:bg-yellow-100 transition-colors"
-                                            >
-                                                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                                    <AlertCircle className="h-5 w-5 text-yellow-600" />
-                                                    Chief Complaint - Latest Visit ({latestVisit.formatted_date})
-                                                </h3>
-                                                {expandedSections['chief-complaint'] ?
-                                                    <ChevronDown className="h-5 w-5 text-gray-400" /> :
-                                                    <ChevronRight className="h-5 w-5 text-gray-400" />
-                                                }
-                                            </button>
-                                            {expandedSections['chief-complaint'] && (
-                                                <div className="px-6 py-4 bg-white">
-                                                    <p className="text-gray-700 leading-relaxed">{latestVisit.chief_complaint}</p>
-                                                    {latestVisit.visit_notes && (
-                                                        <div className="mt-4 pt-4 border-t border-gray-200">
-                                                            <h5 className="font-medium text-gray-900 mb-2">Visit Notes:</h5>
-                                                            <p className="text-gray-700 text-sm">{latestVisit.visit_notes}</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Medical History Section */}
-                                    {patient.medical_history && (
-                                        <div className="border border-gray-200 rounded-xl overflow-hidden">
-                                            <button
-                                                onClick={() => toggleSection('medical-history')}
-                                                className="w-full px-6 py-4 bg-blue-50 flex items-center justify-between text-left hover:bg-blue-100 transition-colors"
-                                            >
-                                                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                                    <Heart className="h-5 w-5 text-red-600" />
-                                                    Medical History
-                                                </h3>
-                                                {expandedSections['medical-history'] ?
-                                                    <ChevronDown className="h-5 w-5 text-gray-400" /> :
-                                                    <ChevronRight className="h-5 w-5 text-gray-400" />
-                                                }
-                                            </button>
-                                            {expandedSections['medical-history'] && (
-                                                <div className="px-6 py-4 bg-white">
-                                                    <p className="text-gray-700 leading-relaxed">{patient.medical_history}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Latest Vision Test Section */}
-                                    {latestVisionTest && (
-                                        <div className="border border-gray-200 rounded-xl overflow-hidden">
-                                            <button
-                                                onClick={() => toggleSection('vision-test')}
-                                                className="w-full px-6 py-4 bg-purple-50 flex items-center justify-between text-left hover:bg-purple-100 transition-colors"
-                                            >
-                                                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                                    <Eye className="h-5 w-5 text-purple-600" />
-                                                    Latest Vision Test Results ({latestVisionTest.formatted_date})
-                                                </h3>
-                                                {expandedSections['vision-test'] ?
-                                                    <ChevronDown className="h-5 w-5 text-gray-400" /> :
-                                                    <ChevronRight className="h-5 w-5 text-gray-400" />
-                                                }
-                                            </button>
-                                            {expandedSections['vision-test'] && (
-                                                <div className="px-6 py-4 bg-white">
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                        {/* Right Eye */}
-                                                        <div>
-                                                            <h4 className="font-medium text-gray-900 mb-3">Right Eye</h4>
-                                                            <div className="space-y-2 text-sm">
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Vision:</span>
-                                                                    <span className="font-medium">{latestVisionTest.right_eye_vision || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Sphere:</span>
-                                                                    <span className="font-medium">{latestVisionTest.right_eye_sphere || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Cylinder:</span>
-                                                                    <span className="font-medium">{latestVisionTest.right_eye_cylinder || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Axis:</span>
-                                                                    <span className="font-medium">{latestVisionTest.right_eye_axis || 'N/A'}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Left Eye */}
-                                                        <div>
-                                                            <h4 className="font-medium text-gray-900 mb-3">Left Eye</h4>
-                                                            <div className="space-y-2 text-sm">
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Vision:</span>
-                                                                    <span className="font-medium">{latestVisionTest.left_eye_vision || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Sphere:</span>
-                                                                    <span className="font-medium">{latestVisionTest.left_eye_sphere || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Cylinder:</span>
-                                                                    <span className="font-medium">{latestVisionTest.left_eye_cylinder || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Axis:</span>
-                                                                    <span className="font-medium">{latestVisionTest.left_eye_axis || 'N/A'}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {latestVisionTest.pupillary_distance && (
-                                                        <div className="mt-4 pt-4 border-t border-gray-200">
-                                                            <div className="flex justify-between text-sm">
-                                                                <span className="text-gray-600">Pupillary Distance:</span>
-                                                                <span className="font-medium">{latestVisionTest.pupillary_distance}mm</span>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {latestVisionTest.additional_notes && (
-                                                        <div className="mt-4 pt-4 border-t border-gray-200">
-                                                            <h5 className="font-medium text-gray-900 mb-2">Additional Notes:</h5>
-                                                            <p className="text-gray-700 text-sm">{latestVisionTest.additional_notes}</p>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
-                                                        <div className="text-sm text-gray-600">
-                                                            Performed by: {latestVisionTest.performed_by.name}
-                                                        </div>
-                                                        <button
-                                                            onClick={() => printVisionTest(latestVisionTest.id)}
-                                                            className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
-                                                        >
-                                                            <Printer className="h-4 w-4" />
-                                                            Print Report
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                                    <h3 className="text-lg font-semibold text-gray-900">Patient Quick Overview</h3>
 
                                     {/* Contact Information */}
-                                    <div className="bg-gray-50 rounded-xl p-6">
-                                        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                            <Phone className="h-5 w-5 text-blue-600" />
-                                            Contact Information
-                                        </h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                            <div>
-                                                <span className="text-gray-600">Phone:</span>
-                                                <p className="font-medium">{patient.phone}</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="p-4 bg-gray-50 rounded-lg">
+                                            <h4 className="font-semibold text-gray-900 mb-3">Contact Details</h4>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <Phone className="h-4 w-4 text-gray-500" />
+                                                    <span>{patient.phone}</span>
+                                                </div>
+                                                {patient.email && (
+                                                    <div className="flex items-center gap-2">
+                                                        <Mail className="h-4 w-4 text-gray-500" />
+                                                        <span>{patient.email}</span>
+                                                    </div>
+                                                )}
+                                                {patient.address && (
+                                                    <div className="flex items-center gap-2">
+                                                        <MapPin className="h-4 w-4 text-gray-500" />
+                                                        <span>{patient.address}</span>
+                                                    </div>
+                                                )}
+                                                {patient.nid_card && (
+                                                    <div className="flex items-center gap-2">
+                                                        <FileText className="h-4 w-4 text-gray-500" />
+                                                        <span>NID: {patient.nid_card}</span>
+                                                    </div>
+                                                )}
                                             </div>
-                                            {patient.email && (
+                                        </div>
+
+                                        <div className="p-4 bg-gray-50 rounded-lg">
+                                            <h4 className="font-semibold text-gray-900 mb-3">Summary</h4>
+                                            <div className="space-y-2 text-sm">
                                                 <div>
-                                                    <span className="text-gray-600">Email:</span>
-                                                    <p className="font-medium">{patient.email}</p>
+                                                    <span className="text-gray-600">Age:</span>
+                                                    <span className="ml-2 font-medium">{patient.age || 'N/A'} years</span>
                                                 </div>
-                                            )}
-                                            {patient.address && (
-                                                <div className="md:col-span-2">
-                                                    <span className="text-gray-600">Address:</span>
-                                                    <p className="font-medium">{patient.address}</p>
-                                                </div>
-                                            )}
-                                            {patient.nid_card && (
                                                 <div>
-                                                    <span className="text-gray-600">NID Card:</span>
-                                                    <p className="font-medium">{patient.nid_card}</p>
+                                                    <span className="text-gray-600">Gender:</span>
+                                                    <span className="ml-2 font-medium capitalize">{patient.gender || 'N/A'}</span>
                                                 </div>
-                                            )}
+                                                <div>
+                                                    <span className="text-gray-600">Registered:</span>
+                                                    <span className="ml-2 font-medium">{patient.formatted_registration_date}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-600">Total Visits:</span>
+                                                    <span className="ml-2 font-medium">{safeStats.total_visits}</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* VISIT HISTORY TAB */}
+                            {/* Visit History Tab */}
                             {activeTab === 'history' && (
                                 <div className="space-y-4">
-                                    {/* Search and Filter */}
-                                    <div className="flex items-center gap-4 mb-6">
-                                        <div className="flex-1 relative">
-                                            <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                            <input
-                                                type="text"
-                                                placeholder="Search visits by ID or complaint..."
-                                                value={searchTerm}
-                                                onChange={(e) => setSearchTerm(e.target.value)}
-                                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
-                                        </div>
-                                        <div className="relative">
-                                            <Filter className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                            <select
-                                                value={filterStatus}
-                                                onChange={(e) => setFilterStatus(e.target.value)}
-                                                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
-                                            >
-                                                <option value="all">All Status</option>
-                                                <option value="completed">Completed</option>
-                                                <option value="pending">Pending</option>
-                                                <option value="prescription">Prescription</option>
-                                                <option value="cancelled">Cancelled</option>
-                                            </select>
-                                        </div>
-                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-900">Visit History ({safeStats.total_visits})</h3>
 
-                                    {filteredVisits.length > 0 ? (
-                                        filteredVisits.map((visit) => (
-                                            <div key={visit.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <div>
-                                                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                                                            {visit.visit_id}
-                                                            <span className="text-sm text-gray-500">• {visit.formatted_time}</span>
-                                                        </h4>
-                                                        <p className="text-sm text-gray-600">{visit.formatted_date}</p>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(visit.payment_status)}`}>
-                                                            {visit.payment_status.toUpperCase()}
-                                                        </span>
-                                                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(visit.overall_status)}`}>
+                                    {patient.visits && patient.visits.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {patient.visits.slice(0, 5).map((visit, index) => (
+                                                <div key={visit.id} className="border border-gray-200 rounded-lg p-4">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div>
+                                                            <h4 className="font-semibold text-gray-900">
+                                                                {visit.visit_id}
+                                                                {index === 0 && (
+                                                                    <span className="ml-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">Latest</span>
+                                                                )}
+                                                            </h4>
+                                                            <p className="text-sm text-gray-600">{visit.formatted_date}</p>
+                                                        </div>
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(visit.overall_status)}`}>
                                                             {visit.overall_status.replace('_', ' ').toUpperCase()}
                                                         </span>
                                                     </div>
-                                                </div>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm mb-4">
-                                                    <div>
-                                                        <span className="text-gray-600">Doctor:</span>
-                                                        <p className="font-medium">
-                                                            {visit.selected_doctor?.name || 'No Doctor Selected'}
-                                                        </p>
-                                                        {visit.selected_doctor?.specialization && (
-                                                            <p className="text-xs text-gray-500">{visit.selected_doctor.specialization}</p>
-                                                        )}
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-gray-600">Amount:</span>
-                                                        <p className="font-medium">{formatCurrency(visit.final_amount)}</p>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-gray-600">Paid:</span>
-                                                        <p className="font-medium text-green-600">{formatCurrency(visit.total_paid)}</p>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-gray-600">Due:</span>
-                                                        <p className="font-medium text-red-600">{formatCurrency(visit.total_due)}</p>
-                                                    </div>
-                                                </div>
+                                                    {visit.chief_complaint && (
+                                                        <div className="mb-3 p-3 bg-yellow-50 rounded-lg">
+                                                            <span className="font-medium text-yellow-800 text-sm">Chief Complaint:</span>
+                                                            <p className="text-sm text-gray-700 mt-1">{visit.chief_complaint}</p>
+                                                        </div>
+                                                    )}
 
-                                                {visit.chief_complaint && (
-                                                    <div className="mb-4 p-4 bg-yellow-50 rounded-lg">
-                                                        <span className="text-gray-600 text-sm font-medium">Chief Complaint:</span>
-                                                        <p className="font-medium text-sm mt-1">{visit.chief_complaint}</p>
-                                                    </div>
-                                                )}
-
-                                                {visit.visit_notes && (
-                                                    <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-                                                        <span className="text-gray-600 text-sm font-medium">Visit Notes:</span>
-                                                        <p className="font-medium text-sm mt-1">{visit.visit_notes}</p>
-                                                    </div>
-                                                )}
-
-                                                {visit.payments.length > 0 && (
-                                                    <div className="mt-4 pt-4 border-t border-gray-200">
-                                                        <h6 className="font-medium text-gray-900 mb-2">Payment History:</h6>
-                                                        <div className="space-y-2">
-                                                            {visit.payments.map((payment) => (
-                                                                <div key={payment.id} className="flex justify-between items-center text-sm bg-green-50 p-2 rounded">
-                                                                    <div>
-                                                                        <span className="font-medium">{formatCurrency(payment.amount)}</span>
-                                                                        <span className="text-gray-600 ml-2">• {payment.payment_method}</span>
-                                                                    </div>
-                                                                    <div className="text-xs text-gray-500">
-                                                                        {payment.formatted_date}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
+                                                    <div className="grid grid-cols-3 gap-4 text-sm">
+                                                        <div>
+                                                            <span className="text-gray-600">Amount:</span>
+                                                            <p className="font-medium">{formatCurrency(visit.final_amount)}</p>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-600">Payment:</span>
+                                                            <span className={`px-2 py-1 rounded text-xs font-medium ml-1 ${getStatusColor(visit.payment_status)}`}>
+                                                                {visit.payment_status.toUpperCase()}
+                                                            </span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="text-gray-600">Doctor:</span>
+                                                            <p className="font-medium text-xs">
+                                                                {visit.selected_doctor?.name || 'N/A'}
+                                                            </p>
                                                         </div>
                                                     </div>
-                                                )}
-                                            </div>
-                                        ))
+                                                </div>
+                                            ))}
+                                            {patient.visits.length > 5 && (
+                                                <div className="text-center py-4">
+                                                    <p className="text-gray-500 text-sm">
+                                                        Showing 5 of {patient.visits.length} visits
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
                                     ) : (
                                         <div className="text-center py-12">
                                             <History className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                                            <p className="text-gray-600">
-                                                {searchTerm || filterStatus !== 'all' ? 'No visits found matching your search criteria' : 'No visit history found'}
-                                            </p>
+                                            <p className="text-gray-600">No visit history found</p>
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            {/* VISION TESTS TAB */}
+                            {/* Vision Tests Tab */}
                             {activeTab === 'vision' && (
                                 <div className="space-y-4">
-                                    {patient.visionTests && patient.visionTests.length > 0 ? (
-                                        <>
-                                            <div className="flex items-center justify-between mb-6">
-                                                <h3 className="text-lg font-semibold text-gray-900">
-                                                    Vision Test History ({patient.visionTests.length} tests)
-                                                </h3>
-                                                <div className="text-sm text-gray-600">
-                                                    Latest: {patient.stats.last_vision_test_date || 'None'}
-                                                </div>
-                                            </div>
+                                    <h3 className="text-lg font-semibold text-gray-900">Vision Test History ({safeStats.total_vision_tests})</h3>
 
-                                            {patient.visionTests.map((test, index) => (
-                                                <div key={test.id || index} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                                    {patient.visionTests && patient.visionTests.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {patient.visionTests.slice(0, 3).map((test, index) => (
+                                                <div key={test.id} className="border border-gray-200 rounded-lg p-4">
                                                     <div className="flex items-center justify-between mb-4">
                                                         <div>
-                                                            <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                                            <h4 className="font-semibold text-gray-900">
                                                                 Vision Test #{test.id}
                                                                 {index === 0 && (
-                                                                    <span className="bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full">Latest</span>
+                                                                    <span className="ml-2 bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full">Latest</span>
                                                                 )}
                                                             </h4>
-                                                            <p className="text-sm text-gray-600">{test.formatted_date} • {test.formatted_time}</p>
+                                                            <p className="text-sm text-gray-600">{test.formatted_date}</p>
                                                         </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="text-sm text-gray-600">
-                                                                by {test.performed_by?.name || 'Unknown'}
-                                                            </div>
-                                                            {test.can_print && (
-                                                                <button
-                                                                    onClick={() => printVisionTest(test.id)}
-                                                                    className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                                                    title="Print Vision Test Report"
-                                                                >
-                                                                    <Printer className="h-4 w-4" />
-                                                                </button>
-                                                            )}
-                                                        </div>
+                                                        <button
+                                                            onClick={() => printVisionTest(test.id)}
+                                                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                                        >
+                                                            <Printer className="h-4 w-4" />
+                                                        </button>
                                                     </div>
 
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                        <div>
-                                                            <h5 className="font-medium text-gray-900 mb-3">Right Eye</h5>
-                                                            <div className="space-y-2 text-sm bg-gray-50 p-4 rounded-lg">
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Vision:</span>
-                                                                    <span className="font-medium">{test.right_eye_vision || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Sphere:</span>
-                                                                    <span className="font-medium">{test.right_eye_sphere || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Cylinder:</span>
-                                                                    <span className="font-medium">{test.right_eye_cylinder || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Axis:</span>
-                                                                    <span className="font-medium">{test.right_eye_axis || 'N/A'}</span>
-                                                                </div>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div className="p-3 bg-purple-50 rounded-lg">
+                                                            <h5 className="font-medium text-purple-800 mb-2">Right Eye</h5>
+                                                            <div className="space-y-1 text-sm">
+                                                                <div>Vision: {test.right_eye_vision || 'N/A'}</div>
+                                                                <div>SPH: {test.right_eye_sphere || 'N/A'}</div>
                                                             </div>
                                                         </div>
-
-                                                        <div>
-                                                            <h5 className="font-medium text-gray-900 mb-3">Left Eye</h5>
-                                                            <div className="space-y-2 text-sm bg-gray-50 p-4 rounded-lg">
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Vision:</span>
-                                                                    <span className="font-medium">{test.left_eye_vision || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Sphere:</span>
-                                                                    <span className="font-medium">{test.left_eye_sphere || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Cylinder:</span>
-                                                                    <span className="font-medium">{test.left_eye_cylinder || 'N/A'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-gray-600">Axis:</span>
-                                                                    <span className="font-medium">{test.left_eye_axis || 'N/A'}</span>
-                                                                </div>
+                                                        <div className="p-3 bg-purple-50 rounded-lg">
+                                                            <h5 className="font-medium text-purple-800 mb-2">Left Eye</h5>
+                                                            <div className="space-y-1 text-sm">
+                                                                <div>Vision: {test.left_eye_vision || 'N/A'}</div>
+                                                                <div>SPH: {test.left_eye_sphere || 'N/A'}</div>
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    {test.pupillary_distance && (
-                                                        <div className="mt-4 pt-4 border-t border-gray-200">
-                                                            <div className="flex justify-between text-sm bg-blue-50 p-3 rounded-lg">
-                                                                <span className="text-gray-600 font-medium">Pupillary Distance:</span>
-                                                                <span className="font-medium">{test.pupillary_distance}mm</span>
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {test.additional_notes && (
-                                                        <div className="mt-4 pt-4 border-t border-gray-200">
-                                                            <h6 className="font-medium text-gray-900 mb-2">Additional Notes:</h6>
-                                                            <div className="bg-yellow-50 p-4 rounded-lg">
-                                                                <p className="text-gray-700 text-sm">{test.additional_notes}</p>
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                    <div className="mt-3 text-sm text-gray-600">
+                                                        Performed by: {test.performed_by?.name}
+                                                    </div>
                                                 </div>
                                             ))}
-                                        </>
+                                        </div>
                                     ) : (
                                         <div className="text-center py-12">
                                             <Eye className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                                            <p className="text-gray-600 mb-4">No vision tests found</p>
-                                            <p className="text-sm text-gray-500">
-                                                Vision tests are performed by refractionist staff. Once completed, they will appear here.
-                                            </p>
+                                            <p className="text-gray-600">No vision tests found</p>
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            {/* PRESCRIPTIONS TAB */}
+                            {/* Prescriptions Tab */}
                             {activeTab === 'prescriptions' && (
                                 <div className="space-y-4">
-                                    {/* Search */}
-                                    <div className="flex items-center gap-4 mb-6">
-                                        <div className="flex-1 relative">
-                                            <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                            <input
-                                                type="text"
-                                                placeholder="Search prescriptions by doctor or medicine..."
-                                                value={searchTerm}
-                                                onChange={(e) => setSearchTerm(e.target.value)}
-                                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
-                                        </div>
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-lg font-semibold text-gray-900">
+                                            Prescription History ({safeStats.total_prescriptions})
+                                        </h3>
                                         <button
                                             onClick={createPrescription}
                                             className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
@@ -1003,67 +933,38 @@ const DoctorPatientView: React.FC<Props> = ({
                                         </button>
                                     </div>
 
-                                    {filteredPrescriptions.length > 0 ? (
-                                        <>
-                                            <div className="flex items-center justify-between mb-6">
-                                                <h3 className="text-lg font-semibold text-gray-900">
-                                                    Prescription History ({filteredPrescriptions.length} prescriptions)
-                                                </h3>
-                                                <div className="text-sm text-gray-600">
-                                                    My Prescriptions: {patient.stats.my_prescriptions}
-                                                </div>
-                                            </div>
-
-                                            {filteredPrescriptions.map((prescription, index) => (
-                                                <div key={prescription.id} className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                                    {patient.prescriptions && patient.prescriptions.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {patient.prescriptions.slice(0, 3).map((prescription, index) => (
+                                                <div key={prescription.id} className="border border-gray-200 rounded-lg p-4">
                                                     <div className="flex items-center justify-between mb-4">
                                                         <div>
-                                                            <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                                            <h4 className="font-semibold text-gray-900">
                                                                 Prescription #{prescription.id}
                                                                 {index === 0 && (
-                                                                    <span className="bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full">Latest</span>
+                                                                    <span className="ml-2 bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full">Latest</span>
                                                                 )}
                                                                 {prescription.can_edit && (
-                                                                    <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">Can Edit</span>
+                                                                    <span className="ml-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">Can Edit</span>
                                                                 )}
                                                             </h4>
-                                                            <p className="text-sm text-gray-600">{prescription.formatted_date} • {prescription.formatted_time}</p>
+                                                            <p className="text-sm text-gray-600">{prescription.formatted_date}</p>
                                                         </div>
                                                         <div className="flex gap-2">
                                                             <button
-                                                                onClick={() => viewPrescription(prescription.id)}
+                                                                onClick={() => printPrescription(prescription.id)}
                                                                 className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                                                title="View Prescription Details"
                                                             >
-                                                                <Eye className="h-4 w-4" />
+                                                                <Printer className="h-4 w-4" />
                                                             </button>
-                                                            {prescription.can_print && (
-                                                                <button
-                                                                    onClick={() => printPrescription(prescription.id)}
-                                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                                    title="Print Prescription"
-                                                                >
-                                                                    <Printer className="h-4 w-4" />
-                                                                </button>
-                                                            )}
-                                                            {prescription.can_edit && (
-                                                                <button
-                                                                    onClick={() => editPrescription(prescription.id)}
-                                                                    className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                                                                    title="Edit Prescription"
-                                                                >
-                                                                    <Edit className="h-4 w-4" />
-                                                                </button>
-                                                            )}
                                                         </div>
                                                     </div>
 
-                                                    <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                                                        <div className="flex items-center justify-between">
+                                                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                                                        <div className="flex justify-between items-center">
                                                             <div>
                                                                 <span className="text-gray-600 text-sm">Prescribed by:</span>
                                                                 <p className="font-medium">{prescription.doctor.name}</p>
-                                                                <p className="text-xs text-gray-500">{prescription.doctor.specialization}</p>
                                                             </div>
                                                             <div className="text-right">
                                                                 <span className="text-gray-600 text-sm">Medicines:</span>
@@ -1072,63 +973,47 @@ const DoctorPatientView: React.FC<Props> = ({
                                                         </div>
                                                     </div>
 
-                                                    <div className="space-y-3">
-                                                        <h6 className="font-medium text-gray-900">Medicines:</h6>
-                                                        {prescription.prescription_medicines && prescription.prescription_medicines.map((medicine, medIndex) => (
-                                                            <div key={medIndex} className="bg-white border border-gray-200 rounded-lg p-4">
-                                                                <div className="flex items-start justify-between">
-                                                                    <div className="flex-1">
-                                                                        <h5 className="font-medium text-gray-900">
-                                                                            {medicine.medicine?.name || 'Unknown Medicine'}
-                                                                            {medicine.medicine?.strength && (
-                                                                                <span className="text-gray-600 ml-2">({medicine.medicine.strength})</span>
-                                                                            )}
-                                                                            {medicine.medicine?.type && (
-                                                                                <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded ml-2">
-                                                                                    {medicine.medicine.type}
-                                                                                </span>
-                                                                            )}
-                                                                        </h5>
-                                                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-3 text-sm">
-                                                                            <div className="bg-blue-50 p-2 rounded">
-                                                                                <span className="font-medium text-blue-800">Dosage:</span>
-                                                                                <p className="text-blue-700">{medicine.dosage || 'N/A'}</p>
-                                                                            </div>
-                                                                            <div className="bg-green-50 p-2 rounded">
-                                                                                <span className="font-medium text-green-800">Frequency:</span>
-                                                                                <p className="text-green-700">{medicine.frequency || 'N/A'}</p>
-                                                                            </div>
-                                                                            <div className="bg-yellow-50 p-2 rounded">
-                                                                                <span className="font-medium text-yellow-800">Duration:</span>
-                                                                                <p className="text-yellow-700">{medicine.duration || 'N/A'}</p>
-                                                                            </div>
-                                                                            {medicine.quantity && (
-                                                                                <div className="bg-purple-50 p-2 rounded">
-                                                                                    <span className="font-medium text-purple-800">Quantity:</span>
-                                                                                    <p className="text-purple-700">{medicine.quantity}</p>
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                        {medicine.instructions && (
-                                                                            <div className="mt-3 p-3 bg-orange-50 rounded">
-                                                                                <span className="font-medium text-orange-800 text-sm">Special Instructions:</span>
-                                                                                <p className="text-orange-700 text-sm mt-1">{medicine.instructions}</p>
-                                                                            </div>
+                                                    {prescription.prescription_medicines && prescription.prescription_medicines.length > 0 && (
+                                                        <div className="space-y-2">
+                                                            <h6 className="font-medium text-gray-900">Medicines:</h6>
+                                                            {prescription.prescription_medicines.slice(0, 2).map((medicine, medIndex) => (
+                                                                <div key={medIndex} className="p-3 bg-white border border-gray-200 rounded-lg">
+                                                                    <h5 className="font-medium text-gray-900">
+                                                                        {medicine.medicine?.name || 'Unknown Medicine'}
+                                                                        {medicine.medicine?.strength && (
+                                                                            <span className="text-gray-600 ml-2">({medicine.medicine.strength})</span>
                                                                         )}
+                                                                    </h5>
+                                                                    <div className="grid grid-cols-3 gap-2 mt-2 text-sm">
+                                                                        <div>
+                                                                            <span className="text-gray-600">Dosage:</span>
+                                                                            <p className="font-medium">{medicine.dosage}</p>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="text-gray-600">Frequency:</span>
+                                                                            <p className="font-medium">{medicine.frequency}</p>
+                                                                        </div>
+                                                                        <div>
+                                                                            <span className="text-gray-600">Duration:</span>
+                                                                            <p className="font-medium">{medicine.duration}</p>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
+                                                            ))}
+                                                            {prescription.prescription_medicines.length > 2 && (
+                                                                <p className="text-sm text-gray-500 text-center">
+                                                                    +{prescription.prescription_medicines.length - 2} more medicines
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
-                                        </>
+                                        </div>
                                     ) : (
                                         <div className="text-center py-12">
                                             <Pill className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                                            <p className="text-gray-600">
-                                                {searchTerm ? 'No prescriptions found matching your search' : 'No prescriptions found'}
-                                            </p>
+                                            <p className="text-gray-600">No prescriptions found</p>
                                             <button
                                                 onClick={createPrescription}
                                                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
@@ -1139,107 +1024,20 @@ const DoctorPatientView: React.FC<Props> = ({
                                     )}
                                 </div>
                             )}
-
-                            {/* APPOINTMENTS TAB */}
-                            {activeTab === 'appointments' && (
-                                <div className="space-y-4">
-                                    {patient.appointments && patient.appointments.length > 0 ? (
-                                        <>
-                                            <div className="flex items-center justify-between mb-6">
-                                                <h3 className="text-lg font-semibold text-gray-900">
-                                                    Appointment History ({patient.appointments.length} appointments)
-                                                </h3>
-                                                {todaysAppointment && (
-                                                    <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-lg text-sm font-medium">
-                                                        Today: Serial {todaysAppointment.serial_number}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {patient.appointments.map((appointment, index) => (
-                                                <div key={appointment.id} className={`border rounded-xl p-6 hover:shadow-md transition-shadow ${appointment.is_today ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
-                                                    }`}>
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <div>
-                                                            <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                                                                Appointment #{appointment.id}
-                                                                {appointment.is_today && (
-                                                                    <span className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">Today</span>
-                                                                )}
-                                                                {appointment.is_past && !appointment.is_today && (
-                                                                    <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">Past</span>
-                                                                )}
-                                                            </h4>
-                                                            <p className="text-sm text-gray-600">
-                                                                {appointment.formatted_date} • {appointment.appointment_time}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="text-sm text-gray-600">
-                                                                Serial: {appointment.serial_number}
-                                                            </span>
-                                                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(appointment.status)}`}>
-                                                                {appointment.status.replace('_', ' ').toUpperCase()}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                                        <div>
-                                                            <span className="text-gray-600">Doctor:</span>
-                                                            <p className="font-medium">{appointment.doctor.name}</p>
-                                                            <p className="text-xs text-gray-500">{appointment.doctor.specialization}</p>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-gray-600">Date & Time:</span>
-                                                            <p className="font-medium">{appointment.formatted_date}</p>
-                                                            <p className="text-xs text-gray-500">{appointment.appointment_time}</p>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-gray-600">Status:</span>
-                                                            <p className={`font-medium text-sm ${appointment.status === 'completed' ? 'text-green-600' :
-                                                                    appointment.status === 'pending' ? 'text-red-600' :
-                                                                        appointment.status === 'in_progress' ? 'text-blue-600' :
-                                                                            'text-gray-600'
-                                                                }`}>
-                                                                {appointment.status.replace('_', ' ').toUpperCase()}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </>
-                                    ) : (
-                                        <div className="text-center py-12">
-                                            <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                                            <p className="text-gray-600">No appointments found</p>
-                                            <p className="text-sm text-gray-500 mt-2">
-                                                Appointments are created by reception staff.
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
 
-                    {/* Action Bar */}
+                    {/* Footer Actions */}
                     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-6">
-                                <div className="text-sm text-gray-600">
-                                    <strong>Patient registered:</strong> {patient.formatted_registration_date}
-                                </div>
+                            <div className="text-sm text-gray-600">
+                                <strong>Consultation with:</strong> Dr. {doctor.name} ({doctor.specialization})
                                 {todaysAppointment && (
-                                    <div className="text-sm text-gray-600">
-                                        <strong>Today's appointment:</strong> {todaysAppointment.appointment_time} (Serial: {todaysAppointment.serial_number})
-                                    </div>
+                                    <span className="ml-4">
+                                        <strong>Today's Serial:</strong> {todaysAppointment.serial_number} at {todaysAppointment.appointment_time}
+                                    </span>
                                 )}
-                                <div className="text-sm text-gray-600">
-                                    <strong>Total visits:</strong> {patient.stats.total_visits}
-                                </div>
                             </div>
-
                             <div className="flex items-center gap-3">
                                 {latestVisionTest && (
                                     <button
@@ -1247,35 +1045,25 @@ const DoctorPatientView: React.FC<Props> = ({
                                         className="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
                                     >
                                         <Eye className="h-4 w-4" />
-                                        Latest Vision Report
+                                        Print Vision Test
                                     </button>
                                 )}
-
-                                {patient.prescriptions.length > 0 && (
-                                    <button
-                                        onClick={() => printPrescription(patient.prescriptions[0].id)}
-                                        className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg font-medium hover:bg-blue-50 transition-colors flex items-center gap-2"
-                                    >
-                                        <Pill className="h-4 w-4" />
-                                        Latest Prescription
-                                    </button>
-                                )}
-
                                 <button
                                     onClick={() => window.print()}
                                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
                                 >
                                     <Printer className="h-4 w-4" />
-                                    Print Patient Info
+                                    Print Summary
                                 </button>
-
-                                <button
-                                    onClick={createPrescription}
-                                    className="px-6 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-2"
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    Write Prescription
-                                </button>
+                                {latestVisit && latestVisit.overall_status === 'prescription' && (
+                                    <button
+                                        onClick={createPrescription}
+                                        className="px-6 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-2"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Write Prescription
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

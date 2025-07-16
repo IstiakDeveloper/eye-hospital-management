@@ -23,6 +23,7 @@ import {
   Plus,
   Proportions
 } from 'lucide-react';
+import FlashMessages from '@/components/FlashMessage';
 
 interface PageProps {
   auth: {
@@ -171,6 +172,9 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
 
   return (
     <div className="h-screen flex overflow-hidden bg-slate-50">
+      {/* Flash Messages */}
+      <FlashMessages />
+
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div

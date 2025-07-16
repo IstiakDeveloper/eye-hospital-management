@@ -6,6 +6,7 @@ use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ReceptionistMiddleware;
 use App\Http\Middleware\RefractionistMiddleware;
+use App\Http\Middleware\RoleBasedDashboard;
 use App\Http\Middleware\RoleMiddleware;
 use App\Http\Middleware\SuperAdminMiddleware;
 use Illuminate\Foundation\Application;
@@ -34,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'receptionist' => ReceptionistMiddleware::class,
             'refractionist' => RefractionistMiddleware::class,
             'doctor-or-receptionist' => DoctorOrReceptionistMiddleware::class,
+            'role.dashboard' => RoleBasedDashboard::class,
 
         ]);
     })

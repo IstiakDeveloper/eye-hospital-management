@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Patient;
+use App\Models\PatientVisit;
 use App\Models\Doctor;
 use App\Models\PaymentMethod;
 use App\Models\PatientPayment;
@@ -34,25 +35,28 @@ class ReceptionistDashboardController extends Controller
         // Get dashboard statistics
         $stats = $this->getDashboardStats();
 
-        // Get recent patients (last 10)
-        $recentPatients = Patient::with(['selectedDoctor.user', 'payments'])
+        // Get recent visits (last 10)
+        $recentVisits = PatientVisit::with(['patient', 'selectedDoctor.user', 'payments'])
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get()
-            ->map(function ($patient) {
+            ->map(function ($visit) {
                 return [
-                    'id' => $patient->id,
-                    'patient_id' => $patient->patient_id,
-                    'name' => $patient->name,
-                    'phone' => $patient->phone,
-                    'email' => $patient->email,
-                    'registration_status' => $patient->registration_status,
-                    'payment_status' => $patient->payment_status,
-                    'total_paid' => $patient->payments->sum('amount'),
-                    'final_amount' => $patient->final_amount ?? 0,
-                    'created_at' => $patient->created_at,
-                    'doctor_name' => $patient->selectedDoctor && $patient->selectedDoctor->user
-                        ? $patient->selectedDoctor->user->name
+                    'id' => $visit->id,
+                    'visit_id' => $visit->visit_id,
+                    'patient_id' => $visit->patient->patient_id,
+                    'patient_name' => $visit->patient->name,
+                    'phone' => $visit->patient->phone,
+                    'email' => $visit->patient->email,
+                    'payment_status' => $visit->payment_status,
+                    'vision_test_status' => $visit->vision_test_status,
+                    'overall_status' => $visit->overall_status,
+                    'total_paid' => $visit->total_paid,
+                    'final_amount' => $visit->final_amount,
+                    'total_due' => $visit->total_due,
+                    'created_at' => $visit->created_at,
+                    'doctor_name' => $visit->selectedDoctor && $visit->selectedDoctor->user
+                        ? $visit->selectedDoctor->user->name
                         : null,
                 ];
             });
@@ -60,29 +64,49 @@ class ReceptionistDashboardController extends Controller
         // Get today's payments summary
         $todayPayments = $this->getTodayPaymentsSummary();
 
-        // Get pending patients (payment not completed)
-        $pendingPatients = Patient::where('payment_status', '!=', 'paid')
-            ->with(['selectedDoctor.user'])
+        // Get pending visits (payment not completed)
+        $pendingVisits = PatientVisit::where('payment_status', '!=', 'paid')
+            ->with(['patient', 'selectedDoctor.user'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get()
-            ->map(function ($patient) {
+            ->map(function ($visit) {
                 return [
-                    'id' => $patient->id,
-                    'patient_id' => $patient->patient_id,
-                    'name' => $patient->name,
-                    'phone' => $patient->phone,
-                    'payment_status' => $patient->payment_status,
-                    'total_due' => ($patient->final_amount ?? 0) - $patient->payments->sum('amount'),
-                    'created_at' => $patient->created_at,
+                    'id' => $visit->id,
+                    'visit_id' => $visit->visit_id,
+                    'patient_id' => $visit->patient->patient_id,
+                    'patient_name' => $visit->patient->name,
+                    'phone' => $visit->patient->phone,
+                    'payment_status' => $visit->payment_status,
+                    'total_due' => $visit->total_due,
+                    'final_amount' => $visit->final_amount,
+                    'total_paid' => $visit->total_paid,
+                    'created_at' => $visit->created_at,
+                    'doctor_name' => $visit->selectedDoctor && $visit->selectedDoctor->user
+                        ? $visit->selectedDoctor->user->name
+                        : null,
+                ];
+            });
+
+        // Get doctors for new visit modal
+        $doctors = Doctor::with('user')
+            ->where('is_available', true)
+            ->get()
+            ->map(function ($doctor) {
+                return [
+                    'id' => $doctor->id,
+                    'name' => $doctor->user ? $doctor->user->name : 'Unknown Doctor',
+                    'specialization' => $doctor->specialization ?? 'General',
+                    'consultation_fee' => $doctor->consultation_fee ?? 0,
                 ];
             });
 
         return Inertia::render('Receptionist/Dashboard', [
             'stats' => $stats,
-            'recentPatients' => $recentPatients,
+            'recentVisits' => $recentVisits,
             'todayPayments' => $todayPayments,
-            'pendingPatients' => $pendingPatients,
+            'pendingVisits' => $pendingVisits,
+            'doctors' => $doctors,
         ]);
     }
 
@@ -93,50 +117,59 @@ class ReceptionistDashboardController extends Controller
     {
         $request->validate(['term' => 'required|string|min:2']);
 
+        // Search patients first
         $patients = Patient::where('name', 'like', '%' . $request->term . '%')
             ->orWhere('phone', 'like', '%' . $request->term . '%')
             ->orWhere('patient_id', 'like', '%' . $request->term . '%')
-            ->with(['selectedDoctor.user'])
+            ->orWhere('nid_card', 'like', '%' . $request->term . '%')
             ->limit(8)
-            ->get()
-            ->map(function ($patient) {
-                return [
-                    'id' => $patient->id,
-                    'patient_id' => $patient->patient_id,
-                    'name' => $patient->name,
-                    'phone' => $patient->phone,
-                    'email' => $patient->email,
-                    'registration_status' => $patient->registration_status,
-                    'payment_status' => $patient->payment_status,
-                    'created_at' => $patient->created_at,
-                    'doctor_name' => $patient->selectedDoctor && $patient->selectedDoctor->user
-                        ? $patient->selectedDoctor->user->name
-                        : null,
-                ];
-            });
+            ->get();
 
-        return response()->json($patients);
+        // Get their latest visits
+        $results = $patients->map(function ($patient) {
+            $latestVisit = $patient->visits()->latest()->first();
+
+            return [
+                'patient_id' => $patient->id,
+                'visit_id' => $latestVisit?->id,
+                'patient_unique_id' => $patient->patient_id,
+                'visit_unique_id' => $latestVisit?->visit_id,
+                'name' => $patient->name,
+                'phone' => $patient->phone,
+                'email' => $patient->email,
+                'nid_card' => $patient->nid_card,
+                'payment_status' => $latestVisit?->payment_status ?? 'no_visit',
+                'vision_test_status' => $latestVisit?->vision_test_status ?? 'no_visit',
+                'overall_status' => $latestVisit?->overall_status ?? 'no_visit',
+                'created_at' => $patient->created_at,
+                'latest_visit_date' => $latestVisit?->created_at,
+                'doctor_name' => $latestVisit?->selectedDoctor?->user?->name,
+                'has_active_visit' => $latestVisit && $latestVisit->overall_status !== 'completed',
+            ];
+        });
+
+        return response()->json($results);
     }
 
     /**
-     * Get patient for receipt printing
+     * Get visit for receipt printing
      */
-    public function getPatientReceipt(Patient $patient)
+    public function getVisitReceipt(PatientVisit $visit)
     {
-        $patient->load([
+        $visit->load([
+            'patient',
             'selectedDoctor.user',
             'payments' => function ($query) {
                 $query->latest();
             }
         ]);
 
-        $latestPayment = $patient->payments->first();
-        $invoice = $patient->invoices()->latest()->first();
+        $latestPayment = $visit->payments->first();
 
         return response()->json([
-            'patient' => $patient,
+            'visit' => $visit,
+            'patient' => $visit->patient,
             'payment' => $latestPayment,
-            'invoice' => $invoice,
         ]);
     }
 
@@ -155,7 +188,7 @@ class ReceptionistDashboardController extends Controller
     }
 
     /**
-     * Process quick patient registration
+     * Process quick patient registration with visit
      */
     public function quickRegister(Request $request)
     {
@@ -168,27 +201,21 @@ class ReceptionistDashboardController extends Controller
         ]);
 
         try {
-            // Register patient with minimal data
-            $result = $this->registrationService->registerPatient(
+            // Register patient with visit
+            $result = $this->registrationService->registerPatientWithVisit(
                 $request->only(['name', 'phone', 'email']),
                 $request->selected_doctor_id,
-                []
+                $request->payment_amount
             );
 
+            $visit = $result['visit'];
             $patient = $result['patient'];
-
-            // Process payment if amount provided
-            if ($request->payment_amount > 0) {
-                $payment = $this->registrationService->processRegistrationPayment($patient, [
-                    'amount' => $request->payment_amount,
-                ]);
-            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Patient registered successfully!',
-                'patient' => $patient->fresh(['selectedDoctor.user', 'payments']),
-                'redirect_url' => route('patients.receipt', $patient),
+                'visit' => $visit->fresh(['patient', 'selectedDoctor.user', 'payments']),
+                'redirect_url' => route('visits.receipt', $visit),
             ]);
 
         } catch (\Exception $e) {
@@ -200,34 +227,37 @@ class ReceptionistDashboardController extends Controller
     }
 
     /**
-     * Get today's appointments/registrations
+     * Get today's visits/registrations
      */
     public function getTodayActivity()
     {
         $today = today();
 
-        $todayPatients = Patient::whereDate('created_at', $today)
-            ->with(['selectedDoctor.user', 'payments'])
+        $todayVisits = PatientVisit::whereDate('created_at', $today)
+            ->with(['patient', 'selectedDoctor.user', 'payments'])
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function ($patient) {
+            ->map(function ($visit) {
                 return [
-                    'id' => $patient->id,
-                    'patient_id' => $patient->patient_id,
-                    'name' => $patient->name,
-                    'phone' => $patient->phone,
-                    'registration_status' => $patient->registration_status,
-                    'payment_status' => $patient->payment_status,
-                    'total_paid' => $patient->payments->sum('amount'),
-                    'final_amount' => $patient->final_amount ?? 0,
-                    'created_at' => $patient->created_at,
-                    'doctor_name' => $patient->selectedDoctor && $patient->selectedDoctor->user
-                        ? $patient->selectedDoctor->user->name
+                    'id' => $visit->id,
+                    'visit_id' => $visit->visit_id,
+                    'patient_id' => $visit->patient->patient_id,
+                    'patient_name' => $visit->patient->name,
+                    'phone' => $visit->patient->phone,
+                    'payment_status' => $visit->payment_status,
+                    'vision_test_status' => $visit->vision_test_status,
+                    'overall_status' => $visit->overall_status,
+                    'total_paid' => $visit->total_paid,
+                    'final_amount' => $visit->final_amount,
+                    'total_due' => $visit->total_due,
+                    'created_at' => $visit->created_at,
+                    'doctor_name' => $visit->selectedDoctor && $visit->selectedDoctor->user
+                        ? $visit->selectedDoctor->user->name
                         : null,
                 ];
             });
 
-        return response()->json($todayPatients);
+        return response()->json($todayVisits);
     }
 
     /**
@@ -240,27 +270,31 @@ class ReceptionistDashboardController extends Controller
 
         return [
             // Today's stats
-            'today_registrations' => Patient::whereDate('created_at', $today)->count(),
+            'today_registrations' => PatientVisit::whereDate('created_at', $today)->count(),
             'today_revenue' => PatientPayment::whereDate('payment_date', $today)->sum('amount'),
-            'today_pending_payments' => Patient::whereDate('created_at', $today)
+            'today_pending_payments' => PatientVisit::whereDate('created_at', $today)
                 ->where('payment_status', '!=', 'paid')->count(),
 
             // This month's stats
-            'month_registrations' => Patient::where('created_at', '>=', $thisMonth)->count(),
+            'month_registrations' => PatientVisit::where('created_at', '>=', $thisMonth)->count(),
             'month_revenue' => PatientPayment::where('payment_date', '>=', $thisMonth)->sum('amount'),
 
             // Overall stats
             'total_patients' => Patient::count(),
-            'pending_payments_count' => Patient::where('payment_status', '!=', 'paid')->count(),
-            'pending_payments_amount' => $this->getPendingPaymentsAmount(),
+            'total_visits' => PatientVisit::count(),
+            'pending_payments_count' => PatientVisit::where('payment_status', '!=', 'paid')->count(),
+            'pending_payments_amount' => PatientVisit::where('payment_status', '!=', 'paid')->sum('total_due'),
 
             // Recent activity
-            'last_registration_time' => Patient::latest()->first()?->created_at,
+            'last_registration_time' => PatientVisit::latest()->first()?->created_at,
             'last_payment_time' => PatientPayment::latest()->first()?->payment_date,
 
             // Quick actions count
-            'patients_ready_for_vision_test' => Patient::where('registration_status', 'completed')
-                ->where('payment_status', 'paid')->count(),
+            'visits_ready_for_vision_test' => PatientVisit::where('payment_status', 'paid')
+                ->where('vision_test_status', 'pending')->count(),
+            'visits_in_vision_test' => PatientVisit::where('vision_test_status', 'in_progress')->count(),
+            'visits_ready_for_prescription' => PatientVisit::where('vision_test_status', 'completed')
+                ->where('prescription_status', 'pending')->count(),
         ];
     }
 
@@ -271,7 +305,7 @@ class ReceptionistDashboardController extends Controller
     {
         $today = today();
 
-        $payments = PatientPayment::with(['patient', 'paymentMethod'])
+        $payments = PatientPayment::with(['visit.patient', 'paymentMethod'])
             ->whereDate('payment_date', $today)
             ->orderBy('payment_date', 'desc')
             ->limit(10)
@@ -288,26 +322,15 @@ class ReceptionistDashboardController extends Controller
                 return [
                     'id' => $payment->id,
                     'amount' => $payment->amount,
-                    'patient_name' => $payment->patient->name,
-                    'patient_id' => $payment->patient->patient_id,
+                    'patient_name' => $payment->visit->patient->name,
+                    'patient_id' => $payment->visit->patient->patient_id,
+                    'visit_id' => $payment->visit->visit_id,
                     'payment_method' => $payment->paymentMethod->name ?? 'Cash',
                     'payment_date' => $payment->payment_date,
                     'created_at' => $payment->created_at,
                 ];
             }),
         ];
-    }
-
-    /**
-     * Get pending payments total amount
-     */
-    private function getPendingPaymentsAmount()
-    {
-        return Patient::where('payment_status', '!=', 'paid')
-            ->get()
-            ->sum(function ($patient) {
-                return ($patient->final_amount ?? 0) - $patient->payments->sum('amount');
-            });
     }
 
     /**
@@ -334,36 +357,39 @@ class ReceptionistDashboardController extends Controller
     }
 
     /**
-     * Mark patient as completed (ready for vision test)
+     * Mark visit as ready for vision test
      */
-    public function markPatientCompleted(Patient $patient)
+    public function markVisitReadyForVisionTest(PatientVisit $visit)
     {
-        if ($patient->payment_status !== 'paid') {
+        if ($visit->payment_status !== 'paid') {
             return response()->json([
                 'success' => false,
-                'message' => 'Patient payment must be completed first',
+                'message' => 'Payment must be completed first',
             ], 422);
         }
 
-        $patient->update(['registration_status' => 'completed']);
+        $visit->update([
+            'vision_test_status' => 'pending',
+            'overall_status' => 'vision_test'
+        ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Patient marked as ready for vision test!',
+            'message' => 'Visit marked as ready for vision test!',
         ]);
     }
 
     /**
-     * Get hourly registration stats for today
+     * Get hourly visit stats for today
      */
     public function getTodayHourlyStats()
     {
         $today = today();
 
-        $hourlyStats = Patient::whereDate('created_at', $today)
+        $hourlyStats = PatientVisit::whereDate('created_at', $today)
             ->select(
                 DB::raw('HOUR(created_at) as hour'),
-                DB::raw('COUNT(*) as registrations'),
+                DB::raw('COUNT(*) as visits'),
                 DB::raw('SUM(final_amount) as revenue')
             )
             ->groupBy('hour')
@@ -376,11 +402,38 @@ class ReceptionistDashboardController extends Controller
         for ($hour = 0; $hour < 24; $hour++) {
             $stats[] = [
                 'hour' => $hour,
-                'registrations' => $hourlyStats->get($hour)?->registrations ?? 0,
+                'visits' => $hourlyStats->get($hour)?->visits ?? 0,
                 'revenue' => $hourlyStats->get($hour)?->revenue ?? 0,
             ];
         }
 
         return response()->json($stats);
+    }
+
+    /**
+     * Get visit workflow status summary
+     */
+    public function getVisitWorkflowSummary()
+    {
+        $today = today();
+
+        return response()->json([
+            'today' => [
+                'payment_pending' => PatientVisit::whereDate('created_at', $today)
+                    ->where('overall_status', 'payment')->count(),
+                'vision_test_pending' => PatientVisit::whereDate('created_at', $today)
+                    ->where('overall_status', 'vision_test')->count(),
+                'prescription_pending' => PatientVisit::whereDate('created_at', $today)
+                    ->where('overall_status', 'prescription')->count(),
+                'completed' => PatientVisit::whereDate('created_at', $today)
+                    ->where('overall_status', 'completed')->count(),
+            ],
+            'overall' => [
+                'payment_pending' => PatientVisit::where('overall_status', 'payment')->count(),
+                'vision_test_pending' => PatientVisit::where('overall_status', 'vision_test')->count(),
+                'prescription_pending' => PatientVisit::where('overall_status', 'prescription')->count(),
+                'completed' => PatientVisit::where('overall_status', 'completed')->count(),
+            ]
+        ]);
     }
 }

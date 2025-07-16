@@ -30,10 +30,29 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
-
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended($this->getDashboardRoute());
+    }
+
+    private function getDashboardRoute(): string
+    {
+        $user = auth()->user();
+
+        if ($user && $user->role) {
+            $roleName = $user->role->name;
+
+            // dd($roleName);
+            $dashboardRoutes = [
+                'receptionist' => 'receptionist.dashboard',
+                'Doctor' => 'doctor.dashboard',
+                'refractionist' => 'refractionist.dashboard',
+            ];
+
+            return route($dashboardRoutes[$roleName] ?? 'dashboard');
+        }
+
+        return route('dashboard');
     }
 
     /**

@@ -6,7 +6,8 @@ import {
     AlertCircle, Eye, Stethoscope, Clock, Phone,
     Activity, Target, Pill, Heart, CheckCircle,
     AlertTriangle, MapPin, Filter, ArrowLeft,
-    UserCheck, Clipboard, Thermometer, Droplets
+    UserCheck, Clipboard, Thermometer, Droplets,
+    ClockIcon // Added this import for History replacement
 } from 'lucide-react';
 
 // Complete Type definitions
@@ -65,8 +66,6 @@ interface Medicine {
     name: string;
     generic_name?: string;
     type: string;
-    strength?: string;
-    unit?: string;
     manufacturer?: string;
 }
 
@@ -190,9 +189,11 @@ export default function PrescriptionCreate({
         );
     };
 
+    // Alternative handleSubmit using router.post
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Validate medicines
         const isValid = medicineItems.every(item => item.medicine_id && item.dosage);
 
         if (!isValid) {
@@ -200,24 +201,35 @@ export default function PrescriptionCreate({
             return;
         }
 
+        // Format medicines data
         const formattedMedicines = medicineItems.map(item => ({
-            medicine_id: item.medicine_id,
+            medicine_id: parseInt(item.medicine_id),
             dosage: item.dosage,
-            frequency: item.frequency,
-            duration: item.duration,
-            instructions: item.instructions,
+            frequency: item.frequency || null,
+            duration: item.duration || null,
+            instructions: item.instructions || null,
             quantity: item.quantity ? parseInt(item.quantity) : null,
         }));
 
+        // Create complete form data
         const submitData = {
-            ...data,
+            patient_id: patient.id,
+            doctor_id: doctor.id,
+            appointment_id: appointment?.id || null,
+            visit_id: latestVisit?.id || null,
+            diagnosis: data.diagnosis,
+            advice: data.advice,
+            notes: data.notes,
+            followup_date: data.followup_date || null,
             medicines: formattedMedicines
         };
 
-        post(route('prescriptions.store', patient.id), {
-            data: submitData,
+        console.log('Submitting with router.post:', submitData);
+
+        // Use router.post instead of useForm post
+        router.post(route('prescriptions.store', patient.id), submitData, {
             onSuccess: () => {
-                // Will redirect to prescription show page
+                console.log('Prescription created successfully');
             },
             onError: (errors) => {
                 console.error('Prescription creation failed:', errors);
@@ -567,7 +579,7 @@ export default function PrescriptionCreate({
                                 {(patient.recent_visits.length > 0 || patient.recent_prescriptions.length > 0) && (
                                     <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
                                         <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                            <History className="h-5 w-5 text-gray-600" />
+                                            <ClockIcon className="h-5 w-5 text-gray-600" />
                                             Recent History
                                         </h3>
 
@@ -698,7 +710,6 @@ export default function PrescriptionCreate({
                                                                 .map(medicine => (
                                                                     <option key={medicine.id} value={medicine.id}>
                                                                         {medicine.name} {medicine.generic_name ? `(${medicine.generic_name})` : ''}
-                                                                        {medicine.strength ? ` - ${medicine.strength}` : ''}
                                                                     </option>
                                                                 ))}
                                                         </select>
@@ -800,7 +811,6 @@ export default function PrescriptionCreate({
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
                         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mt-8">
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                 <div className="flex items-center space-x-2 text-sm text-gray-600">

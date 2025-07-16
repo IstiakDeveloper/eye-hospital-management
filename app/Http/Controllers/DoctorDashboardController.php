@@ -17,6 +17,8 @@ class DoctorDashboardController extends Controller
     /**
      * Display doctor dashboard with today's appointments by serial
      */
+    // Fixed Controller - যদি prescriptions table এ visit_id না থাকে
+
     public function index()
     {
         $doctor = auth()->user()->doctor;
@@ -26,71 +28,95 @@ class DoctorDashboardController extends Controller
                 ->withErrors(['error' => 'Doctor profile not found.']);
         }
 
-        // Get today's appointments for this doctor, ordered by serial number
-        $todaysAppointments = Appointment::where('doctor_id', $doctor->id)
-            ->whereDate('appointment_date', today())
-            ->with(['patient', 'visit'])
-            ->orderBy('serial_number', 'asc')
+        // Get today's ACTIVE visits for this doctor (not completed)
+        $todaysActiveVisits = PatientVisit::where('selected_doctor_id', $doctor->id)
+            ->whereDate('created_at', today())
+            ->whereIn('overall_status', ['payment', 'vision_test', 'prescription']) // Only active statuses
+            ->with(['patient', 'selectedDoctor.user', 'payments'])
+            ->orderBy('created_at', 'asc')
             ->get()
-            ->map(function ($appointment) {
-                $latestVisit = PatientVisit::where('patient_id', $appointment->patient_id)
-                    ->latest()
-                    ->first();
+            ->map(function ($visit, $index) {
+                $hasVisionTest = VisionTest::where('patient_id', $visit->patient_id)
+                    ->whereDate('test_date', today())
+                    ->exists();
 
-                $latestVisionTest = VisionTest::where('patient_id', $appointment->patient_id)
-                    ->latest()
-                    ->first();
+                // Check prescription by patient_id and doctor_id for today
+                $hasPrescription = Prescription::where('patient_id', $visit->patient_id)
+                    ->where('doctor_id', $visit->selected_doctor_id)
+                    ->whereDate('created_at', today())
+                    ->exists();
 
                 return [
-                    'id' => $appointment->id,
-                    'serial_number' => $appointment->serial_number,
-                    'appointment_time' => $appointment->appointment_time,
-                    'status' => $appointment->status,
-                    'patient_id' => $appointment->patient->patient_id,
-                    'patient_database_id' => $appointment->patient->id,
-                    'patient_name' => $appointment->patient->name,
-                    'patient_phone' => $appointment->patient->phone,
-                    'patient_age' => $appointment->patient->date_of_birth
-                        ? Carbon::parse($appointment->patient->date_of_birth)->age
+                    'id' => $visit->id,
+                    'visit_id' => $visit->visit_id,
+                    'patient_database_id' => $visit->patient_id,
+                    'patient_id' => $visit->patient->patient_id,
+                    'patient_name' => $visit->patient->name,
+                    'patient_phone' => $visit->patient->phone,
+                    'patient_age' => $visit->patient->date_of_birth
+                        ? Carbon::parse($visit->patient->date_of_birth)->age
                         : null,
-                    'patient_gender' => $appointment->patient->gender,
-                    'chief_complaint' => $latestVisit ? $latestVisit->chief_complaint : null,
-                    'medical_history' => $appointment->patient->medical_history,
-                    'has_vision_test' => $latestVisionTest ? true : false,
-                    'vision_test_date' => $latestVisionTest ? $latestVisionTest->test_date : null,
-                    'visit_id' => $latestVisit ? $latestVisit->visit_id : null,
-                    'visit_database_id' => $latestVisit ? $latestVisit->id : null,
-                    'waiting_time' => Carbon::parse($appointment->created_at)->diffForHumans(),
-                    'is_completed' => $appointment->status === 'completed',
-                    'is_current' => $appointment->status === 'pending',
+                    'patient_gender' => $visit->patient->gender,
+                    'chief_complaint' => $visit->chief_complaint,
+                    'medical_history' => $visit->patient->medical_history,
+                    'visit_date' => $visit->created_at->toISOString(),
+                    'overall_status' => $visit->overall_status,
+                    'payment_status' => $visit->payment_status,
+                    'vision_test_status' => $visit->vision_test_status,
+                    'has_vision_test' => $hasVisionTest,
+                    'has_prescription' => $hasPrescription,
+                    'waiting_time' => $visit->created_at->diffForHumans(),
+                    'serial_number' => $index + 1,
+                    'final_amount' => $visit->final_amount ?? 0,
+                    'total_paid' => $visit->total_paid ?? 0,
+                    'total_due' => $visit->total_due ?? 0,
                 ];
             });
 
-        // Get doctor's today statistics
+        // Get today's statistics
         $todayStats = [
-            'total_appointments' => $todaysAppointments->count(),
-            'completed_appointments' => $todaysAppointments->where('is_completed', true)->count(),
-            'pending_appointments' => $todaysAppointments->where('is_current', true)->count(),
-            'cancelled_appointments' => Appointment::where('doctor_id', $doctor->id)
-                ->whereDate('appointment_date', today())
-                ->where('status', 'cancelled')
+            'total_visits' => PatientVisit::where('selected_doctor_id', $doctor->id)
+                ->whereDate('created_at', today())
+                ->count(),
+            'completed_visits' => PatientVisit::where('selected_doctor_id', $doctor->id)
+                ->whereDate('created_at', today())
+                ->where('overall_status', 'completed')
+                ->count(),
+            'pending_prescriptions' => PatientVisit::where('selected_doctor_id', $doctor->id)
+                ->whereDate('created_at', today())
+                ->where('overall_status', 'prescription')
+                ->where('payment_status', 'paid')
+                ->where('vision_test_status', 'completed')
+                ->whereDoesntHave('prescriptions', function ($query) use ($doctor) {
+                    $query->where('doctor_id', $doctor->id)
+                        ->whereDate('created_at', today());
+                })
                 ->count(),
             'prescriptions_written' => Prescription::where('doctor_id', $doctor->id)
                 ->whereDate('created_at', today())
                 ->count(),
+            'total_revenue' => PatientVisit::where('selected_doctor_id', $doctor->id)
+                ->whereDate('created_at', today())
+                ->sum('doctor_fee'),
         ];
 
-        // Get recent prescriptions
+        // Get recent prescriptions (without visit_id)
         $recentPrescriptions = Prescription::where('doctor_id', $doctor->id)
-            ->with('patient')
+            ->with(['patient'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get()
             ->map(function ($prescription) {
+                // Find related visit by patient and date
+                $relatedVisit = PatientVisit::where('patient_id', $prescription->patient_id)
+                    ->whereDate('created_at', $prescription->created_at->toDateString())
+                    ->first();
+
                 return [
                     'id' => $prescription->id,
                     'patient_name' => $prescription->patient->name,
                     'patient_id' => $prescription->patient->patient_id,
+                    'visit_id' => $relatedVisit ? $relatedVisit->visit_id : 'N/A',
                     'created_at' => $prescription->created_at->format('M d, H:i'),
                     'medicines_count' => $prescription->prescriptionMedicines->count(),
                 ];
@@ -103,7 +129,7 @@ class DoctorDashboardController extends Controller
                 'specialization' => $doctor->specialization,
                 'consultation_fee' => $doctor->consultation_fee,
             ],
-            'todaysAppointments' => $todaysAppointments,
+            'todaysActiveVisits' => $todaysActiveVisits,
             'todayStats' => $todayStats,
             'recentPrescriptions' => $recentPrescriptions,
         ]);
