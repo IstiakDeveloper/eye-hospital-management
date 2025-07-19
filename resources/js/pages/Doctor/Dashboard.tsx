@@ -75,6 +75,19 @@ const DoctorDashboard: React.FC<Props> = ({
     const [selectedVisit, setSelectedVisit] = useState<ActiveVisit | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
+    // এইখানে add করুন ⬇️
+    useEffect(() => {
+        const interval = setInterval(() => {
+            router.reload({
+                only: ['todaysActiveVisits', 'todayStats', 'recentPrescriptions'],
+                preserveState: true,
+                preserveScroll: true,
+            });
+        }, 10000);
+
+        return () => clearInterval(interval);
+    }, []);
+
     const refreshDashboard = (): void => {
         setRefreshing(true);
         router.reload({
@@ -156,8 +169,8 @@ const DoctorDashboard: React.FC<Props> = ({
     // Filter visits - only show active visits (not completed)
     const filteredVisits = todaysActiveVisits.filter(visit =>
         (visit.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         visit.patient_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         visit.visit_id.toLowerCase().includes(searchTerm.toLowerCase())) &&
+            visit.patient_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            visit.visit_id.toLowerCase().includes(searchTerm.toLowerCase())) &&
         visit.overall_status !== 'completed' // Only show active visits
     );
 
@@ -288,11 +301,10 @@ const DoctorDashboard: React.FC<Props> = ({
                                         {filteredVisits.map((visit, index) => (
                                             <div
                                                 key={visit.id}
-                                                className={`p-4 border-2 rounded-xl transition-all duration-200 cursor-pointer ${
-                                                    selectedVisit?.id === visit.id
+                                                className={`p-4 border-2 rounded-xl transition-all duration-200 cursor-pointer ${selectedVisit?.id === visit.id
                                                         ? 'border-blue-500 bg-blue-50'
                                                         : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                                                }`}
+                                                    }`}
                                                 onClick={() => setSelectedVisit(visit)}
                                             >
                                                 <div className="flex items-center justify-between">
@@ -378,35 +390,35 @@ const DoctorDashboard: React.FC<Props> = ({
 
                                                         {/* Write Prescription Button */}
                                                         {visit.overall_status === 'prescription' &&
-                                                         visit.payment_status === 'paid' &&
-                                                         visit.vision_test_status === 'completed' &&
-                                                         !visit.has_prescription && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    writePrescription(visit);
-                                                                }}
-                                                                className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
-                                                            >
-                                                                <PenTool className="h-4 w-4" />
-                                                                Prescribe
-                                                            </button>
-                                                        )}
+                                                            visit.payment_status === 'paid' &&
+                                                            visit.vision_test_status === 'completed' &&
+                                                            !visit.has_prescription && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        writePrescription(visit);
+                                                                    }}
+                                                                    className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+                                                                >
+                                                                    <PenTool className="h-4 w-4" />
+                                                                    Prescribe
+                                                                </button>
+                                                            )}
 
                                                         {/* Complete Visit Button */}
                                                         {visit.overall_status === 'prescription' &&
-                                                         visit.has_prescription && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    completeVisit(visit);
-                                                                }}
-                                                                className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
-                                                            >
-                                                                <CheckCircle className="h-4 w-4" />
-                                                                Complete
-                                                            </button>
-                                                        )}
+                                                            visit.has_prescription && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        completeVisit(visit);
+                                                                    }}
+                                                                    className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
+                                                                >
+                                                                    <CheckCircle className="h-4 w-4" />
+                                                                    Complete
+                                                                </button>
+                                                            )}
                                                     </div>
                                                 </div>
                                             </div>

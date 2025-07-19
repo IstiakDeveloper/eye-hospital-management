@@ -25,7 +25,34 @@ use Inertia\Inertia;
 */
 
 Route::get('/', function () {
-    return redirect()->route('login');
+    // Check if user is authenticated
+    if (!auth()->check()) {
+        return redirect()->route('login');
+    }
+
+    $user = auth()->user();
+
+    if ($user && $user->role) {
+        $roleName = $user->role->name;
+
+        $dashboardRoutes = [
+            'Receptionist' => 'receptionist.dashboard',
+            'Doctor' => 'doctor.dashboard',
+            'Refractionist' => 'refractionist.dashboard',
+            'Super Admin' => 'dashboard'
+        ];
+
+        // Role-based redirect
+        $routeName = $dashboardRoutes[$roleName] ?? 'dashboard';
+
+        // Route exists কিনা check করুন
+        if (Route::has($routeName)) {
+            return redirect()->route($routeName);
+        }
+    }
+
+    // Fallback to default dashboard
+    return redirect()->route('dashboard');
 });
 
 Route::middleware(['auth'])->group(function () {
