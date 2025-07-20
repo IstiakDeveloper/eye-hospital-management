@@ -7,6 +7,7 @@ use App\Models\PatientVisit;
 use App\Models\VisionTest;
 use App\Models\Prescription;
 use App\Models\PrescriptionMedicine;
+use App\Models\PrescriptionGlasses;
 use App\Models\Medicine;
 use App\Models\Doctor;
 use App\Models\Appointment;
@@ -22,7 +23,54 @@ use Carbon\Carbon;
 class PrescriptionController extends Controller
 {
     /**
-     * Show the form for creating a new prescription - COMPLETE VERSION
+     * Display a listing of prescriptions (Admin/Staff view)
+     */
+    public function index(Request $request)
+    {
+        try {
+            $user = auth()->user();
+
+            // Check if user can view all prescriptions
+            if (!in_array($user->role, ['super_admin', 'receptionist'])) {
+                return redirect()->route('dashboard')
+                    ->with('error', 'You are not authorized to view all prescriptions');
+            }
+
+            $prescriptions = Prescription::with(['patient', 'doctor.user', 'prescriptionMedicines', 'prescriptionGlasses'])
+                ->when($request->search, function ($query, $search) {
+                    $query->whereHas('patient', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('patient_id', 'like', "%{$search}%");
+                    });
+                })
+                ->when($request->doctor_id, function ($query, $doctorId) {
+                    $query->where('doctor_id', $doctorId);
+                })
+                ->when($request->date_from, function ($query, $dateFrom) {
+                    $query->whereDate('created_at', '>=', $dateFrom);
+                })
+                ->when($request->date_to, function ($query, $dateTo) {
+                    $query->whereDate('created_at', '<=', $dateTo);
+                })
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+
+            $doctors = Doctor::with('user')->get();
+
+            return Inertia::render('Prescriptions/Index', [
+                'prescriptions' => $prescriptions,
+                'doctors' => $doctors,
+                'filters' => $request->only(['search', 'doctor_id', 'date_from', 'date_to']),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Prescription Index Error: ' . $e->getMessage());
+            return redirect()->route('dashboard')
+                ->with('error', 'Failed to load prescriptions');
+        }
+    }
+
+    /**
+     * Show the form for creating a new prescription (Doctor's view)
      */
     public function create($patientId, $appointmentId = null)
     {
@@ -36,7 +84,6 @@ class PrescriptionController extends Controller
 
             // Ensure the user is a doctor
             $doctor = $user->doctor;
-
             if (!$doctor) {
                 $doctor = Doctor::where('user_id', $user->id)->first();
                 if (!$doctor) {
@@ -59,7 +106,7 @@ class PrescriptionController extends Controller
                             ->limit(3);
                     },
                     'prescriptions' => function ($query) {
-                        $query->with(['prescriptionMedicines.medicine', 'doctor.user'])
+                        $query->with(['prescriptionMedicines.medicine', 'prescriptionGlasses', 'doctor.user'])
                             ->orderBy('created_at', 'desc')
                             ->limit(5);
                     },
@@ -78,7 +125,6 @@ class PrescriptionController extends Controller
 
             // Get current appointment if provided
             $appointment = null;
-
             if ($appointmentId) {
                 $appointment = Appointment::where('id', $appointmentId)
                     ->where('patient_id', $patientId)
@@ -103,7 +149,7 @@ class PrescriptionController extends Controller
                     ->first();
             }
 
-            // Get all active medicines - FIXED: removed non-existent columns
+            // Get all active medicines
             $medicines = Medicine::where('is_active', true)
                 ->orderBy('type')
                 ->orderBy('name')
@@ -149,6 +195,8 @@ class PrescriptionController extends Controller
                         'created_at' => $prescription->created_at->format('M d, Y'),
                         'doctor_name' => $prescription->doctor->user->name,
                         'medicines_count' => $prescription->prescriptionMedicines->count(),
+                        'has_glasses' => $prescription->prescriptionGlasses->count() > 0,
+                        'glasses_count' => $prescription->prescriptionGlasses->count(),
                     ];
                 }),
             ];
@@ -216,7 +264,7 @@ class PrescriptionController extends Controller
     }
 
     /**
-     * Store a newly created prescription - COMPLETE VERSION
+     * Store a newly created prescription (Doctor's simplified version)
      */
     public function store(Request $request, $patientId)
     {
@@ -239,14 +287,7 @@ class PrescriptionController extends Controller
 
             $patient = Patient::findOrFail($patientId);
 
-            // Debug: Log incoming request data
-            Log::info('Prescription Store Request Data', [
-                'all_request_data' => $request->all(),
-                'medicines_data' => $request->input('medicines'),
-                'has_medicines' => $request->has('medicines'),
-                'medicines_count' => $request->has('medicines') ? count($request->input('medicines', [])) : 0
-            ]);
-
+            // Enhanced validation for simplified system
             $request->validate([
                 'appointment_id' => 'nullable|exists:appointments,id',
                 'visit_id' => 'nullable|exists:patient_visits,id',
@@ -254,13 +295,32 @@ class PrescriptionController extends Controller
                 'advice' => 'nullable|string|max:2000',
                 'notes' => 'nullable|string|max:1000',
                 'followup_date' => 'nullable|date|after:today',
-                'medicines' => 'required|array|min:1',
-                'medicines.*.medicine_id' => 'required|exists:medicines,id',
-                'medicines.*.dosage' => 'required|string|max:255',
+                'includes_glasses' => 'boolean',
+                'glasses_notes' => 'nullable|string|max:1000',
+
+                // Medicines validation
+                'medicines' => 'nullable|array',
+                'medicines.*.medicine_id' => 'required_with:medicines|exists:medicines,id',
+                'medicines.*.dosage' => 'required_with:medicines|string|max:255',
                 'medicines.*.frequency' => 'nullable|string|max:255',
                 'medicines.*.duration' => 'nullable|string|max:255',
                 'medicines.*.instructions' => 'nullable|string|max:500',
                 'medicines.*.quantity' => 'nullable|integer|min:1',
+
+                // Simplified glasses validation - only medical data
+                'glasses' => 'nullable|array',
+                'glasses.*.prescription_type' => 'required_with:glasses|in:distance,reading,progressive,bifocal,computer',
+                'glasses.*.right_eye_sphere' => 'nullable|numeric|between:-20,20',
+                'glasses.*.right_eye_cylinder' => 'nullable|numeric|between:-10,10',
+                'glasses.*.right_eye_axis' => 'nullable|integer|between:0,180',
+                'glasses.*.right_eye_add' => 'nullable|numeric|between:0,5',
+                'glasses.*.left_eye_sphere' => 'nullable|numeric|between:-20,20',
+                'glasses.*.left_eye_cylinder' => 'nullable|numeric|between:-10,10',
+                'glasses.*.left_eye_axis' => 'nullable|integer|between:0,180',
+                'glasses.*.left_eye_add' => 'nullable|numeric|between:0,5',
+                'glasses.*.pupillary_distance' => 'nullable|numeric|between:45,85',
+                'glasses.*.segment_height' => 'nullable|numeric|between:10,30',
+                'glasses.*.special_instructions' => 'nullable|string|max:500',
             ]);
 
             DB::beginTransaction();
@@ -274,20 +334,46 @@ class PrescriptionController extends Controller
                 'advice' => $request->advice,
                 'notes' => $request->notes,
                 'followup_date' => $request->followup_date,
+                'includes_glasses' => $request->boolean('includes_glasses'),
+                'glasses_notes' => $request->glasses_notes,
                 'created_by' => $user->id,
             ]);
 
-            // Add medicines to prescription
-            foreach ($request->medicines as $medicineData) {
-                PrescriptionMedicine::create([
-                    'prescription_id' => $prescription->id,
-                    'medicine_id' => $medicineData['medicine_id'],
-                    'dosage' => $medicineData['dosage'],
-                    'frequency' => $medicineData['frequency'] ?? null,
-                    'duration' => $medicineData['duration'] ?? null,
-                    'instructions' => $medicineData['instructions'] ?? null,
-                    'quantity' => $medicineData['quantity'] ?? null,
-                ]);
+            // Add medicines to prescription if provided
+            if ($request->has('medicines') && is_array($request->medicines)) {
+                foreach ($request->medicines as $medicineData) {
+                    PrescriptionMedicine::create([
+                        'prescription_id' => $prescription->id,
+                        'medicine_id' => $medicineData['medicine_id'],
+                        'dosage' => $medicineData['dosage'],
+                        'frequency' => $medicineData['frequency'] ?? null,
+                        'duration' => $medicineData['duration'] ?? null,
+                        'instructions' => $medicineData['instructions'] ?? null,
+                        'quantity' => $medicineData['quantity'] ?? null,
+                    ]);
+                }
+            }
+
+            // Add glasses prescription (medical data only)
+            if ($request->has('glasses') && is_array($request->glasses)) {
+                foreach ($request->glasses as $glassData) {
+                    PrescriptionGlasses::create([
+                        'prescription_id' => $prescription->id,
+                        'prescription_type' => $glassData['prescription_type'],
+                        'right_eye_sphere' => $glassData['right_eye_sphere'] ?? null,
+                        'right_eye_cylinder' => $glassData['right_eye_cylinder'] ?? null,
+                        'right_eye_axis' => $glassData['right_eye_axis'] ?? null,
+                        'right_eye_add' => $glassData['right_eye_add'] ?? null,
+                        'left_eye_sphere' => $glassData['left_eye_sphere'] ?? null,
+                        'left_eye_cylinder' => $glassData['left_eye_cylinder'] ?? null,
+                        'left_eye_axis' => $glassData['left_eye_axis'] ?? null,
+                        'left_eye_add' => $glassData['left_eye_add'] ?? null,
+                        'pupillary_distance' => $glassData['pupillary_distance'] ?? null,
+                        'segment_height' => $glassData['segment_height'] ?? null,
+                        'special_instructions' => $glassData['special_instructions'] ?? null,
+                        // No commercial data (frames, lenses, pricing, delivery)
+                    ]);
+                }
             }
 
             // Update appointment status if provided
@@ -319,7 +405,9 @@ class PrescriptionController extends Controller
                 'prescription_id' => $prescription->id,
                 'patient_id' => $patientId,
                 'doctor_id' => $doctor->id,
-                'medicines_count' => count($request->medicines),
+                'medicines_count' => $request->has('medicines') ? count($request->medicines) : 0,
+                'glasses_count' => $request->has('glasses') ? count($request->glasses) : 0,
+                'includes_glasses' => $request->boolean('includes_glasses'),
             ]);
 
             return redirect()->route('prescriptions.show', $prescription->id)
@@ -343,17 +431,17 @@ class PrescriptionController extends Controller
     }
 
     /**
-     * Display the specified prescription - COMPLETE VERSION
+     * Display the specified prescription
      */
     public function show($id)
     {
-
         try {
             $prescription = Prescription::with([
                 'patient',
                 'doctor.user',
                 'appointment',
                 'prescriptionMedicines.medicine',
+                'prescriptionGlasses',
                 'createdBy'
             ])->findOrFail($id);
 
@@ -368,12 +456,10 @@ class PrescriptionController extends Controller
             } elseif (in_array($user->role, ['receptionist', 'refractionist'])) {
                 $canView = true; // Staff can view all prescriptions
             }
-            // dd($user->role->name);
-
 
             if (!$canView) {
                 return redirect()->route('dashboard')
-                    ->withErrors(['error' => 'You are not authorized to view this prescription']);
+                    ->with('error', 'You are not authorized to view this prescription');
             }
 
             // Format prescription data for frontend
@@ -383,6 +469,8 @@ class PrescriptionController extends Controller
                 'advice' => $prescription->advice,
                 'notes' => $prescription->notes,
                 'followup_date' => $prescription->followup_date,
+                'includes_glasses' => $prescription->includes_glasses,
+                'glasses_notes' => $prescription->glasses_notes,
                 'created_at' => $prescription->created_at,
                 'formatted_date' => $prescription->created_at->format('M d, Y'),
                 'formatted_time' => $prescription->created_at->format('h:i A'),
@@ -415,7 +503,6 @@ class PrescriptionController extends Controller
                             'id' => $prescriptionMedicine->medicine->id,
                             'name' => $prescriptionMedicine->medicine->name,
                             'generic_name' => $prescriptionMedicine->medicine->generic_name,
-                            'strength' => $prescriptionMedicine->medicine->strength,
                             'type' => $prescriptionMedicine->medicine->type ?? 'General',
                             'manufacturer' => $prescriptionMedicine->medicine->manufacturer,
                         ],
@@ -424,6 +511,35 @@ class PrescriptionController extends Controller
                         'duration' => $prescriptionMedicine->duration,
                         'instructions' => $prescriptionMedicine->instructions,
                         'quantity' => $prescriptionMedicine->quantity,
+                    ];
+                }),
+                'glasses' => $prescription->prescriptionGlasses->map(function ($prescriptionGlass) {
+                    return [
+                        'id' => $prescriptionGlass->id,
+                        'prescription_type' => $prescriptionGlass->prescription_type,
+                        'right_eye_sphere' => $prescriptionGlass->right_eye_sphere,
+                        'right_eye_cylinder' => $prescriptionGlass->right_eye_cylinder,
+                        'right_eye_axis' => $prescriptionGlass->right_eye_axis,
+                        'right_eye_add' => $prescriptionGlass->right_eye_add,
+                        'left_eye_sphere' => $prescriptionGlass->left_eye_sphere,
+                        'left_eye_cylinder' => $prescriptionGlass->left_eye_cylinder,
+                        'left_eye_axis' => $prescriptionGlass->left_eye_axis,
+                        'left_eye_add' => $prescriptionGlass->left_eye_add,
+                        'pupillary_distance' => $prescriptionGlass->pupillary_distance,
+                        'segment_height' => $prescriptionGlass->segment_height,
+                        'special_instructions' => $prescriptionGlass->special_instructions,
+                        'right_eye_prescription' => $this->formatEyePrescription(
+                            $prescriptionGlass->right_eye_sphere,
+                            $prescriptionGlass->right_eye_cylinder,
+                            $prescriptionGlass->right_eye_axis,
+                            $prescriptionGlass->right_eye_add
+                        ),
+                        'left_eye_prescription' => $this->formatEyePrescription(
+                            $prescriptionGlass->left_eye_sphere,
+                            $prescriptionGlass->left_eye_cylinder,
+                            $prescriptionGlass->left_eye_axis,
+                            $prescriptionGlass->left_eye_add
+                        ),
                     ];
                 }),
                 'can_edit' => $user->role === 'doctor' && $user->doctor &&
@@ -438,12 +554,12 @@ class PrescriptionController extends Controller
         } catch (\Exception $e) {
             Log::error('Prescription Show Error: ' . $e->getMessage());
             return redirect()->route('dashboard')
-                ->withErrors(['error' => 'Prescription not found or access denied']);
+                ->with('error', 'Prescription not found or access denied');
         }
     }
 
     /**
-     * Show the form for editing the specified prescription - COMPLETE VERSION
+     * Show the form for editing the specified prescription
      */
     public function edit($id)
     {
@@ -459,7 +575,7 @@ class PrescriptionController extends Controller
                 $doctor = Doctor::where('user_id', $user->id)->first();
                 if (!$doctor) {
                     return redirect()->route('dashboard')
-                        ->withErrors(['error' => 'Only doctors can edit prescriptions']);
+                        ->with('error', 'Only doctors can edit prescriptions');
                 }
             }
 
@@ -467,16 +583,17 @@ class PrescriptionController extends Controller
                 'patient',
                 'doctor.user',
                 'appointment',
-                'prescriptionMedicines.medicine'
+                'prescriptionMedicines.medicine',
+                'prescriptionGlasses'
             ])->findOrFail($id);
 
             // Check if current doctor can edit this prescription
             if ($prescription->doctor_id !== $doctor->id) {
                 return redirect()->route('prescriptions.show', $id)
-                    ->withErrors(['error' => 'You can only edit your own prescriptions']);
+                    ->with('error', 'You can only edit your own prescriptions');
             }
 
-            $medicines = Medicine::where('status', 'active')
+            $medicines = Medicine::where('is_active', true)
                 ->orderBy('type')
                 ->orderBy('name')
                 ->get()
@@ -486,8 +603,6 @@ class PrescriptionController extends Controller
                         'name' => $medicine->name,
                         'generic_name' => $medicine->generic_name,
                         'type' => $medicine->type ?? 'General',
-                        'strength' => $medicine->strength,
-                        'unit' => $medicine->unit,
                         'manufacturer' => $medicine->manufacturer,
                     ];
                 });
@@ -499,6 +614,8 @@ class PrescriptionController extends Controller
                 'advice' => $prescription->advice,
                 'notes' => $prescription->notes,
                 'followup_date' => $prescription->followup_date,
+                'includes_glasses' => $prescription->includes_glasses,
+                'glasses_notes' => $prescription->glasses_notes,
                 'patient' => [
                     'id' => $prescription->patient->id,
                     'patient_id' => $prescription->patient->patient_id,
@@ -519,6 +636,23 @@ class PrescriptionController extends Controller
                         'quantity' => $prescriptionMedicine->quantity,
                     ];
                 }),
+                'glasses' => $prescription->prescriptionGlasses->map(function ($prescriptionGlass) {
+                    return [
+                        'id' => $prescriptionGlass->id,
+                        'prescription_type' => $prescriptionGlass->prescription_type,
+                        'right_eye_sphere' => $prescriptionGlass->right_eye_sphere,
+                        'right_eye_cylinder' => $prescriptionGlass->right_eye_cylinder,
+                        'right_eye_axis' => $prescriptionGlass->right_eye_axis,
+                        'right_eye_add' => $prescriptionGlass->right_eye_add,
+                        'left_eye_sphere' => $prescriptionGlass->left_eye_sphere,
+                        'left_eye_cylinder' => $prescriptionGlass->left_eye_cylinder,
+                        'left_eye_axis' => $prescriptionGlass->left_eye_axis,
+                        'left_eye_add' => $prescriptionGlass->left_eye_add,
+                        'pupillary_distance' => $prescriptionGlass->pupillary_distance,
+                        'segment_height' => $prescriptionGlass->segment_height,
+                        'special_instructions' => $prescriptionGlass->special_instructions,
+                    ];
+                }),
             ];
 
             return Inertia::render('Prescriptions/Edit', [
@@ -533,12 +667,12 @@ class PrescriptionController extends Controller
         } catch (\Exception $e) {
             Log::error('Prescription Edit Error: ' . $e->getMessage());
             return redirect()->route('dashboard')
-                ->withErrors(['error' => 'Failed to load prescription for editing']);
+                ->with('error', 'Failed to load prescription for editing');
         }
     }
 
     /**
-     * Update the specified prescription - COMPLETE VERSION
+     * Update the specified prescription
      */
     public function update(Request $request, $id)
     {
@@ -553,7 +687,7 @@ class PrescriptionController extends Controller
             if (!$doctor) {
                 $doctor = Doctor::where('user_id', $user->id)->first();
                 if (!$doctor) {
-                    return back()->withErrors(['error' => 'Only doctors can update prescriptions']);
+                    return back()->with('error', 'Only doctors can update prescriptions');
                 }
             }
 
@@ -561,7 +695,7 @@ class PrescriptionController extends Controller
 
             // Check if current doctor can edit this prescription
             if ($prescription->doctor_id !== $doctor->id) {
-                return back()->withErrors(['error' => 'You can only edit your own prescriptions']);
+                return back()->with('error', 'You can only edit your own prescriptions');
             }
 
             $request->validate([
@@ -569,13 +703,32 @@ class PrescriptionController extends Controller
                 'advice' => 'nullable|string|max:2000',
                 'notes' => 'nullable|string|max:1000',
                 'followup_date' => 'nullable|date|after:today',
-                'medicines' => 'required|array|min:1',
-                'medicines.*.medicine_id' => 'required|exists:medicines,id',
-                'medicines.*.dosage' => 'required|string|max:255',
+                'includes_glasses' => 'boolean',
+                'glasses_notes' => 'nullable|string|max:1000',
+
+                // Medicines validation
+                'medicines' => 'nullable|array',
+                'medicines.*.medicine_id' => 'required_with:medicines|exists:medicines,id',
+                'medicines.*.dosage' => 'required_with:medicines|string|max:255',
                 'medicines.*.frequency' => 'nullable|string|max:255',
                 'medicines.*.duration' => 'nullable|string|max:255',
                 'medicines.*.instructions' => 'nullable|string|max:500',
                 'medicines.*.quantity' => 'nullable|integer|min:1',
+
+                // Glasses validation
+                'glasses' => 'nullable|array',
+                'glasses.*.prescription_type' => 'required_with:glasses|in:distance,reading,progressive,bifocal,computer',
+                'glasses.*.right_eye_sphere' => 'nullable|numeric|between:-20,20',
+                'glasses.*.right_eye_cylinder' => 'nullable|numeric|between:-10,10',
+                'glasses.*.right_eye_axis' => 'nullable|integer|between:0,180',
+                'glasses.*.right_eye_add' => 'nullable|numeric|between:0,5',
+                'glasses.*.left_eye_sphere' => 'nullable|numeric|between:-20,20',
+                'glasses.*.left_eye_cylinder' => 'nullable|numeric|between:-10,10',
+                'glasses.*.left_eye_axis' => 'nullable|integer|between:0,180',
+                'glasses.*.left_eye_add' => 'nullable|numeric|between:0,5',
+                'glasses.*.pupillary_distance' => 'nullable|numeric|between:45,85',
+                'glasses.*.segment_height' => 'nullable|numeric|between:10,30',
+                'glasses.*.special_instructions' => 'nullable|string|max:500',
             ]);
 
             DB::beginTransaction();
@@ -586,22 +739,48 @@ class PrescriptionController extends Controller
                 'advice' => $request->advice,
                 'notes' => $request->notes,
                 'followup_date' => $request->followup_date,
+                'includes_glasses' => $request->boolean('includes_glasses'),
+                'glasses_notes' => $request->glasses_notes,
             ]);
 
-            // Delete existing prescription medicines
+            // Delete existing prescription medicines and glasses
             $prescription->prescriptionMedicines()->delete();
+            $prescription->prescriptionGlasses()->delete();
 
             // Add new medicines to prescription
-            foreach ($request->medicines as $medicineData) {
-                PrescriptionMedicine::create([
-                    'prescription_id' => $prescription->id,
-                    'medicine_id' => $medicineData['medicine_id'],
-                    'dosage' => $medicineData['dosage'],
-                    'frequency' => $medicineData['frequency'] ?? null,
-                    'duration' => $medicineData['duration'] ?? null,
-                    'instructions' => $medicineData['instructions'] ?? null,
-                    'quantity' => $medicineData['quantity'] ?? null,
-                ]);
+            if ($request->has('medicines') && is_array($request->medicines)) {
+                foreach ($request->medicines as $medicineData) {
+                    PrescriptionMedicine::create([
+                        'prescription_id' => $prescription->id,
+                        'medicine_id' => $medicineData['medicine_id'],
+                        'dosage' => $medicineData['dosage'],
+                        'frequency' => $medicineData['frequency'] ?? null,
+                        'duration' => $medicineData['duration'] ?? null,
+                        'instructions' => $medicineData['instructions'] ?? null,
+                        'quantity' => $medicineData['quantity'] ?? null,
+                    ]);
+                }
+            }
+
+            // Add new glasses to prescription
+            if ($request->has('glasses') && is_array($request->glasses)) {
+                foreach ($request->glasses as $glassData) {
+                    PrescriptionGlasses::create([
+                        'prescription_id' => $prescription->id,
+                        'prescription_type' => $glassData['prescription_type'],
+                        'right_eye_sphere' => $glassData['right_eye_sphere'] ?? null,
+                        'right_eye_cylinder' => $glassData['right_eye_cylinder'] ?? null,
+                        'right_eye_axis' => $glassData['right_eye_axis'] ?? null,
+                        'right_eye_add' => $glassData['right_eye_add'] ?? null,
+                        'left_eye_sphere' => $glassData['left_eye_sphere'] ?? null,
+                        'left_eye_cylinder' => $glassData['left_eye_cylinder'] ?? null,
+                        'left_eye_axis' => $glassData['left_eye_axis'] ?? null,
+                        'left_eye_add' => $glassData['left_eye_add'] ?? null,
+                        'pupillary_distance' => $glassData['pupillary_distance'] ?? null,
+                        'segment_height' => $glassData['segment_height'] ?? null,
+                        'special_instructions' => $glassData['special_instructions'] ?? null,
+                    ]);
+                }
             }
 
             DB::commit();
@@ -610,7 +789,8 @@ class PrescriptionController extends Controller
             Log::info('Prescription updated successfully', [
                 'prescription_id' => $prescription->id,
                 'doctor_id' => $doctor->id,
-                'medicines_count' => count($request->medicines),
+                'medicines_count' => $request->has('medicines') ? count($request->medicines) : 0,
+                'glasses_count' => $request->has('glasses') ? count($request->glasses) : 0,
             ]);
 
             return redirect()->route('prescriptions.show', $id)
@@ -618,13 +798,13 @@ class PrescriptionController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Prescription Update Error: ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Failed to update prescription: ' . $e->getMessage()])
+            return back()->with('error', 'Failed to update prescription: ' . $e->getMessage())
                 ->withInput();
         }
     }
 
     /**
-     * Print the prescription - ENHANCED VERSION
+     * Print the prescription - Updated for simplified glasses
      */
     public function print($id)
     {
@@ -633,7 +813,8 @@ class PrescriptionController extends Controller
                 'patient',
                 'doctor.user',
                 'appointment',
-                'prescriptionMedicines.medicine'
+                'prescriptionMedicines.medicine',
+                'prescriptionGlasses'
             ])->findOrFail($id);
 
             // Check if user can print this prescription
@@ -650,7 +831,7 @@ class PrescriptionController extends Controller
 
             if (!$canPrint) {
                 return redirect()->route('dashboard')
-                    ->withErrors(['error' => 'You are not authorized to print this prescription']);
+                    ->with('error', 'You are not authorized to print this prescription');
             }
 
             // Generate PDF with enhanced settings
@@ -658,6 +839,8 @@ class PrescriptionController extends Controller
                 'prescription' => $prescription,
                 'print_date' => now()->format('M d, Y h:i A'),
                 'printed_by' => $user->name,
+                'has_glasses' => $prescription->prescriptionGlasses->count() > 0,
+                'glasses_count' => $prescription->prescriptionGlasses->count(),
             ]);
 
             // Set exact A4 portrait with optimized settings
@@ -689,13 +872,14 @@ class PrescriptionController extends Controller
                 'prescription_id' => $prescription->id,
                 'patient_id' => $prescription->patient_id,
                 'printed_by' => $user->name,
+                'has_glasses' => $prescription->prescriptionGlasses->count() > 0,
             ]);
 
             // For download
             return $pdf->download($filename);
         } catch (\Exception $e) {
             Log::error('Prescription Print Error: ' . $e->getMessage());
-            return redirect()->back()->withErrors(['error' => 'Failed to generate prescription PDF']);
+            return redirect()->back()->with('error', 'Failed to generate prescription PDF');
         }
     }
 
@@ -708,7 +892,7 @@ class PrescriptionController extends Controller
             $patient = Patient::findOrFail($patientId);
 
             $prescriptions = $patient->prescriptions()
-                ->with(['doctor.user', 'prescriptionMedicines.medicine'])
+                ->with(['doctor.user', 'prescriptionMedicines.medicine', 'prescriptionGlasses'])
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
 
@@ -740,7 +924,7 @@ class PrescriptionController extends Controller
             }
 
             if (!$canComplete) {
-                return back()->withErrors(['error' => 'You are not authorized to complete this follow-up']);
+                return back()->with('error', 'You are not authorized to complete this follow-up');
             }
 
             $prescription->update(['followup_date' => null]);
@@ -753,92 +937,7 @@ class PrescriptionController extends Controller
             return back()->with('success', 'Follow-up marked as completed');
         } catch (\Exception $e) {
             Log::error('Complete Followup Error: ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Failed to complete follow-up']);
-        }
-    }
-
-    /**
-     * Get all prescriptions with filtering (for admin/reports)
-     */
-    public function index(Request $request)
-    {
-        try {
-            $user = auth()->user();
-
-            // Check if user can view all prescriptions
-            if (!in_array($user->role, ['super_admin', 'receptionist'])) {
-                return redirect()->route('dashboard')
-                    ->withErrors(['error' => 'You are not authorized to view all prescriptions']);
-            }
-
-            $prescriptions = Prescription::with(['patient', 'doctor.user', 'prescriptionMedicines.medicine'])
-                ->when($request->search, function ($query, $search) {
-                    $query->whereHas('patient', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('patient_id', 'like', "%{$search}%");
-                    });
-                })
-                ->when($request->doctor_id, function ($query, $doctorId) {
-                    $query->where('doctor_id', $doctorId);
-                })
-                ->when($request->date_from, function ($query, $dateFrom) {
-                    $query->whereDate('created_at', '>=', $dateFrom);
-                })
-                ->when($request->date_to, function ($query, $dateTo) {
-                    $query->whereDate('created_at', '<=', $dateTo);
-                })
-                ->orderBy('created_at', 'desc')
-                ->paginate(20);
-
-            $doctors = Doctor::with('user')->get();
-
-            return Inertia::render('Prescriptions/Index', [
-                'prescriptions' => $prescriptions,
-                'doctors' => $doctors,
-                'filters' => $request->only(['search', 'doctor_id', 'date_from', 'date_to']),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Prescription Index Error: ' . $e->getMessage());
-            return redirect()->route('dashboard')
-                ->withErrors(['error' => 'Failed to load prescriptions']);
-        }
-    }
-
-    /**
-     * Delete a prescription (admin only)
-     */
-    public function destroy($id)
-    {
-        try {
-            $user = auth()->user();
-
-            // Only super admin can delete prescriptions
-            if ($user->role !== 'super_admin') {
-                return back()->withErrors(['error' => 'Only administrators can delete prescriptions']);
-            }
-
-            $prescription = Prescription::findOrFail($id);
-
-            DB::beginTransaction();
-
-            // Delete prescription medicines first
-            $prescription->prescriptionMedicines()->delete();
-
-            // Delete prescription
-            $prescription->delete();
-
-            DB::commit();
-
-            Log::info('Prescription deleted', [
-                'prescription_id' => $id,
-                'deleted_by' => $user->name,
-            ]);
-
-            return back()->with('success', 'Prescription deleted successfully');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Prescription Delete Error: ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Failed to delete prescription']);
+            return back()->with('error', 'Failed to complete follow-up');
         }
     }
 
@@ -876,6 +975,7 @@ class PrescriptionController extends Controller
                 'total_prescriptions' => $query->count(),
                 'unique_patients' => $query->distinct('patient_id')->count(),
                 'total_medicines' => $query->withCount('prescriptionMedicines')->get()->sum('prescription_medicines_count'),
+                'total_glasses' => $query->withCount('prescriptionGlasses')->get()->sum('prescription_glasses_count'),
                 'with_followup' => $query->whereNotNull('followup_date')->count(),
                 'overdue_followups' => Prescription::where('followup_date', '<', now())
                     ->whereNotNull('followup_date')
@@ -941,6 +1041,7 @@ class PrescriptionController extends Controller
                         'doctor_name' => $prescription->doctor->user->name,
                         'created_at' => $prescription->created_at->format('M d, Y'),
                         'medicines_count' => $prescription->prescriptionMedicines->count(),
+                        'glasses_count' => $prescription->prescriptionGlasses->count(),
                     ];
                 });
 
@@ -1020,7 +1121,7 @@ class PrescriptionController extends Controller
 
             // Check permissions
             if (!in_array($user->role, ['super_admin', 'doctor'])) {
-                return back()->withErrors(['error' => 'You are not authorized to export prescriptions']);
+                return back()->with('error', 'You are not authorized to export prescriptions');
             }
 
             $format = $request->get('format', 'csv'); // csv, pdf, excel
@@ -1031,7 +1132,7 @@ class PrescriptionController extends Controller
                 $doctorId = $user->doctor->id;
             }
 
-            $prescriptions = Prescription::with(['patient', 'doctor.user', 'prescriptionMedicines.medicine'])
+            $prescriptions = Prescription::with(['patient', 'doctor.user', 'prescriptionMedicines.medicine', 'prescriptionGlasses'])
                 ->when($doctorId, function ($q) use ($doctorId) {
                     $q->where('doctor_id', $doctorId);
                 })
@@ -1056,6 +1157,7 @@ class PrescriptionController extends Controller
                     'diagnosis' => $prescription->diagnosis,
                     'advice' => $prescription->advice,
                     'medicines_count' => $prescription->prescriptionMedicines->count(),
+                    'glasses_count' => $prescription->prescriptionGlasses->count(),
                     'followup_date' => $prescription->followup_date,
                 ];
             });
@@ -1090,17 +1192,18 @@ class PrescriptionController extends Controller
             if (!$doctor) {
                 $doctor = Doctor::where('user_id', $user->id)->first();
                 if (!$doctor) {
-                    return back()->withErrors(['error' => 'Only doctors can duplicate prescriptions']);
+                    return back()->with('error', 'Only doctors can duplicate prescriptions');
                 }
             }
 
-            $originalPrescription = Prescription::with('prescriptionMedicines')->findOrFail($id);
+            $originalPrescription = Prescription::with(['prescriptionMedicines', 'prescriptionGlasses'])->findOrFail($id);
 
             // Redirect to create page with pre-filled data
             return redirect()->route('prescriptions.create.patient', $originalPrescription->patient_id)
                 ->with('duplicate_data', [
                     'diagnosis' => $originalPrescription->diagnosis,
                     'advice' => $originalPrescription->advice,
+                    'glasses_notes' => $originalPrescription->glasses_notes,
                     'medicines' => $originalPrescription->prescriptionMedicines->map(function ($medicine) {
                         return [
                             'medicine_id' => $medicine->medicine_id,
@@ -1111,10 +1214,65 @@ class PrescriptionController extends Controller
                             'quantity' => $medicine->quantity,
                         ];
                     })->toArray(),
+                    'glasses' => $originalPrescription->prescriptionGlasses->map(function ($glass) {
+                        return [
+                            'prescription_type' => $glass->prescription_type,
+                            'right_eye_sphere' => $glass->right_eye_sphere,
+                            'right_eye_cylinder' => $glass->right_eye_cylinder,
+                            'right_eye_axis' => $glass->right_eye_axis,
+                            'right_eye_add' => $glass->right_eye_add,
+                            'left_eye_sphere' => $glass->left_eye_sphere,
+                            'left_eye_cylinder' => $glass->left_eye_cylinder,
+                            'left_eye_axis' => $glass->left_eye_axis,
+                            'left_eye_add' => $glass->left_eye_add,
+                            'pupillary_distance' => $glass->pupillary_distance,
+                            'segment_height' => $glass->segment_height,
+                            'special_instructions' => $glass->special_instructions,
+                        ];
+                    })->toArray(),
                 ]);
         } catch (\Exception $e) {
             Log::error('Duplicate Prescription Error: ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Failed to duplicate prescription']);
+            return back()->with('error', 'Failed to duplicate prescription');
+        }
+    }
+
+    /**
+     * Delete a prescription (admin only)
+     */
+    public function destroy($id)
+    {
+        try {
+            $user = auth()->user();
+
+            // Only super admin can delete prescriptions
+            if ($user->role !== 'super_admin') {
+                return back()->with('error', 'Only administrators can delete prescriptions');
+            }
+
+            $prescription = Prescription::findOrFail($id);
+
+            DB::beginTransaction();
+
+            // Delete prescription medicines and glasses first
+            $prescription->prescriptionMedicines()->delete();
+            $prescription->prescriptionGlasses()->delete();
+
+            // Delete prescription
+            $prescription->delete();
+
+            DB::commit();
+
+            Log::info('Prescription deleted', [
+                'prescription_id' => $id,
+                'deleted_by' => $user->name,
+            ]);
+
+            return back()->with('success', 'Prescription deleted successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Prescription Delete Error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete prescription');
         }
     }
 
@@ -1158,5 +1316,28 @@ class PrescriptionController extends Controller
             Log::error('Get Prescription Template Error: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to get template'], 500);
         }
+    }
+
+    /**
+     * Helper method to format eye prescription
+     */
+    private function formatEyePrescription($sphere, $cylinder, $axis, $add)
+    {
+        $parts = [];
+
+        if ($sphere) {
+            $parts[] = "SPH: " . ($sphere > 0 ? '+' : '') . $sphere;
+        }
+        if ($cylinder) {
+            $parts[] = "CYL: " . ($cylinder > 0 ? '+' : '') . $cylinder;
+        }
+        if ($axis) {
+            $parts[] = "AXIS: " . $axis . "°";
+        }
+        if ($add) {
+            $parts[] = "ADD: +" . $add;
+        }
+
+        return implode(' / ', $parts) ?: 'N/A';
     }
 }

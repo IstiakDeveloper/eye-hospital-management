@@ -93,4 +93,13 @@ class Doctor extends Model
             ->orderBy('appointment_time')
             ->get();
     }
+
+    public function recentAppointments()
+    {
+        return $this->hasMany(Appointment::class)
+            ->with('patient')
+            ->whereIn('status', ['pending', 'processing', 'cancelled'])
+            ->orderByRaw("FIELD(status, 'processing', 'pending', 'cancelled')")
+            ->orderBy('created_at', 'desc');
+    }
 }

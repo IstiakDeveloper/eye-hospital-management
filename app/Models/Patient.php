@@ -58,8 +58,8 @@ class Patient extends Model
         $prefix = 'P';
         $date = now()->format('Ymd');
         $lastPatient = static::whereDate('created_at', today())
-                            ->orderBy('id', 'desc')
-                            ->first();
+            ->orderBy('id', 'desc')
+            ->first();
 
         $sequence = $lastPatient ? (intval(substr($lastPatient->patient_id, -4)) + 1) : 1;
 
@@ -112,7 +112,7 @@ class Patient extends Model
     public function activeVisits()
     {
         return $this->hasMany(PatientVisit::class)
-                    ->whereNotIn('overall_status', ['completed']);
+            ->whereNotIn('overall_status', ['completed']);
     }
 
     public function visionTests(): HasMany
@@ -205,7 +205,7 @@ class Patient extends Model
     public function scopeWithTotals($query)
     {
         return $query->withSum('visits as total_paid_sum', 'total_paid')
-                     ->withSum('visits as total_due_sum', 'total_due');
+            ->withSum('visits as total_due_sum', 'total_due');
     }
 
     public function scopeActive($query)
@@ -216,5 +216,10 @@ class Patient extends Model
     public function scopeCompleted($query)
     {
         return $query->whereDoesntHave('activeVisits');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

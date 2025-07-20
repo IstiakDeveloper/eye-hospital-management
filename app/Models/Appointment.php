@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\AppointmentUpdated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -136,5 +137,21 @@ class Appointment extends Model
     public function visit()
     {
         return $this->belongsTo(PatientVisit::class, 'visit_id');
+    }
+
+
+    protected static function booted()
+    {
+        static::created(function ($appointment) {
+            broadcast(new AppointmentUpdated($appointment));
+        });
+
+        static::updated(function ($appointment) {
+            broadcast(new AppointmentUpdated($appointment));
+        });
+
+        static::deleted(function ($appointment) {
+            broadcast(new AppointmentUpdated($appointment));
+        });
     }
 }

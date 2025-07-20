@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\AppointmentDisplayController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\DoctorDashboardController;
@@ -203,6 +204,13 @@ Route::middleware(['auth'])->prefix('reports')->name('reports.')->group(function
     Route::get('/revenue', [ReportController::class, 'revenue'])->name('revenue');
     Route::get('/medicines', [ReportController::class, 'medicines'])->name('medicines');
 });
+
+Route::get('/appointment-display', [AppointmentDisplayController::class, 'index'])
+    ->name('appointment.display');
+
+// API route
+Route::get('/api/appointment-display-data', [AppointmentDisplayController::class, 'getData'])
+    ->name('api.appointment.display.data');
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';

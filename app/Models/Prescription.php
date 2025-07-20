@@ -97,4 +97,13 @@ class Prescription extends Model
         return $this->invoice && $this->invoice->status === 'paid';
     }
 
+    public function prescriptionGlasses(): HasMany
+    {
+        return $this->hasMany(PrescriptionGlasses::class);
+    }
+
+    public function getHasGlassesAttribute(): bool
+    {
+        return $this->prescriptionGlasses()->exists();
+    }
 }
