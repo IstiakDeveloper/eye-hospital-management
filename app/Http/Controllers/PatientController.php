@@ -9,6 +9,8 @@ use App\Models\Doctor;
 use App\Models\PaymentMethod;
 use App\Models\PatientInvoice;
 use App\Models\InvoiceItem;
+use App\Models\Prescription;
+use App\Models\VisionTest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -20,50 +22,34 @@ class PatientController extends Controller
      */
     public function index(Request $request)
     {
-        $searchTerm = $request->get('search');
-        $status = $request->get('status'); // active, completed, all
-
-        $query = Patient::with(['visits' => function ($q) {
-            $q->latest()->limit(1);
-        }]);
+        $query = Patient::query()->with('registeredBy');
 
         // Search functionality
-        if ($searchTerm) {
+        if ($request->filled('search')) {
+            $searchTerm = $request->get('search');
+
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('name', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('phone', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('patient_id', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('nid_card', 'like', '%' . $searchTerm . '%');
+                $q->where('name', 'like', "%{$searchTerm}%")
+                    ->orWhere('phone', 'like', "%{$searchTerm}%")
+                    ->orWhere('nid_card', 'like', "%{$searchTerm}%")
+                    ->orWhere('patient_id', 'like', "%{$searchTerm}%")
+                    ->orWhere('email', 'like', "%{$searchTerm}%");
             });
         }
 
-        // Filter by status
-        if ($status === 'active') {
-            $query->whereHas('visits', function ($q) {
-                $q->whereNotIn('overall_status', ['completed']);
-            });
-        } elseif ($status === 'completed') {
-            $query->whereDoesntHave('visits', function ($q) {
-                $q->whereNotIn('overall_status', ['completed']);
-            });
+        // Filter by gender if provided
+        if ($request->filled('gender')) {
+            $query->where('gender', $request->get('gender'));
         }
 
-        $patients = $query->orderBy('created_at', 'desc')->paginate(15);
-
-        // Add latest visit info to each patient
-        $patients->getCollection()->transform(function ($patient) {
-            $latestVisit = $patient->visits->first();
-            $patient->latest_visit = $latestVisit;
-            $patient->has_active_visit = $latestVisit && $latestVisit->overall_status !== 'completed';
-            return $patient;
-        });
+        // Sort by created_at descending by default
+        $patients = $query->orderBy('created_at', 'desc')
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render('Patients/Index', [
             'patients' => $patients,
-            'filters' => [
-                'search' => $searchTerm,
-                'status' => $status,
-            ],
+            'filters' => $request->only(['search', 'gender']),
         ]);
     }
 
@@ -208,34 +194,93 @@ class PatientController extends Controller
      */
     public function show(Patient $patient)
     {
+        // Load patient with all necessary relationships
         $patient->load([
-            'visits' => function ($query) {
-                $query->with(['selectedDoctor.user', 'payments', 'visionTests', 'appointments'])
-                    ->orderBy('created_at', 'desc');
-            },
             'registeredBy',
-            'visionTests' => function ($query) {
-                $query->orderBy('test_date', 'desc')->limit(5);
-            },
-            'appointments' => function ($query) {
-                $query->with('doctor.user')->orderBy('appointment_date', 'desc')->limit(5);
+            'visits' => function ($query) {
+                $query->orderBy('created_at', 'desc')
+                    ->with([
+                        'selectedDoctor',
+                        'createdBy',
+                        'visionTests' => function ($visionQuery) {
+                            $visionQuery->with('performedBy')
+                                ->orderBy('test_date', 'desc');
+                        },
+                        'prescriptions' => function ($prescQuery) {
+                            $prescQuery->with(['doctor', 'createdBy'])
+                                ->orderBy('created_at', 'desc');
+                        },
+                        'payments' => function ($paymentQuery) {
+                            $paymentQuery->with(['paymentMethod', 'receivedBy'])
+                                ->orderBy('payment_date', 'desc');
+                        }
+                    ]);
             }
         ]);
 
-        // Get active visit
-        $activeVisit = $patient->visits->where('overall_status', '!=', 'completed')->first();
-
-        // Calculate totals using methods instead of attributes
-        $totalPaid = $patient->getTotalPaid();
-        $totalDue = $patient->getTotalDue();
+        // Calculate summary statistics
         $totalVisits = $patient->visits->count();
+        $completedVisits = $patient->visits->where('overall_status', 'completed')->count();
+        $pendingVisits = $patient->visits->where('overall_status', '!=', 'completed')->count();
+        $totalPaid = $patient->visits->sum('total_paid');
+        $totalDue = $patient->visits->sum('total_due');
 
+        // Get all vision tests for this patient (including those without visit_id)
+        $allVisionTests = VisionTest::where('patient_id', $patient->id)
+            ->with(['performedBy'])
+            ->orderBy('test_date', 'desc')
+            ->get();
+
+
+
+        // Get all prescriptions for this patient (including those without visit_id)
+        $allPrescriptions = Prescription::where('patient_id', $patient->id)
+            ->with(['doctor', 'createdBy'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        // Attach vision tests and prescriptions to visits if visit_id exists
+        // Otherwise, keep them as standalone items
+        foreach ($patient->visits as $visit) {
+            // Get vision tests for this specific visit
+            $visitVisionTests = $allVisionTests->where('visit_id', $visit->id);
+            $visit->visionTests = $visitVisionTests->values();
+
+            // Get prescriptions for this specific visit
+            $visitPrescriptions = $allPrescriptions->where('visit_id', $visit->id);
+            $visit->prescriptions = $visitPrescriptions->values();
+        }
+
+        // Get standalone vision tests and prescriptions (those without visit_id)
+        $standaloneVisionTests = $allVisionTests->whereNull('visit_id');
+        $standalonePrescriptions = $allPrescriptions->whereNull('visit_id');
+
+        // dd([
+        //     'patient' => $patient,
+        //     'statistics' => [
+        //         'total_visits' => $totalVisits,
+        //         'completed_visits' => $completedVisits,
+        //         'pending_visits' => $pendingVisits,
+        //         'total_paid' => $totalPaid,
+        //         'total_due' => $totalDue,
+        //     ],
+        //     'standalone_vision_tests' => $standaloneVisionTests,
+        //     'standalone_prescriptions' => $standalonePrescriptions,
+        //     'all_vision_tests' => $allVisionTests,
+        //     'all_prescriptions' => $allPrescriptions,
+        // ]);
         return Inertia::render('Patients/Show', [
             'patient' => $patient,
-            'activeVisit' => $activeVisit,
-            'totalPaid' => $totalPaid,
-            'totalDue' => $totalDue,
-            'totalVisits' => $totalVisits,
+            'statistics' => [
+                'total_visits' => $totalVisits,
+                'completed_visits' => $completedVisits,
+                'pending_visits' => $pendingVisits,
+                'total_paid' => $totalPaid,
+                'total_due' => $totalDue,
+            ],
+            'standalone_vision_tests' => $standaloneVisionTests,
+            'standalone_prescriptions' => $standalonePrescriptions,
+            'all_vision_tests' => $allVisionTests,
+            'all_prescriptions' => $allPrescriptions,
         ]);
     }
 

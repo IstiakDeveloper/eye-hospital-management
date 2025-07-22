@@ -1,407 +1,342 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/layouts/admin-layout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import AdminLayout from '@/Layouts/admin-layout';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent
-} from '@/components/ui/card';
-import Pagination from '@/components/ui/pagination';
-import { formatDate, calculateAge } from '@/lib/utils';
-import {
-  Search,
-  UserPlus,
-  Eye,
-  Edit,
-  Calendar,
-  FileText,
-  Users,
-  Filter,
-  Download,
-  MoreVertical,
-  Phone,
-  User,
-  Clock,
-  TrendingUp,
-  Activity
+    Search,
+    Plus,
+    Eye,
+    Phone,
+    Filter,
+    Users,
+    Edit,
+    MapPin
 } from 'lucide-react';
 
+interface User {
+    id: number;
+    name: string;
+}
+
 interface Patient {
-  id: number;
-  patient_id: string;
-  name: string;
-  phone: string;
-  email: string | null;
-  address: string | null;
-  date_of_birth: string | null;
-  gender: string | null;
-  created_at: string;
+    id: number;
+    patient_id: string;
+    name: string;
+    phone: string;
+    nid_card?: string;
+    email?: string;
+    address?: string;
+    date_of_birth?: string;
+    gender?: string;
+    registered_by?: User;
+    created_at: string;
 }
 
-interface PaginationLinks {
-  url: string | null;
-  label: string;
-  active: boolean;
+interface PaginationLink {
+    url: string | null;
+    label: string;
+    active: boolean;
 }
 
-interface PatientsIndexProps {
-  patients: {
+interface PaginatedData {
     data: Patient[];
-    links: PaginationLinks[];
     current_page: number;
     last_page: number;
-    from: number;
-    to: number;
+    per_page: number;
     total: number;
-  };
+    links: PaginationLink[];
 }
 
-export default function PatientsIndex({ patients }: PatientsIndexProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+interface Props {
+    patients: PaginatedData;
+    filters: {
+        search?: string;
+        gender?: string;
+    };
+}
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSearching(true);
-    try {
-      await router.get(route('patients.index'), { search: searchTerm }, { preserveState: true });
-    } finally {
-      setIsSearching(false);
-    }
-  };
+export default function Index({ patients, filters }: Props) {
+    const [searchTerm, setSearchTerm] = useState(filters.search || '');
+    const [genderFilter, setGenderFilter] = useState(filters.gender || '');
 
-  const clearSearch = () => {
-    setSearchTerm('');
-    router.get(route('patients.index'), {}, { preserveState: true });
-  };
+    // Realtime search with debounce
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            router.get(route('patients.index'), {
+                search: searchTerm,
+                gender: genderFilter,
+            }, {
+                preserveState: true,
+                replace: true,
+            });
+        }, 500); // 500ms delay
 
-  // Calculate stats
-  const totalPatients = patients.total;
-  const currentPageCount = patients.data.length;
-  const malePatients = patients.data.filter(p => p.gender === 'male').length;
-  const femalePatients = patients.data.filter(p => p.gender === 'female').length;
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm, genderFilter]);
 
-  const getGenderBadge = (gender: string | null) => {
-    if (!gender) return null;
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        // Form submit will be handled by useEffect
+    };
 
-    const genderFormatted = gender.charAt(0).toUpperCase() + gender.slice(1);
-    const colorClass = gender === 'male'
-      ? 'bg-blue-50 text-blue-700 border-blue-200'
-      : 'bg-pink-50 text-pink-700 border-pink-200';
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    };
+
+    const calculateAge = (dateOfBirth?: string) => {
+        if (!dateOfBirth) return 'N/A';
+        const today = new Date();
+        const birth = new Date(dateOfBirth);
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+            age--;
+        }
+        return age;
+    };
 
     return (
-      <Badge className={`${colorClass} font-medium`}>
-        {genderFormatted}
-      </Badge>
-    );
-  };
+        <AdminLayout>
+            <Head title="Patients" />
 
-  return (
-    <AdminLayout title="Patients Management">
-      <Head title="Patients Management" />
-
-      {/* Header Section */}
-      <div className="mb-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Patients Management</h1>
-            <p className="text-gray-600">Manage and track all your patients in one place</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button variant="outline" leftIcon={<Download className="h-4 w-4" />}>
-              Export Data
-            </Button>
-            <Button href={route('patients.create')} leftIcon={<UserPlus className="h-4 w-4" />} size="lg">
-              Add New Patient
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-600 mb-1">Total Patients</p>
-                <p className="text-3xl font-bold text-blue-900">{totalPatients.toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-blue-500 rounded-xl">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-emerald-600 mb-1">This Page</p>
-                <p className="text-3xl font-bold text-emerald-900">{currentPageCount}</p>
-              </div>
-              <div className="p-3 bg-emerald-500 rounded-xl">
-                <Activity className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-600 mb-1">Male Patients</p>
-                <p className="text-3xl font-bold text-purple-900">{malePatients}</p>
-              </div>
-              <div className="p-3 bg-purple-500 rounded-xl">
-                <User className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-pink-600 mb-1">Female Patients</p>
-                <p className="text-3xl font-bold text-pink-900">{femalePatients}</p>
-              </div>
-              <div className="p-3 bg-pink-500 rounded-xl">
-                <User className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
-      <Card className="mb-8 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
-          <CardTitle className="flex items-center space-x-2">
-            <Search className="h-5 w-5 text-gray-600" />
-            <span>Search & Filters</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <form onSubmit={handleSearch} className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                type="text"
-                placeholder="Search by name, phone, email, or patient ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                leftIcon={<Search className="h-4 w-4" />}
-                className="w-full"
-              />
-            </div>
-            <div className="flex gap-3">
-              <Button
-                type="submit"
-                isLoading={isSearching}
-                loadingText="Searching..."
-                className="min-w-[120px]"
-              >
-                Search
-              </Button>
-              {searchTerm && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={clearSearch}
-                >
-                  Clear
-                </Button>
-              )}
-              <Button variant="outline" leftIcon={<Filter className="h-4 w-4" />}>
-                Filters
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-
-      {/* Main Content */}
-      <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-gray-600" />
-              <span>Patient Directory</span>
-            </CardTitle>
-            <div className="flex items-center space-x-4">
-              <p className="text-sm text-gray-600 bg-white px-3 py-1 rounded-lg border">
-                Showing <span className="font-semibold">{patients.from}</span> to <span className="font-semibold">{patients.to}</span> of <span className="font-semibold">{patients.total}</span> patients
-              </p>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-0">
-          {patients.data.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50 hover:bg-gray-50">
-                    <TableHead className="font-bold text-gray-800 py-4">
-                      <div className="flex items-center space-x-2">
-                        <User className="h-4 w-4" />
-                        <span>Patient ID</span>
-                      </div>
-                    </TableHead>
-                    <TableHead className="font-bold text-gray-800">Patient Details</TableHead>
-                    <TableHead className="font-bold text-gray-800">Contact Info</TableHead>
-                    <TableHead className="font-bold text-gray-800">Demographics</TableHead>
-                    <TableHead className="font-bold text-gray-800">
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-4 w-4" />
-                        <span>Registration</span>
-                      </div>
-                    </TableHead>
-                    <TableHead className="text-right font-bold text-gray-800">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {patients.data.map((patient, index) => (
-                    <TableRow
-                      key={patient.id}
-                      className="hover:bg-blue-50 transition-colors duration-200 group"
+            <div className="p-6">
+                {/* Compact Header */}
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h1 className="text-lg font-semibold text-gray-900">Patients</h1>
+                        <p className="text-xs text-gray-500">Manage patient records and information</p>
+                    </div>
+                    <Link
+                        href={route('patients.create')}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
                     >
-                      <TableCell className="font-medium py-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                            {patient.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-bold text-gray-900">{patient.patient_id}</p>
-                            <p className="text-xs text-gray-500">ID #{index + 1}</p>
-                          </div>
-                        </div>
-                      </TableCell>
+                        <Plus className="h-3 w-3" />
+                        Add Patient
+                    </Link>
+                </div>
 
-                      <TableCell>
-                        <div>
-                          <p className="font-semibold text-gray-900 mb-1">{patient.name}</p>
-                          {patient.email && (
-                            <p className="text-sm text-gray-500">{patient.email}</p>
-                          )}
+                {/* Compact Search Bar */}
+                <div className="flex items-center gap-3 mb-4">
+                    <form onSubmit={handleSearch} className="flex-1 flex items-center gap-2">
+                        <div className="flex-1 relative">
+                            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search by name, phone, NID or patient ID..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-7 pr-3 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            />
                         </div>
-                      </TableCell>
+                        <select
+                            value={genderFilter}
+                            onChange={(e) => setGenderFilter(e.target.value)}
+                            className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                            <option value="">All Genders</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <button
+                            type="button"
+                            className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded hover:bg-gray-200"
+                            onClick={() => {
+                                setSearchTerm('');
+                                setGenderFilter('');
+                            }}
+                        >
+                            Clear
+                        </button>
+                    </form>
+                </div>
 
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          <span className="font-medium text-gray-900">{patient.phone}</span>
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="space-y-2">
-                          {patient.date_of_birth && (
-                            <div className="flex items-center space-x-2">
-                              <Badge variant="outline" className="text-xs">
-                                {calculateAge(patient.date_of_birth)} years
-                              </Badge>
+                {/* Compact Stats */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className="bg-blue-50 rounded p-2">
+                        <div className="flex items-center gap-2">
+                            <Users className="h-3 w-3 text-blue-600" />
+                            <div>
+                                <p className="text-xs text-blue-600 font-medium">Total Patients</p>
+                                <p className="text-sm font-semibold text-blue-700">{patients.total}</p>
                             </div>
-                          )}
-                          {getGenderBadge(patient.gender)}
                         </div>
-                      </TableCell>
+                    </div>
+                    <div className="bg-green-50 rounded p-2">
+                        <div className="flex items-center gap-2">
+                            <Filter className="h-3 w-3 text-green-600" />
+                            <div>
+                                <p className="text-xs text-green-600 font-medium">This Page</p>
+                                <p className="text-sm font-semibold text-green-700">{patients.data.length}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-purple-50 rounded p-2">
+                        <div className="flex items-center gap-2">
+                            <Search className="h-3 w-3 text-purple-600" />
+                            <div>
+                                <p className="text-xs text-purple-600 font-medium">Page {patients.current_page} of {patients.last_page}</p>
+                                <p className="text-sm font-semibold text-purple-700">{patients.per_page}/page</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                      <TableCell>
-                        <div className="text-sm">
-                          <p className="font-medium text-gray-900">{formatDate(patient.created_at)}</p>
-                          <p className="text-gray-500">Registered</p>
-                        </div>
-                      </TableCell>
+                {/* Compact Table */}
+                <div className="bg-white rounded border border-gray-200 overflow-hidden">
+                    <table className="min-w-full">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Registered</th>
+                                <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {patients.data.map((patient) => (
+                                <tr key={patient.id} className="hover:bg-gray-50">
+                                    <td className="px-3 py-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                                <span className="text-xs font-medium text-blue-600">
+                                                    {patient.name.charAt(0).toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium text-gray-900">{patient.name}</p>
+                                                <p className="text-xs text-gray-500">ID: {patient.patient_id}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-3 py-2">
+                                        <div className="space-y-0.5">
+                                            <div className="flex items-center gap-1 text-xs text-gray-600">
+                                                <Phone className="h-2.5 w-2.5" />
+                                                {patient.phone}
+                                            </div>
+                                            {patient.nid_card && (
+                                                <p className="text-xs text-gray-500">NID: {patient.nid_card}</p>
+                                            )}
+                                            {patient.email && (
+                                                <p className="text-xs text-gray-500">{patient.email}</p>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-3 py-2">
+                                        <div className="space-y-0.5">
+                                            <div className="flex items-center gap-1">
+                                                {patient.gender && (
+                                                    <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
+                                                        patient.gender === 'male'
+                                                            ? 'bg-blue-100 text-blue-700'
+                                                            : patient.gender === 'female'
+                                                            ? 'bg-pink-100 text-pink-700'
+                                                            : 'bg-gray-100 text-gray-700'
+                                                    }`}>
+                                                        {patient.gender === 'male' ? 'M' : patient.gender === 'female' ? 'F' : 'O'}
+                                                    </span>
+                                                )}
+                                                <span className="text-xs text-gray-600">Age: {calculateAge(patient.date_of_birth)}</span>
+                                            </div>
+                                            {patient.address && (
+                                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                                    <MapPin className="h-2.5 w-2.5" />
+                                                    <span className="truncate max-w-24">{patient.address}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-3 py-2">
+                                        <div>
+                                            <p className="text-xs text-gray-600">{formatDate(patient.created_at)}</p>
+                                            {patient.registered_by && (
+                                                <p className="text-xs text-gray-500">by {patient.registered_by.name}</p>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-3 py-2 text-right">
+                                        <div className="flex items-center gap-1 justify-end">
+                                            <Link
+                                                href={route('patients.show', patient.id)}
+                                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                                            >
+                                                <Eye className="h-3 w-3" />
+                                                View
+                                            </Link>
+                                            <Link
+                                                href={route('patients.edit', patient.id)}
+                                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded"
+                                            >
+                                                <Edit className="h-3 w-3" />
+                                                Edit
+                                            </Link>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
 
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            href={route('patients.show', patient.id)}
-                            className="hover:bg-blue-100 transition-all duration-300 group-hover:scale-110"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            href={route('patients.edit', patient.id)}
-                            className="hover:bg-gray-100 transition-all duration-300 group-hover:scale-110"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            href={route('appointments.create.patient', patient.id)}
-                            className="hover:bg-green-100 transition-all duration-300 group-hover:scale-110"
-                          >
-                            <Calendar className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            href={route('visiontests.create', patient.id)}
-                            className="hover:bg-purple-100 transition-all duration-300 group-hover:scale-110"
-                          >
-                            <FileText className="h-4 w-4" />
-                          </Button>
+                    {patients.data.length === 0 && (
+                        <div className="text-center py-8">
+                            <Users className="mx-auto h-8 w-8 text-gray-400" />
+                            <h3 className="mt-2 text-sm font-medium text-gray-900">No patients found</h3>
+                            <p className="mt-1 text-xs text-gray-500">Get started by creating a new patient record.</p>
+                            <div className="mt-4">
+                                <Link
+                                    href={route('patients.create')}
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
+                                >
+                                    <Plus className="h-3 w-3" />
+                                    Add Patient
+                                </Link>
+                            </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center py-16">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Users className="h-12 w-12 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No patients found</h3>
-              <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                {searchTerm
-                  ? `No patients match your search for "${searchTerm}". Try adjusting your search terms.`
-                  : "Get started by adding your first patient to the system."
-                }
-              </p>
-              <div className="flex justify-center space-x-3">
-                {searchTerm && (
-                  <Button variant="outline" onClick={clearSearch}>
-                    Clear Search
-                  </Button>
+                    )}
+                </div>
+
+                {/* Compact Pagination */}
+                {patients.total > patients.per_page && (
+                    <div className="flex items-center justify-between mt-3">
+                        <div className="text-xs text-gray-700">
+                            Showing {((patients.current_page - 1) * patients.per_page) + 1} to{' '}
+                            {Math.min(patients.current_page * patients.per_page, patients.total)} of{' '}
+                            {patients.total} results
+                        </div>
+                        <div className="flex gap-1">
+                            {patients.links.map((link, index) => {
+                                if (link.url === null) {
+                                    return (
+                                        <span
+                                            key={index}
+                                            className="px-2 py-1 text-xs text-gray-400 cursor-not-allowed"
+                                            dangerouslySetInnerHTML={{ __html: link.label }}
+                                        />
+                                    );
+                                }
+
+                                return (
+                                    <Link
+                                        key={index}
+                                        href={link.url}
+                                        className={`px-2 py-1 text-xs font-medium rounded ${
+                                            link.active
+                                                ? 'bg-blue-600 text-white'
+                                                : 'text-gray-700 hover:bg-gray-100'
+                                        }`}
+                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                    />
+                                );
+                            })}
+                        </div>
+                    </div>
                 )}
-                <Button href={route('patients.create')} leftIcon={<UserPlus className="h-4 w-4" />}>
-                  Add First Patient
-                </Button>
-              </div>
             </div>
-          )}
-        </CardContent>
-
-        {patients.data.length > 0 && (
-          <div className="border-t bg-gray-50 px-6 py-4">
-            <Pagination links={patients.links} />
-          </div>
-        )}
-      </Card>
-    </AdminLayout>
-  );
+        </AdminLayout>
+    );
 }

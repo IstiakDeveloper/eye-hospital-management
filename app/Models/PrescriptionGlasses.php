@@ -101,7 +101,7 @@ class PrescriptionGlasses extends Model
 
     public function getStatusBadgeColorAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'yellow',
             'ordered' => 'blue',
             'ready' => 'green',

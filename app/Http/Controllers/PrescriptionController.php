@@ -287,6 +287,12 @@ class PrescriptionController extends Controller
 
             $patient = Patient::findOrFail($patientId);
 
+            // Find the active visit for prescription
+            $activeVisit = $patient->visits()
+                ->whereIn('overall_status', ['prescription', 'vision_test'])
+                ->latest()
+                ->first();
+
             // Enhanced validation for simplified system
             $request->validate([
                 'appointment_id' => 'nullable|exists:appointments,id',
@@ -325,9 +331,20 @@ class PrescriptionController extends Controller
 
             DB::beginTransaction();
 
-            // Create prescription
+            // Determine visit_id to use
+            $visitId = null;
+            if ($request->visit_id) {
+                // Use provided visit_id
+                $visitId = $request->visit_id;
+            } elseif ($activeVisit) {
+                // Use active visit
+                $visitId = $activeVisit->id;
+            }
+
+            // Create prescription - INCLUDE visit_id
             $prescription = Prescription::create([
                 'patient_id' => $patientId,
+                'visit_id' => $visitId,  // ✅ THIS WAS MISSING!
                 'doctor_id' => $doctor->id,
                 'appointment_id' => $request->appointment_id,
                 'diagnosis' => $request->diagnosis,
@@ -384,12 +401,7 @@ class PrescriptionController extends Controller
                 }
             }
 
-            // Update visit status if patient has active visit
-            $activeVisit = $patient->visits()
-                ->whereIn('overall_status', ['prescription', 'vision_test'])
-                ->latest()
-                ->first();
-
+            // Update visit status if we have an active visit
             if ($activeVisit) {
                 $activeVisit->update([
                     'prescription_status' => 'completed',
@@ -400,10 +412,12 @@ class PrescriptionController extends Controller
 
             DB::commit();
 
-            // Log successful prescription creation
+            // Log successful prescription creation - Enhanced logging
             Log::info('Prescription created successfully', [
                 'prescription_id' => $prescription->id,
                 'patient_id' => $patientId,
+                'visit_id' => $visitId,  // ✅ Log visit_id
+                'prescription_visit_id' => $prescription->visit_id,  // ✅ Confirm it's saved
                 'doctor_id' => $doctor->id,
                 'medicines_count' => $request->has('medicines') ? count($request->medicines) : 0,
                 'glasses_count' => $request->has('glasses') ? count($request->glasses) : 0,

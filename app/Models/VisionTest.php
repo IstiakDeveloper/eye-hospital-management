@@ -17,6 +17,7 @@ class VisionTest extends Model
      */
     protected $fillable = [
         'patient_id',
+        'visit_id',
         'right_eye_vision',
         'left_eye_vision',
         'right_eye_power',

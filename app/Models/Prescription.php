@@ -20,6 +20,7 @@ class Prescription extends Model
         'patient_id',
         'doctor_id',
         'appointment_id',
+        'visit_id',
         'diagnosis',
         'advice',
         'notes',

@@ -49,13 +49,13 @@ class VisionTestController extends Controller
                     break;
                 case 'month':
                     $query->whereMonth('vision_tests.test_date', now()->month)
-                          ->whereYear('vision_tests.test_date', now()->year);
+                        ->whereYear('vision_tests.test_date', now()->year);
                     break;
             }
         }
 
         $visionTests = $query->orderBy('vision_tests.test_date', 'desc')
-                            ->paginate(20);
+            ->paginate(20);
 
         // Get statistics
         $stats = [
@@ -63,8 +63,8 @@ class VisionTestController extends Controller
             'tests_today' => VisionTest::whereDate('test_date', today())->count(),
             'tests_this_week' => VisionTest::whereBetween('test_date', [now()->startOfWeek(), now()->endOfWeek()])->count(),
             'tests_this_month' => VisionTest::whereMonth('test_date', now()->month)
-                                           ->whereYear('test_date', now()->year)
-                                           ->count(),
+                ->whereYear('test_date', now()->year)
+                ->count(),
         ];
 
         return Inertia::render('VisionTests/Index', [
@@ -86,13 +86,13 @@ class VisionTestController extends Controller
         // Find the most recent active visit for vision test
         $visit = PatientVisit::with(['patient', 'selectedDoctor.user'])
             ->where('patient_id', $patient->id)
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('vision_test_status', 'in_progress')
-                      ->orWhere(function($subQuery) {
-                          $subQuery->where('payment_status', 'paid')
-                                   ->where('vision_test_status', 'pending')
-                                   ->where('overall_status', 'vision_test');
-                      });
+                    ->orWhere(function ($subQuery) {
+                        $subQuery->where('payment_status', 'paid')
+                            ->where('vision_test_status', 'pending')
+                            ->where('overall_status', 'vision_test');
+                    });
             })
             ->latest()
             ->first();
@@ -147,12 +147,12 @@ class VisionTestController extends Controller
     {
         // Find the active visit
         $visit = PatientVisit::where('patient_id', $patient->id)
-            ->where(function($query) {
+            ->where(function ($query) {
                 $query->where('vision_test_status', 'in_progress')
-                      ->orWhere(function($subQuery) {
-                          $subQuery->where('payment_status', 'paid')
-                                   ->where('vision_test_status', 'pending');
-                      });
+                    ->orWhere(function ($subQuery) {
+                        $subQuery->where('payment_status', 'paid')
+                            ->where('vision_test_status', 'pending');
+                    });
             })
             ->latest()
             ->first();
@@ -177,6 +177,17 @@ class VisionTestController extends Controller
             ]);
         }
 
+        // ✅ NEW CHECK: Ensure we don't already have a vision test for THIS specific visit
+        $existingVisionTest = VisionTest::where('visit_id', $visit->id)
+            ->where('patient_id', $patient->id)
+            ->first();
+
+        if ($existingVisionTest) {
+            return back()->withErrors([
+                'error' => 'Vision test already exists for this visit. Please create a new visit or edit the existing test.'
+            ]);
+        }
+
         $request->validate([
             'right_eye_vision' => 'nullable|string|max:20',
             'left_eye_vision' => 'nullable|string|max:20',
@@ -197,9 +208,10 @@ class VisionTestController extends Controller
         try {
             DB::beginTransaction();
 
-            // Prepare data for vision test
+            // Prepare data for NEW vision test - ALWAYS CREATE, NEVER UPDATE
             $visionTestData = [
                 'patient_id' => $patient->id,
+                'visit_id' => $visit->id,  // ✅ Link to specific visit
                 'performed_by' => auth()->id(),
                 'test_date' => now(),
                 'right_eye_vision' => $request->right_eye_vision,
@@ -218,13 +230,15 @@ class VisionTestController extends Controller
                 'additional_notes' => $request->additional_notes,
             ];
 
-            // Create vision test
+            // ✅ ALWAYS CREATE NEW vision test (never update existing)
             $visionTest = VisionTest::create($visionTestData);
 
-            Log::info('Vision test created successfully', [
+            Log::info('NEW vision test created successfully', [
                 'vision_test_id' => $visionTest->id,
                 'patient_id' => $patient->id,
                 'visit_id' => $visit->id,
+                'vision_test_visit_id' => $visionTest->visit_id,
+                'is_new_record' => true, // ✅ Confirm it's new
             ]);
 
             // Complete vision test for the visit using model method
@@ -239,7 +253,7 @@ class VisionTestController extends Controller
             // Auto-create appointment with selected doctor if available
             $appointment = $this->createAppointmentWithSelectedDoctor($patient, $visit);
 
-            $message = 'Vision test completed successfully!';
+            $message = 'New vision test created successfully!';
             if ($appointment) {
                 $message .= ' Appointment has been automatically scheduled with Dr. ' . $appointment->doctor->user->name . ' (Serial: ' . $appointment->serial_number . ')';
             } else {
@@ -250,11 +264,10 @@ class VisionTestController extends Controller
 
             return redirect()->route('refractionist.dashboard')
                 ->with('success', $message);
-
         } catch (\Exception $e) {
             DB::rollback();
 
-            Log::error('Failed to complete vision test', [
+            Log::error('Failed to create new vision test', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'patient_id' => $patient->id,
@@ -262,7 +275,7 @@ class VisionTestController extends Controller
             ]);
 
             return back()->withErrors([
-                'error' => 'Failed to complete vision test: ' . $e->getMessage()
+                'error' => 'Failed to create vision test: ' . $e->getMessage()
             ]);
         }
     }
@@ -485,9 +498,9 @@ class VisionTestController extends Controller
         ]);
 
         $filename = 'vision-test-' .
-                   $visionTest->patient->name . '-' .
-                   $visionTest->patient->patient_id . '-' .
-                   $visionTest->test_date->format('Y-m-d') . '.pdf';
+            $visionTest->patient->name . '-' .
+            $visionTest->patient->patient_id . '-' .
+            $visionTest->test_date->format('Y-m-d') . '.pdf';
 
         return $pdf->download($filename);
     }
@@ -555,7 +568,7 @@ class VisionTestController extends Controller
         $searchTerm = $request->term;
 
         $visionTests = VisionTest::with(['patient', 'performedBy'])
-            ->whereHas('patient', function($query) use ($searchTerm) {
+            ->whereHas('patient', function ($query) use ($searchTerm) {
                 $query->where('name', 'like', '%' . $searchTerm . '%')
                     ->orWhere('phone', 'like', '%' . $searchTerm . '%')
                     ->orWhere('patient_id', 'like', '%' . $searchTerm . '%');
@@ -563,7 +576,7 @@ class VisionTestController extends Controller
             ->orderBy('test_date', 'desc')
             ->limit(10)
             ->get()
-            ->map(function($test) {
+            ->map(function ($test) {
                 return [
                     'id' => $test->id,
                     'patient_name' => $test->patient->name,
@@ -596,7 +609,7 @@ class VisionTestController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        $callback = function() use ($visionTests) {
+        $callback = function () use ($visionTests) {
             $file = fopen('php://output', 'w');
 
             // CSV Headers
@@ -659,7 +672,6 @@ class VisionTestController extends Controller
             ]);
 
             return back()->with('success', "Deleted {$deleted} vision tests successfully.");
-
         } catch (\Exception $e) {
             Log::error('Failed to bulk delete vision tests', [
                 'error' => $e->getMessage(),
