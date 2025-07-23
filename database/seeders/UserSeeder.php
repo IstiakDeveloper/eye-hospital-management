@@ -15,7 +15,6 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-
         $superAdmin = User::create([
             'name' => 'Super Admin',
             'email' => 'admin@eyehospital.com',
@@ -56,10 +55,18 @@ class UserSeeder extends Seeder
             'name' => 'Refractionist',
             'email' => 'refractionist@eyehospital.com',
             'password' => Hash::make('password'),
-            'role_id' => 4,
+            'role_id' => 4, // Refractionist
             'phone' => '01700000003',
             'is_active' => true,
         ]);
 
+        User::create([
+            'name' => 'Medicine Seller',
+            'email' => 'seller@eyehospital.com',
+            'password' => Hash::make('password'),
+            'role_id' => 5, // Medicine Seller
+            'phone' => '01700000004',
+            'is_active' => true,
+        ]);
     }
 }

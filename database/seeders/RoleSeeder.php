@@ -30,6 +30,10 @@ class RoleSeeder extends Seeder
                 'name' => 'Refractionist',
                 'description' => 'Can conduct vision tests, manage test equipment, and generate test reports',
             ],
+            [
+                'name' => 'Medicine Seller',
+                'description' => 'Can sell medicines, manage sales transactions, and view sales reports',
+            ],
         ];
 
         foreach ($roles as $role) {

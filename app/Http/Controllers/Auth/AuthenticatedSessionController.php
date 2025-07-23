@@ -46,7 +46,8 @@ class AuthenticatedSessionController extends Controller
                 'Receptionist' => 'receptionist.dashboard',
                 'Doctor' => 'doctor.dashboard',
                 'Refractionist' => 'refractionist.dashboard',
-                'Super Admin' => 'dashboard'  // Super Admin যোগ করুন
+                'Medicine Seller' => 'medicine-seller.dashboard', // Added Medicine Seller
+                'Super Admin' => 'dashboard'
             ];
 
             // Role-based route return করুন

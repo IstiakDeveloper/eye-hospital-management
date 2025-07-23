@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Medicine;
 use App\Repositories\MedicineRepository;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -47,7 +48,22 @@ class MedicineController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Medicines/Create');
+        $types = Medicine::distinct('type')
+            ->whereNotNull('type')
+            ->where('type', '!=', '')
+            ->pluck('type')
+            ->toArray();
+
+        $manufacturers = Medicine::distinct('manufacturer')
+            ->whereNotNull('manufacturer')
+            ->where('manufacturer', '!=', '')
+            ->pluck('manufacturer')
+            ->toArray();
+
+        return Inertia::render('Medicines/Create', [
+            'types' => $types,
+            'manufacturers' => $manufacturers,
+        ]);
     }
 
     /**

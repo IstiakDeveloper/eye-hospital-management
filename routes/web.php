@@ -6,6 +6,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\DoctorDashboardController;
 use App\Http\Controllers\MedicineController;
+use App\Http\Controllers\MedicineCornerController;
+use App\Http\Controllers\MedicineSellerDashboardController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientVisitController;
 use App\Http\Controllers\PrescriptionController;
@@ -211,6 +213,53 @@ Route::get('/appointment-display', [AppointmentDisplayController::class, 'index'
 // API route
 Route::get('/api/appointment-display-data', [AppointmentDisplayController::class, 'getData'])
     ->name('api.appointment.display.data');
+
+
+
+
+Route::prefix('medicine-corner')->middleware(['auth', 'super-admin'])->group(function () {
+    // Page routes
+    Route::get('/stock', [MedicineCornerController::class, 'stock'])->name('medicine.stock');
+    Route::get('/medicines', [MedicineCornerController::class, 'medicines'])->name('medicine.list');
+    Route::get('/purchase', [MedicineCornerController::class, 'purchase'])->name('medicine.purchase');
+    Route::get('/reports', [MedicineCornerController::class, 'reports'])->name('medicine.reports');
+    Route::get('/alerts', [MedicineCornerController::class, 'alerts'])->name('medicine.alerts');
+
+    // API routes
+    Route::post('/medicine/store', [MedicineCornerController::class, 'storeMedicine']);
+    Route::post('/stock/add', [MedicineCornerController::class, 'addStock']);
+    Route::post('/stock/adjust', [MedicineCornerController::class, 'adjustStock']);
+    Route::put('/medicine/{medicine}', [MedicineCornerController::class, 'updateMedicine']);
+    Route::put('/medicine/{medicine}/alert', [MedicineCornerController::class, 'updateStockAlert']);
+    Route::get('/medicine/{medicine}/details', [MedicineCornerController::class, 'getMedicineDetails']);
+});
+
+
+Route::prefix('medicine-seller')->middleware(['auth'])->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [MedicineSellerDashboardController::class, 'index'])->name('medicine-seller.dashboard');
+
+    // POS System
+    Route::get('/pos', [MedicineSellerDashboardController::class, 'pos'])->name('medicine-seller.pos');
+    Route::post('/pos/sale', [MedicineSellerDashboardController::class, 'processSale'])->name('medicine-seller.process-sale');
+
+    // Sales Management
+    Route::get('/sales', [MedicineSellerDashboardController::class, 'salesHistory'])->name('medicine-seller.sales');
+    Route::get('/sales/{sale}', [MedicineSellerDashboardController::class, 'saleDetails'])->name('medicine-seller.sale-details');
+    Route::put('/sales/{sale}/payment', [MedicineSellerDashboardController::class, 'updatePayment'])->name('medicine-seller.update-payment');
+
+    // Reports
+    Route::get('/my-report', [MedicineSellerDashboardController::class, 'myReport'])->name('medicine-seller.report');
+
+    // API endpoints
+    Route::get('/api/search-medicines', [MedicineSellerDashboardController::class, 'searchMedicines'])->name('medicine-seller.search-medicines');
+    Route::get('/api/medicine/{medicine}/stock', [MedicineSellerDashboardController::class, 'getMedicineStock'])->name('medicine-seller.medicine-stock');
+});
+
+// Default redirect for Medicine Seller
+Route::get('/medicine-seller', function () {
+    return redirect()->route('medicine-seller.dashboard');
+})->middleware(['auth', 'role:Medicine Seller']);
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';
