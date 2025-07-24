@@ -232,6 +232,15 @@ Route::prefix('medicine-corner')->middleware(['auth', 'super-admin'])->group(fun
     Route::put('/medicine/{medicine}', [MedicineCornerController::class, 'updateMedicine']);
     Route::put('/medicine/{medicine}/alert', [MedicineCornerController::class, 'updateStockAlert']);
     Route::get('/medicine/{medicine}/details', [MedicineCornerController::class, 'getMedicineDetails']);
+
+    Route::get('/sales', [MedicineCornerController::class, 'sales'])->name('medicine-corner.sales');
+    Route::get('/sales/{sale}', [MedicineCornerController::class, 'saleDetails'])->name('medicine-corner.sale-details');
+    Route::get('/sales/{sale}/edit', [MedicineCornerController::class, 'editSale'])->name('medicine-corner.edit-sale');
+    Route::put('/sales/{sale}', [MedicineCornerController::class, 'updateSale'])->name('medicine-corner.update-sale');
+    Route::put('/sales/{sale}/payment', [MedicineCornerController::class, 'updatePayment'])->name('medicine-corner.update-payment');
+    Route::delete('/sales/{sale}', [MedicineCornerController::class, 'deleteSale'])->name('medicine-corner.delete-sale');
+    Route::post('/sales/bulk-action', [MedicineCornerController::class, 'bulkAction'])->name('medicine-corner.bulk-action');
+    Route::get('/analytics/sales', [MedicineCornerController::class, 'salesAnalytics'])->name('medicine-corner.sales-analytics');
 });
 
 

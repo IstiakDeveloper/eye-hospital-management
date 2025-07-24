@@ -27,7 +27,10 @@ import {
     ShoppingCart,
     BarChart3,
     AlertTriangle,
-    DollarSign
+    DollarSign,
+    CreditCard,
+    History,
+    FileBarChart
 } from 'lucide-react';
 import FlashMessages from '@/components/FlashMessage';
 
@@ -83,6 +86,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             'Receptionist': 'receptionist.dashboard',
             'Doctor': 'doctor.dashboard',
             'Refractionist': 'refractionist.dashboard',
+            'Medicine Seller': 'medicine-seller.dashboard',
             'Super Admin': 'dashboard'
         };
 
@@ -97,15 +101,22 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
         // For dashboard routes, check if current route ends with 'dashboard'
         if (currentPattern === 'dashboard') {
             return currentRouteName === 'dashboard' ||
-                   currentRouteName === 'receptionist.dashboard' ||
-                   currentRouteName === 'doctor.dashboard' ||
-                   currentRouteName === 'refractionist.dashboard';
+                currentRouteName === 'receptionist.dashboard' ||
+                currentRouteName === 'doctor.dashboard' ||
+                currentRouteName === 'refractionist.dashboard' ||
+                currentRouteName === 'medicine-seller.dashboard';
         }
 
-        // For medicine corner routes
+        // For medicine corner routes (Super Admin)
         if (currentPattern === 'medicine.*') {
             return currentRouteName?.includes('medicine-corner') ||
-                   window.location.pathname.includes('/medicine-corner');
+                window.location.pathname.includes('/medicine-corner');
+        }
+
+        // For medicine seller routes
+        if (currentPattern === 'medicine-seller.*') {
+            return currentRouteName?.includes('medicine-seller') ||
+                window.location.pathname.includes('/medicine-seller');
         }
 
         // For other routes, use pattern matching
@@ -115,7 +126,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     // Check if medicine corner is active (parent or any child)
     const isMedicineCornerActive = () => {
         return currentRouteName?.includes('medicine-corner') ||
-               window.location.pathname.includes('/medicine-corner');
+            window.location.pathname.includes('/medicine-corner');
     };
 
     // Check if any medicine corner child is active
@@ -137,7 +148,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             href: route(getDashboardRoute()),
             icon: Home,
             current: 'dashboard',
-            roles: ['Super Admin', 'Doctor', 'Receptionist', 'Refractionist']
+            roles: ['Super Admin', 'Doctor', 'Receptionist', 'Refractionist', 'Medicine Seller']
         },
         {
             name: 'Patients',
@@ -154,7 +165,31 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             roles: ['Super Admin'],
             badge: 'Today'
         },
-        // Medicine Corner with dropdown
+        // POS System for Medicine Seller
+        {
+            name: 'POS System',
+            href: route('medicine-seller.pos'),
+            icon: CreditCard,
+            current: 'medicine-seller.pos',
+            roles: ['Medicine Seller']
+        },
+        // Sales Management for Medicine Seller
+        {
+            name: 'Sales History',
+            href: route('medicine-seller.sales'),
+            icon: History,
+            current: 'medicine-seller.sales',
+            roles: ['Medicine Seller']
+        },
+        // My Reports for Medicine Seller
+        {
+            name: 'My Reports',
+            href: route('medicine-seller.report'),
+            icon: FileBarChart,
+            current: 'medicine-seller.report',
+            roles: ['Medicine Seller']
+        },
+        // Medicine Corner with dropdown (Super Admin only)
         {
             name: 'Medicine Corner',
             href: '#',
@@ -181,6 +216,13 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                     href: '/medicine-corner/purchase',
                     icon: ShoppingCart,
                     current: 'medicine.purchase',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Sales Management',
+                    href: '/medicine-corner/sales',
+                    icon: ShoppingCart,
+                    current: 'medicine-corner.sales',
                     roles: ['Super Admin']
                 },
                 {
@@ -251,6 +293,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 return 'bg-gradient-to-r from-blue-600 to-blue-700 text-white';
             case 'Refractionist':
                 return 'bg-gradient-to-r from-orange-600 to-orange-700 text-white';
+            case 'Medicine Seller':
+                return 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white';
             default:
                 return 'bg-gray-600 text-white';
         }
@@ -266,6 +310,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 return <CalendarDays className="h-4 w-4" />;
             case 'Refractionist':
                 return <Eye className="h-4 w-4" />;
+            case 'Medicine Seller':
+                return <Pill className="h-4 w-4" />;
             default:
                 return <User className="h-4 w-4" />;
         }
@@ -286,9 +332,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
 
             {/* Sidebar */}
             <div
-                className={`fixed inset-y-0 left-0 flex flex-col z-50 bg-white border-r border-gray-200 shadow-xl transition-all duration-300 ease-in-out transform ${
-                    sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-                } md:translate-x-0 md:static md:z-auto w-72 md:flex-shrink-0`}
+                className={`fixed inset-y-0 left-0 flex flex-col z-50 bg-white border-r border-gray-200 shadow-xl transition-all duration-300 ease-in-out transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                    } md:translate-x-0 md:static md:z-auto w-72 md:flex-shrink-0`}
             >
                 {/* Logo */}
                 <div className="flex items-center justify-between px-6 py-4 h-16 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-indigo-600">
@@ -358,25 +403,21 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                         <div key={item.name}>
                                             <button
                                                 onClick={() => setMedicineCornerOpen(!medicineCornerOpen)}
-                                                className={`group flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                                                    shouldShowAsActive
+                                                className={`group flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${shouldShowAsActive
                                                         ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
                                                         : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                                                }`}
+                                                    }`}
                                             >
-                                                <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${
-                                                    shouldShowAsActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
-                                                }`} />
+                                                <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${shouldShowAsActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                    }`} />
                                                 <span className="flex-1 text-left">{item.name}</span>
-                                                <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${
-                                                    medicineCornerOpen || anyChildActive ? 'rotate-90' : ''
-                                                } ${shouldShowAsActive ? 'text-blue-700' : 'text-gray-400'}`} />
+                                                <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${medicineCornerOpen || anyChildActive ? 'rotate-90' : ''
+                                                    } ${shouldShowAsActive ? 'text-blue-700' : 'text-gray-400'}`} />
                                             </button>
 
                                             {/* Dropdown Items */}
-                                            <div className={`mt-1 space-y-1 transition-all duration-200 overflow-hidden ${
-                                                medicineCornerOpen || anyChildActive ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                            }`}>
+                                            <div className={`mt-1 space-y-1 transition-all duration-200 overflow-hidden ${medicineCornerOpen || anyChildActive ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                                }`}>
                                                 {item.children?.map((childItem) => {
                                                     const ChildIcon = childItem.icon;
                                                     const isChildActive = window.location.pathname === childItem.href;
@@ -385,15 +426,13 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                         <Link
                                                             key={childItem.name}
                                                             href={childItem.href}
-                                                            className={`group flex items-center pl-11 pr-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                                                                isChildActive
+                                                            className={`group flex items-center pl-11 pr-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isChildActive
                                                                     ? 'bg-blue-100 text-blue-800 border-r-2 border-blue-600'
                                                                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                                            }`}
+                                                                }`}
                                                         >
-                                                            <ChildIcon className={`flex-shrink-0 h-4 w-4 mr-2 ${
-                                                                isChildActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'
-                                                            }`} />
+                                                            <ChildIcon className={`flex-shrink-0 h-4 w-4 mr-2 ${isChildActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'
+                                                                }`} />
                                                             <span>{childItem.name}</span>
                                                         </Link>
                                                     );
@@ -408,15 +447,13 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                     <Link
                                         key={item.name}
                                         href={item.href}
-                                        className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                                            isActive
+                                        className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
                                                 ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
                                                 : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                                        }`}
+                                            }`}
                                     >
-                                        <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${
-                                            isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
-                                        }`} />
+                                        <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
+                                            }`} />
                                         <span className="flex-1">{item.name}</span>
                                         {item.badge && (
                                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
@@ -444,15 +481,13 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                         <Link
                                             key={item.name}
                                             href={item.href}
-                                            className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-                                                isActive
+                                            className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
                                                     ? 'bg-purple-50 text-purple-700 border-r-2 border-purple-700'
                                                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                                            }`}
+                                                }`}
                                         >
-                                            <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${
-                                                isActive ? 'text-purple-700' : 'text-gray-400 group-hover:text-gray-500'
-                                            }`} />
+                                            <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${isActive ? 'text-purple-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                }`} />
                                             <span>{item.name}</span>
                                         </Link>
                                     );
@@ -490,6 +525,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                             >
                                 <Eye className="h-4 w-4 mr-2" />
                                 Vision Test
+                            </Link>
+                        )}
+                        {userRole === 'Medicine Seller' && (
+                            <Link
+                                href={route('medicine-seller.pos')}
+                                className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm font-medium rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all duration-200 shadow-sm"
+                            >
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Quick Sale
                             </Link>
                         )}
                         {userRole === 'Super Admin' && (

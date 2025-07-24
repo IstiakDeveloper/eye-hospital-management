@@ -43,11 +43,10 @@ export default function Dashboard({
   topSellingMedicines
 }: DashboardProps) {
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-BD', {
-      style: 'currency',
-      currency: 'BDT',
-      minimumFractionDigits: 0,
+    const formatted = new Intl.NumberFormat('en-US', {
+        minimumFractionDigits: 0,
     }).format(amount);
+    return `৳${formatted}`;
   };
 
   const formatDate = (date: string) => {

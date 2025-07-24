@@ -62,11 +62,11 @@ class MedicineSellerDashboardController extends Controller
         $lowStockMedicines = Medicine::with(['stockAlert'])
             ->whereHas('stocks', function ($query) {
                 $query->where('available_quantity', '>', 0)
-                      ->where('expiry_date', '>', now());
+                    ->where('expiry_date', '>', now());
             })
             ->whereHas('stockAlert', function ($query) {
                 $query->where('low_stock_alert', true)
-                      ->whereRaw('medicines.total_stock <= stock_alerts.minimum_stock');
+                    ->whereRaw('medicines.total_stock <= stock_alerts.minimum_stock');
             })
             ->limit(5)
             ->get();
@@ -144,24 +144,19 @@ class MedicineSellerDashboardController extends Controller
      */
     public function pos()
     {
-        // Available medicines with stock
+        // Available medicines with stock - including out of stock items
         $medicines = Medicine::with(['stocks' => function ($query) {
-            $query->where('available_quantity', '>', 0)
-                  ->where('expiry_date', '>', now())
-                  ->where('is_active', true)
-                  ->orderBy('expiry_date', 'asc'); // FIFO
+            $query->where('expiry_date', '>', now())
+                ->where('is_active', true)
+                ->orderBy('expiry_date', 'asc'); // FIFO
         }])
-        ->whereHas('stocks', function ($query) {
-            $query->where('available_quantity', '>', 0)
-                  ->where('expiry_date', '>', now());
-        })
-        ->where('is_active', true)
-        ->orderBy('name')
-        ->get();
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
-        // Recent customers
+        // Recent customers for search
         $recentCustomers = Patient::orderBy('created_at', 'desc')
-            ->limit(10)
+            ->limit(50) // Increased for better search results
             ->get(['id', 'name', 'phone', 'email']);
 
         // Quick stats for POS
@@ -186,6 +181,7 @@ class MedicineSellerDashboardController extends Controller
      */
     public function processSale(Request $request)
     {
+        // dd($request->all());
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
             'items.*.medicine_stock_id' => 'required|exists:medicine_stocks,id',
@@ -209,7 +205,9 @@ class MedicineSellerDashboardController extends Controller
             // Generate invoice number
             $invoiceNumber = 'SL-' . date('Ymd') . '-' . str_pad(
                 MedicineSale::whereDate('created_at', today())->count() + 1,
-                4, '0', STR_PAD_LEFT
+                4,
+                '0',
+                STR_PAD_LEFT
             );
 
             // Calculate totals
@@ -295,7 +293,6 @@ class MedicineSellerDashboardController extends Controller
             DB::commit();
 
             return redirect()->back()->with('success', "Sale completed successfully! Invoice: {$invoiceNumber}");
-
         } catch (\Exception $e) {
             DB::rollback();
             return redirect()->back()->with('error', 'Sale failed: ' . $e->getMessage());
@@ -374,21 +371,21 @@ class MedicineSellerDashboardController extends Controller
 
         $medicines = Medicine::with(['stocks' => function ($stockQuery) {
             $stockQuery->where('available_quantity', '>', 0)
-                      ->where('expiry_date', '>', now())
-                      ->where('is_active', true)
-                      ->orderBy('expiry_date', 'asc');
+                ->where('expiry_date', '>', now())
+                ->where('is_active', true)
+                ->orderBy('expiry_date', 'asc');
         }])
-        ->where('is_active', true)
-        ->where(function ($q) use ($query) {
-            $q->where('name', 'LIKE', "%{$query}%")
-              ->orWhere('generic_name', 'LIKE', "%{$query}%");
-        })
-        ->whereHas('stocks', function ($stockQuery) {
-            $stockQuery->where('available_quantity', '>', 0)
-                      ->where('expiry_date', '>', now());
-        })
-        ->limit(10)
-        ->get();
+            ->where('is_active', true)
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'LIKE', "%{$query}%")
+                    ->orWhere('generic_name', 'LIKE', "%{$query}%");
+            })
+            ->whereHas('stocks', function ($stockQuery) {
+                $stockQuery->where('available_quantity', '>', 0)
+                    ->where('expiry_date', '>', now());
+            })
+            ->limit(10)
+            ->get();
 
         return response()->json($medicines);
     }
