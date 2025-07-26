@@ -12,10 +12,10 @@
             box-sizing: border-box;
         }
 
-        /* Page Setup - Exact A4 Portrait */
+        /* Page Setup for PDF */
         @page {
             size: A4 portrait;
-            margin: 0;
+            margin: 5mm;
         }
 
         html, body {
@@ -23,564 +23,691 @@
             height: 297mm;
             margin: 0;
             padding: 0;
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
             font-size: 11px;
-            line-height: 1.2;
-            color: #333;
+            line-height: 1.3;
+            color: #000;
             background: white;
         }
 
         /* Main Container */
         .report-container {
-            width: 180mm;
-            min-height: 270mm;
-            max-height: 270mm;
-            padding: 8mm;
+            width: 200mm;
+            padding: 5mm;
             margin: 0 auto;
-            position: relative;
-            overflow: hidden;
         }
 
-        /* Header Area for Letterhead */
-        .letterhead-space {
-            height: 30mm;
-            border-bottom: 2px solid #1976d2;
-            margin-bottom: 6mm;
-        }
-
-        /* Report Header */
-        .report-header {
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 3mm;
-            margin-bottom: 4mm;
+        /* Hospital Header */
+        .hospital-header {
             text-align: center;
-            position: relative;
+            margin-bottom: 8mm;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5mm;
         }
 
-        .test-number {
+        .hospital-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 2mm;
+        }
+
+        .hospital-address {
+            font-size: 10px;
+            margin-bottom: 1mm;
+        }
+
+        .hospital-contact {
+            font-size: 10px;
+        }
+
+        /* Vision Title Box with QR Code */
+        .vision-title-section {
+            width: 100%;
+            margin: 5mm auto 8mm auto;
+            position: relative;
+            height: 25mm;
+        }
+
+        .vision-title {
+            width: 60mm;
+            margin: 0 auto;
+            border: 2px solid #000;
+            padding: 4mm;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            background: #f5f5f5;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .header-left {
             position: absolute;
             left: 0;
             top: 0;
+            width: 25mm;
             font-size: 9px;
-            color: #666;
-        }
-
-        .report-title {
-            font-size: 16px;
             font-weight: bold;
-            color: #1976d2;
-            letter-spacing: 1px;
         }
 
-        .test-date {
+        .header-right {
             position: absolute;
             right: 0;
             top: 0;
-            font-size: 9px;
+            width: 35mm;
+            text-align: right;
+        }
+
+        .date-info {
+            font-weight: bold;
+            margin-bottom: 1mm;
+        }
+
+        .time-info {
+            font-size: 8px;
             color: #666;
         }
 
-        /* Patient Information */
-        .patient-section {
-            border: 1px solid #1976d2;
-            margin-bottom: 4mm;
-            background: #f3f7fd;
-        }
-
-        .patient-header {
-            background: #1976d2;
-            color: white;
-            font-weight: bold;
-            font-size: 10px;
-            text-transform: uppercase;
-            padding: 3mm;
-            text-align: center;
-        }
-
-        .patient-info {
+        .barcode-container {
+            width: 35mm;
+            height: 25mm;
+            border: 2px solid #000;
+            background: #fff;
             padding: 2mm;
-            font-size: 9px;
+            text-align: center;
+            float: right;
         }
 
-        .patient-row {
+        .barcode-lines {
+            margin-bottom: 2mm;
+            height: 18mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .barcode-text {
+            font-family: Arial, sans-serif;
+            font-size: 5px;
+            font-weight: bold;
             margin-bottom: 1mm;
+            word-wrap: break-word;
+        }
+
+        .test-id {
+            font-size: 5px;
+            font-weight: bold;
+            color: #666;
+        }
+
+        /* Patient Info Table */
+        .patient-info-table {
+            width: 100%;
+            margin-bottom: 6mm;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+
+        .patient-info-table td {
+            padding: 2mm;
+            vertical-align: top;
         }
 
         .patient-label {
-            display: inline-block;
-            width: 18mm;
             font-weight: bold;
-            color: #555;
+            width: 15mm;
         }
 
         .patient-value {
-            border-bottom: 1px dotted #999;
-            display: inline-block;
-            min-width: 25mm;
-            margin-right: 8mm;
-        }
-
-        /* Vision Test Results */
-        .vision-results {
-            margin: 4mm 0;
-        }
-
-        .section-header {
-            background: #1976d2;
-            color: white;
-            font-weight: bold;
-            font-size: 10px;
-            text-transform: uppercase;
-            padding: 3mm;
-            margin: 3mm 0 0 0;
-            text-align: center;
-        }
-
-        /* Eye Test Table */
-        .eye-test-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 3mm 0;
-            font-size: 9px;
-            border: 1px solid #1976d2;
-        }
-
-        .eye-test-table th {
-            background: #1976d2;
-            color: white;
-            border: 1px solid #1976d2;
-            padding: 3mm;
-            text-align: center;
-            font-weight: bold;
-            font-size: 9px;
-        }
-
-        .eye-test-table td {
-            border: 1px solid #ddd;
-            padding: 3mm;
-            text-align: center;
-            font-size: 9px;
-        }
-
-        .eye-test-table .test-label {
-            background: #f3f7fd;
-            font-weight: bold;
-            text-align: left;
+            border-bottom: 1px solid #000;
+            min-height: 4mm;
             width: 30mm;
+            padding-left: 1mm;
         }
 
-        .eye-test-table .eye-column {
-            width: 30mm;
+        /* Complaints Section */
+        .complaints-section {
+            margin-bottom: 5mm;
         }
 
-        .vision-value {
+        .complaints-label {
             font-weight: bold;
-            color: #1976d2;
-            font-size: 10px;
+            margin-bottom: 2mm;
+            font-size: 11px;
         }
 
-        .power-value {
-            font-weight: bold;
-            color: #d32f2f;
-        }
-
-        .pressure-value {
-            font-weight: bold;
-            color: #f57c00;
-        }
-
-        .eye-test-table tr:nth-child(even) {
-            background: #fafafa;
-        }
-
-        /* Refraction Table */
-        .refraction-section {
-            margin: 4mm 0;
-        }
-
-        .refraction-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 3mm 0;
-            font-size: 9px;
-            border: 1px solid #1976d2;
-        }
-
-        .refraction-table th {
-            background: #1976d2;
-            color: white;
-            border: 1px solid #1976d2;
-            padding: 3mm;
-            text-align: center;
-            font-weight: bold;
-            font-size: 9px;
-        }
-
-        .refraction-table td {
-            border: 1px solid #ddd;
-            padding: 3mm;
-            text-align: center;
-            font-size: 9px;
-        }
-
-        .refraction-table .eye-label {
-            background: #f3f7fd;
-            font-weight: bold;
-            text-align: center;
-            width: 25mm;
-        }
-
-        .sphere-value {
-            font-weight: bold;
-            color: #1976d2;
-        }
-
-        .cylinder-value {
-            font-weight: bold;
-            color: #d32f2f;
-        }
-
-        .axis-value {
-            font-weight: bold;
-            color: #388e3c;
-        }
-
-        /* Notes Section */
-        .notes-section {
-            margin: 4mm 0;
-        }
-
-        .notes-content {
-            border: 1px solid #1976d2;
-            border-top: none;
-            padding: 3mm;
-            background: white;
-            font-size: 9px;
+        .complaints-box {
+            border: 1px solid #000;
             min-height: 15mm;
+            padding: 2mm;
+            width: 100%;
         }
 
-        /* Summary Box */
-        .summary-box {
-            border-left: 4px solid #4caf50;
-            background: #e8f5e8;
-            padding: 3mm;
-            margin: 4mm 0;
-            font-size: 9px;
-        }
-
-        .summary-title {
-            font-weight: bold;
-            color: #2e7d32;
+        /* All Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 5mm;
             font-size: 10px;
-            text-transform: uppercase;
+        }
+
+        .data-table th,
+        .data-table td {
+            border: 1px solid #000;
+            padding: 2mm;
+            text-align: left;
+        }
+
+        .data-table th {
+            background: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .data-table .label-cell {
+            background: #f8f8f8;
+            font-weight: bold;
+            width: 25%;
+        }
+
+        .data-table .eye-cell {
+            width: 37.5%;
+            text-align: center;
+        }
+
+        /* Vitals Table */
+        .vitals-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 5mm;
+            font-size: 10px;
+        }
+
+        .vitals-table td {
+            border: 1px solid #000;
+            padding: 3mm;
+            width: 33.33%;
+            vertical-align: top;
+        }
+
+        .vitals-label {
+            font-weight: bold;
             margin-bottom: 2mm;
         }
 
-        .summary-content {
-            color: #1b5e20;
+        .vitals-value {
+            border-bottom: 1px solid #000;
+            min-height: 5mm;
+            padding-left: 1mm;
         }
 
-        /* Signature Area */
-        .signature-area {
-            position: absolute;
-            bottom: 15mm;
-            left: 8mm;
-            right: 8mm;
-            border-top: 1px solid #ddd;
-            padding-top: 3mm;
-        }
-
-        .signature-row {
-            display: block;
+        /* Fundus Table */
+        .fundus-table {
             width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 5mm;
+            font-size: 10px;
+        }
+
+        .fundus-table th,
+        .fundus-table td {
+            border: 1px solid #000;
+            padding: 2mm;
+        }
+
+        .fundus-table th {
+            background: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .fundus-table .fundus-label {
+            background: #f8f8f8;
+            font-weight: bold;
+            width: 20%;
+        }
+
+        .fundus-table .fundus-content {
+            min-height: 12mm;
+            vertical-align: top;
+        }
+
+        /* History Section */
+        .history-section {
+            margin-bottom: 5mm;
+        }
+
+        .history-label {
+            font-weight: bold;
+            margin-bottom: 2mm;
+            font-size: 11px;
+        }
+
+        .history-box {
+            border: 1px solid #000;
+            min-height: 15mm;
+            padding: 2mm;
+            width: 100%;
+        }
+
+        /* Drug Used Table */
+        .drug-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 5mm;
+            font-size: 10px;
+        }
+
+        .drug-table td {
+            padding: 1mm 2mm;
+            vertical-align: middle;
+        }
+
+        .drug-label {
+            font-weight: bold;
+            margin-bottom: 2mm;
+            font-size: 11px;
+        }
+
+        .checkbox {
+            width: 3mm;
+            height: 3mm;
+            border: 1px solid #000;
+            display: inline-block;
+            text-align: center;
+            margin-right: 2mm;
+            vertical-align: middle;
+            font-size: 9px;
+            line-height: 2.8mm;
+            font-weight: bold;
+        }
+
+        .checkbox.checked {
+            background: #000;
+            color: white;
+        }
+
+        /* Medications Section */
+        .medications-section {
+            margin-bottom: 8mm;
+        }
+
+        .medications-label {
+            font-weight: bold;
+            margin-bottom: 2mm;
+            font-size: 11px;
+        }
+
+        .medications-box {
+            border: 1px solid #000;
+            min-height: 10mm;
+            padding: 2mm;
+            width: 100%;
+        }
+
+        /* Signature Table */
+        .signature-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8mm;
+            font-size: 9px;
+        }
+
+        .signature-table td {
+            border-top: 1px solid #000;
+            padding: 3mm 2mm 2mm 2mm;
+            width: 50%;
+            vertical-align: top;
         }
 
         .signature-left {
-            float: left;
-            width: 45%;
             text-align: center;
+            border-right: 1px solid #000;
         }
 
         .signature-right {
-            float: right;
-            width: 45%;
             text-align: center;
-        }
-
-        .examiner-info {
-            text-align: right;
-            margin-bottom: 3mm;
-            font-size: 9px;
-        }
-
-        .examiner-name {
-            font-size: 11px;
-            font-weight: bold;
-            color: #1976d2;
-            margin-bottom: 1mm;
-        }
-
-        .examiner-details {
-            font-size: 7px;
-            color: #666;
         }
 
         .signature-line {
-            border-bottom: 1px solid #333;
-            height: 15mm;
+            border-bottom: 1px solid #000;
+            height: 10mm;
             margin-bottom: 2mm;
+            width: 80%;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .signature-label {
-            font-size: 7px;
             font-weight: bold;
-            color: #666;
+            font-size: 8px;
         }
 
-        /* Footer */
-        .report-footer {
-            position: absolute;
-            bottom: 2mm;
-            left: 8mm;
-            right: 8mm;
+        .examiner-info {
+            margin-bottom: 2mm;
             text-align: center;
-            font-size: 6px;
-            color: #666;
-            border-top: 1px dotted #ccc;
-            padding-top: 1mm;
         }
 
-        /* Clear float */
-        .clearfix::after {
-            content: "";
-            display: table;
-            clear: both;
+        .examiner-name {
+            font-weight: bold;
+            font-size: 10px;
         }
 
-        /* Print Optimizations */
-        @media print {
-            html, body {
-                width: 210mm !important;
-                height: 297mm !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
+        .examiner-title {
+            font-size: 9px;
+            margin-top: 1mm;
+        }
 
-            .report-container {
-                width: 180mm !important;
-                min-height: 270mm !important;
-                max-height: 270mm !important;
-                padding: 8mm !important;
-                margin: 0 auto !important;
-                overflow: hidden !important;
-            }
+        .examiner-date {
+            font-size: 8px;
+            margin-top: 1mm;
+        }
 
-            body {
-                page-break-after: avoid !important;
-            }
+        /* Page Break Control */
+        .page-break {
+            page-break-before: always;
+        }
 
-            .patient-section,
-            .eye-test-table,
-            .refraction-table,
-            .signature-area {
-                page-break-inside: avoid;
-                page-break-after: avoid;
-            }
+        .no-break {
+            page-break-inside: avoid;
         }
     </style>
 </head>
 <body>
     <div class="report-container">
-        <!-- Letterhead Space -->
-        <div class="letterhead-space"></div>
+        <!-- Hospital Header -->
+        <div class="hospital-header">
+            <div class="hospital-name">Naogaon Islamia Chakkhu Hospital and Phaco Center</div>
+            <div class="hospital-address">Main Road, Beside of Naogaon Fisheries Building, Naogaon Sadar, Naogaon</div>
+            <div class="hospital-contact">Mobile: 01307-885566; Email: niehpc@gamil.com</div>
+        </div>
 
-        <!-- Report Header -->
-        <div class="report-header">
-            <div class="test-number">Test #{{ str_pad($visionTest->id, 6, '0', STR_PAD_LEFT) }}</div>
-            <div class="report-title">VISION TEST REPORT</div>
-            <div class="test-date">
-                Date: {{ \Carbon\Carbon::parse($visionTest->test_date)->format('d/m/Y') }}<br>
-                {{ \Carbon\Carbon::parse($visionTest->test_date)->format('h:i A') }}
+        <!-- Vision Title with Date and QR Code -->
+        <div class="vision-title-section">
+            <div class="header-left">
+                <div class="date-info">{{ \Carbon\Carbon::parse($visionTest->test_date)->format('d/m/Y') }}</div>
+                <div class="time-info">{{ \Carbon\Carbon::parse($visionTest->test_date)->format('h:i A') }}</div>
+            </div>
+
+            <div class="vision-title">Vision</div>
+
+            <div class="header-right">
+                <div class="barcode-container">
+                    @php
+                        // Generate unique patient code
+                        $patientCode = $visionTest->patient->qr_code ?? 'EH-' . now()->format('Ymd') . '-' . str_pad($visionTest->patient->id, 6, '0', STR_PAD_LEFT);
+
+                        // Try to generate QR code using online service as fallback
+                        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=' . urlencode($patientCode);
+                    @endphp
+
+                    <!-- Real QR Code Image from Database -->
+                    <div class="barcode-lines">
+                        @if(isset($qrCodeBase64) && $qrCodeBase64)
+                            <img src="{{ $qrCodeBase64 }}"
+                                 style="width: 20mm; height: 20mm; border: 1px solid #ccc;"
+                                 alt="Patient QR Code">
+                        @else
+                            <!-- Fallback if no QR code available -->
+                            <div style="width: 18mm; height: 18mm; border: 2px solid #000; background: #fff; font-family: monospace; font-size: 3px; padding: 1mm; text-align: center;">
+                                <div style="margin-top: 6mm; font-weight: bold;">QR CODE</div>
+                                <div style="font-size: 2px; margin-top: 2mm;">{{ $visionTest->patient->patient_id }}</div>
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="barcode-text">{{ $patientCode }}</div>
+                    <div class="test-id">Test: {{ str_pad($visionTest->id, 6, '0', STR_PAD_LEFT) }}</div>
+                </div>
             </div>
         </div>
 
         <!-- Patient Information -->
-        <div class="patient-section">
-            <div class="patient-header">Patient Information</div>
-            <div class="patient-info">
-                <div class="patient-row">
-                    <span class="patient-label">Name:</span>
-                    <span class="patient-value">{{ $visionTest->patient->name }}</span>
-                    <span class="patient-label">Age:</span>
-                    <span class="patient-value">
-                        @if($visionTest->patient->date_of_birth)
-                            {{ \Carbon\Carbon::parse($visionTest->patient->date_of_birth)->age }} Years
-                        @else
-                            N/A
-                        @endif
-                    </span>
-                </div>
-                <div class="patient-row">
-                    <span class="patient-label">Patient ID:</span>
-                    <span class="patient-value">{{ $visionTest->patient->patient_id }}</span>
-                    <span class="patient-label">Gender:</span>
-                    <span class="patient-value">{{ $visionTest->patient->gender ? ucfirst($visionTest->patient->gender) : 'N/A' }}</span>
-                </div>
-                <div class="patient-row">
-                    <span class="patient-label">Phone:</span>
-                    <span class="patient-value">{{ $visionTest->patient->phone ?? 'N/A' }}</span>
-                    <span class="patient-label">Test Date:</span>
-                    <span class="patient-value">{{ \Carbon\Carbon::parse($visionTest->test_date)->format('d/m/Y') }}</span>
-                </div>
-            </div>
+        <table class="patient-info-table">
+            <tr>
+                <td class="patient-label">Invoice:</td>
+                <td class="patient-value">{{ str_pad($visionTest->id, 6, '0', STR_PAD_LEFT) }}</td>
+                <td style="width: 10mm;"></td>
+                <td class="patient-label">Patient ID:</td>
+                <td class="patient-value">{{ $visionTest->patient->patient_id }}</td>
+            </tr>
+            <tr>
+                <td class="patient-label">Name:</td>
+                <td class="patient-value">{{ $visionTest->patient->name }}</td>
+                <td style="width: 10mm;"></td>
+                <td class="patient-label">Patient Type:</td>
+                <td class="patient-value">Regular</td>
+            </tr>
+            <tr>
+                <td class="patient-label">Age:</td>
+                <td class="patient-value">
+                    @if($visionTest->patient->date_of_birth)
+                        {{ \Carbon\Carbon::parse($visionTest->patient->date_of_birth)->age }} Years
+                    @endif
+                </td>
+                <td style="width: 10mm;"></td>
+                <td class="patient-label">Guardian:</td>
+                <td class="patient-value"></td>
+            </tr>
+            <tr>
+                <td class="patient-label">Sex:</td>
+                <td class="patient-value">{{ $visionTest->patient->gender ? ucfirst($visionTest->patient->gender) : '' }}</td>
+                <td style="width: 10mm;"></td>
+                <td class="patient-label">Mobile:</td>
+                <td class="patient-value">{{ $visionTest->patient->phone }}</td>
+            </tr>
+            <tr>
+                <td class="patient-label">Address:</td>
+                <td colspan="4" class="patient-value" style="width: auto;">{{ $visionTest->patient->address ?? '' }}</td>
+            </tr>
+        </table>
+
+        <!-- Complaints Section -->
+        <div class="complaints-section">
+            <div class="complaints-label">Complains:</div>
+            <div class="complaints-box">{{ $visionTest->complains ?? '' }}</div>
         </div>
 
-        <!-- Vision Test Results -->
-        <div class="vision-results">
-            <div class="section-header">Visual Acuity & Eye Pressure</div>
-            <table class="eye-test-table">
-                <thead>
-                    <tr>
-                        <th class="test-label">Test Parameter</th>
-                        <th class="eye-column">Right Eye (OD)</th>
-                        <th class="eye-column">Left Eye (OS)</th>
-                        <th style="width: 40mm;">Remarks</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="test-label">Visual Acuity</td>
-                        <td><span class="vision-value">{{ $visionTest->right_eye_vision ?? '-' }}</span></td>
-                        <td><span class="vision-value">{{ $visionTest->left_eye_vision ?? '-' }}</span></td>
-                        <td>Distance Vision</td>
-                    </tr>
-                    <tr>
-                        <td class="test-label">Eye Power</td>
-                        <td><span class="power-value">{{ $visionTest->right_eye_power ?? '-' }}</span></td>
-                        <td><span class="power-value">{{ $visionTest->left_eye_power ?? '-' }}</span></td>
-                        <td>Diopter (D)</td>
-                    </tr>
-                    <tr>
-                        <td class="test-label">Eye Pressure (IOP)</td>
-                        <td><span class="pressure-value">{{ $visionTest->right_eye_pressure ?? '-' }}</span></td>
-                        <td><span class="pressure-value">{{ $visionTest->left_eye_pressure ?? '-' }}</span></td>
-                        <td>mmHg</td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- Physical Examination Table -->
+        <table class="data-table no-break">
+            <thead>
+                <tr>
+                    <th style="width: 25%;"></th>
+                    <th style="width: 37.5%;">Right Eye</th>
+                    <th style="width: 37.5%;">Left Eye</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label-cell">Diagnosis</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_diagnosis ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_diagnosis ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Lids</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_lids ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_lids ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Conjunctiva</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_conjunctiva ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_conjunctiva ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Cornea</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_cornea ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_cornea ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Anterior Chamber</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_anterior_chamber ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_anterior_chamber ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Iris</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_iris ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_iris ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Pupil</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_pupil ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_pupil ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Lens</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_lens ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_lens ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Ocular movements</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_ocular_movements ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_ocular_movements ?? '' }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Vision Tests Table -->
+        <table class="data-table no-break">
+            <thead>
+                <tr>
+                    <th style="width: 25%;"></th>
+                    <th style="width: 37.5%;">Right Eye</th>
+                    <th style="width: 37.5%;">Left Eye</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label-cell">Vision Without Glass</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_vision_without_glass ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_vision_without_glass ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Vision With Glass/pinhole</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_vision_with_glass ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_vision_with_glass ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">IOP</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_iop ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_iop ?? '' }}</td>
+                </tr>
+                <tr>
+                    <td class="label-cell">Ducts</td>
+                    <td class="eye-cell">{{ $visionTest->right_eye_ducts ?? '' }}</td>
+                    <td class="eye-cell">{{ $visionTest->left_eye_ducts ?? '' }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Vitals Section -->
+        <table class="vitals-table no-break">
+            <tr>
+                <td>
+                    <div class="vitals-label">B.P</div>
+                    <div class="vitals-value">{{ $visionTest->blood_pressure ?? '' }}</div>
+                </td>
+                <td>
+                    <div class="vitals-label">Urine Sugar</div>
+                    <div class="vitals-value">{{ $visionTest->urine_sugar ?? '' }}</div>
+                </td>
+                <td>
+                    <div class="vitals-label">Blood Sugar</div>
+                    <div class="vitals-value">{{ $visionTest->blood_sugar ?? '' }}</div>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Fundus Section -->
+        <table class="fundus-table no-break">
+            <thead>
+                <tr>
+                    <th class="fundus-label">Fundus:</th>
+                    <th style="width: 40%;">Right Eye</th>
+                    <th style="width: 40%;">Left Eye</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="fundus-label"></td>
+                    <td class="fundus-content">{{ $visionTest->right_eye_fundus ?? '' }}</td>
+                    <td class="fundus-content">{{ $visionTest->left_eye_fundus ?? '' }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Detailed History Section -->
+        <div class="history-section">
+            <div class="history-label">Detailed History: (Immediate Past and Treatment History)</div>
+            <div class="history-box">{{ $visionTest->detailed_history ?? '' }}</div>
         </div>
 
-        <!-- Refraction Results -->
-        @if($visionTest->right_eye_sphere || $visionTest->left_eye_sphere || $visionTest->right_eye_cylinder || $visionTest->left_eye_cylinder)
-        <div class="refraction-section">
-            <div class="section-header">Refraction Results</div>
-            <table class="refraction-table">
-                <thead>
-                    <tr>
-                        <th class="eye-label">Eye</th>
-                        <th style="width: 25mm;">Sphere (SPH)</th>
-                        <th style="width: 25mm;">Cylinder (CYL)</th>
-                        <th style="width: 25mm;">Axis</th>
-                        <th style="width: 40mm;">Prescription</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="eye-label">Right Eye (OD)</td>
-                        <td><span class="sphere-value">{{ $visionTest->right_eye_sphere ?? '-' }}</span></td>
-                        <td><span class="cylinder-value">{{ $visionTest->right_eye_cylinder ?? '-' }}</span></td>
-                        <td><span class="axis-value">{{ $visionTest->right_eye_axis ?? '-' }}°</span></td>
-                        <td>
-                            @if($visionTest->right_eye_sphere || $visionTest->right_eye_cylinder)
-                                {{ $visionTest->right_eye_sphere ?? '0.00' }}
-                                {{ $visionTest->right_eye_cylinder ? ($visionTest->right_eye_cylinder > 0 ? '+' : '') . $visionTest->right_eye_cylinder : '' }}
-                                {{ $visionTest->right_eye_axis ? ' x ' . $visionTest->right_eye_axis . '°' : '' }}
-                            @else
-                                -
-                            @endif
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="eye-label">Left Eye (OS)</td>
-                        <td><span class="sphere-value">{{ $visionTest->left_eye_sphere ?? '-' }}</span></td>
-                        <td><span class="cylinder-value">{{ $visionTest->left_eye_cylinder ?? '-' }}</span></td>
-                        <td><span class="axis-value">{{ $visionTest->left_eye_axis ?? '-' }}°</span></td>
-                        <td>
-                            @if($visionTest->left_eye_sphere || $visionTest->left_eye_cylinder)
-                                {{ $visionTest->left_eye_sphere ?? '0.00' }}
-                                {{ $visionTest->left_eye_cylinder ? ($visionTest->left_eye_cylinder > 0 ? '+' : '') . $visionTest->left_eye_cylinder : '' }}
-                                {{ $visionTest->left_eye_axis ? ' x ' . $visionTest->left_eye_axis . '°' : '' }}
-                            @else
-                                -
-                            @endif
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        @endif
+        <!-- Drug Used Section -->
+        <div class="drug-label">Drug Used:</div>
+        <table class="drug-table">
+            <tr>
+                <td style="width: 33.33%;">
+                    <span class="checkbox {{ $visionTest->is_one_eyed ? 'checked' : '' }}">{{ $visionTest->is_one_eyed ? '✓' : '' }}</span>
+                    ONE EYED
+                </td>
+                <td style="width: 33.33%;">
+                    <span class="checkbox {{ $visionTest->is_cardiac ? 'checked' : '' }}">{{ $visionTest->is_cardiac ? '✓' : '' }}</span>
+                    CARDIAC
+                </td>
+                <td style="width: 33.33%;">
+                    <span class="checkbox {{ $visionTest->is_hypertensive ? 'checked' : '' }}">{{ $visionTest->is_hypertensive ? '✓' : '' }}</span>
+                    HYPERTENSIVE
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <span class="checkbox {{ $visionTest->is_diabetic ? 'checked' : '' }}">{{ $visionTest->is_diabetic ? '✓' : '' }}</span>
+                    DIABETIC
+                </td>
+                <td>
+                    <span class="checkbox {{ $visionTest->is_asthmatic ? 'checked' : '' }}">{{ $visionTest->is_asthmatic ? '✓' : '' }}</span>
+                    ASTHMATIC
+                </td>
+                <td>
+                    <span class="checkbox {{ $visionTest->is_thyroid ? 'checked' : '' }}">{{ $visionTest->is_thyroid ? '✓' : '' }}</span>
+                    THYROID
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3">
+                    <span class="checkbox {{ $visionTest->other_conditions ? 'checked' : '' }}">{{ $visionTest->other_conditions ? '✓' : '' }}</span>
+                    OTHERS: {{ $visionTest->other_conditions ?? '________________________' }}
+                </td>
+            </tr>
+        </table>
 
-        <!-- Clinical Summary -->
-        <div class="summary-box">
-            <div class="summary-title">Clinical Assessment</div>
-            <div class="summary-content">
-                @php
-                    $summary = [];
-                    if ($visionTest->right_eye_vision || $visionTest->left_eye_vision) {
-                        $summary[] = "Visual acuity recorded for both eyes";
-                    }
-                    if ($visionTest->right_eye_pressure || $visionTest->left_eye_pressure) {
-                        $summary[] = "Intraocular pressure measured";
-                    }
-                    if ($visionTest->right_eye_sphere || $visionTest->left_eye_sphere) {
-                        $summary[] = "Refractive error assessment completed";
-                    }
-                    if (empty($summary)) {
-                        $summary[] = "Basic vision screening performed";
-                    }
-                @endphp
-                {{ implode(' • ', $summary) }}
-            </div>
-        </div>
-
-        <!-- Additional Notes -->
-        @if($visionTest->additional_notes)
-        <div class="section-header">Additional Notes & Observations</div>
-        <div class="notes-content">
-            {{ $visionTest->additional_notes }}
+        <!-- Current Medications -->
+        @if($visionTest->drugs_used)
+        <div class="medications-section">
+            <div class="medications-label">Current Medications:</div>
+            <div class="medications-box">{{ $visionTest->drugs_used }}</div>
         </div>
         @endif
 
         <!-- Signature Area -->
-        <div class="signature-area clearfix">
-            <div class="signature-row">
-                <div class="signature-left">
+        <table class="signature-table">
+            <tr>
+                <td class="signature-left">
                     <div class="signature-line"></div>
                     <div class="signature-label">Patient's Signature</div>
-                </div>
-                <div class="signature-right">
+                </td>
+                <td class="signature-right">
                     <div class="examiner-info">
-                        <div class="examiner-name">
-                            {{ $visionTest->performedBy->name ?? 'N/A' }}
-                        </div>
-                        <div class="examiner-details">
-                            Vision Test Examiner<br>
-                            Employee ID: {{ $visionTest->performedBy->employee_id ?? 'N/A' }}
-                        </div>
+                        <div class="examiner-name">{{ $visionTest->performedBy->name ?? 'N/A' }}</div>
+                        <div class="examiner-title">Vision Test Examiner</div>
+                        <div class="examiner-date">Date: {{ \Carbon\Carbon::parse($visionTest->test_date)->format('d/m/Y') }}</div>
                     </div>
                     <div class="signature-line"></div>
                     <div class="signature-label">Examiner's Signature & Seal</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <div class="report-footer">
-            <strong>Note:</strong> This report is valid for medical consultation • Follow up as recommended by your doctor • Keep for medical records<br>
-            Generated: {{ \Carbon\Carbon::now()->format('d/m/Y h:i A') }} | Test ID: {{ str_pad($visionTest->id, 6, '0', STR_PAD_LEFT) }}
-        </div>
+                </td>
+            </tr>
+        </table>
     </div>
 </body>
 </html>

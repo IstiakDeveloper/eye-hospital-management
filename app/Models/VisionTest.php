@@ -18,19 +18,69 @@ class VisionTest extends Model
     protected $fillable = [
         'patient_id',
         'visit_id',
-        'right_eye_vision',
-        'left_eye_vision',
-        'right_eye_power',
-        'left_eye_power',
-        'right_eye_pressure',
-        'left_eye_pressure',
-        'right_eye_sphere',
-        'left_eye_sphere',
-        'right_eye_cylinder',
-        'left_eye_cylinder',
-        'right_eye_axis',
-        'left_eye_axis',
-        'additional_notes',
+
+        // Patient complaints
+        'complains',
+
+        // Physical examination
+        'right_eye_diagnosis',
+        'left_eye_diagnosis',
+        'right_eye_lids',
+        'left_eye_lids',
+        'right_eye_conjunctiva',
+        'left_eye_conjunctiva',
+        'right_eye_cornea',
+        'left_eye_cornea',
+        'right_eye_anterior_chamber',
+        'left_eye_anterior_chamber',
+        'right_eye_iris',
+        'left_eye_iris',
+        'right_eye_pupil',
+        'left_eye_pupil',
+        'right_eye_lens',
+        'left_eye_lens',
+        'right_eye_ocular_movements',
+        'left_eye_ocular_movements',
+
+        // Vision testing
+        'right_eye_vision_without_glass',
+        'left_eye_vision_without_glass',
+        'right_eye_vision_with_glass',
+        'left_eye_vision_with_glass',
+
+        // IOP
+        'right_eye_iop',
+        'left_eye_iop',
+
+        // Ducts
+        'right_eye_ducts',
+        'left_eye_ducts',
+
+        // Vital signs
+        'blood_pressure',
+        'urine_sugar',
+        'blood_sugar',
+
+        // Fundus
+        'right_eye_fundus',
+        'left_eye_fundus',
+
+        // History
+        'detailed_history',
+
+        // Medical conditions
+        'is_one_eyed',
+        'is_diabetic',
+        'is_cardiac',
+        'is_asthmatic',
+        'is_hypertensive',
+        'is_thyroid',
+        'other_conditions',
+
+        // Drugs
+        'drugs_used',
+
+        // Metadata
         'performed_by',
         'test_date',
     ];
@@ -41,9 +91,13 @@ class VisionTest extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'right_eye_power' => 'float',
-        'left_eye_power' => 'float',
         'test_date' => 'datetime',
+        'is_one_eyed' => 'boolean',
+        'is_diabetic' => 'boolean',
+        'is_cardiac' => 'boolean',
+        'is_asthmatic' => 'boolean',
+        'is_hypertensive' => 'boolean',
+        'is_thyroid' => 'boolean',
     ];
 
     /**
@@ -53,7 +107,6 @@ class VisionTest extends Model
     {
         parent::boot();
 
-        // Set test_date to current time if not provided
         static::creating(function ($visionTest) {
             if (!$visionTest->test_date) {
                 $visionTest->test_date = now();
@@ -77,6 +130,14 @@ class VisionTest extends Model
         return $this->belongsTo(User::class, 'performed_by');
     }
 
+    /**
+     * Get the visit associated with this vision test.
+     */
+    public function visit(): BelongsTo
+    {
+        return $this->belongsTo(PatientVisit::class, 'visit_id');
+    }
+
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(PatientInvoice::class, 'invoice_id');
@@ -86,5 +147,4 @@ class VisionTest extends Model
     {
         return $this->invoice && $this->invoice->status === 'paid';
     }
-
 }

@@ -23,6 +23,8 @@ return new class extends Migration {
             $table->text('medical_history')->nullable();
             $table->foreignId('registered_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('qr_code')->unique()->nullable();
+            $table->string('qr_code_image_path')->nullable();
+
             $table->timestamps();
 
             // Index for searching

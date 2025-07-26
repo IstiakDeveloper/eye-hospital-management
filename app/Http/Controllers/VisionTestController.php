@@ -177,7 +177,7 @@ class VisionTestController extends Controller
             ]);
         }
 
-        // ✅ NEW CHECK: Ensure we don't already have a vision test for THIS specific visit
+        // Check if vision test already exists for this visit
         $existingVisionTest = VisionTest::where('visit_id', $visit->id)
             ->where('patient_id', $patient->id)
             ->first();
@@ -189,59 +189,111 @@ class VisionTestController extends Controller
         }
 
         $request->validate([
-            'right_eye_vision' => 'nullable|string|max:20',
-            'left_eye_vision' => 'nullable|string|max:20',
-            'right_eye_power' => 'nullable|numeric|between:-30,30',
-            'left_eye_power' => 'nullable|numeric|between:-30,30',
-            'right_eye_pressure' => 'nullable|string|max:20',
-            'left_eye_pressure' => 'nullable|string|max:20',
-            'right_eye_sphere' => 'nullable|numeric|between:-20,20',
-            'left_eye_sphere' => 'nullable|numeric|between:-20,20',
-            'right_eye_cylinder' => 'nullable|numeric|between:-10,10',
-            'left_eye_cylinder' => 'nullable|numeric|between:-10,10',
-            'right_eye_axis' => 'nullable|integer|between:0,180',
-            'left_eye_axis' => 'nullable|integer|between:0,180',
-            'pupillary_distance' => 'nullable|numeric|between:50,80',
-            'additional_notes' => 'nullable|string|max:1000',
+            'complains' => 'nullable|string|max:1000',
+            'right_eye_diagnosis' => 'nullable|string|max:500',
+            'left_eye_diagnosis' => 'nullable|string|max:500',
+            'right_eye_lids' => 'nullable|string|max:500',
+            'left_eye_lids' => 'nullable|string|max:500',
+            'right_eye_conjunctiva' => 'nullable|string|max:500',
+            'left_eye_conjunctiva' => 'nullable|string|max:500',
+            'right_eye_cornea' => 'nullable|string|max:500',
+            'left_eye_cornea' => 'nullable|string|max:500',
+            'right_eye_anterior_chamber' => 'nullable|string|max:500',
+            'left_eye_anterior_chamber' => 'nullable|string|max:500',
+            'right_eye_iris' => 'nullable|string|max:500',
+            'left_eye_iris' => 'nullable|string|max:500',
+            'right_eye_pupil' => 'nullable|string|max:500',
+            'left_eye_pupil' => 'nullable|string|max:500',
+            'right_eye_lens' => 'nullable|string|max:500',
+            'left_eye_lens' => 'nullable|string|max:500',
+            'right_eye_ocular_movements' => 'nullable|string|max:500',
+            'left_eye_ocular_movements' => 'nullable|string|max:500',
+            'right_eye_vision_without_glass' => 'nullable|string|max:20',
+            'left_eye_vision_without_glass' => 'nullable|string|max:20',
+            'right_eye_vision_with_glass' => 'nullable|string|max:20',
+            'left_eye_vision_with_glass' => 'nullable|string|max:20',
+            'right_eye_iop' => 'nullable|string|max:20',
+            'left_eye_iop' => 'nullable|string|max:20',
+            'right_eye_ducts' => 'nullable|string|max:500',
+            'left_eye_ducts' => 'nullable|string|max:500',
+            'blood_pressure' => 'nullable|string|max:20',
+            'urine_sugar' => 'nullable|string|max:20',
+            'blood_sugar' => 'nullable|string|max:20',
+            'right_eye_fundus' => 'nullable|string|max:1000',
+            'left_eye_fundus' => 'nullable|string|max:1000',
+            'detailed_history' => 'nullable|string|max:2000',
+            'is_one_eyed' => 'boolean',
+            'is_diabetic' => 'boolean',
+            'is_cardiac' => 'boolean',
+            'is_asthmatic' => 'boolean',
+            'is_hypertensive' => 'boolean',
+            'is_thyroid' => 'boolean',
+            'other_conditions' => 'nullable|string|max:500',
+            'drugs_used' => 'nullable|string|max:1000',
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Prepare data for NEW vision test - ALWAYS CREATE, NEVER UPDATE
+            // Prepare data for new vision test
             $visionTestData = [
                 'patient_id' => $patient->id,
-                'visit_id' => $visit->id,  // ✅ Link to specific visit
+                'visit_id' => $visit->id,
                 'performed_by' => auth()->id(),
                 'test_date' => now(),
-                'right_eye_vision' => $request->right_eye_vision,
-                'left_eye_vision' => $request->left_eye_vision,
-                'right_eye_power' => $request->right_eye_power,
-                'left_eye_power' => $request->left_eye_power,
-                'right_eye_pressure' => $request->right_eye_pressure,
-                'left_eye_pressure' => $request->left_eye_pressure,
-                'right_eye_sphere' => $request->right_eye_sphere,
-                'left_eye_sphere' => $request->left_eye_sphere,
-                'right_eye_cylinder' => $request->right_eye_cylinder,
-                'left_eye_cylinder' => $request->left_eye_cylinder,
-                'right_eye_axis' => $request->right_eye_axis,
-                'left_eye_axis' => $request->left_eye_axis,
-                'pupillary_distance' => $request->pupillary_distance,
-                'additional_notes' => $request->additional_notes,
+                'complains' => $request->complains,
+                'right_eye_diagnosis' => $request->right_eye_diagnosis,
+                'left_eye_diagnosis' => $request->left_eye_diagnosis,
+                'right_eye_lids' => $request->right_eye_lids,
+                'left_eye_lids' => $request->left_eye_lids,
+                'right_eye_conjunctiva' => $request->right_eye_conjunctiva,
+                'left_eye_conjunctiva' => $request->left_eye_conjunctiva,
+                'right_eye_cornea' => $request->right_eye_cornea,
+                'left_eye_cornea' => $request->left_eye_cornea,
+                'right_eye_anterior_chamber' => $request->right_eye_anterior_chamber,
+                'left_eye_anterior_chamber' => $request->left_eye_anterior_chamber,
+                'right_eye_iris' => $request->right_eye_iris,
+                'left_eye_iris' => $request->left_eye_iris,
+                'right_eye_pupil' => $request->right_eye_pupil,
+                'left_eye_pupil' => $request->left_eye_pupil,
+                'right_eye_lens' => $request->right_eye_lens,
+                'left_eye_lens' => $request->left_eye_lens,
+                'right_eye_ocular_movements' => $request->right_eye_ocular_movements,
+                'left_eye_ocular_movements' => $request->left_eye_ocular_movements,
+                'right_eye_vision_without_glass' => $request->right_eye_vision_without_glass,
+                'left_eye_vision_without_glass' => $request->left_eye_vision_without_glass,
+                'right_eye_vision_with_glass' => $request->right_eye_vision_with_glass,
+                'left_eye_vision_with_glass' => $request->left_eye_vision_with_glass,
+                'right_eye_iop' => $request->right_eye_iop,
+                'left_eye_iop' => $request->left_eye_iop,
+                'right_eye_ducts' => $request->right_eye_ducts,
+                'left_eye_ducts' => $request->left_eye_ducts,
+                'blood_pressure' => $request->blood_pressure,
+                'urine_sugar' => $request->urine_sugar,
+                'blood_sugar' => $request->blood_sugar,
+                'right_eye_fundus' => $request->right_eye_fundus,
+                'left_eye_fundus' => $request->left_eye_fundus,
+                'detailed_history' => $request->detailed_history,
+                'is_one_eyed' => $request->boolean('is_one_eyed'),
+                'is_diabetic' => $request->boolean('is_diabetic'),
+                'is_cardiac' => $request->boolean('is_cardiac'),
+                'is_asthmatic' => $request->boolean('is_asthmatic'),
+                'is_hypertensive' => $request->boolean('is_hypertensive'),
+                'is_thyroid' => $request->boolean('is_thyroid'),
+                'other_conditions' => $request->other_conditions,
+                'drugs_used' => $request->drugs_used,
             ];
 
-            // ✅ ALWAYS CREATE NEW vision test (never update existing)
+            // Create new vision test
             $visionTest = VisionTest::create($visionTestData);
 
-            Log::info('NEW vision test created successfully', [
+            Log::info('New vision test created successfully', [
                 'vision_test_id' => $visionTest->id,
                 'patient_id' => $patient->id,
                 'visit_id' => $visit->id,
-                'vision_test_visit_id' => $visionTest->visit_id,
-                'is_new_record' => true, // ✅ Confirm it's new
             ]);
 
-            // Complete vision test for the visit using model method
+            // Complete vision test for the visit
             $visit->completeVisionTest();
 
             Log::info('Visit vision test status updated', [
@@ -307,11 +359,6 @@ class VisionTestController extends Controller
                 return null;
             }
 
-            Log::info('Doctor found, proceeding with appointment creation', [
-                'doctor_id' => $doctor->id,
-                'doctor_name' => $doctor->user->name ?? 'Unknown',
-            ]);
-
             // Generate serial number for today
             $today = now()->format('Y-m-d');
             $lastSerial = Appointment::where('appointment_date', $today)
@@ -333,8 +380,6 @@ class VisionTestController extends Controller
                 'created_by' => auth()->id(),
             ];
 
-            Log::info('Attempting to create appointment with data', $appointmentData);
-
             // Create appointment
             $appointment = Appointment::create($appointmentData);
 
@@ -343,31 +388,21 @@ class VisionTestController extends Controller
                     'appointment_id' => $appointment->id,
                     'patient_id' => $patient->id,
                     'doctor_id' => $visit->selected_doctor_id,
-                    'appointment_date' => $today,
-                    'appointment_time' => now()->format('H:i'),
                     'serial_number' => $serialNumberFormatted,
                 ]);
 
                 // Load the doctor relationship for return
                 $appointment->load('doctor.user');
                 return $appointment;
-            } else {
-                Log::error('Appointment::create() returned null/false', [
-                    'patient_id' => $patient->id,
-                    'selected_doctor_id' => $visit->selected_doctor_id,
-                    'appointment_data' => $appointmentData,
-                ]);
-                return null;
             }
+
+            return null;
         } catch (\Exception $e) {
             Log::error('Exception during appointment creation', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
                 'patient_id' => $patient->id,
                 'visit_id' => $visit->id,
                 'selected_doctor_id' => $visit->selected_doctor_id,
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
             ]);
             return null;
         }
@@ -432,37 +467,91 @@ class VisionTestController extends Controller
         }
 
         $request->validate([
-            'right_eye_vision' => 'nullable|string|max:20',
-            'left_eye_vision' => 'nullable|string|max:20',
-            'right_eye_power' => 'nullable|numeric|between:-30,30',
-            'left_eye_power' => 'nullable|numeric|between:-30,30',
-            'right_eye_pressure' => 'nullable|string|max:20',
-            'left_eye_pressure' => 'nullable|string|max:20',
-            'right_eye_sphere' => 'nullable|numeric|between:-20,20',
-            'left_eye_sphere' => 'nullable|numeric|between:-20,20',
-            'right_eye_cylinder' => 'nullable|numeric|between:-10,10',
-            'left_eye_cylinder' => 'nullable|numeric|between:-10,10',
-            'right_eye_axis' => 'nullable|integer|between:0,180',
-            'left_eye_axis' => 'nullable|integer|between:0,180',
-            'pupillary_distance' => 'nullable|numeric|between:50,80',
-            'additional_notes' => 'nullable|string|max:1000',
+            'complains' => 'nullable|string|max:1000',
+            'right_eye_diagnosis' => 'nullable|string|max:500',
+            'left_eye_diagnosis' => 'nullable|string|max:500',
+            'right_eye_lids' => 'nullable|string|max:500',
+            'left_eye_lids' => 'nullable|string|max:500',
+            'right_eye_conjunctiva' => 'nullable|string|max:500',
+            'left_eye_conjunctiva' => 'nullable|string|max:500',
+            'right_eye_cornea' => 'nullable|string|max:500',
+            'left_eye_cornea' => 'nullable|string|max:500',
+            'right_eye_anterior_chamber' => 'nullable|string|max:500',
+            'left_eye_anterior_chamber' => 'nullable|string|max:500',
+            'right_eye_iris' => 'nullable|string|max:500',
+            'left_eye_iris' => 'nullable|string|max:500',
+            'right_eye_pupil' => 'nullable|string|max:500',
+            'left_eye_pupil' => 'nullable|string|max:500',
+            'right_eye_lens' => 'nullable|string|max:500',
+            'left_eye_lens' => 'nullable|string|max:500',
+            'right_eye_ocular_movements' => 'nullable|string|max:500',
+            'left_eye_ocular_movements' => 'nullable|string|max:500',
+            'right_eye_vision_without_glass' => 'nullable|string|max:20',
+            'left_eye_vision_without_glass' => 'nullable|string|max:20',
+            'right_eye_vision_with_glass' => 'nullable|string|max:20',
+            'left_eye_vision_with_glass' => 'nullable|string|max:20',
+            'right_eye_iop' => 'nullable|string|max:20',
+            'left_eye_iop' => 'nullable|string|max:20',
+            'right_eye_ducts' => 'nullable|string|max:500',
+            'left_eye_ducts' => 'nullable|string|max:500',
+            'blood_pressure' => 'nullable|string|max:20',
+            'urine_sugar' => 'nullable|string|max:20',
+            'blood_sugar' => 'nullable|string|max:20',
+            'right_eye_fundus' => 'nullable|string|max:1000',
+            'left_eye_fundus' => 'nullable|string|max:1000',
+            'detailed_history' => 'nullable|string|max:2000',
+            'is_one_eyed' => 'boolean',
+            'is_diabetic' => 'boolean',
+            'is_cardiac' => 'boolean',
+            'is_asthmatic' => 'boolean',
+            'is_hypertensive' => 'boolean',
+            'is_thyroid' => 'boolean',
+            'other_conditions' => 'nullable|string|max:500',
+            'drugs_used' => 'nullable|string|max:1000',
         ]);
 
         $visionTest->update($request->only([
-            'right_eye_vision',
-            'left_eye_vision',
-            'right_eye_power',
-            'left_eye_power',
-            'right_eye_pressure',
-            'left_eye_pressure',
-            'right_eye_sphere',
-            'left_eye_sphere',
-            'right_eye_cylinder',
-            'left_eye_cylinder',
-            'right_eye_axis',
-            'left_eye_axis',
-            'pupillary_distance',
-            'additional_notes',
+            'complains',
+            'right_eye_diagnosis',
+            'left_eye_diagnosis',
+            'right_eye_lids',
+            'left_eye_lids',
+            'right_eye_conjunctiva',
+            'left_eye_conjunctiva',
+            'right_eye_cornea',
+            'left_eye_cornea',
+            'right_eye_anterior_chamber',
+            'left_eye_anterior_chamber',
+            'right_eye_iris',
+            'left_eye_iris',
+            'right_eye_pupil',
+            'left_eye_pupil',
+            'right_eye_lens',
+            'left_eye_lens',
+            'right_eye_ocular_movements',
+            'left_eye_ocular_movements',
+            'right_eye_vision_without_glass',
+            'left_eye_vision_without_glass',
+            'right_eye_vision_with_glass',
+            'left_eye_vision_with_glass',
+            'right_eye_iop',
+            'left_eye_iop',
+            'right_eye_ducts',
+            'left_eye_ducts',
+            'blood_pressure',
+            'urine_sugar',
+            'blood_sugar',
+            'right_eye_fundus',
+            'left_eye_fundus',
+            'detailed_history',
+            'is_one_eyed',
+            'is_diabetic',
+            'is_cardiac',
+            'is_asthmatic',
+            'is_hypertensive',
+            'is_thyroid',
+            'other_conditions',
+            'drugs_used',
         ]));
 
         Log::info('Vision test updated', [
@@ -482,9 +571,18 @@ class VisionTestController extends Controller
         $visionTest = VisionTest::with(['patient', 'performedBy'])
             ->findOrFail($id);
 
+        // Ensure patient has QR code
+        if (!$visionTest->patient->qr_code) {
+            $visionTest->patient->generateQRCode();
+        }
+
+        // Get QR code base64 image
+        $qrCodeBase64 = $visionTest->patient->getQRCodeBase64();
+
         // Generate PDF with precise settings
         $pdf = Pdf::loadView('vision-tests.print', [
-            'visionTest' => $visionTest
+            'visionTest' => $visionTest,
+            'qrCodeBase64' => $qrCodeBase64
         ]);
 
         $pdf->setPaper('A4', 'portrait');
@@ -618,14 +716,16 @@ class VisionTestController extends Controller
                 'Patient Name',
                 'Patient ID',
                 'Phone',
-                'Right Eye Vision',
-                'Left Eye Vision',
-                'Right Eye Sphere',
-                'Left Eye Sphere',
-                'Right Eye Cylinder',
-                'Left Eye Cylinder',
+                'Complains',
+                'Right Eye Vision (No Glass)',
+                'Left Eye Vision (No Glass)',
+                'Right Eye Vision (With Glass)',
+                'Left Eye Vision (With Glass)',
+                'Right Eye IOP',
+                'Left Eye IOP',
+                'Blood Pressure',
                 'Performed By',
-                'Notes'
+                'Diagnosis'
             ]);
 
             // CSV Data
@@ -635,14 +735,16 @@ class VisionTestController extends Controller
                     $test->patient->name,
                     $test->patient->patient_id,
                     $test->patient->phone,
-                    $test->right_eye_vision,
-                    $test->left_eye_vision,
-                    $test->right_eye_sphere,
-                    $test->left_eye_sphere,
-                    $test->right_eye_cylinder,
-                    $test->left_eye_cylinder,
+                    $test->complains,
+                    $test->right_eye_vision_without_glass,
+                    $test->left_eye_vision_without_glass,
+                    $test->right_eye_vision_with_glass,
+                    $test->left_eye_vision_with_glass,
+                    $test->right_eye_iop,
+                    $test->left_eye_iop,
+                    $test->blood_pressure,
                     $test->performedBy->name ?? 'Unknown',
-                    $test->additional_notes,
+                    $test->right_eye_diagnosis . ' | ' . $test->left_eye_diagnosis,
                 ]);
             }
 
