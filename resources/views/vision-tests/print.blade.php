@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,13 +19,14 @@
             margin: 5mm;
         }
 
-        html, body {
+        html,
+        body {
             width: 210mm;
             height: 297mm;
             margin: 0;
             padding: 0;
             font-family: Arial, sans-serif;
-            font-size: 11px;
+            font-size: 10px;
             line-height: 1.3;
             color: #000;
             background: white;
@@ -37,12 +39,49 @@
             margin: 0 auto;
         }
 
-        /* Hospital Header */
+        /* Hospital Header with Logo - Centered Layout */
         .hospital-header {
-            text-align: center;
-            margin-bottom: 8mm;
+            margin-bottom: 2mm;
             border-bottom: 2px solid #000;
             padding-bottom: 5mm;
+            width: 100%;
+            text-align: center;
+        }
+
+        .header-content {
+            display: inline-block;
+            text-align: center;
+            position: relative;
+        }
+
+        .header-table {
+            margin: 0 auto;
+            border-collapse: collapse;
+            vertical-align: middle;
+        }
+
+        .header-table td {
+            vertical-align: middle;
+            padding: 1mm 3mm;
+        }
+
+        .logo-cell {
+            width: 25mm;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo-cell img {
+            width: 20mm;
+            height: 15mm;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .info-cell {
+            text-align: left;
+            width: auto;
+            padding-left: 5mm;
         }
 
         .hospital-name {
@@ -63,7 +102,7 @@
         /* Vision Title Box with QR Code */
         .vision-title-section {
             width: 100%;
-            margin: 5mm auto 8mm auto;
+            margin: 2mm auto 2mm auto;
             position: relative;
             height: 25mm;
         }
@@ -72,7 +111,7 @@
             width: 60mm;
             margin: 0 auto;
             border: 2px solid #000;
-            padding: 4mm;
+            padding: 2mm;
             text-align: center;
             font-weight: bold;
             font-size: 14px;
@@ -85,8 +124,8 @@
 
         .header-left {
             position: absolute;
-            left: 0;
-            top: 0;
+            left: 5;
+            top: 25;
             width: 25mm;
             font-size: 9px;
             font-weight: bold;
@@ -96,7 +135,7 @@
             position: absolute;
             right: 0;
             top: 0;
-            width: 35mm;
+            width: 30mm;
             text-align: right;
         }
 
@@ -113,19 +152,37 @@
         .barcode-container {
             width: 35mm;
             height: 25mm;
-            border: 2px solid #000;
             background: #fff;
-            padding: 2mm;
-            text-align: center;
+            text-align: end;
             float: right;
         }
 
         .barcode-lines {
             margin-bottom: 2mm;
             height: 18mm;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            text-align: end;
+            line-height: 18mm;
+        }
+
+        .qr-code-image {
+            width: 18mm;
+            height: 18mm;
+            border: 1px solid #ccc;
+            object-fit: contain;
+            vertical-align: end;
+        }
+
+        .qr-fallback {
+            width: 18mm;
+            height: 18mm;
+            border: 2px solid #000;
+            background: #fff;
+            font-family: monospace;
+            font-size: 3px;
+            padding: 2mm;
+            text-align: center;
+            vertical-align: middle;
+            display: inline-block;
         }
 
         .barcode-text {
@@ -174,15 +231,15 @@
 
         .complaints-label {
             font-weight: bold;
-            margin-bottom: 2mm;
+            margin-bottom: 1mm;
             font-size: 11px;
         }
 
         .complaints-box {
             border: 1px solid #000;
-            min-height: 15mm;
-            padding: 2mm;
-            width: 100%;
+            min-height: 10mm;
+            padding: 1mm;
+            width: 99%;
         }
 
         /* All Tables */
@@ -223,13 +280,15 @@
             border-collapse: collapse;
             margin-bottom: 5mm;
             font-size: 10px;
+            page-break-after: always;
         }
 
         .vitals-table td {
             border: 1px solid #000;
-            padding: 3mm;
+            padding: 2mm;
             width: 33.33%;
             vertical-align: top;
+
         }
 
         .vitals-label {
@@ -248,13 +307,15 @@
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 5mm;
+            margin-top: 10mm;
             font-size: 10px;
+
         }
 
         .fundus-table th,
         .fundus-table td {
             border: 1px solid #000;
-            padding: 2mm;
+            padding: 5mm;
         }
 
         .fundus-table th {
@@ -272,11 +333,12 @@
         .fundus-table .fundus-content {
             min-height: 12mm;
             vertical-align: top;
+            padding: 2mm;
         }
 
         /* History Section */
         .history-section {
-            margin-bottom: 5mm;
+            margin-top: 5mm;
         }
 
         .history-label {
@@ -413,15 +475,62 @@
         .no-break {
             page-break-inside: avoid;
         }
+
+        /* New Page Section - starts on page 2 */
+        .page-two-content {
+            page-break-before: always;
+        }
     </style>
 </head>
+
 <body>
     <div class="report-container">
-        <!-- Hospital Header -->
+        <!-- Hospital Header with Logo - Centered Layout -->
         <div class="hospital-header">
-            <div class="hospital-name">Naogaon Islamia Chakkhu Hospital and Phaco Center</div>
-            <div class="hospital-address">Main Road, Beside of Naogaon Fisheries Building, Naogaon Sadar, Naogaon</div>
-            <div class="hospital-contact">Mobile: 01307-885566; Email: niehpc@gamil.com</div>
+            <div class="header-content">
+                <table class="header-table">
+                    <tr>
+                        <td class="logo-cell">
+                            @php
+                                $logoPath = public_path('logo.png');
+                                $logoExists = file_exists($logoPath);
+                            @endphp
+
+                            @if ($logoExists)
+                                <img src="{{ public_path('logo.png') }}" alt="Hospital Logo">
+                            @else
+                                <!-- Fallback: Base64 encoded logo or placeholder -->
+                                @php
+                                    // Option 1: Try to get base64 encoded logo
+                                    $base64Logo = null;
+                                    $storageLogo = storage_path('app/public/logo.png');
+                                    if (file_exists($storageLogo)) {
+                                        $logoData = file_get_contents($storageLogo);
+                                        $base64Logo = base64_encode($logoData);
+                                    }
+                                @endphp
+
+                                @if ($base64Logo)
+                                    <img src="data:image/png;base64,{{ $base64Logo }}" alt="Hospital Logo"
+                                        style="width: 20mm; height: 15mm; display: block; margin: 0 auto;">
+                                @else
+                                    <!-- Final fallback: Placeholder div -->
+                                    <div
+                                        style="width: 20mm; height: 15mm; border: 2px solid #000; background: #f0f0f0; text-align: center; line-height: 15mm; font-size: 8px; font-weight: bold; margin: 0 auto;">
+                                        LOGO
+                                    </div>
+                                @endif
+                            @endif
+                        </td>
+                        <td class="info-cell">
+                            <div class="hospital-name">Naogaon Islamia Chakkhu Hospital and Phaco Center</div>
+                            <div class="hospital-address">Main Road, Beside of Naogaon Fisheries Building, Naogaon
+                                Sadar, Naogaon</div>
+                            <div class="hospital-contact">Mobile: 01307-885566; Email: niehpc@gamil.com</div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
         </div>
 
         <!-- Vision Title with Date and QR Code -->
@@ -431,35 +540,52 @@
                 <div class="time-info">{{ \Carbon\Carbon::parse($visionTest->test_date)->format('h:i A') }}</div>
             </div>
 
-            <div class="vision-title">Vision</div>
+            <div class="vision-title">Particulars of Patient</div>
 
+            <!-- Updated QR Code Section in Blade Template -->
             <div class="header-right">
                 <div class="barcode-container">
                     @php
-                        // Generate unique patient code
-                        $patientCode = $visionTest->patient->qr_code ?? 'EH-' . now()->format('Ymd') . '-' . str_pad($visionTest->patient->id, 6, '0', STR_PAD_LEFT);
-
-                        // Try to generate QR code using online service as fallback
-                        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=' . urlencode($patientCode);
+                        $patientCode = $visionTest->patient->patient_id;
                     @endphp
 
-                    <!-- Real QR Code Image from Database -->
+                    <!-- QR Code Display -->
                     <div class="barcode-lines">
-                        @if(isset($qrCodeBase64) && $qrCodeBase64)
-                            <img src="{{ $qrCodeBase64 }}"
-                                 style="width: 20mm; height: 20mm; border: 1px solid #ccc;"
-                                 alt="Patient QR Code">
+                        @if (isset($qrCodeBase64) && $qrCodeBase64)
+                            <!-- Use base64 image passed from controller -->
+                            <img src="data:image/png;base64,{{ $qrCodeBase64 }}" class="qr-code-image"
+                                alt="Patient QR Code">
+                        @elseif($visionTest->patient->qr_code_image_path)
+                            @php
+                                // Fallback: try to load image directly and convert to base64
+                                $qrImagePath = storage_path('app/public/' . $visionTest->patient->qr_code_image_path);
+                                $imageExists = file_exists($qrImagePath);
+                                $qrBase64 = null;
+                                if ($imageExists) {
+                                    $imageData = file_get_contents($qrImagePath);
+                                    $qrBase64 = base64_encode($imageData);
+                                }
+                            @endphp
+
+                            @if ($qrBase64)
+                                <img src="data:image/png;base64,{{ $qrBase64 }}" class="qr-code-image"
+                                    alt="Patient QR Code">
+                            @else
+                                <!-- File not found fallback -->
+                                <div class="qr-fallback">
+                                    <div style="font-weight: bold; font-size: 4px; margin-bottom: 2mm;">FILE MISSING
+                                    </div>
+                                    <div style="font-size: 2px;">{{ $patientCode }}</div>
+                                </div>
+                            @endif
                         @else
-                            <!-- Fallback if no QR code available -->
-                            <div style="width: 18mm; height: 18mm; border: 2px solid #000; background: #fff; font-family: monospace; font-size: 3px; padding: 1mm; text-align: center;">
-                                <div style="margin-top: 6mm; font-weight: bold;">QR CODE</div>
-                                <div style="font-size: 2px; margin-top: 2mm;">{{ $visionTest->patient->patient_id }}</div>
+                            <!-- No QR code available -->
+                            <div class="qr-fallback">
+                                <div style="font-weight: bold; font-size: 4px; margin-bottom: 2mm;">NO QR</div>
+                                <div style="font-size: 2px;">{{ $patientCode }}</div>
                             </div>
                         @endif
                     </div>
-
-                    <div class="barcode-text">{{ $patientCode }}</div>
-                    <div class="test-id">Test: {{ str_pad($visionTest->id, 6, '0', STR_PAD_LEFT) }}</div>
                 </div>
             </div>
         </div>
@@ -483,7 +609,7 @@
             <tr>
                 <td class="patient-label">Age:</td>
                 <td class="patient-value">
-                    @if($visionTest->patient->date_of_birth)
+                    @if ($visionTest->patient->date_of_birth)
                         {{ \Carbon\Carbon::parse($visionTest->patient->date_of_birth)->age }} Years
                     @endif
                 </td>
@@ -493,14 +619,16 @@
             </tr>
             <tr>
                 <td class="patient-label">Sex:</td>
-                <td class="patient-value">{{ $visionTest->patient->gender ? ucfirst($visionTest->patient->gender) : '' }}</td>
+                <td class="patient-value">
+                    {{ $visionTest->patient->gender ? ucfirst($visionTest->patient->gender) : '' }}</td>
                 <td style="width: 10mm;"></td>
                 <td class="patient-label">Mobile:</td>
                 <td class="patient-value">{{ $visionTest->patient->phone }}</td>
             </tr>
             <tr>
                 <td class="patient-label">Address:</td>
-                <td colspan="4" class="patient-value" style="width: auto;">{{ $visionTest->patient->address ?? '' }}</td>
+                <td colspan="4" class="patient-value" style="width: auto;">{{ $visionTest->patient->address ?? '' }}
+                </td>
             </tr>
         </table>
 
@@ -602,7 +730,7 @@
         </table>
 
         <!-- Vitals Section -->
-        <table class="vitals-table no-break">
+        <table class="vitals-table">
             <tr>
                 <td>
                     <div class="vitals-label">B.P</div>
@@ -620,7 +748,7 @@
         </table>
 
         <!-- Fundus Section -->
-        <table class="fundus-table no-break">
+        <table class="fundus-table">
             <thead>
                 <tr>
                     <th class="fundus-label">Fundus:</th>
@@ -648,46 +776,53 @@
         <table class="drug-table">
             <tr>
                 <td style="width: 33.33%;">
-                    <span class="checkbox {{ $visionTest->is_one_eyed ? 'checked' : '' }}">{{ $visionTest->is_one_eyed ? '✓' : '' }}</span>
+                    <span
+                        class="checkbox {{ $visionTest->is_one_eyed ? 'checked' : '' }}">{{ $visionTest->is_one_eyed ? '•' : '' }}</span>
                     ONE EYED
                 </td>
                 <td style="width: 33.33%;">
-                    <span class="checkbox {{ $visionTest->is_cardiac ? 'checked' : '' }}">{{ $visionTest->is_cardiac ? '✓' : '' }}</span>
+                    <span
+                        class="checkbox {{ $visionTest->is_cardiac ? 'checked' : '' }}">{{ $visionTest->is_cardiac ? '•' : '' }}</span>
                     CARDIAC
                 </td>
                 <td style="width: 33.33%;">
-                    <span class="checkbox {{ $visionTest->is_hypertensive ? 'checked' : '' }}">{{ $visionTest->is_hypertensive ? '✓' : '' }}</span>
+                    <span
+                        class="checkbox {{ $visionTest->is_hypertensive ? 'checked' : '' }}">{{ $visionTest->is_hypertensive ? '•' : '' }}</span>
                     HYPERTENSIVE
                 </td>
             </tr>
             <tr>
                 <td>
-                    <span class="checkbox {{ $visionTest->is_diabetic ? 'checked' : '' }}">{{ $visionTest->is_diabetic ? '✓' : '' }}</span>
+                    <span
+                        class="checkbox {{ $visionTest->is_diabetic ? 'checked' : '' }}">{{ $visionTest->is_diabetic ? '•' : '' }}</span>
                     DIABETIC
                 </td>
                 <td>
-                    <span class="checkbox {{ $visionTest->is_asthmatic ? 'checked' : '' }}">{{ $visionTest->is_asthmatic ? '✓' : '' }}</span>
+                    <span
+                        class="checkbox {{ $visionTest->is_asthmatic ? 'checked' : '' }}">{{ $visionTest->is_asthmatic ? '•' : '' }}</span>
                     ASTHMATIC
                 </td>
                 <td>
-                    <span class="checkbox {{ $visionTest->is_thyroid ? 'checked' : '' }}">{{ $visionTest->is_thyroid ? '✓' : '' }}</span>
+                    <span
+                        class="checkbox {{ $visionTest->is_thyroid ? 'checked' : '' }}">{{ $visionTest->is_thyroid ? '•' : '' }}</span>
                     THYROID
                 </td>
             </tr>
             <tr>
                 <td colspan="3">
-                    <span class="checkbox {{ $visionTest->other_conditions ? 'checked' : '' }}">{{ $visionTest->other_conditions ? '✓' : '' }}</span>
+                    <span
+                        class="checkbox {{ $visionTest->other_conditions ? 'checked' : '' }}">{{ $visionTest->other_conditions ? '•' : '' }}</span>
                     OTHERS: {{ $visionTest->other_conditions ?? '________________________' }}
                 </td>
             </tr>
         </table>
 
         <!-- Current Medications -->
-        @if($visionTest->drugs_used)
-        <div class="medications-section">
-            <div class="medications-label">Current Medications:</div>
-            <div class="medications-box">{{ $visionTest->drugs_used }}</div>
-        </div>
+        @if ($visionTest->drugs_used)
+            <div class="medications-section">
+                <div class="medications-label">Current Medications:</div>
+                <div class="medications-box">{{ $visionTest->drugs_used }}</div>
+            </div>
         @endif
 
         <!-- Signature Area -->
@@ -701,7 +836,8 @@
                     <div class="examiner-info">
                         <div class="examiner-name">{{ $visionTest->performedBy->name ?? 'N/A' }}</div>
                         <div class="examiner-title">Vision Test Examiner</div>
-                        <div class="examiner-date">Date: {{ \Carbon\Carbon::parse($visionTest->test_date)->format('d/m/Y') }}</div>
+                        <div class="examiner-date">Date:
+                            {{ \Carbon\Carbon::parse($visionTest->test_date)->format('d/m/Y') }}</div>
                     </div>
                     <div class="signature-line"></div>
                     <div class="signature-label">Examiner's Signature & Seal</div>
@@ -710,4 +846,5 @@
         </table>
     </div>
 </body>
+
 </html>

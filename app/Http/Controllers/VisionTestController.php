@@ -571,34 +571,28 @@ class VisionTestController extends Controller
         $visionTest = VisionTest::with(['patient', 'performedBy'])
             ->findOrFail($id);
 
-        // Ensure patient has QR code
-        if (!$visionTest->patient->qr_code) {
-            $visionTest->patient->generateQRCode();
+        // Prepare QR code base64 for PDF
+        $qrCodeBase64 = null;
+        if ($visionTest->patient->qr_code_image_path) {
+            $qrImagePath = storage_path('app/public/' . $visionTest->patient->qr_code_image_path);
+
+            if (file_exists($qrImagePath)) {
+                $imageData = file_get_contents($qrImagePath);
+                if ($imageData) {
+                    $qrCodeBase64 = base64_encode($imageData);
+                }
+            }
         }
 
-        // Get QR code base64 image
-        $qrCodeBase64 = $visionTest->patient->getQRCodeBase64();
-
-        // Generate PDF with precise settings
+        // Generate PDF
         $pdf = Pdf::loadView('vision-tests.print', [
             'visionTest' => $visionTest,
-            'qrCodeBase64' => $qrCodeBase64
+            'qrCodeBase64' => $qrCodeBase64  // Pass base64 to view
         ]);
 
         $pdf->setPaper('A4', 'portrait');
-        $pdf->setOptions([
-            'isHtml5ParserEnabled' => true,
-            'isPhpEnabled' => true,
-            'defaultFont' => 'Arial',
-            'dpi' => 96,
-            'defaultPaperSize' => 'A4',
-            'orientation' => 'portrait',
-        ]);
 
-        $filename = 'vision-test-' .
-            $visionTest->patient->name . '-' .
-            $visionTest->patient->patient_id . '-' .
-            $visionTest->test_date->format('Y-m-d') . '.pdf';
+        $filename = 'vision-test-' . $visionTest->patient->patient_id . '.pdf';
 
         return $pdf->download($filename);
     }

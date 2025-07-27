@@ -17,7 +17,10 @@ use App\Http\Controllers\RefractionistDashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VisionTestController;
+use App\Models\Patient;
 use Illuminate\Foundation\Application;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -271,6 +274,178 @@ Route::get('/medicine-seller', function () {
     return redirect()->route('medicine-seller.dashboard');
 })->middleware(['auth', 'role:Medicine Seller']);
 
+
+Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $request) {
+    try {
+        // Log the incoming request for debugging
+        Log::info('QR save request received', [
+            'patient_id' => $patient->id,
+            'patient_code' => $patient->patient_id,
+            'current_qr_path' => $patient->qr_code_image_path
+        ]);
+
+        // Validate request
+        $request->validate([
+            'qr_data_url' => 'required|string',
+        ]);
+
+        $dataUrl = $request->qr_data_url;
+
+        // Validate base64 image format
+        if (!preg_match('/^data:image\/png;base64,(.+)$/', $dataUrl, $matches)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid image format. Expected PNG base64.'
+            ], 400);
+        }
+
+        $base64Data = $matches[1];
+        $imageData = base64_decode($base64Data);
+
+        // Validate decoded image
+        if ($imageData === false) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to decode base64 image data.'
+            ], 400);
+        }
+
+        // Check minimum image size (at least 1KB)
+        if (strlen($imageData) < 1000) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Image data too small. Minimum 1KB required.'
+            ], 400);
+        }
+
+        // Create directory if not exists
+        $directory = 'qr-codes';
+        if (!Storage::disk('public')->exists($directory)) {
+            Storage::disk('public')->makeDirectory($directory);
+        }
+
+        // Generate unique filename
+        $filename = $directory . '/patient-' . $patient->patient_id . '-' . time() . '.png';
+
+        // Save image to storage
+        if (!Storage::disk('public')->put($filename, $imageData)) {
+            Log::error('Failed to save QR image to storage', [
+                'filename' => $filename,
+                'patient_id' => $patient->id
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save image to storage.'
+            ], 500);
+        }
+
+        Log::info('QR image saved to storage', [
+            'filename' => $filename,
+            'patient_id' => $patient->id,
+            'file_size' => strlen($imageData)
+        ]);
+
+        // Delete old QR image if exists
+        if ($patient->qr_code_image_path && Storage::disk('public')->exists($patient->qr_code_image_path)) {
+            Storage::disk('public')->delete($patient->qr_code_image_path);
+            Log::info('Old QR image deleted', [
+                'old_path' => $patient->qr_code_image_path,
+                'patient_id' => $patient->id
+            ]);
+        }
+
+        // ** CRITICAL FIX: Update patient record with proper error handling **
+        try {
+            $updateResult = $patient->update([
+                'qr_code_image_path' => $filename
+            ]);
+
+            if (!$updateResult) {
+                Log::error('Failed to update patient record', [
+                    'patient_id' => $patient->id,
+                    'filename' => $filename
+                ]);
+
+                // Delete the uploaded file since DB update failed
+                Storage::disk('public')->delete($filename);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update patient record in database.'
+                ], 500);
+            }
+
+            // Refresh the model to confirm the update
+            $patient->refresh();
+
+            Log::info('Patient record updated successfully', [
+                'patient_id' => $patient->id,
+                'new_qr_path' => $patient->qr_code_image_path,
+                'filename' => $filename
+            ]);
+        } catch (\Exception $dbError) {
+            Log::error('Database update error', [
+                'patient_id' => $patient->id,
+                'filename' => $filename,
+                'error' => $dbError->getMessage()
+            ]);
+
+            // Delete the uploaded file since DB update failed
+            Storage::disk('public')->delete($filename);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Database update failed: ' . $dbError->getMessage()
+            ], 500);
+        }
+
+        // Generate full URL for the image
+        $imageUrl = Storage::disk('public')->url($filename);
+
+        // Return success response with detailed info
+        return response()->json([
+            'success' => true,
+            'message' => 'QR code saved successfully!',
+            'url' => $imageUrl,
+            'filename' => $filename,
+            'patient_id' => $patient->patient_id,
+            'patient_db_id' => $patient->id,
+            'saved_at' => now()->toISOString(),
+            'file_size' => strlen($imageData),
+            'updated_qr_path' => $patient->qr_code_image_path
+        ]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        Log::error('Validation failed for QR save', [
+            'patient_id' => $patient->id,
+            'errors' => $e->errors()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        Log::error('QR save failed with exception', [
+            'patient_id' => $patient->id,
+            'patient_code' => $patient->patient_id,
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Server error: ' . $e->getMessage(),
+            'debug_info' => [
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]
+        ], 500);
+    }
+})->name('patient.save-qr');
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';

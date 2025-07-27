@@ -1,10 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Head } from '@inertiajs/react';
 
 import {
     User, Phone, Mail, Calendar,
     Receipt, DollarSign, FileText,
-    CheckCircle, Building, Clock
+    CheckCircle, Building, Clock, Save
 } from 'lucide-react';
 import QRCode from 'react-qr-code';
 
@@ -21,6 +21,7 @@ interface Patient {
     gender?: string;
     medical_history?: string;
     qr_code?: string;
+    qr_code_image_path?: string;
     created_at: string;
 }
 
@@ -67,16 +68,227 @@ interface Props {
     patient: Patient;
     visit: Visit;
     payment?: Payment;
+    csrfToken?: string; // Add CSRF token as prop
 }
 
-// Receipt Component for A4 50% height, full width
-const PatientReceipt: React.FC<Props> = ({ patient, visit, payment }) => {
+// Auto-Save QR Component
+const AutoSaveQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?: string }> = ({
+    patient,
+    size = 64,
+    csrfToken
+}) => {
+    const qrRef = useRef<HTMLDivElement>(null);
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string>('');
 
-    // Auto print when component mounts
+    // Auto-save QR code when component mounts
+    useEffect(() => {
+        if (patient.qr_code && !hasAttemptedSave && !patient.qr_code_image_path) {
+            const timer = setTimeout(() => {
+                autoSaveQRCode();
+            }, 2000); // Increased delay for QR rendering
+
+            return () => clearTimeout(timer);
+        }
+    }, [patient.qr_code, hasAttemptedSave, patient.qr_code_image_path]);
+
+    // Get CSRF token from multiple sources
+    const getCSRFToken = (): string | null => {
+        // Priority order for token retrieval
+
+        // 1. From props (passed from Laravel)
+        if (csrfToken) {
+            return csrfToken;
+        }
+
+        // 2. From meta tag
+        const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (metaToken) {
+            return metaToken;
+        }
+
+        // 3. From window object (if set by Laravel)
+        const windowToken = (window as any).csrfToken;
+        if (windowToken) {
+            return windowToken;
+        }
+
+        // 4. From cookie (XSRF-TOKEN)
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'XSRF-TOKEN') {
+                return decodeURIComponent(value);
+            }
+        }
+
+        return null;
+    };
+
+    const autoSaveQRCode = async () => {
+        if (!qrRef.current || !patient.qr_code || hasAttemptedSave) return;
+
+        setHasAttemptedSave(true);
+        setSaveStatus('saving');
+        setErrorMessage('');
+
+        try {
+            // Get SVG from QR component
+            const svgElement = qrRef.current.querySelector('svg');
+            if (!svgElement) {
+                throw new Error('QR SVG not found');
+            }
+
+            // Create high-quality canvas
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                throw new Error('Canvas context not available');
+            }
+
+            const scale = 8; // Higher quality scale
+            canvas.width = size * scale;
+            canvas.height = size * scale;
+            ctx.scale(scale, scale);
+
+            // Convert SVG to image
+            const svgData = new XMLSerializer().serializeToString(svgElement);
+            const img = new Image();
+
+            await new Promise<void>((resolve, reject) => {
+                img.onload = () => resolve();
+                img.onerror = () => reject(new Error('Failed to load SVG image'));
+                img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+            });
+
+            // Draw on canvas with white background
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, size, size);
+            ctx.drawImage(img, 0, 0, size, size);
+
+            // Convert to base64 PNG
+            const dataUrl = canvas.toDataURL('image/png', 1.0);
+
+            // Get CSRF token
+            const token = getCSRFToken();
+
+            // Prepare headers
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            };
+
+            // Add CSRF token to headers
+            if (token) {
+                headers['X-CSRF-TOKEN'] = token;
+            } else {
+                console.warn('No CSRF token found - request may fail');
+            }
+
+            // Send to server (using web route only)
+            const response = await fetch(`/patient/${patient.id}/save-qr`, {
+                method: 'POST',
+                headers,
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    qr_data_url: dataUrl,
+                    patient_id: patient.patient_id
+                })
+            });
+
+            // Handle response
+            if (!response.ok) {
+                let errorMsg = `HTTP ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.message || errorMsg;
+                } catch {
+                    errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+                }
+                throw new Error(errorMsg);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                setSaveStatus('saved');
+                console.log('QR code auto-saved successfully:', result);
+            } else {
+                throw new Error(result.message || 'Save failed');
+            }
+
+        } catch (error) {
+            console.error('Auto-save QR error:', error);
+            setSaveStatus('error');
+            setErrorMessage(error instanceof Error ? error.message : 'Unknown error');
+        }
+    };
+
+    // Manual retry function
+    const retryAutoSave = async () => {
+        setHasAttemptedSave(false);
+        setSaveStatus('idle');
+        setErrorMessage('');
+
+        // Wait a moment then try again
+        setTimeout(() => {
+            autoSaveQRCode();
+        }, 500);
+    };
+
+    // Generate QR data
+    const getQRCodeData = () => {
+        if (patient.qr_code) {
+            return patient.qr_code;
+        }
+
+        // Generate structured QR data
+        return JSON.stringify({
+            type: 'patient',
+            patient_id: patient.patient_id,
+            name: patient.name,
+            phone: patient.phone,
+            hospital: 'Eye Hospital',
+            url: `${window.location.origin}/patient/${patient.patient_id}`,
+            generated_at: new Date().toISOString()
+        });
+    };
+
+    return (
+        <div className="text-center">
+            {/* QR Code Display */}
+            <div ref={qrRef} className="bg-white p-2 border border-gray-400 rounded mx-auto mb-1 w-fit">
+                <QRCode
+                    value={getQRCodeData()}
+                    size={size}
+                    bgColor="#ffffff"
+                    fgColor="#000000"
+                    level="M"
+                />
+            </div>
+
+            <p className="text-xs text-gray-400 mb-1">Patient QR Code</p>
+
+
+            {/* QR Data Display */}
+            <p className="text-xs text-gray-600 mt-1 font-mono break-all">
+                ID: {patient.patient_id}
+            </p>
+
+        </div>
+    );
+};
+
+// Main Receipt Component with Auto-Save QR
+const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken }) => {
+
+    // Auto print when component mounts (with delay for QR save)
     useEffect(() => {
         const timer = setTimeout(() => {
             window.print();
-        }, 500);
+        }, 2000); // Increased delay to allow QR auto-save
 
         return () => clearTimeout(timer);
     }, []);
@@ -122,8 +334,13 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment }) => {
         <div className="min-h-screen bg-white">
             <Head title="Patient Registration Receipt" />
 
+            {/* CSRF Token Meta (fallback) */}
+            {csrfToken && (
+                <meta name="csrf-token" content={csrfToken} />
+            )}
+
             {/* Print Styles */}
-            <style jsx>{`
+            <style>{`
         @media print {
           @page {
             size: A4 portrait;
@@ -169,6 +386,11 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment }) => {
                     <Receipt className="h-5 w-5" />
                     Print Receipt
                 </button>
+            </div>
+
+            {/* Auto-Save Status Banner */}
+            <div className="no-print bg-blue-50 border-b border-blue-200 p-2 text-center text-sm text-blue-700">
+                🔄 QR Code will be automatically saved to database when page loads
             </div>
 
             {/* Receipt Container - Optimized Layout */}
@@ -224,16 +446,15 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment }) => {
 
                         {/* Status */}
                         <div className="text-center">
-                            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
-                                visit.payment_status === 'paid'
-                                    ? 'bg-green-100 text-green-800'
-                                    : visit.payment_status === 'partial'
+                            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${visit.payment_status === 'paid'
+                                ? 'bg-green-100 text-green-800'
+                                : visit.payment_status === 'partial'
                                     ? 'bg-yellow-100 text-yellow-800'
                                     : 'bg-red-100 text-red-800'
-                            }`}>
+                                }`}>
                                 <CheckCircle className="h-3 w-3" />
                                 {visit.payment_status === 'paid' ? 'FULLY PAID' :
-                                 visit.payment_status === 'partial' ? 'PARTIALLY PAID' : 'PENDING'}
+                                    visit.payment_status === 'partial' ? 'PARTIALLY PAID' : 'PENDING'}
                             </div>
                         </div>
                     </div>
@@ -391,7 +612,7 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment }) => {
                         </div>
                     </div>
 
-                    {/* Far Right Section - Next Steps */}
+                    {/* Far Right Section - Next Steps & Auto-Save QR */}
                     <div className="col-span-3">
                         {/* Next Steps */}
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-3">
@@ -426,10 +647,9 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment }) => {
                             </h4>
                             <div className="text-xs text-gray-700">
                                 <div className="mb-1">
-                                    Payment: <span className={`font-bold ${
-                                        visit.payment_status === 'paid' ? 'text-green-600' :
+                                    Payment: <span className={`font-bold ${visit.payment_status === 'paid' ? 'text-green-600' :
                                         visit.payment_status === 'partial' ? 'text-yellow-600' : 'text-red-600'
-                                    }`}>
+                                        }`}>
                                         {visit.payment_status.toUpperCase()}
                                     </span>
                                 </div>
@@ -456,23 +676,8 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment }) => {
                             </div>
                         )}
 
-                        {/* QR Code */}
-                        <div className="text-center">
-                            <div className="bg-white p-2 border border-gray-400 rounded mx-auto mb-1 w-fit">
-                                {patient.qr_code ? (
-                                    <QRCode value={patient.qr_code} size={64} />
-                                ) : (
-                                    <div className="w-16 h-16 bg-gray-100 flex items-center justify-center text-xs text-gray-500">
-                                        QR
-                                    </div>
-                                )}
-                            </div>
-
-                            <p className="text-xs text-gray-400">Patient QR Code</p>
-                            {patient.qr_code && (
-                                <p className="text-xs text-gray-600 mt-1 font-mono">{patient.qr_code}</p>
-                            )}
-                        </div>
+                        {/* Auto-Save QR Code Component */}
+                        <AutoSaveQRCode patient={patient} size={64} csrfToken={csrfToken} />
                     </div>
 
                 </div>

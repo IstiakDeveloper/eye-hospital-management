@@ -302,6 +302,7 @@ class PatientController extends Controller
             'patient' => $patient,
             'visit' => $latestVisit,
             'payment' => $latestPayment,
+            'csrfToken' => csrf_token(),
         ]);
     }
 
