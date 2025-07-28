@@ -17,7 +17,6 @@ class PatientVisitController extends Controller
      */
     public function store(Request $request)
     {
-
         $request->validate([
             'patient_id' => 'required|exists:patients,id',
             'chief_complaint' => 'required|string|max:500',
@@ -78,18 +77,12 @@ class PatientVisitController extends Controller
                     }
                 }
 
-                return response()->json([
-                    'success' => true,
-                    'message' => 'New visit created successfully!',
-                    'visit' => $visit->fresh(['patient', 'selectedDoctor.user', 'payments']),
-                    'redirect_url' => route('visits.show', $visit),
-                ]);
+                return redirect()->route('visits.show', $visit->id)
+                    ->with('success', 'New visit created successfully!');
             });
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Visit creation failed: ' . $e->getMessage(),
-            ], 422);
+            return redirect()->back()
+                ->with('error', 'Visit creation failed: ' . $e->getMessage());
         }
     }
 
@@ -111,20 +104,66 @@ class PatientVisitController extends Controller
     }
 
     /**
-     * Show visit receipt
+     * Show visit receipt - Fixed to pass all data properly
      */
     public function receipt(PatientVisit $visit)
     {
+        // Load visit with all necessary relationships
         $visit->load([
-            'patient',
-            'selectedDoctor.user',
+            'patient', // Load patient details
+            'selectedDoctor.user', // Load doctor with user relationship
             'payments' => function ($query) {
-                $query->latest();
+                $query->with(['paymentMethod', 'receivedBy']) // Load payment methods and who received
+                    ->orderBy('payment_date', 'desc'); // Latest payments first
             }
         ]);
 
+        // Get the latest payment for this visit
+        $latestPayment = $visit->payments->first();
+
+        // Debug data (remove dd() to actually render the page)
+        // Uncomment below line only for debugging
+        // dd([
+        //     'patient' => $visit->patient,
+        //     'visit' => $visit,
+        //     'payment' => $latestPayment,
+        //     'csrfToken' => csrf_token(),
+        // ]);
+
         return Inertia::render('Visits/Receipt', [
+            'patient' => $visit->patient,
             'visit' => $visit,
+            'payment' => $latestPayment,
+            'csrfToken' => csrf_token(),
+        ]);
+    }
+
+    /**
+     * Alternative receipt method that takes Patient and finds latest visit
+     */
+    public function receiptByPatient(Patient $patient)
+    {
+        // Get the latest visit for this patient
+        $latestVisit = $patient->visits()->with([
+            'selectedDoctor.user',
+            'payments' => function ($query) {
+                $query->with(['paymentMethod', 'receivedBy'])
+                    ->orderBy('payment_date', 'desc');
+            }
+        ])->latest()->first();
+
+        if (!$latestVisit) {
+            return redirect()->back()->with('error', 'No visits found for this patient.');
+        }
+
+        // Get the latest payment for this visit
+        $latestPayment = $latestVisit->payments->first();
+
+        return Inertia::render('Visits/Receipt', [
+            'patient' => $patient,
+            'visit' => $latestVisit,
+            'payment' => $latestPayment,
+            'csrfToken' => csrf_token(),
         ]);
     }
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/admin-layout';
 import {
     ArrowLeft,
@@ -175,6 +175,10 @@ export default function Show({
 
     const handlePrescriptionPrint = (prescriptionId: number) => {
         window.open(route('prescriptions.print', prescriptionId), '_blank');
+    };
+
+    const handleVisitReceiptPrint = (visitId: number) => {
+        window.open(route('visits.receipt', visitId), '_blank');
     };
 
     const handleReceiptPrint = (visitId: number) => {
@@ -600,14 +604,7 @@ export default function Show({
                                                         </span>
                                                     </div>
 
-                                                    <Link
-                                                        href={route('visits.show', visit.id)}
-                                                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg border border-blue-200"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <Eye className="h-3 w-3" />
-                                                        View
-                                                    </Link>
+
                                                 </div>
                                             </div>
 
@@ -755,17 +752,18 @@ export default function Show({
                                                                                     <p className="text-xs text-gray-500">{payment.payment_method.name}</p>
                                                                                 )}
                                                                                 <div className="flex gap-1 mt-1">
-                                                                                    <button className="inline-flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded">
+                                                                                    {/* <button className="inline-flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded">
                                                                                         <Receipt className="h-3 w-3" />
                                                                                         View
-                                                                                    </button>
-                                                                                    <Link
-                                                                                        href={route('visits.receipt', visit.id)}
+                                                                                    </button> */}
+                                                                                    <button
+                                                                                        onClick={() => handleVisitReceiptPrint(visit.id)}
                                                                                         className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded"
                                                                                     >
                                                                                         <Printer className="h-3 w-3" />
                                                                                         Print
-                                                                                    </Link>
+                                                                                    </button>
+
                                                                                 </div>
                                                                             </div>
                                                                         ))}

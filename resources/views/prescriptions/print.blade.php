@@ -12,10 +12,10 @@
             box-sizing: border-box;
         }
 
-        /* Page Setup - Exact A4 Portrait */
+        /* Page Setup for PDF */
         @page {
             size: A4 portrait;
-            margin: 0;
+            margin: 5mm;
         }
 
         html, body {
@@ -23,543 +23,506 @@
             height: 297mm;
             margin: 0;
             padding: 0;
-            font-family: 'Arial', sans-serif;
-            font-size: 11px;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
             line-height: 1.3;
-            color: #333;
+            color: #000;
             background: white;
         }
 
-        /* Main Container - Fixed width */
+        /* Main Container */
         .prescription-container {
-            width: 180mm;
-            min-height: 270mm;
-            max-height: 270mm;
-            padding: 8mm;
+            width: 200mm;
+            padding: 3mm;
             margin: 0 auto;
-            position: relative;
-            overflow: hidden;
         }
 
-        /* Header Area for Letterhead */
-        .letterhead-space {
-            height: 30mm;
-            border-bottom: 2px solid #2c5aa0;
-            margin-bottom: 6mm;
-            position: relative;
-        }
-
-        .hospital-info {
-            position: absolute;
-            top: 5mm;
-            left: 0;
-            right: 0;
+        /* Hospital Header with Logo */
+        .hospital-header {
+            margin-bottom: 1mm;
+            border-bottom: 2px solid #000;
+            padding-bottom: 3mm;
+            width: 100%;
             text-align: center;
+            min-height: 100px;
+        }
+
+        .header-content {
+            display: inline-block;
+            text-align: center;
+            position: relative;
+        }
+
+        .header-table {
+            margin: 0 auto;
+            border-collapse: collapse;
+            vertical-align: middle;
+        }
+
+        .header-table td {
+            vertical-align: middle;
+            padding: 0.5mm 2mm;
+        }
+
+        .logo-cell {
+            width: 20mm;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo-cell img {
+            width: 15mm;
+            height: 12mm;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .info-cell {
+            text-align: left;
+            width: auto;
+            padding-left: 3mm;
         }
 
         .hospital-name {
-            font-size: 18px;
+            font-size: 14px;
             font-weight: bold;
-            color: #2c5aa0;
-            margin-bottom: 2mm;
+            margin-bottom: 1mm;
         }
 
-        .hospital-details {
+        .hospital-address {
             font-size: 9px;
-            color: #666;
-            line-height: 1.4;
+            margin-bottom: 0.5mm;
         }
 
-        /* Prescription Header */
-        .rx-header {
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 3mm;
-            margin-bottom: 4mm;
-            text-align: center;
+        .hospital-contact {
+            font-size: 9px;
+        }
+
+        /* Prescription Title Section */
+        .prescription-title-section {
+            width: 100%;
+            margin: 1mm auto 1mm auto;
             position: relative;
-        }
-
-        .rx-number {
-            position: absolute;
-            left: 0;
-            top: 0;
-            font-size: 9px;
-            color: #666;
+            height: 15mm;
         }
 
         .prescription-title {
-            font-size: 16px;
+            width: 70mm;
+            margin: 0 auto;
+            border: 2px solid #000;
+            padding: 1mm;
+            text-align: center;
             font-weight: bold;
-            color: #2c5aa0;
-            letter-spacing: 1px;
+            font-size: 12px;
+            background: #f5f5f5;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
         }
 
-        .rx-date {
+        .header-left {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 35mm;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .header-right {
             position: absolute;
             right: 0;
             top: 0;
+            width: 35mm;
+            text-align: right;
             font-size: 9px;
+            font-weight: bold;
+        }
+
+        .rx-number {
+            color: #666;
+            margin-bottom: 1mm;
+        }
+
+        .date-info {
+            font-weight: bold;
+            margin-bottom: 1mm;
+        }
+
+        .time-info {
+            font-size: 8px;
             color: #666;
         }
 
-        /* Patient Information */
-        .patient-section {
-            border: 1px solid #2c5aa0;
-            margin-bottom: 4mm;
-            background: #f8f9fa;
-        }
-
-        .patient-header {
-            background: #2c5aa0;
-            color: white;
-            font-weight: bold;
-            font-size: 10px;
-            text-transform: uppercase;
-            padding: 3mm;
-            text-align: center;
-        }
-
-        .patient-info {
-            padding: 3mm;
+        /* Patient Info Table - 3 Column Layout */
+        .patient-info-table {
+            width: 100%;
+            margin-bottom: 3mm;
+            border-collapse: collapse;
             font-size: 9px;
         }
 
-        .patient-row {
-            margin-bottom: 1.5mm;
+        .patient-info-table td {
+            padding: 1mm;
+            vertical-align: top;
         }
 
         .patient-label {
-            display: inline-block;
-            width: 20mm;
             font-weight: bold;
-            color: #555;
+            width: 12mm;
         }
 
         .patient-value {
-            border-bottom: 1px dotted #999;
-            display: inline-block;
-            min-width: 30mm;
-            margin-right: 8mm;
+            border-bottom: 1px solid #000;
+            min-height: 3mm;
+            width: 25mm;
+            padding-left: 1mm;
         }
 
-        /* Section Headers */
-        .section-header {
-            background: #2c5aa0;
-            color: white;
+        /* Diagnosis Section */
+        .diagnosis-section {
+            margin-bottom: 3mm;
+        }
+
+        .section-label {
             font-weight: bold;
-            font-size: 9px;
-            text-transform: uppercase;
-            padding: 2mm;
-            margin: 3mm 0 0 0;
+            margin-bottom: 0.5mm;
+            font-size: 10px;
         }
 
-        .section-content {
-            border: 1px solid #2c5aa0;
-            border-top: none;
-            padding: 3mm;
-            background: white;
-            font-size: 9px;
-            min-height: 8mm;
+        .section-box {
+            border: 1px solid #000;
+            min-height: 6mm;
+            padding: 1mm;
+            width: 98.7%;
         }
 
         /* Medicine Table */
         .medicine-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 3mm 0;
+            margin-bottom: 3mm;
             font-size: 8px;
-            border: 1px solid #2c5aa0;
+        }
+
+        .medicine-table th,
+        .medicine-table td {
+            border: 1px solid #000;
+            padding: 1mm;
+            text-align: left;
         }
 
         .medicine-table th {
-            background: #2c5aa0;
-            color: white;
-            border: 1px solid #2c5aa0;
-            padding: 2mm;
+            background: #f0f0f0;
+            font-weight: bold;
             text-align: center;
-            font-weight: bold;
             font-size: 8px;
-        }
-
-        .medicine-table td {
-            border: 1px solid #ddd;
-            padding: 2mm;
-            vertical-align: top;
-            font-size: 8px;
-        }
-
-        .col-sl { width: 8mm; text-align: center; }
-        .col-medicine { width: 45mm; }
-        .col-dosage { width: 18mm; text-align: center; }
-        .col-duration { width: 15mm; text-align: center; }
-        .col-instructions { width: 35mm; }
-
-        .medicine-name {
-            font-weight: bold;
-            color: #2c5aa0;
-            font-size: 9px;
-        }
-
-        .dosage-highlight {
-            font-weight: bold;
-            color: #dc3545;
-            font-size: 9px;
         }
 
         .medicine-table tr:nth-child(even) {
-            background: #f8f9fa;
+            background: #f8f8f8;
         }
 
-        /* Glasses Prescription Styles */
+        .medicine-name {
+            font-weight: bold;
+            color: #000;
+            font-size: 9px;
+        }
+
+        .medicine-generic {
+            font-size: 8px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .dosage-cell {
+            text-align: center;
+            font-weight: bold;
+        }
+
+        /* Glasses Section */
         .glasses-section {
-            margin: 4mm 0;
+            margin-bottom: 3mm;
+            border: 1px solid #000;
         }
 
         .glasses-header {
-            background: #8e44ad;
-            color: white;
+            background: #f0f0f0;
             font-weight: bold;
-            font-size: 9px;
-            text-transform: uppercase;
-            padding: 2mm;
-        }
-
-        .glasses-prescription {
-            border: 1px solid #8e44ad;
-            margin: 2mm 0;
-            background: white;
-        }
-
-        .glasses-type-header {
-            background: #9b59b6;
-            color: white;
-            padding: 2mm;
-            font-weight: bold;
+            padding: 1mm;
             text-align: center;
             font-size: 9px;
+            border-bottom: 1px solid #000;
         }
 
-        .prescription-table {
+        .glasses-content {
+            padding: 2mm;
+        }
+
+        .glasses-table {
             width: 100%;
             border-collapse: collapse;
+            margin: 1mm 0;
             font-size: 8px;
         }
 
-        .prescription-table th {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            padding: 2mm;
+        .glasses-table th,
+        .glasses-table td {
+            border: 1px solid #000;
+            padding: 1mm;
             text-align: center;
+        }
+
+        .glasses-table th {
+            background: #f8f8f8;
             font-weight: bold;
-            color: #333;
-            font-size: 8px;
         }
 
-        .prescription-table td {
-            border: 1px solid #ddd;
-            padding: 2mm;
-            text-align: center;
-            font-size: 8px;
-        }
-
-        .eye-label {
+        .eye-right {
+            background: #fff5f5;
             font-weight: bold;
-            text-align: center;
-            font-size: 8px;
         }
 
-        .right-eye {
-            background: #ffebee;
-            color: #c62828;
-        }
-
-        .left-eye {
-            background: #e3f2fd;
-            color: #1565c0;
+        .eye-left {
+            background: #f0f8ff;
+            font-weight: bold;
         }
 
         .measurements-box {
-            margin-top: 2mm;
-            padding: 2mm;
-            background: #f8f9fa;
+            margin-top: 1mm;
+            padding: 1mm;
+            background: #f8f8f8;
             border: 1px solid #ddd;
-            font-size: 8px;
+            font-size: 7px;
         }
 
-        .measurements-title {
+        .optical-notice {
+            background: #f0f8ff;
+            border: 1px solid #007acc;
+            padding: 1mm;
+            margin: 1mm 0;
+            text-align: center;
+            font-size: 8px;
             font-weight: bold;
-            margin-bottom: 1mm;
-            color: #8e44ad;
-            font-size: 8px;
         }
 
-        .glasses-notes {
-            margin-top: 2mm;
-            padding: 2mm;
-            background: #fff3e0;
-            border: 1px solid #ff9800;
-            font-size: 8px;
-        }
-
-        .glasses-notes-title {
-            font-weight: bold;
-            margin-bottom: 1mm;
-            color: #e65100;
-            font-size: 8px;
-        }
-
-        /* Medical Notes */
-        .advice-box {
-            border-left: 3px solid #f39c12;
-            background: #fff8dc;
-            padding: 2mm;
-            margin: 3mm 0;
-            font-size: 8px;
+        /* Advice Section */
+        .advice-section {
+            background: #fffbf0;
+            border: 1px solid #cc9900;
+            padding: 3mm;
+            margin-bottom: 5mm;
         }
 
         .advice-title {
             font-weight: bold;
-            color: #b7791f;
-            font-size: 9px;
-            text-transform: uppercase;
-            margin-bottom: 1mm;
+            color: #cc6600;
+            margin-bottom: 2mm;
+            font-size: 11px;
         }
 
-        .followup-box {
-            border-left: 3px solid #28a745;
-            background: #d4edda;
-            padding: 2mm;
-            margin: 3mm 0;
+        /* Follow-up */
+        .followup-section {
             display: inline-block;
-            font-size: 8px;
+            background: #f0fff0;
+            border: 1px solid #009900;
+            padding: 2mm 4mm;
+            margin-bottom: 5mm;
+            font-size: 10px;
         }
 
         .followup-label {
             font-weight: bold;
-            color: #155724;
-            font-size: 8px;
+            color: #006600;
         }
 
         .followup-date {
             font-weight: bold;
-            color: #28a745;
-            font-size: 10px;
+            margin-left: 2mm;
+        }
+
+        /* Notes Section */
+        .notes-section {
+            margin-bottom: 8mm;
         }
 
         .notes-box {
-            border: 1px dashed #6c757d;
-            background: #f8f9fa;
+            border: 1px solid #000;
+            min-height: 10mm;
             padding: 2mm;
-            margin: 3mm 0 8mm 0;
-            font-size: 8px;
+            width: 97.6%;
         }
 
-        /* Signature Area */
-        .signature-area {
-            position: absolute;
-            bottom: 15mm;
-            left: 8mm;
-            right: 8mm;
-            border-top: 1px solid #ddd;
-            padding-top: 3mm;
-        }
-
-        .signature-row {
-            display: block;
+        /* Signature Table */
+        .signature-table {
             width: 100%;
-        }
-
-        .signature-left {
-            float: left;
-            width: 45%;
-            text-align: center;
-        }
-
-        .signature-right {
-            float: right;
-            width: 45%;
-            text-align: center;
-        }
-
-        .doctor-info {
-            text-align: right;
-            margin-bottom: 3mm;
+            border-collapse: collapse;
+            margin-top: 8mm;
             font-size: 9px;
         }
 
-        .doctor-name {
-            font-size: 11px;
-            font-weight: bold;
-            color: #2c5aa0;
-            margin-bottom: 1mm;
+        .signature-table td {
+            border-top: 1px solid #000;
+            padding: 3mm 2mm 2mm 2mm;
+            width: 50%;
+            vertical-align: top;
         }
 
-        .doctor-details {
-            font-size: 7px;
-            color: #666;
+        .signature-left {
+            text-align: center;
+            border-right: 1px solid #000;
+        }
+
+        .signature-right {
+            text-align: center;
         }
 
         .signature-line {
-            border-bottom: 1px solid #333;
-            height: 15mm;
+            border-bottom: 1px solid #000;
+            height: 12mm;
             margin-bottom: 2mm;
+            width: 80%;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .signature-label {
-            font-size: 7px;
             font-weight: bold;
+            font-size: 8px;
+        }
+
+        .doctor-info {
+            margin-bottom: 3mm;
+            text-align: center;
+        }
+
+        .doctor-name {
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .doctor-details {
+            font-size: 8px;
             color: #666;
+            margin-top: 1mm;
         }
 
         /* Footer */
         .prescription-footer {
-            position: absolute;
-            bottom: 2mm;
-            left: 8mm;
-            right: 8mm;
+            position: fixed;
+            bottom: 5mm;
+            left: 5mm;
+            right: 5mm;
             text-align: center;
-            font-size: 6px;
+            font-size: 7px;
             color: #666;
-            border-top: 1px dotted #ccc;
-            padding-top: 1mm;
+            border-top: 1px solid #ddd;
+            padding-top: 2mm;
         }
 
-        .clearfix::after {
-            content: "";
-            display: table;
-            clear: both;
+        /* Page Break Control */
+        .no-break {
+            page-break-inside: avoid;
         }
 
-        /* Print Optimizations */
         @media print {
-            html, body {
-                width: 210mm !important;
-                height: 297mm !important;
-                margin: 0 !important;
-                padding: 0 !important;
+            body {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
-
-            .prescription-container {
-                width: 180mm !important;
-                min-height: 270mm !important;
-                max-height: 270mm !important;
-                padding: 8mm !important;
-                margin: 0 auto !important;
-                overflow: hidden !important;
-            }
-
-            body {
-                page-break-after: avoid !important;
-            }
-
-            .patient-section,
-            .medicine-table,
-            .glasses-prescription,
-            .signature-area {
-                page-break-inside: avoid;
-                page-break-after: avoid;
-            }
-        }
-
-        /* Special Optical Shop Notice */
-        .optical-notice {
-            background: #e8f5e8;
-            border: 2px solid #4caf50;
-            padding: 3mm;
-            margin: 3mm 0;
-            text-align: center;
-            font-size: 9px;
-            font-weight: bold;
-            color: #2e7d32;
         }
     </style>
 </head>
 <body>
     <div class="prescription-container">
-        <!-- Letterhead Space -->
-        <div class="letterhead-space">
+        <!-- Hospital Header with Logo -->
+        <div class="hospital-header">
 
         </div>
 
-        <!-- Prescription Header -->
-        <div class="rx-header">
-            <div class="rx-number">Rx #{{ str_pad($prescription->id, 6, '0', STR_PAD_LEFT) }}</div>
+        <!-- Prescription Title with Date and Rx Number -->
+        <div class="prescription-title-section">
+            <div class="header-left">
+                <div class="rx-number">Rx #{{ str_pad($prescription->id, 6, '0', STR_PAD_LEFT) }}</div>
+            </div>
+
             <div class="prescription-title">MEDICAL PRESCRIPTION</div>
-            <div class="rx-date">
-                Date: {{ \Carbon\Carbon::parse($prescription->created_at)->format('d/m/Y') }}<br>
-                {{ \Carbon\Carbon::parse($prescription->created_at)->format('h:i A') }}
+
+            <div class="header-right">
+                <div class="date-info">{{ \Carbon\Carbon::parse($prescription->created_at)->format('d/m/Y') }}</div>
+                <div class="time-info">{{ \Carbon\Carbon::parse($prescription->created_at)->format('h:i A') }}</div>
             </div>
         </div>
 
-        <!-- Patient Information -->
-        <div class="patient-section">
-            <div class="patient-header">Patient Information</div>
-            <div class="patient-info">
-                <div class="patient-row">
-                    <span class="patient-label">Name:</span>
-                    <span class="patient-value">{{ $prescription->patient->name }}</span>
-                    <span class="patient-label">Age:</span>
-                    <span class="patient-value">
-                        @if($prescription->patient->date_of_birth)
-                            {{ \Carbon\Carbon::parse($prescription->patient->date_of_birth)->age }} Years
-                        @else
-                            N/A
-                        @endif
-                    </span>
-                </div>
-                <div class="patient-row">
-                    <span class="patient-label">Patient ID:</span>
-                    <span class="patient-value">{{ $prescription->patient->patient_id }}</span>
-                    <span class="patient-label">Gender:</span>
-                    <span class="patient-value">{{ $prescription->patient->gender ? ucfirst($prescription->patient->gender) : 'N/A' }}</span>
-                </div>
-                <div class="patient-row">
-                    <span class="patient-label">Phone:</span>
-                    <span class="patient-value">{{ $prescription->patient->phone ?? 'N/A' }}</span>
-                    <span class="patient-label">Address:</span>
-                    <span class="patient-value">{{ $prescription->patient->address ?? 'N/A' }}</span>
-                </div>
-            </div>
-        </div>
+        <!-- Patient Information - 3 Column Layout -->
+        <table class="patient-info-table">
+            <tr>
+                <td class="patient-label">Name:</td>
+                <td class="patient-value">{{ $prescription->patient->name }}</td>
+                <td style="width: 5mm;"></td>
+                <td class="patient-label">Patient ID:</td>
+                <td class="patient-value">{{ $prescription->patient->patient_id }}</td>
+                <td style="width: 5mm;"></td>
+                <td class="patient-label">Gender:</td>
+                <td class="patient-value">{{ $prescription->patient->gender ? ucfirst($prescription->patient->gender) : 'N/A' }}</td>
+            </tr>
+            <tr>
+                <td class="patient-label">Age:</td>
+                <td class="patient-value">
+                    @if($prescription->patient->date_of_birth)
+                        {{ \Carbon\Carbon::parse($prescription->patient->date_of_birth)->age }} Years
+                    @else
+                        {{ $prescription->patient->age ?? 'N/A' }}
+                    @endif
+                </td>
+                <td style="width: 5mm;"></td>
+                <td class="patient-label">Phone:</td>
+                <td class="patient-value">{{ $prescription->patient->phone ?? 'N/A' }}</td>
+                <td style="width: 5mm;"></td>
+                <td class="patient-label">Date:</td>
+                <td class="patient-value">{{ \Carbon\Carbon::parse($prescription->created_at)->format('d/m/Y') }}</td>
+            </tr>
+            <tr>
+                <td class="patient-label">Address:</td>
+                <td colspan="7" class="patient-value" style="width: auto;">{{ $prescription->patient->address ?? 'N/A' }}</td>
+            </tr>
+        </table>
 
-        <!-- Chief Complaint / Diagnosis -->
+        <!-- Diagnosis -->
         @if($prescription->diagnosis)
-        <div class="section-header">Medical Diagnosis</div>
-        <div class="section-content">
-            {{ $prescription->diagnosis }}
+        <div class="diagnosis-section">
+            <div class="section-label">Medical Diagnosis:</div>
+            <div class="section-box">{{ $prescription->diagnosis }}</div>
         </div>
         @endif
 
-        <!-- Prescription Medicines -->
+        <!-- Medicines -->
         @if($prescription->prescriptionMedicines->count() > 0)
-        <div class="section-header">Prescribed Medicines</div>
-        <table class="medicine-table">
+        <div class="section-label">Prescribed Medicines:</div>
+        <table class="medicine-table no-break">
             <thead>
                 <tr>
-                    <th class="col-sl">S/L</th>
-                    <th class="col-medicine">Medicine Name</th>
-                    <th class="col-dosage">Dosage</th>
-                    <th class="col-duration">Duration</th>
-                    <th class="col-instructions">Instructions</th>
+                    <th style="width: 8%">S/L</th>
+                    <th style="width: 40%">Medicine Name</th>
+                    <th style="width: 18%">Dosage</th>
+                    <th style="width: 15%">Duration</th>
+                    <th style="width: 19%">Instructions</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($prescription->prescriptionMedicines as $index => $medicine)
                 <tr>
-                    <td class="col-sl">{{ $index + 1 }}</td>
-                    <td class="col-medicine">
+                    <td style="text-align: center;">{{ $index + 1 }}</td>
+                    <td>
                         <div class="medicine-name">{{ $medicine->medicine->name }}</div>
                         @if($medicine->medicine->generic_name)
-                            <div style="font-size: 7px; color: #666;">({{ $medicine->medicine->generic_name }})</div>
+                            <div class="medicine-generic">({{ $medicine->medicine->generic_name }})</div>
                         @endif
                     </td>
-                    <td class="col-dosage">
-                        <span class="dosage-highlight">{{ $medicine->dosage }}</span>
-                    </td>
-                    <td class="col-duration">{{ $medicine->duration ?? '-' }}</td>
-                    <td class="col-instructions">
+                    <td class="dosage-cell">{{ $medicine->dosage }}</td>
+                    <td style="text-align: center;">{{ $medicine->duration ?? '-' }}</td>
+                    <td>
                         {{ $medicine->instructions ?? '-' }}
                         @if($medicine->frequency)
                             <br><small>({{ $medicine->frequency }})</small>
@@ -571,159 +534,102 @@
         </table>
         @endif
 
-        <!-- Optical Prescription Section -->
+        <!-- Glasses Prescription -->
         @if($prescription->prescriptionGlasses->count() > 0)
-        <div class="glasses-section">
-            <div class="glasses-header">Optical Prescription (Medical Values Only)</div>
-
-            <!-- Optical Shop Notice -->
-            <div class="optical-notice">
-                📝 IMPORTANT: This prescription can be used at any optical shop. Patient may choose their preferred frames and lenses.
+        @foreach($prescription->prescriptionGlasses as $index => $prescriptionGlass)
+        <div class="glasses-section no-break">
+            <div class="glasses-header">
+                Optical Prescription - {{ ucfirst(str_replace('_', ' ', $prescriptionGlass->prescription_type)) }}
             </div>
-
-            @foreach($prescription->prescriptionGlasses as $index => $prescriptionGlass)
-            <div class="glasses-prescription">
-                <div class="glasses-type-header">
-                    Prescription #{{ $index + 1 }} - {{ ucfirst(str_replace('_', ' ', $prescriptionGlass->prescription_type)) }}
+            <div class="glasses-content">
+                <!-- Optical Notice -->
+                <div class="optical-notice">
+                    This prescription can be used at any optical shop
                 </div>
 
-                <!-- Eye Prescription Table -->
-                <table class="prescription-table">
+                <table class="glasses-table">
                     <thead>
                         <tr>
-                            <th style="width: 20mm;">Eye</th>
-                            <th style="width: 15mm;">SPH</th>
-                            <th style="width: 15mm;">CYL</th>
-                            <th style="width: 15mm;">AXIS</th>
-                            <th style="width: 15mm;">ADD</th>
+                            <th style="width: 25%">Eye</th>
+                            <th style="width: 18%">SPH</th>
+                            <th style="width: 18%">CYL</th>
+                            <th style="width: 18%">AXIS</th>
+                            <th style="width: 18%">ADD</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td class="eye-label right-eye">Right Eye (OD)</td>
-                            <td>
-                                @if($prescriptionGlass->right_eye_sphere)
-                                    {{ $prescriptionGlass->right_eye_sphere > 0 ? '+' : '' }}{{ $prescriptionGlass->right_eye_sphere }}
-                                @else
-                                    -
-                                @endif
-                            </td>
-                            <td>
-                                @if($prescriptionGlass->right_eye_cylinder)
-                                    {{ $prescriptionGlass->right_eye_cylinder > 0 ? '+' : '' }}{{ $prescriptionGlass->right_eye_cylinder }}
-                                @else
-                                    -
-                                @endif
-                            </td>
-                            <td>
-                                {{ $prescriptionGlass->right_eye_axis ?? '-' }}
-                                @if($prescriptionGlass->right_eye_axis)°@endif
-                            </td>
-                            <td>
-                                @if($prescriptionGlass->right_eye_add)
-                                    +{{ $prescriptionGlass->right_eye_add }}
-                                @else
-                                    -
-                                @endif
-                            </td>
+                            <td class="eye-right">Right Eye (OD)</td>
+                            <td>{{ $prescriptionGlass->right_eye_sphere ? ($prescriptionGlass->right_eye_sphere > 0 ? '+' : '') . $prescriptionGlass->right_eye_sphere : '-' }}</td>
+                            <td>{{ $prescriptionGlass->right_eye_cylinder ? ($prescriptionGlass->right_eye_cylinder > 0 ? '+' : '') . $prescriptionGlass->right_eye_cylinder : '-' }}</td>
+                            <td>{{ $prescriptionGlass->right_eye_axis ? $prescriptionGlass->right_eye_axis . '°' : '-' }}</td>
+                            <td>{{ $prescriptionGlass->right_eye_add ? '+' . $prescriptionGlass->right_eye_add : '-' }}</td>
                         </tr>
                         <tr>
-                            <td class="eye-label left-eye">Left Eye (OS)</td>
-                            <td>
-                                @if($prescriptionGlass->left_eye_sphere)
-                                    {{ $prescriptionGlass->left_eye_sphere > 0 ? '+' : '' }}{{ $prescriptionGlass->left_eye_sphere }}
-                                @else
-                                    -
-                                @endif
-                            </td>
-                            <td>
-                                @if($prescriptionGlass->left_eye_cylinder)
-                                    {{ $prescriptionGlass->left_eye_cylinder > 0 ? '+' : '' }}{{ $prescriptionGlass->left_eye_cylinder }}
-                                @else
-                                    -
-                                @endif
-                            </td>
-                            <td>
-                                {{ $prescriptionGlass->left_eye_axis ?? '-' }}
-                                @if($prescriptionGlass->left_eye_axis)°@endif
-                            </td>
-                            <td>
-                                @if($prescriptionGlass->left_eye_add)
-                                    +{{ $prescriptionGlass->left_eye_add }}
-                                @else
-                                    -
-                                @endif
-                            </td>
+                            <td class="eye-left">Left Eye (OS)</td>
+                            <td>{{ $prescriptionGlass->left_eye_sphere ? ($prescriptionGlass->left_eye_sphere > 0 ? '+' : '') . $prescriptionGlass->left_eye_sphere : '-' }}</td>
+                            <td>{{ $prescriptionGlass->left_eye_cylinder ? ($prescriptionGlass->left_eye_cylinder > 0 ? '+' : '') . $prescriptionGlass->left_eye_cylinder : '-' }}</td>
+                            <td>{{ $prescriptionGlass->left_eye_axis ? $prescriptionGlass->left_eye_axis . '°' : '-' }}</td>
+                            <td>{{ $prescriptionGlass->left_eye_add ? '+' . $prescriptionGlass->left_eye_add : '-' }}</td>
                         </tr>
                     </tbody>
                 </table>
 
-                <!-- Additional Measurements -->
                 @if($prescriptionGlass->pupillary_distance || $prescriptionGlass->segment_height)
                 <div class="measurements-box">
-                    <div class="measurements-title">Additional Measurements:</div>
+                    <strong>Additional Measurements:</strong>
                     @if($prescriptionGlass->pupillary_distance)
-                        <strong>PD (Pupillary Distance):</strong> {{ $prescriptionGlass->pupillary_distance }}mm
+                        PD: {{ $prescriptionGlass->pupillary_distance }}mm
                     @endif
                     @if($prescriptionGlass->segment_height)
                         @if($prescriptionGlass->pupillary_distance) | @endif
-                        <strong>Segment Height:</strong> {{ $prescriptionGlass->segment_height }}mm
+                        Segment Height: {{ $prescriptionGlass->segment_height }}mm
                     @endif
                 </div>
                 @endif
 
-                <!-- Special Medical Instructions -->
                 @if($prescriptionGlass->special_instructions)
-                <div class="glasses-notes">
-                    <div class="glasses-notes-title">Medical Instructions for Optical Lab:</div>
-                    {{ $prescriptionGlass->special_instructions }}
+                <div class="measurements-box">
+                    <strong>Special Instructions:</strong> {{ $prescriptionGlass->special_instructions }}
                 </div>
                 @endif
             </div>
-            @endforeach
-
-            <!-- General Glasses Notes -->
-            @if($prescription->glasses_notes)
-            <div class="glasses-notes">
-                <div class="glasses-notes-title">Doctor's Optical Notes:</div>
-                {{ $prescription->glasses_notes }}
-            </div>
-            @endif
         </div>
+        @endforeach
         @endif
 
-        <!-- Medical Advice -->
+        <!-- Advice -->
         @if($prescription->advice)
-        <div class="advice-box">
-            <div class="advice-title">Medical Advice & Recommendations</div>
+        <div class="advice-section">
+            <div class="advice-title">Medical Advice & Recommendations:</div>
             <div>{{ $prescription->advice }}</div>
         </div>
         @endif
 
         <!-- Follow-up -->
         @if($prescription->followup_date)
-        <div class="followup-box">
+        <div class="followup-section">
             <span class="followup-label">Next Follow-up:</span>
             <span class="followup-date">{{ \Carbon\Carbon::parse($prescription->followup_date)->format('d/m/Y') }}</span>
         </div>
         @endif
 
-        <!-- Additional Clinical Notes -->
+        <!-- Clinical Notes -->
         @if($prescription->notes)
-        <div class="section-header">Clinical Notes</div>
-        <div class="notes-box">
-            {{ $prescription->notes }}
+        <div class="notes-section">
+            <div class="section-label">Clinical Notes:</div>
+            <div class="notes-box">{{ $prescription->notes }}</div>
         </div>
         @endif
 
-        <!-- Signature Area -->
-        <div class="signature-area clearfix">
-            <div class="signature-row">
-                <div class="signature-left">
+        <!-- Signature -->
+        <table class="signature-table">
+            <tr>
+                <td class="signature-left">
                     <div class="signature-line"></div>
                     <div class="signature-label">Patient's Signature</div>
-                </div>
-                <div class="signature-right">
+                </td>
+                <td class="signature-right">
                     <div class="doctor-info">
                         <div class="doctor-name">Dr. {{ $prescription->doctor->user->name }}</div>
                         <div class="doctor-details">
@@ -731,24 +637,23 @@
                                 {{ $prescription->doctor->specialization }}<br>
                             @endif
                             @if($prescription->doctor->registration_number)
-                                BMDC Reg. No: {{ $prescription->doctor->registration_number }}<br>
+                                BMDC Reg: {{ $prescription->doctor->registration_number }}<br>
                             @endif
-                            <strong>License to Practice Medicine</strong>
+                            License to Practice Medicine
                         </div>
                     </div>
                     <div class="signature-line"></div>
                     <div class="signature-label">Doctor's Signature & Seal</div>
-                </div>
-            </div>
-        </div>
+                </td>
+            </tr>
+        </table>
 
         <!-- Footer -->
         <div class="prescription-footer">
-            <strong>Important Medical Information:</strong> Take medicines as prescribed • Do not self-medicate • Keep out of reach of children
+            <strong>Important:</strong> Take medicines as prescribed • Valid for 30 days • Keep out of reach of children
             @if($prescription->prescriptionGlasses->count() > 0)
                 • Optical prescription valid at any certified optical shop
-            @endif
-            • Valid for 30 days<br>
+            @endif<br>
             Generated: {{ \Carbon\Carbon::now()->format('d/m/Y h:i A') }} |
             Prescription ID: {{ str_pad($prescription->id, 6, '0', STR_PAD_LEFT) }} |
             @if($prescription->prescriptionMedicines->count() > 0)
@@ -762,6 +667,3 @@
     </div>
 </body>
 </html>
-
-
-

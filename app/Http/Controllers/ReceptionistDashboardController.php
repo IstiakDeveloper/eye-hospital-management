@@ -113,6 +113,9 @@ class ReceptionistDashboardController extends Controller
     /**
      * Quick search patients for autocomplete
      */
+    /**
+     * Quick search patients for autocomplete - Fixed version
+     */
     public function quickSearch(Request $request)
     {
         $request->validate(['term' => 'required|string|min:2']);
@@ -122,29 +125,52 @@ class ReceptionistDashboardController extends Controller
             ->orWhere('phone', 'like', '%' . $request->term . '%')
             ->orWhere('patient_id', 'like', '%' . $request->term . '%')
             ->orWhere('nid_card', 'like', '%' . $request->term . '%')
+            ->with(['visits' => function ($q) {
+                $q->latest()->limit(2); // Get latest 2 visits to check properly
+            }])
             ->limit(8)
             ->get();
 
-        // Get their latest visits
+        // Get their latest visits and check active status properly
         $results = $patients->map(function ($patient) {
-            $latestVisit = $patient->visits()->latest()->first();
+            $latestVisit = $patient->visits->first();
+
+            // Check if patient has any active (non-completed) visit
+            $activeVisit = $patient->visits->where('overall_status', '!=', 'completed')->first();
+            $hasActiveVisit = $activeVisit !== null;
+
+            // If there's an active visit, use that one. Otherwise use latest visit
+            $displayVisit = $activeVisit ?: $latestVisit;
 
             return [
                 'patient_id' => $patient->id,
-                'visit_id' => $latestVisit?->id,
+                'visit_id' => $displayVisit?->id,
                 'patient_unique_id' => $patient->patient_id,
-                'visit_unique_id' => $latestVisit?->visit_id,
+                'visit_unique_id' => $displayVisit?->visit_id,
                 'name' => $patient->name,
                 'phone' => $patient->phone,
                 'email' => $patient->email,
                 'nid_card' => $patient->nid_card,
-                'payment_status' => $latestVisit?->payment_status ?? 'no_visit',
-                'vision_test_status' => $latestVisit?->vision_test_status ?? 'no_visit',
-                'overall_status' => $latestVisit?->overall_status ?? 'no_visit',
+
+                // Payment and visit status from active visit (if exists) or latest visit
+                'payment_status' => $displayVisit?->payment_status ?? 'no_visit',
+                'vision_test_status' => $displayVisit?->vision_test_status ?? 'no_visit',
+                'overall_status' => $displayVisit?->overall_status ?? 'no_visit',
+
                 'created_at' => $patient->created_at,
-                'latest_visit_date' => $latestVisit?->created_at,
-                'doctor_name' => $latestVisit?->selectedDoctor?->user?->name,
-                'has_active_visit' => $latestVisit && $latestVisit->overall_status !== 'completed',
+                'latest_visit_date' => $displayVisit?->created_at,
+                'doctor_name' => $displayVisit?->selectedDoctor?->user?->name,
+
+                // This is the key fix - proper active visit detection
+                'has_active_visit' => $hasActiveVisit,
+
+                // Additional debugging info (optional - remove in production)
+                'debug_info' => [
+                    'total_visits' => $patient->visits->count(),
+                    'latest_visit_status' => $latestVisit?->overall_status,
+                    'active_visit_id' => $activeVisit?->id,
+                    'active_visit_status' => $activeVisit?->overall_status,
+                ]
             ];
         });
 
@@ -217,7 +243,6 @@ class ReceptionistDashboardController extends Controller
                 'visit' => $visit->fresh(['patient', 'selectedDoctor.user', 'payments']),
                 'redirect_url' => route('visits.receipt', $visit),
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

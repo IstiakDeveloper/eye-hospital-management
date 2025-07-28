@@ -134,11 +134,25 @@ const ReceptionistDashboard: React.FC<Props> = ({
             });
 
             if (response.data) {
+                console.log('Search Results:', response.data); // Debug log
+
+                // Debug each patient
+                response.data.forEach((patient: Patient) => {
+                    console.log(`Patient: ${patient.name}`);
+                    console.log(`- Has Active Visit: ${patient.has_active_visit}`);
+                    console.log(`- Overall Status: ${patient.overall_status}`);
+                    console.log(`- Payment Status: ${patient.payment_status}`);
+                    console.log(`- Visit ID: ${patient.visit_id}`);
+                    if (patient.debug_info) {
+                        console.log(`- Debug Info:`, patient.debug_info);
+                    }
+                    console.log('---');
+                });
+
                 setSearchResults(response.data);
             }
         } catch (error) {
             console.error('Search failed:', error);
-            // Handle error gracefully
             setSearchResults([]);
         } finally {
             setIsSearching(false);
@@ -485,21 +499,6 @@ const ReceptionistDashboard: React.FC<Props> = ({
                                     Add New Patient
                                 </button>
 
-                                <button
-                                    onClick={() => router.visit(route('visits.ready-for-vision-test'))}
-                                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-medium hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-                                >
-                                    <Eye className="h-5 w-5" />
-                                    Vision Test Queue ({stats.visits_ready_for_vision_test})
-                                </button>
-
-                                <button
-                                    onClick={() => router.visit(route('visits.ready-for-prescription'))}
-                                    className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-3 rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-                                >
-                                    <Stethoscope className="h-5 w-5" />
-                                    Prescription Queue ({stats.visits_ready_for_prescription})
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -564,7 +563,7 @@ const ReceptionistDashboard: React.FC<Props> = ({
                                     </div>
                                 )}
 
-                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                {/* <div className="mt-4 pt-4 border-t border-gray-200">
                                     <button
                                         onClick={() => router.visit(route('visits.index'))}
                                         className="w-full text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center justify-center gap-2"
@@ -572,7 +571,7 @@ const ReceptionistDashboard: React.FC<Props> = ({
                                         View All Visits
                                         <FileText className="h-4 w-4" />
                                     </button>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
 
@@ -681,7 +680,7 @@ const ReceptionistDashboard: React.FC<Props> = ({
                     )}
 
                     {/* Quick Action Buttons */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <button
                             onClick={() => router.visit(route('patients.create'))}
                             className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-2xl font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
@@ -713,7 +712,7 @@ const ReceptionistDashboard: React.FC<Props> = ({
                             <Printer className="h-6 w-6" />
                             Print Reports
                         </button>
-                    </div>
+                    </div> */}
 
                 </div>
             </div>

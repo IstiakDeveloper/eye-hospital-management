@@ -17,7 +17,8 @@ import {
     UserCheck,
     ArrowLeft,
     Printer,
-    Edit
+    Edit,
+    QrCode
 } from 'lucide-react';
 
 interface VisionTest {
@@ -114,55 +115,26 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
     const { url } = usePage();
 
     const handlePrint = () => {
-        window.open(`/visiontests/${visionTest.id}/print`, '_blank');
+        window.open(route('visiontests.print', visionTest.id), '_blank');
     };
 
-    const EyeExaminationSection = ({
-        title,
-        rightValue,
-        leftValue,
-        icon
-    }: {
-        title: string;
-        rightValue: string;
-        leftValue: string;
-        icon: React.ReactNode;
-    }) => (
-        <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="flex items-center gap-2 mb-3">
-                {icon}
-                <h4 className="font-medium text-gray-900">{title}</h4>
+    const CheckboxField = ({ label, checked }: { label: string; checked: boolean }) => (
+        <div className="flex items-center gap-2">
+            <div className={`w-4 h-4 border-2 border-gray-400 rounded flex items-center justify-center ${checked ? 'bg-black border-black' : 'bg-white'
+                }`}>
+                {checked && <span className="text-white text-xs">✓</span>}
             </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="text-sm font-medium text-gray-600">Right Eye</label>
-                    <p className="text-gray-900 mt-1">{rightValue || 'Not recorded'}</p>
-                </div>
-                <div>
-                    <label className="text-sm font-medium text-gray-600">Left Eye</label>
-                    <p className="text-gray-900 mt-1">{leftValue || 'Not recorded'}</p>
-                </div>
-            </div>
+            <span className="text-sm font-medium text-gray-900">{label}</span>
         </div>
-    );
-
-    const MedicalConditionBadge = ({ condition, isTrue }: { condition: string; isTrue: boolean }) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isTrue
-                ? 'bg-red-100 text-red-800'
-                : 'bg-gray-100 text-gray-800'
-            }`}>
-            {condition}
-            {isTrue && <AlertCircle className="w-3 h-3 ml-1" />}
-        </span>
     );
 
     return (
         <AdminLayout>
             <Head title={`Vision Test Report - ${visionTest.patient.name}`} />
 
-            {/* Header */}
-            <div className="bg-white shadow-sm border-b">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            {/* Header Actions */}
+            <div className="bg-white shadow-sm border-b mb-6">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <Link
@@ -172,8 +144,6 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
                                 <ArrowLeft className="w-5 h-5" />
                                 Back to Vision Tests
                             </Link>
-                            <div className="h-6 w-px bg-gray-300" />
-                            <h1 className="text-2xl font-bold text-gray-900">Vision Test Report</h1>
                         </div>
 
                         <div className="flex items-center gap-3">
@@ -197,331 +167,298 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Patient Information Header */}
-                <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="lg:col-span-2">
-                            <div className="flex items-center gap-3 mb-4">
-                                <User className="w-6 h-6 text-blue-600" />
-                                <h2 className="text-xl font-semibold text-gray-900">Patient Information</h2>
-                            </div>
+            {/* Vision Test Report */}
+            <div className="mx-auto pb-8">
+                <div className="bg-white shadow-lg rounded-lg border">
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-sm font-medium text-gray-600">Full Name</label>
-                                    <p className="text-lg font-medium text-gray-900">{visionTest.patient.name}</p>
+                    {/* Hospital Header */}
+                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
+                                    <Eye className="w-8 h-8 text-blue-600" />
                                 </div>
                                 <div>
-                                    <label className="text-sm font-medium text-gray-600">Patient ID</label>
-                                    <p className="text-lg font-medium text-gray-900">{visionTest.patient.patient_id}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Phone className="w-4 h-4 text-gray-500" />
-                                    <div>
-                                        <label className="text-sm font-medium text-gray-600">Phone</label>
-                                        <p className="text-gray-900">{visionTest.patient.phone}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <MapPin className="w-4 h-4 text-gray-500" />
-                                    <div>
-                                        <label className="text-sm font-medium text-gray-600">Address</label>
-                                        <p className="text-gray-900">{visionTest.patient.address || 'Not provided'}</p>
-                                    </div>
+                                    <h1 className="text-2xl font-bold">Naogaon Islamia Chakkhu Hospital and Phaco Center</h1>
+                                    <p className="text-blue-100">Main Road, Beside of Naogaon Fisheries Building, Naogaon Sadar, Naogaon</p>
+                                    <p className="text-blue-100">Mobile: 01307-885566; Email: niehpc@gmail.com</p>
                                 </div>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4 mt-4">
-                                <div>
-                                    <label className="text-sm font-medium text-gray-600">Age</label>
-                                    <p className="text-gray-900">{visionTest.patient.age} years</p>
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium text-gray-600">Gender</label>
-                                    <p className="text-gray-900 capitalize">{visionTest.patient.gender}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="border-l pl-6">
-                            <div className="flex items-center gap-3 mb-4">
-                                <Clock className="w-6 h-6 text-green-600" />
-                                <h3 className="text-lg font-semibold text-gray-900">Test Information</h3>
-                            </div>
-
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="text-sm font-medium text-gray-600">Test Date</label>
-                                    <p className="text-gray-900">{format(new Date(visionTest.test_date), 'PPP p')}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <UserCheck className="w-4 h-4 text-gray-500" />
-                                    <div>
-                                        <label className="text-sm font-medium text-gray-600">Performed By</label>
-                                        <p className="text-gray-900">{visionTest.performed_by_user?.name || 'Unknown'}</p>
-                                    </div>
-                                </div>
+                            <div className="text-right">
+                                <QrCode className="w-16 h-16 text-white" />
                             </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Chief Complaints */}
-                {visionTest.complains && (
-                    <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-                        <div className="flex items-center gap-3 mb-4">
-                            <FileText className="w-6 h-6 text-orange-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">Chief Complaints</h3>
-                        </div>
-                        <p className="text-gray-900 leading-relaxed">{visionTest.complains}</p>
-                    </div>
-                )}
-
-                {/* Medical Conditions */}
-                <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <Heart className="w-6 h-6 text-red-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Medical Conditions</h3>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 mb-4">
-                        <MedicalConditionBadge condition="One Eyed" isTrue={visionTest.is_one_eyed} />
-                        <MedicalConditionBadge condition="Diabetic" isTrue={visionTest.is_diabetic} />
-                        <MedicalConditionBadge condition="Cardiac" isTrue={visionTest.is_cardiac} />
-                        <MedicalConditionBadge condition="Asthmatic" isTrue={visionTest.is_asthmatic} />
-                        <MedicalConditionBadge condition="Hypertensive" isTrue={visionTest.is_hypertensive} />
-                        <MedicalConditionBadge condition="Thyroid" isTrue={visionTest.is_thyroid} />
-                    </div>
-
-                    {visionTest.other_conditions && (
-                        <div className="mt-4">
-                            <label className="text-sm font-medium text-gray-600">Other Conditions</label>
-                            <p className="text-gray-900 mt-1">{visionTest.other_conditions}</p>
-                        </div>
-                    )}
-
-                    {visionTest.drugs_used && (
-                        <div className="mt-4">
-                            <label className="text-sm font-medium text-gray-600">Current Medications</label>
-                            <p className="text-gray-900 mt-1">{visionTest.drugs_used}</p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Vital Signs */}
-                <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <Activity className="w-6 h-6 text-purple-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Vital Signs & Lab Results</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <label className="text-sm font-medium text-gray-600">Blood Pressure</label>
-                            <p className="text-xl font-semibold text-gray-900 mt-1">
-                                {visionTest.blood_pressure || 'Not recorded'}
-                            </p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <label className="text-sm font-medium text-gray-600">Blood Sugar</label>
-                            <p className="text-xl font-semibold text-gray-900 mt-1">
-                                {visionTest.blood_sugar || 'Not recorded'}
-                            </p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <label className="text-sm font-medium text-gray-600">Urine Sugar</label>
-                            <p className="text-xl font-semibold text-gray-900 mt-1">
-                                {visionTest.urine_sugar || 'Not recorded'}
-                            </p>
+                    {/* Date and Title */}
+                    <div className="px-6 py-4 border-b bg-gray-50">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-600">
+                                    {format(new Date(visionTest.test_date), 'dd/MM/yyyy')}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                    {format(new Date(visionTest.test_date), 'hh:mm a')}
+                                </p>
+                            </div>
+                            <div className="text-center">
+                                <h2 className="text-xl font-bold text-gray-900 border border-gray-400 px-8 py-2">
+                                    Particulars of Patient
+                                </h2>
+                            </div>
+                            <div></div>
                         </div>
                     </div>
-                </div>
 
-                {/* Vision Acuity */}
-                <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <Eye className="w-6 h-6 text-blue-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Vision Acuity</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <EyeExaminationSection
-                            title="Vision Without Glasses"
-                            rightValue={visionTest.right_eye_vision_without_glass}
-                            leftValue={visionTest.left_eye_vision_without_glass}
-                            icon={<Eye className="w-5 h-5 text-blue-600" />}
-                        />
-                        <EyeExaminationSection
-                            title="Vision With Glasses"
-                            rightValue={visionTest.right_eye_vision_with_glass}
-                            leftValue={visionTest.left_eye_vision_with_glass}
-                            icon={<Eye className="w-5 h-5 text-green-600" />}
-                        />
-                    </div>
-                </div>
-
-                {/* Eye Examination */}
-                <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        <Eye className="w-6 h-6 text-indigo-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Detailed Eye Examination</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <EyeExaminationSection
-                            title="Eyelids"
-                            rightValue={visionTest.right_eye_lids}
-                            leftValue={visionTest.left_eye_lids}
-                            icon={<Eye className="w-4 h-4 text-gray-600" />}
-                        />
-                        <EyeExaminationSection
-                            title="Conjunctiva"
-                            rightValue={visionTest.right_eye_conjunctiva}
-                            leftValue={visionTest.left_eye_conjunctiva}
-                            icon={<Eye className="w-4 h-4 text-gray-600" />}
-                        />
-                        <EyeExaminationSection
-                            title="Cornea"
-                            rightValue={visionTest.right_eye_cornea}
-                            leftValue={visionTest.left_eye_cornea}
-                            icon={<Eye className="w-4 h-4 text-gray-600" />}
-                        />
-                        <EyeExaminationSection
-                            title="Anterior Chamber"
-                            rightValue={visionTest.right_eye_anterior_chamber}
-                            leftValue={visionTest.left_eye_anterior_chamber}
-                            icon={<Eye className="w-4 h-4 text-gray-600" />}
-                        />
-                        <EyeExaminationSection
-                            title="Iris"
-                            rightValue={visionTest.right_eye_iris}
-                            leftValue={visionTest.left_eye_iris}
-                            icon={<Eye className="w-4 h-4 text-gray-600" />}
-                        />
-                        <EyeExaminationSection
-                            title="Pupil"
-                            rightValue={visionTest.right_eye_pupil}
-                            leftValue={visionTest.left_eye_pupil}
-                            icon={<Eye className="w-4 h-4 text-gray-600" />}
-                        />
-                        <EyeExaminationSection
-                            title="Lens"
-                            rightValue={visionTest.right_eye_lens}
-                            leftValue={visionTest.left_eye_lens}
-                            icon={<Eye className="w-4 h-4 text-gray-600" />}
-                        />
-                        <EyeExaminationSection
-                            title="Ocular Movements"
-                            rightValue={visionTest.right_eye_ocular_movements}
-                            leftValue={visionTest.left_eye_ocular_movements}
-                            icon={<Activity className="w-4 h-4 text-gray-600" />}
-                        />
-                        <EyeExaminationSection
-                            title="Intraocular Pressure (IOP)"
-                            rightValue={visionTest.right_eye_iop}
-                            leftValue={visionTest.left_eye_iop}
-                            icon={<Droplets className="w-4 h-4 text-blue-600" />}
-                        />
-                        <EyeExaminationSection
-                            title="Lacrimal Ducts"
-                            rightValue={visionTest.right_eye_ducts}
-                            leftValue={visionTest.left_eye_ducts}
-                            icon={<Droplets className="w-4 h-4 text-gray-600" />}
-                        />
-                    </div>
-                </div>
-
-                {/* Fundus Examination */}
-                <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <Eye className="w-6 h-6 text-red-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Fundus Examination</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <label className="text-sm font-medium text-gray-600 mb-2 block">Right Eye Fundus</label>
-                            <p className="text-gray-900 leading-relaxed">
-                                {visionTest.right_eye_fundus || 'Not examined'}
-                            </p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <label className="text-sm font-medium text-gray-600 mb-2 block">Left Eye Fundus</label>
-                            <p className="text-gray-900 leading-relaxed">
-                                {visionTest.left_eye_fundus || 'Not examined'}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Diagnosis */}
-                <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <FileText className="w-6 h-6 text-green-600" />
-                        <h3 className="text-lg font-semibold text-gray-900">Diagnosis</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                            <label className="text-sm font-medium text-green-800 mb-2 block">Right Eye Diagnosis</label>
-                            <p className="text-green-900 font-medium">
-                                {visionTest.right_eye_diagnosis || 'No diagnosis recorded'}
-                            </p>
-                        </div>
-                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                            <label className="text-sm font-medium text-green-800 mb-2 block">Left Eye Diagnosis</label>
-                            <p className="text-green-900 font-medium">
-                                {visionTest.left_eye_diagnosis || 'No diagnosis recorded'}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Detailed History */}
-                {visionTest.detailed_history && (
-                    <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-                        <div className="flex items-center gap-3 mb-4">
-                            <FileText className="w-6 h-6 text-gray-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">Detailed History</h3>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <p className="text-gray-900 leading-relaxed whitespace-pre-wrap">
-                                {visionTest.detailed_history}
-                            </p>
-                        </div>
-                    </div>
-                )}
-
-                {/* Patient Visit History */}
-                {patientVisits && patientVisits.length > 0 && (
-                    <div className="bg-white rounded-lg shadow-sm border p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                            <Calendar className="w-6 h-6 text-blue-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">Recent Visit History</h3>
-                        </div>
-
-                        <div className="space-y-3">
-                            {patientVisits.slice(0, 5).map((visit, index) => (
-                                <div key={visit.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div>
-                                        <p className="font-medium text-gray-900">
-                                            Visit #{visit.id}
-                                        </p>
-                                        <p className="text-sm text-gray-600">
-                                            {format(new Date(visit.created_at), 'PPP')}
-                                        </p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-sm font-medium text-gray-900">
-                                            Dr. {visit.selectedDoctor?.user?.name || 'Unknown'}
-                                        </p>
-                                    </div>
+                    {/* Patient Information Grid */}
+                    <div className="p-6">
+                        <div className="grid grid-cols-2 gap-8 mb-6">
+                            <div className="space-y-4">
+                                <div className="flex">
+                                    <label className="w-20 font-semibold text-gray-900">Invoice:</label>
+                                    <div className="flex-1 border-b border-gray-400 pb-1">000001</div>
                                 </div>
-                            ))}
+                                <div className="flex">
+                                    <label className="w-20 font-semibold text-gray-900">Name:</label>
+                                    <div className="flex-1 border-b border-gray-400 pb-1">{visionTest.patient.name}</div>
+                                </div>
+                                <div className="flex">
+                                    <label className="w-20 font-semibold text-gray-900">Age:</label>
+                                    <div className="flex-1 border-b border-gray-400 pb-1">{visionTest.patient.age}</div>
+                                </div>
+                                <div className="flex">
+                                    <label className="w-20 font-semibold text-gray-900">Sex:</label>
+                                    <div className="flex-1 border-b border-gray-400 pb-1 capitalize">{visionTest.patient.gender}</div>
+                                </div>
+                                <div className="flex">
+                                    <label className="w-20 font-semibold text-gray-900">Address:</label>
+                                    <div className="flex-1 border-b border-gray-400 pb-1">{visionTest.patient.address}</div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="flex">
+                                    <label className="w-24 font-semibold text-gray-900">Patient ID:</label>
+                                    <div className="flex-1 border-b border-gray-400 pb-1">{visionTest.patient.patient_id}</div>
+                                </div>
+                                <div className="flex">
+                                    <label className="w-24 font-semibold text-gray-900">Patient Type:</label>
+                                    <div className="flex-1 border-b border-gray-400 pb-1">Regular</div>
+                                </div>
+                                <div className="flex">
+                                    <label className="w-24 font-semibold text-gray-900">Guardian:</label>
+                                    <div className="flex-1 border-b border-gray-400 pb-1"></div>
+                                </div>
+                                <div className="flex">
+                                    <label className="w-24 font-semibold text-gray-900">Mobile:</label>
+                                    <div className="flex-1 border-b border-gray-400 pb-1">{visionTest.patient.phone}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Complains */}
+                        <div className="mb-6">
+                            <label className="font-semibold text-gray-900 mb-2 block">Complains:</label>
+                            <div className="border border-gray-400 p-3 min-h-16 bg-gray-50">
+                                {visionTest.complains || ''}
+                            </div>
+                        </div>
+
+                        {/* Eye Examination Table */}
+                        <div className="mb-6">
+                            <table className="w-full border-collapse border border-gray-400">
+                                <thead>
+                                    <tr className="bg-gray-100">
+                                        <th className="border border-gray-400 p-2 text-left font-semibold"></th>
+                                        <th className="border border-gray-400 p-2 text-center font-semibold">Right Eye</th>
+                                        <th className="border border-gray-400 p-2 text-center font-semibold">Left Eye</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Diagnosis</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_diagnosis || ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_diagnosis || ''}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Lids</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_lids || ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_lids || ''}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Conjunctiva</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_conjunctiva || ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_conjunctiva || ''}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Cornea</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_cornea || ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_cornea || ''}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Anterior Chamber</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_anterior_chamber || ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_anterior_chamber || ''}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Iris</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_iris || ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_iris || ''}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Pupil</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_pupil || ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_pupil || ''}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Lens</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_lens || ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_lens || ''}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Ocular movements</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_ocular_movements || ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_ocular_movements || ''}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Vision Test Table */}
+                        <div className="mb-6">
+                            <table className="w-full border-collapse border border-gray-400">
+                                <thead>
+                                    <tr className="bg-gray-100">
+                                        <th className="border border-gray-400 p-2 text-left font-semibold"></th>
+                                        <th className="border border-gray-400 p-2 text-center font-semibold">Right Eye</th>
+                                        <th className="border border-gray-400 p-2 text-center font-semibold">Left Eye</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Vision Without Glass</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_vision_without_glass || ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_vision_without_glass || ''}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Vision With Glass/pinhole</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_vision_with_glass || ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_vision_with_glass || ''}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">IOP</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_iop ? `${visionTest.right_eye_iop} mmHg` : ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_iop ? `${visionTest.left_eye_iop} mmHg` : ''}</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Ducts</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_ducts || ''}</td>
+                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_ducts || ''}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Lab Results Table */}
+                        <div className="mb-6">
+                            <table className="w-full border-collapse border border-gray-400">
+                                <tbody>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50 w-1/3">B.P</td>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50 w-1/3">Urine Sugar</td>
+                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50 w-1/3">Blood Sugar</td>
+                                    </tr>
+                                    <tr>
+                                        <td className="border border-gray-400 p-3">{visionTest.blood_pressure || ''}</td>
+                                        <td className="border border-gray-400 p-3">{visionTest.urine_sugar || ''}</td>
+                                        <td className="border border-gray-400 p-3">{visionTest.blood_sugar || ''}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Fundus Examination */}
+                        <div className="mb-6">
+                            <table className="w-full border-collapse border border-gray-400">
+                                <thead>
+                                    <tr className="bg-gray-100">
+                                        <th className="border border-gray-400 p-2 text-left font-semibold">Fundus:</th>
+                                        <th className="border border-gray-400 p-2 text-center font-semibold">Right Eye</th>
+                                        <th className="border border-gray-400 p-2 text-center font-semibold">Left Eye</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td className="border border-gray-400 p-2"></td>
+                                        <td className="border border-gray-400 p-3">{visionTest.right_eye_fundus || ''}</td>
+                                        <td className="border border-gray-400 p-3">{visionTest.left_eye_fundus || ''}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Detailed History */}
+                        <div className="mb-6">
+                            <label className="font-semibold text-gray-900 mb-2 block">Detailed History: (Immediate Past and Treatment History)</label>
+                            <div className="border border-gray-400 p-3 min-h-20 bg-gray-50">
+                                {visionTest.detailed_history || ''}
+                            </div>
+                        </div>
+
+                        {/* Drug Used */}
+                        <div className="mb-6">
+                            <label className="font-semibold text-gray-900 mb-2 block">Drug Used:</label>
+                            <div className="grid grid-cols-3 gap-6 mb-4">
+                                <div className="space-y-2">
+                                    <CheckboxField label="ONE EYED" checked={visionTest.is_one_eyed} />
+                                    <CheckboxField label="DIABETIC" checked={visionTest.is_diabetic} />
+                                </div>
+                                <div className="space-y-2">
+                                    <CheckboxField label="CARDIAC" checked={visionTest.is_cardiac} />
+                                    <CheckboxField label="ASTHMATIC" checked={visionTest.is_asthmatic} />
+                                </div>
+                                <div className="space-y-2">
+                                    <CheckboxField label="HYPERTENSIVE" checked={visionTest.is_hypertensive} />
+                                    <CheckboxField label="THYROID" checked={visionTest.is_thyroid} />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 mb-4">
+                                <span className="font-semibold text-gray-900">OTHERS:</span>
+                                <div className="flex-1 border-b border-gray-400 pb-1">
+                                    {visionTest.other_conditions || ''}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Current Medications */}
+                        <div className="mb-8">
+                            <label className="font-semibold text-gray-900 mb-2 block">Current Medications:</label>
+                            <div className="border border-gray-400 p-3 min-h-16 bg-gray-50">
+                                {visionTest.drugs_used || ''}
+                            </div>
+                        </div>
+
+                        {/* Signature Section */}
+                        <div className="grid grid-cols-2 gap-8 pt-8 border-t border-gray-300">
+                            <div className="text-center">
+                                <div className="h-16 border-b border-gray-400 mb-2"></div>
+                                <p className="font-semibold text-gray-900">Patient's Signature</p>
+                            </div>
+                            <div className="text-center">
+                                <div className="text-right mb-4">
+                                    <p className="font-semibold text-gray-900">Refractionist</p>
+                                    <p className="text-sm text-gray-600">Vision Test Examiner</p>
+                                    <p className="text-sm text-gray-600">
+                                        Date: {format(new Date(visionTest.test_date), 'dd/MM/yyyy')}
+                                    </p>
+                                </div>
+                                <div className="h-16 border-b border-gray-400 mb-2"></div>
+                                <p className="font-semibold text-gray-900">Examiner's Signature & Seal</p>
+                            </div>
                         </div>
                     </div>
-                )}
+                </div>
             </div>
         </AdminLayout>
     );

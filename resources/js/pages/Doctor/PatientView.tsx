@@ -8,10 +8,12 @@ import {
     AlertCircle, Star, Download, Printer, Save,
     ChevronRight, ChevronDown, Info, DollarSign,
     CreditCard, Users, TrendingUp, ClipboardList,
-    ExternalLink, RefreshCw, Search, Filter
+    ExternalLink, RefreshCw, Search, Filter,
+    Shield, Target, Camera, BookOpen, Zap,
+    Droplets, Monitor, Brain
 } from 'lucide-react';
 
-// Complete Type definitions
+// Updated interfaces based on new schema
 interface Doctor {
     id: number;
     name: string;
@@ -75,21 +77,74 @@ interface Visit {
     payments: Payment[];
 }
 
+// Updated VisionTest interface based on new schema
 interface VisionTest {
     id: number;
     test_date: string;
     formatted_date: string;
     formatted_time: string;
-    right_eye_vision?: string;
-    left_eye_vision?: string;
-    right_eye_sphere?: number;
-    left_eye_sphere?: number;
-    right_eye_cylinder?: number;
-    left_eye_cylinder?: number;
-    right_eye_axis?: number;
-    left_eye_axis?: number;
-    pupillary_distance?: number;
-    additional_notes?: string;
+
+    // Patient complaints
+    complains?: string;
+
+    // Physical examination
+    right_eye_diagnosis?: string;
+    left_eye_diagnosis?: string;
+    right_eye_lids?: string;
+    left_eye_lids?: string;
+    right_eye_conjunctiva?: string;
+    left_eye_conjunctiva?: string;
+    right_eye_cornea?: string;
+    left_eye_cornea?: string;
+    right_eye_anterior_chamber?: string;
+    left_eye_anterior_chamber?: string;
+    right_eye_iris?: string;
+    left_eye_iris?: string;
+    right_eye_pupil?: string;
+    left_eye_pupil?: string;
+    right_eye_lens?: string;
+    left_eye_lens?: string;
+    right_eye_ocular_movements?: string;
+    left_eye_ocular_movements?: string;
+
+    // Vision testing
+    right_eye_vision_without_glass?: string;
+    left_eye_vision_without_glass?: string;
+    right_eye_vision_with_glass?: string;
+    left_eye_vision_with_glass?: string;
+
+    // IOP
+    right_eye_iop?: string;
+    left_eye_iop?: string;
+
+    // Ducts
+    right_eye_ducts?: string;
+    left_eye_ducts?: string;
+
+    // Vitals
+    blood_pressure?: string;
+    urine_sugar?: string;
+    blood_sugar?: string;
+
+    // Fundus
+    right_eye_fundus?: string;
+    left_eye_fundus?: string;
+
+    // History
+    detailed_history?: string;
+
+    // Medical conditions
+    is_one_eyed: boolean;
+    is_diabetic: boolean;
+    is_cardiac: boolean;
+    is_asthmatic: boolean;
+    is_hypertensive: boolean;
+    is_thyroid: boolean;
+    other_conditions?: string;
+
+    // Drugs
+    drugs_used?: string;
+
     performed_by: {
         id?: number;
         name: string;
@@ -171,16 +226,18 @@ interface LatestVisionTest {
     id: number;
     test_date: string;
     formatted_date: string;
-    right_eye_vision?: string;
-    left_eye_vision?: string;
-    right_eye_sphere?: number;
-    left_eye_sphere?: number;
-    right_eye_cylinder?: number;
-    left_eye_cylinder?: number;
-    right_eye_axis?: number;
-    left_eye_axis?: number;
-    pupillary_distance?: number;
-    additional_notes?: string;
+    complains?: string;
+    right_eye_vision_without_glass?: string;
+    left_eye_vision_without_glass?: string;
+    right_eye_vision_with_glass?: string;
+    left_eye_vision_with_glass?: string;
+    right_eye_iop?: string;
+    left_eye_iop?: string;
+    blood_pressure?: string;
+    blood_sugar?: string;
+    is_diabetic: boolean;
+    is_cardiac: boolean;
+    is_hypertensive: boolean;
     performed_by: {
         name: string;
     };
@@ -208,7 +265,7 @@ const DoctorPatientView: React.FC<Props> = ({
     todaysAppointment,
     doctor
 }) => {
-    const [activeTab, setActiveTab] = useState('overview');
+    const [showOldData, setShowOldData] = useState(false);
 
     // Helper Functions
     const goBack = () => {
@@ -222,7 +279,7 @@ const DoctorPatientView: React.FC<Props> = ({
     };
 
     const printVisionTest = (visionTestId: number) => {
-        window.open(route('vision-test.print', visionTestId), '_blank');
+        window.open(route('vision-tests.print', visionTestId), '_blank');
     };
 
     const printPrescription = (prescriptionId: number) => {
@@ -255,6 +312,16 @@ const DoctorPatientView: React.FC<Props> = ({
         }
     };
 
+    const getConditionIcon = (condition: boolean) => {
+        return condition ?
+            <CheckCircle className="w-4 h-4 text-red-600" /> :
+            <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>;
+    };
+
+    const hasValue = (value: any): boolean => {
+        return value !== null && value !== undefined && value !== '';
+    };
+
     // Safe stats with fallbacks
     const safeStats = patient.stats || {
         total_visits: patient.visits?.length || 0,
@@ -275,7 +342,7 @@ const DoctorPatientView: React.FC<Props> = ({
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 p-6">
                 <div className="max-w-6xl mx-auto space-y-6">
 
-                    {/* Header */}
+                    {/* 1. Patient Information - First Section */}
                     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
                         <div className="flex items-center justify-between mb-6">
                             <button
@@ -291,7 +358,7 @@ const DoctorPatientView: React.FC<Props> = ({
                         </div>
 
                         {/* Patient Basic Info */}
-                        <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-6 mb-6">
                             <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl">
                                 <User className="h-10 w-10 text-white" />
                             </div>
@@ -328,25 +395,366 @@ const DoctorPatientView: React.FC<Props> = ({
                             )}
                         </div>
 
+                        {/* Contact Details */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Contact Information</h3>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-3">
+                                        <Phone className="h-4 w-4 text-gray-500" />
+                                        <span className="text-gray-900">{patient.phone}</span>
+                                    </div>
+                                    {patient.email && (
+                                        <div className="flex items-center gap-3">
+                                            <Mail className="h-4 w-4 text-gray-500" />
+                                            <span className="text-gray-900">{patient.email}</span>
+                                        </div>
+                                    )}
+                                    {patient.address && (
+                                        <div className="flex items-start gap-3">
+                                            <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
+                                            <span className="text-gray-900">{patient.address}</span>
+                                        </div>
+                                    )}
+                                    {patient.nid_card && (
+                                        <div className="flex items-center gap-3">
+                                            <FileText className="h-4 w-4 text-gray-500" />
+                                            <span className="text-gray-900">NID: {patient.nid_card}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Patient Summary</h3>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span className="text-gray-600">Age:</span>
+                                        <span className="ml-2 font-medium">{patient.age || 'N/A'} years</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Gender:</span>
+                                        <span className="ml-2 font-medium capitalize">{patient.gender || 'N/A'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Total Visits:</span>
+                                        <span className="ml-2 font-medium">{safeStats.total_visits}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600">Registered:</span>
+                                        <span className="ml-2 font-medium">{patient.formatted_registration_date}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Medical History Alert */}
                         {patient.medical_history && (
-                            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                                 <div className="flex items-center gap-2 mb-2">
                                     <Heart className="h-4 w-4 text-red-500" />
-                                    <span className="font-medium text-red-800">Medical History</span>
+                                    <span className="font-medium text-red-800">Important Medical History</span>
                                 </div>
                                 <p className="text-sm text-gray-700">{patient.medical_history}</p>
                             </div>
                         )}
                     </div>
 
-                    {/* Current Visit Status */}
+                    {/* 2. Old Data Section - Click to Expand */}
+                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
+                        <div className="p-6 border-b border-gray-200">
+                            <button
+                                onClick={() => setShowOldData(!showOldData)}
+                                className="w-full flex items-center justify-between text-left"
+                            >
+                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                    <History className="h-6 w-6 text-amber-600" />
+                                    Previous Records & History
+                                    <span className="bg-amber-100 text-amber-800 text-sm px-2 py-1 rounded-full">
+                                        {safeStats.total_visits} visits • {safeStats.total_vision_tests} tests • {safeStats.total_prescriptions} prescriptions
+                                    </span>
+                                </h2>
+                                {showOldData ? (
+                                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                                ) : (
+                                    <ChevronRight className="h-5 w-5 text-gray-500" />
+                                )}
+                            </button>
+                        </div>
+
+                        {showOldData && (
+                            <div className="p-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                    {/* Previous Visits */}
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                            <Activity className="h-5 w-5 text-blue-600" />
+                                            Previous Visits ({patient.visits?.length || 0})
+                                        </h3>
+
+                                        {patient.visits && patient.visits.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {patient.visits.slice(0, 3).map((visit, index) => (
+                                                    <div key={visit.id} className="border border-gray-200 rounded-lg p-3">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <h4 className="font-medium text-gray-900">{visit.visit_id}</h4>
+                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(visit.overall_status)}`}>
+                                                                {visit.overall_status.replace('_', ' ').toUpperCase()}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-gray-600">{visit.formatted_date}</p>
+                                                        {visit.chief_complaint && (
+                                                            <p className="text-sm text-gray-700 mt-1">
+                                                                <span className="font-medium">Complaint:</span> {visit.chief_complaint}
+                                                            </p>
+                                                        )}
+                                                        <div className="flex justify-between text-sm mt-2">
+                                                            <span>Dr. {visit.selected_doctor?.name || 'N/A'}</span>
+                                                            <span className="font-medium">{formatCurrency(visit.final_amount)}</span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                {patient.visits.length > 3 && (
+                                                    <p className="text-center text-sm text-gray-500">
+                                                        +{patient.visits.length - 3} more visits
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <p className="text-gray-500 text-center py-8">No previous visits</p>
+                                        )}
+                                    </div>
+
+                                    {/* Previous Vision Tests & Prescriptions */}
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                            <Eye className="h-5 w-5 text-purple-600" />
+                                            Previous Vision Tests & Prescriptions
+                                        </h3>
+
+                                        {/* Vision Tests */}
+                                        {patient.visionTests && patient.visionTests.length > 0 && (
+                                            <div className="mb-6">
+                                                <h4 className="font-medium text-purple-800 mb-2">Vision Tests ({patient.visionTests.length})</h4>
+                                                <div className="space-y-2">
+                                                    {patient.visionTests.slice(0, 2).map((test) => (
+                                                        <div key={test.id} className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className="text-sm font-medium text-purple-900">{test.formatted_date}</span>
+                                                                <button
+                                                                    onClick={() => printVisionTest(test.id)}
+                                                                    className="text-purple-600 hover:text-purple-800"
+                                                                >
+                                                                    <Printer className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                <div>R: {test.right_eye_vision_without_glass || 'N/A'}</div>
+                                                                <div>L: {test.left_eye_vision_without_glass || 'N/A'}</div>
+                                                            </div>
+                                                            <p className="text-xs text-purple-600 mt-1">By: {test.performed_by.name}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Prescriptions */}
+                                        {patient.prescriptions && patient.prescriptions.length > 0 && (
+                                            <div>
+                                                <h4 className="font-medium text-green-800 mb-2">Prescriptions ({patient.prescriptions.length})</h4>
+                                                <div className="space-y-2">
+                                                    {patient.prescriptions.slice(0, 2).map((prescription) => (
+                                                        <div key={prescription.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className="text-sm font-medium text-green-900">{prescription.formatted_date}</span>
+                                                                <button
+                                                                    onClick={() => printPrescription(prescription.id)}
+                                                                    className="text-green-600 hover:text-green-800"
+                                                                >
+                                                                    <Printer className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                            <p className="text-xs text-green-700">
+                                                                Dr. {prescription.doctor.name} • {prescription.medicines_count} medicines
+                                                            </p>
+                                                            {prescription.can_edit && (
+                                                                <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full mt-1 inline-block">
+                                                                    Can Edit
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 3. Latest Vision Test Results - Current Data */}
+                    {latestVisionTest && (
+                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                    <Eye className="h-6 w-6 text-purple-600" />
+                                    Latest Vision Test Results
+                                    <span className="bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded-full">
+                                        {latestVisionTest.formatted_date}
+                                    </span>
+                                </h2>
+                                <button
+                                    onClick={() => printVisionTest(latestVisionTest.id)}
+                                    className="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
+                                >
+                                    <Printer className="h-4 w-4" />
+                                    Print Report
+                                </button>
+                            </div>
+
+                            {/* Chief Complaints */}
+                            {latestVisionTest.complains && (
+                                <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <ClipboardList className="h-4 w-4 text-orange-600" />
+                                        <span className="font-medium text-orange-800">Patient Complaints</span>
+                                    </div>
+                                    <p className="text-gray-700">{latestVisionTest.complains}</p>
+                                </div>
+                            )}
+
+                            {/* Visual Acuity Assessment */}
+                            <div className="mb-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                    <Target className="h-5 w-5 text-blue-600" />
+                                    Visual Acuity Assessment
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Right Eye */}
+                                    <div className="p-4 border border-red-200 rounded-lg bg-red-50">
+                                        <h4 className="font-semibold text-red-800 mb-3 flex items-center gap-2">
+                                            <Eye className="h-4 w-4" />
+                                            Right Eye (OD)
+                                        </h4>
+                                        <div className="space-y-2 text-sm">
+                                            {hasValue(latestVisionTest.right_eye_vision_without_glass) && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Without Glass:</span>
+                                                    <span className="font-medium">{latestVisionTest.right_eye_vision_without_glass}</span>
+                                                </div>
+                                            )}
+                                            {hasValue(latestVisionTest.right_eye_vision_with_glass) && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">With Glass:</span>
+                                                    <span className="font-medium">{latestVisionTest.right_eye_vision_with_glass}</span>
+                                                </div>
+                                            )}
+                                            {hasValue(latestVisionTest.right_eye_iop) && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">IOP:</span>
+                                                    <span className="font-medium">{latestVisionTest.right_eye_iop} mmHg</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Left Eye */}
+                                    <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                                        <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                                            <Eye className="h-4 w-4" />
+                                            Left Eye (OS)
+                                        </h4>
+                                        <div className="space-y-2 text-sm">
+                                            {hasValue(latestVisionTest.left_eye_vision_without_glass) && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Without Glass:</span>
+                                                    <span className="font-medium">{latestVisionTest.left_eye_vision_without_glass}</span>
+                                                </div>
+                                            )}
+                                            {hasValue(latestVisionTest.left_eye_vision_with_glass) && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">With Glass:</span>
+                                                    <span className="font-medium">{latestVisionTest.left_eye_vision_with_glass}</span>
+                                                </div>
+                                            )}
+                                            {hasValue(latestVisionTest.left_eye_iop) && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">IOP:</span>
+                                                    <span className="font-medium">{latestVisionTest.left_eye_iop} mmHg</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Vital Signs */}
+                            {(hasValue(latestVisionTest.blood_pressure) || hasValue(latestVisionTest.blood_sugar)) && (
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                        <Heart className="h-5 w-5 text-red-600" />
+                                        Vital Signs
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {hasValue(latestVisionTest.blood_pressure) && (
+                                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                                                <div className="flex items-center justify-center gap-2 mb-2">
+                                                    <Heart className="h-4 w-4 text-red-600" />
+                                                    <span className="font-medium text-red-800">Blood Pressure</span>
+                                                </div>
+                                                <p className="text-lg font-bold text-red-900">{latestVisionTest.blood_pressure}</p>
+                                            </div>
+                                        )}
+
+                                        {hasValue(latestVisionTest.blood_sugar) && (
+                                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
+                                                <div className="flex items-center justify-center gap-2 mb-2">
+                                                    <Droplets className="h-4 w-4 text-orange-600" />
+                                                    <span className="font-medium text-orange-800">Blood Sugar</span>
+                                                </div>
+                                                <p className="text-lg font-bold text-orange-900">{latestVisionTest.blood_sugar}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Medical Conditions */}
+                            <div className="mb-6">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                    <Shield className="h-5 w-5 text-green-600" />
+                                    Medical Conditions
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    <div className="flex items-center gap-2">
+                                        {getConditionIcon(latestVisionTest.is_diabetic)}
+                                        <span className="text-sm text-gray-700">Diabetic</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {getConditionIcon(latestVisionTest.is_cardiac)}
+                                        <span className="text-sm text-gray-700">Cardiac</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {getConditionIcon(latestVisionTest.is_hypertensive)}
+                                        <span className="text-sm text-gray-700">Hypertensive</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="text-sm text-gray-600 text-center">
+                                Performed by: {latestVisionTest.performed_by.name} on {latestVisionTest.formatted_date}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 4. Current Visit Status & Write Prescription */}
                     {latestVisit && (
                         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                                     <Activity className="h-6 w-6 text-blue-600" />
-                                    Current Visit - {latestVisit.visit_id}
+                                    Current Visit Status - {latestVisit.visit_id}
                                 </h2>
                                 <div className="flex items-center gap-2">
                                     <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(latestVisit.overall_status)}`}>
@@ -422,104 +830,30 @@ const DoctorPatientView: React.FC<Props> = ({
                                 </div>
                             </div>
 
-                            {/* Visit Details Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                                {/* Chief Complaint */}
-                                {latestVisit.chief_complaint && (
-                                    <div className="md:col-span-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <AlertCircle className="h-4 w-4 text-yellow-600" />
-                                            <span className="font-medium text-yellow-800">Chief Complaint</span>
-                                        </div>
-                                        <p className="text-gray-700">{latestVisit.chief_complaint}</p>
+                            {/* Chief Complaint */}
+                            {latestVisit.chief_complaint && (
+                                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <AlertCircle className="h-4 w-4 text-yellow-600" />
+                                        <span className="font-medium text-yellow-800">Chief Complaint</span>
                                     </div>
-                                )}
-
-                                {/* Payment Status */}
-                                <div className="p-4 bg-green-50 rounded-lg">
-                                    <h4 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
-                                        <DollarSign className="h-4 w-4" />
-                                        Payment Details
-                                    </h4>
-                                    <div className="space-y-2 text-sm">
-                                        <div className="flex justify-between">
-                                            <span className="text-green-700">Total:</span>
-                                            <span className="font-medium">{formatCurrency(latestVisit.final_amount)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-green-700">Paid:</span>
-                                            <span className="font-medium text-green-600">{formatCurrency(latestVisit.total_paid)}</span>
-                                        </div>
-                                        {latestVisit.total_due > 0 && (
-                                            <div className="flex justify-between">
-                                                <span className="text-green-700">Due:</span>
-                                                <span className="font-medium text-red-600">{formatCurrency(latestVisit.total_due)}</span>
-                                            </div>
-                                        )}
-                                        <div className="pt-2">
-                                            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(latestVisit.payment_status)}`}>
-                                                {latestVisit.payment_status.toUpperCase()}
-                                            </span>
-                                        </div>
-                                    </div>
+                                    <p className="text-gray-700">{latestVisit.chief_complaint}</p>
                                 </div>
+                            )}
 
-                                {/* Vision Test Status */}
-                                <div className="p-4 bg-purple-50 rounded-lg">
-                                    <h4 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
-                                        <Eye className="h-4 w-4" />
-                                        Vision Test
-                                    </h4>
-                                    <div className="space-y-2 text-sm">
-                                        <div>
-                                            <span className="text-purple-700">Status:</span>
-                                            <span className={`px-2 py-1 rounded text-xs font-medium ml-2 ${getStatusColor(latestVisit.vision_test_status)}`}>
-                                                {latestVisit.vision_test_status.toUpperCase()}
-                                            </span>
-                                        </div>
-                                        {latestVisionTest && (
-                                            <>
-                                                <div className="flex justify-between">
-                                                    <span className="text-purple-700">Right Eye:</span>
-                                                    <span className="font-medium">{latestVisionTest.right_eye_vision || 'N/A'}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-purple-700">Left Eye:</span>
-                                                    <span className="font-medium">{latestVisionTest.left_eye_vision || 'N/A'}</span>
-                                                </div>
-                                                <div className="pt-2">
-                                                    <span className="text-xs text-purple-600">
-                                                        By: {latestVisionTest.performed_by.name}
-                                                    </span>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
+                            {/* Payment Summary */}
+                            <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                                    <h4 className="font-semibold text-green-900 mb-2">Total Amount</h4>
+                                    <p className="text-2xl font-bold text-green-600">{formatCurrency(latestVisit.final_amount)}</p>
                                 </div>
-
-                                {/* Prescription Status */}
-                                <div className="p-4 bg-blue-50 rounded-lg">
-                                    <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                                        <Pill className="h-4 w-4" />
-                                        Prescription
-                                    </h4>
-                                    <div className="space-y-2 text-sm">
-                                        <div>
-                                            <span className="text-blue-700">My Prescriptions:</span>
-                                            <span className="font-medium ml-2">{safeStats.my_prescriptions}</span>
-                                        </div>
-                                        <div>
-                                            <span className="text-blue-700">Total Prescriptions:</span>
-                                            <span className="font-medium ml-2">{safeStats.total_prescriptions}</span>
-                                        </div>
-                                        {safeStats.my_prescriptions > 0 && (
-                                            <div className="pt-2">
-                                                <span className="px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs font-medium">
-                                                    Has Previous Prescriptions
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
+                                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                                    <h4 className="font-semibold text-blue-900 mb-2">Paid</h4>
+                                    <p className="text-2xl font-bold text-blue-600">{formatCurrency(latestVisit.total_paid)}</p>
+                                </div>
+                                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
+                                    <h4 className="font-semibold text-red-900 mb-2">Due</h4>
+                                    <p className="text-2xl font-bold text-red-600">{formatCurrency(latestVisit.total_due)}</p>
                                 </div>
                             </div>
 
@@ -531,501 +865,37 @@ const DoctorPatientView: React.FC<Props> = ({
                                  latestVisit.vision_test_status === 'completed' && (
                                     <button
                                         onClick={createPrescription}
-                                        className="px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-2 shadow-lg"
+                                        className="px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold text-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-3 shadow-xl"
                                     >
-                                        <Plus className="h-5 w-5" />
+                                        <Plus className="h-6 w-6" />
                                         Write Prescription
                                     </button>
                                 )}
 
                                 {/* Status Messages */}
                                 {latestVisit.payment_status !== 'paid' && (
-                                    <div className="flex items-center gap-2 px-6 py-3 bg-red-100 text-red-700 rounded-lg">
-                                        <AlertCircle className="h-5 w-5" />
-                                        <span>Waiting for payment completion</span>
+                                    <div className="flex items-center gap-3 px-8 py-4 bg-red-100 text-red-700 rounded-xl">
+                                        <AlertCircle className="h-6 w-6" />
+                                        <span className="font-medium">Waiting for payment completion</span>
                                     </div>
                                 )}
 
                                 {latestVisit.payment_status === 'paid' && latestVisit.vision_test_status !== 'completed' && (
-                                    <div className="flex items-center gap-2 px-6 py-3 bg-purple-100 text-purple-700 rounded-lg">
-                                        <Clock className="h-5 w-5" />
-                                        <span>Waiting for vision test</span>
+                                    <div className="flex items-center gap-3 px-8 py-4 bg-purple-100 text-purple-700 rounded-xl">
+                                        <Clock className="h-6 w-6" />
+                                        <span className="font-medium">Waiting for vision test completion</span>
                                     </div>
                                 )}
 
                                 {latestVisit.overall_status === 'completed' && (
-                                    <div className="flex items-center gap-2 px-6 py-3 bg-green-100 text-green-700 rounded-lg">
-                                        <CheckCircle className="h-5 w-5" />
-                                        <span>Visit completed successfully</span>
+                                    <div className="flex items-center gap-3 px-8 py-4 bg-green-100 text-green-700 rounded-xl">
+                                        <CheckCircle className="h-6 w-6" />
+                                        <span className="font-medium">Visit completed successfully</span>
                                     </div>
                                 )}
                             </div>
                         </div>
                     )}
-
-                    {/* Vision Test Results - Detailed */}
-                    {latestVisionTest && latestVisit?.vision_test_status === 'completed' && (
-                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                    <Eye className="h-6 w-6 text-purple-600" />
-                                    Latest Vision Test Results
-                                </h2>
-                                <button
-                                    onClick={() => printVisionTest(latestVisionTest.id)}
-                                    className="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
-                                >
-                                    <Printer className="h-4 w-4" />
-                                    Print Report
-                                </button>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="p-4 border border-purple-200 rounded-lg">
-                                    <h3 className="font-semibold text-purple-900 mb-4">Right Eye (OD)</h3>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Vision:</span>
-                                            <span className="font-medium">{latestVisionTest.right_eye_vision || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Sphere (SPH):</span>
-                                            <span className="font-medium">{latestVisionTest.right_eye_sphere || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Cylinder (CYL):</span>
-                                            <span className="font-medium">{latestVisionTest.right_eye_cylinder || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Axis:</span>
-                                            <span className="font-medium">{latestVisionTest.right_eye_axis || 'N/A'}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="p-4 border border-purple-200 rounded-lg">
-                                    <h3 className="font-semibold text-purple-900 mb-4">Left Eye (OS)</h3>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Vision:</span>
-                                            <span className="font-medium">{latestVisionTest.left_eye_vision || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Sphere (SPH):</span>
-                                            <span className="font-medium">{latestVisionTest.left_eye_sphere || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Cylinder (CYL):</span>
-                                            <span className="font-medium">{latestVisionTest.left_eye_cylinder || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-gray-600">Axis:</span>
-                                            <span className="font-medium">{latestVisionTest.left_eye_axis || 'N/A'}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {latestVisionTest.pupillary_distance && (
-                                <div className="mt-4 p-3 bg-purple-50 rounded-lg">
-                                    <div className="flex justify-between items-center">
-                                        <span className="font-medium text-purple-800">Pupillary Distance (PD):</span>
-                                        <span className="font-bold text-purple-900">{latestVisionTest.pupillary_distance}mm</span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {latestVisionTest.additional_notes && (
-                                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                    <h4 className="font-medium text-yellow-800 mb-2">Additional Notes:</h4>
-                                    <p className="text-gray-700 text-sm">{latestVisionTest.additional_notes}</p>
-                                </div>
-                            )}
-
-                            <div className="mt-4 text-sm text-gray-600 text-center">
-                                Performed by: {latestVisionTest.performed_by.name} on {latestVisionTest.formatted_date}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Patient Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-semibold text-gray-900">Total Visits</h3>
-                                <Activity className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <p className="text-2xl font-bold text-blue-600">{safeStats.total_visits}</p>
-                            <p className="text-sm text-gray-500 mt-1">
-                                Last: {safeStats.last_visit_date || 'None'}
-                            </p>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-semibold text-gray-900">Vision Tests</h3>
-                                <Eye className="h-5 w-5 text-purple-600" />
-                            </div>
-                            <p className="text-2xl font-bold text-purple-600">{safeStats.total_vision_tests}</p>
-                            <p className="text-sm text-gray-500 mt-1">
-                                Last: {safeStats.last_vision_test_date || 'None'}
-                            </p>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-semibold text-gray-900">Prescriptions</h3>
-                                <Pill className="h-5 w-5 text-green-600" />
-                            </div>
-                            <p className="text-2xl font-bold text-green-600">{safeStats.total_prescriptions}</p>
-                            <p className="text-sm text-gray-500 mt-1">
-                                By me: {safeStats.my_prescriptions}
-                            </p>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-semibold text-gray-900">Financial</h3>
-                                <DollarSign className="h-5 w-5 text-orange-600" />
-                            </div>
-                            <p className="text-lg font-bold text-green-600">{formatCurrency(safeStats.total_amount_paid)}</p>
-                            <p className="text-sm text-red-500">
-                                Due: {formatCurrency(safeStats.total_amount_due)}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Tabs Section */}
-                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
-                        <div className="border-b border-gray-200">
-                            <nav className="flex space-x-8 px-6">
-                                {[
-                                    { id: 'overview', name: 'Quick Overview', icon: Info },
-                                    { id: 'history', name: 'Visit History', icon: History, count: safeStats.total_visits },
-                                    { id: 'vision', name: 'Vision Tests', icon: Eye, count: safeStats.total_vision_tests },
-                                    { id: 'prescriptions', name: 'Prescriptions', icon: Pill, count: safeStats.total_prescriptions },
-                                ].map((tab) => {
-                                    const Icon = tab.icon;
-                                    return (
-                                        <button
-                                            key={tab.id}
-                                            onClick={() => setActiveTab(tab.id)}
-                                            className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
-                                                activeTab === tab.id
-                                                    ? 'border-blue-500 text-blue-600'
-                                                    : 'border-transparent text-gray-500 hover:text-gray-700'
-                                            }`}
-                                        >
-                                            <Icon className="h-4 w-4" />
-                                            {tab.name}
-                                            {tab.count !== undefined && tab.count > 0 && (
-                                                <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
-                                                    {tab.count}
-                                                </span>
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </nav>
-                        </div>
-
-                        <div className="p-6">
-                            {/* Overview Tab */}
-                            {activeTab === 'overview' && (
-                                <div className="space-y-6">
-                                    <h3 className="text-lg font-semibold text-gray-900">Patient Quick Overview</h3>
-
-                                    {/* Contact Information */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="p-4 bg-gray-50 rounded-lg">
-                                            <h4 className="font-semibold text-gray-900 mb-3">Contact Details</h4>
-                                            <div className="space-y-2 text-sm">
-                                                <div className="flex items-center gap-2">
-                                                    <Phone className="h-4 w-4 text-gray-500" />
-                                                    <span>{patient.phone}</span>
-                                                </div>
-                                                {patient.email && (
-                                                    <div className="flex items-center gap-2">
-                                                        <Mail className="h-4 w-4 text-gray-500" />
-                                                        <span>{patient.email}</span>
-                                                    </div>
-                                                )}
-                                                {patient.address && (
-                                                    <div className="flex items-center gap-2">
-                                                        <MapPin className="h-4 w-4 text-gray-500" />
-                                                        <span>{patient.address}</span>
-                                                    </div>
-                                                )}
-                                                {patient.nid_card && (
-                                                    <div className="flex items-center gap-2">
-                                                        <FileText className="h-4 w-4 text-gray-500" />
-                                                        <span>NID: {patient.nid_card}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="p-4 bg-gray-50 rounded-lg">
-                                            <h4 className="font-semibold text-gray-900 mb-3">Summary</h4>
-                                            <div className="space-y-2 text-sm">
-                                                <div>
-                                                    <span className="text-gray-600">Age:</span>
-                                                    <span className="ml-2 font-medium">{patient.age || 'N/A'} years</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-gray-600">Gender:</span>
-                                                    <span className="ml-2 font-medium capitalize">{patient.gender || 'N/A'}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-gray-600">Registered:</span>
-                                                    <span className="ml-2 font-medium">{patient.formatted_registration_date}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-gray-600">Total Visits:</span>
-                                                    <span className="ml-2 font-medium">{safeStats.total_visits}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Visit History Tab */}
-                            {activeTab === 'history' && (
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-gray-900">Visit History ({safeStats.total_visits})</h3>
-
-                                    {patient.visits && patient.visits.length > 0 ? (
-                                        <div className="space-y-4">
-                                            {patient.visits.slice(0, 5).map((visit, index) => (
-                                                <div key={visit.id} className="border border-gray-200 rounded-lg p-4">
-                                                    <div className="flex items-center justify-between mb-3">
-                                                        <div>
-                                                            <h4 className="font-semibold text-gray-900">
-                                                                {visit.visit_id}
-                                                                {index === 0 && (
-                                                                    <span className="ml-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">Latest</span>
-                                                                )}
-                                                            </h4>
-                                                            <p className="text-sm text-gray-600">{visit.formatted_date}</p>
-                                                        </div>
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(visit.overall_status)}`}>
-                                                            {visit.overall_status.replace('_', ' ').toUpperCase()}
-                                                        </span>
-                                                    </div>
-
-                                                    {visit.chief_complaint && (
-                                                        <div className="mb-3 p-3 bg-yellow-50 rounded-lg">
-                                                            <span className="font-medium text-yellow-800 text-sm">Chief Complaint:</span>
-                                                            <p className="text-sm text-gray-700 mt-1">{visit.chief_complaint}</p>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="grid grid-cols-3 gap-4 text-sm">
-                                                        <div>
-                                                            <span className="text-gray-600">Amount:</span>
-                                                            <p className="font-medium">{formatCurrency(visit.final_amount)}</p>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-gray-600">Payment:</span>
-                                                            <span className={`px-2 py-1 rounded text-xs font-medium ml-1 ${getStatusColor(visit.payment_status)}`}>
-                                                                {visit.payment_status.toUpperCase()}
-                                                            </span>
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-gray-600">Doctor:</span>
-                                                            <p className="font-medium text-xs">
-                                                                {visit.selected_doctor?.name || 'N/A'}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            {patient.visits.length > 5 && (
-                                                <div className="text-center py-4">
-                                                    <p className="text-gray-500 text-sm">
-                                                        Showing 5 of {patient.visits.length} visits
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-12">
-                                            <History className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                                            <p className="text-gray-600">No visit history found</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Vision Tests Tab */}
-                            {activeTab === 'vision' && (
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-semibold text-gray-900">Vision Test History ({safeStats.total_vision_tests})</h3>
-
-                                    {patient.visionTests && patient.visionTests.length > 0 ? (
-                                        <div className="space-y-4">
-                                            {patient.visionTests.slice(0, 3).map((test, index) => (
-                                                <div key={test.id} className="border border-gray-200 rounded-lg p-4">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <div>
-                                                            <h4 className="font-semibold text-gray-900">
-                                                                Vision Test #{test.id}
-                                                                {index === 0 && (
-                                                                    <span className="ml-2 bg-purple-100 text-purple-600 text-xs px-2 py-1 rounded-full">Latest</span>
-                                                                )}
-                                                            </h4>
-                                                            <p className="text-sm text-gray-600">{test.formatted_date}</p>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => printVisionTest(test.id)}
-                                                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                                        >
-                                                            <Printer className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        <div className="p-3 bg-purple-50 rounded-lg">
-                                                            <h5 className="font-medium text-purple-800 mb-2">Right Eye</h5>
-                                                            <div className="space-y-1 text-sm">
-                                                                <div>Vision: {test.right_eye_vision || 'N/A'}</div>
-                                                                <div>SPH: {test.right_eye_sphere || 'N/A'}</div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="p-3 bg-purple-50 rounded-lg">
-                                                            <h5 className="font-medium text-purple-800 mb-2">Left Eye</h5>
-                                                            <div className="space-y-1 text-sm">
-                                                                <div>Vision: {test.left_eye_vision || 'N/A'}</div>
-                                                                <div>SPH: {test.left_eye_sphere || 'N/A'}</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="mt-3 text-sm text-gray-600">
-                                                        Performed by: {test.performed_by?.name}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-12">
-                                            <Eye className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                                            <p className="text-gray-600">No vision tests found</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Prescriptions Tab */}
-                            {activeTab === 'prescriptions' && (
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-semibold text-gray-900">
-                                            Prescription History ({safeStats.total_prescriptions})
-                                        </h3>
-                                        <button
-                                            onClick={createPrescription}
-                                            className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
-                                        >
-                                            <Plus className="h-4 w-4" />
-                                            New Prescription
-                                        </button>
-                                    </div>
-
-                                    {patient.prescriptions && patient.prescriptions.length > 0 ? (
-                                        <div className="space-y-4">
-                                            {patient.prescriptions.slice(0, 3).map((prescription, index) => (
-                                                <div key={prescription.id} className="border border-gray-200 rounded-lg p-4">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <div>
-                                                            <h4 className="font-semibold text-gray-900">
-                                                                Prescription #{prescription.id}
-                                                                {index === 0 && (
-                                                                    <span className="ml-2 bg-green-100 text-green-600 text-xs px-2 py-1 rounded-full">Latest</span>
-                                                                )}
-                                                                {prescription.can_edit && (
-                                                                    <span className="ml-2 bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full">Can Edit</span>
-                                                                )}
-                                                            </h4>
-                                                            <p className="text-sm text-gray-600">{prescription.formatted_date}</p>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => printPrescription(prescription.id)}
-                                                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                                            >
-                                                                <Printer className="h-4 w-4" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                                                        <div className="flex justify-between items-center">
-                                                            <div>
-                                                                <span className="text-gray-600 text-sm">Prescribed by:</span>
-                                                                <p className="font-medium">{prescription.doctor.name}</p>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <span className="text-gray-600 text-sm">Medicines:</span>
-                                                                <p className="font-medium">{prescription.medicines_count} items</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {prescription.prescription_medicines && prescription.prescription_medicines.length > 0 && (
-                                                        <div className="space-y-2">
-                                                            <h6 className="font-medium text-gray-900">Medicines:</h6>
-                                                            {prescription.prescription_medicines.slice(0, 2).map((medicine, medIndex) => (
-                                                                <div key={medIndex} className="p-3 bg-white border border-gray-200 rounded-lg">
-                                                                    <h5 className="font-medium text-gray-900">
-                                                                        {medicine.medicine?.name || 'Unknown Medicine'}
-                                                                        {medicine.medicine?.strength && (
-                                                                            <span className="text-gray-600 ml-2">({medicine.medicine.strength})</span>
-                                                                        )}
-                                                                    </h5>
-                                                                    <div className="grid grid-cols-3 gap-2 mt-2 text-sm">
-                                                                        <div>
-                                                                            <span className="text-gray-600">Dosage:</span>
-                                                                            <p className="font-medium">{medicine.dosage}</p>
-                                                                        </div>
-                                                                        <div>
-                                                                            <span className="text-gray-600">Frequency:</span>
-                                                                            <p className="font-medium">{medicine.frequency}</p>
-                                                                        </div>
-                                                                        <div>
-                                                                            <span className="text-gray-600">Duration:</span>
-                                                                            <p className="font-medium">{medicine.duration}</p>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                            {prescription.prescription_medicines.length > 2 && (
-                                                                <p className="text-sm text-gray-500 text-center">
-                                                                    +{prescription.prescription_medicines.length - 2} more medicines
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-12">
-                                            <Pill className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                                            <p className="text-gray-600">No prescriptions found</p>
-                                            <button
-                                                onClick={createPrescription}
-                                                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-                                            >
-                                                Write First Prescription
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
 
                     {/* Footer Actions */}
                     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">

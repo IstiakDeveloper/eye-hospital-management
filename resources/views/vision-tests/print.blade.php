@@ -338,7 +338,7 @@
 
         /* History Section */
         .history-section {
-            margin-top: 5mm;
+            margin: 5mm 0;
         }
 
         .history-label {
