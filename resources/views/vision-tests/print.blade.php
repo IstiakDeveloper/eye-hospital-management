@@ -21,7 +21,7 @@
 
         @font-face {
             font-family: 'Noto Sans Bengali';
-            src: url('{{ storage_path('fonts/cache/nato.ttf') }}') format('truetype');
+            src: url('{{ storage_path('fonts/nato.ttf') }}') format('truetype');
             font-weight: normal;
             font-style: normal;
         }
