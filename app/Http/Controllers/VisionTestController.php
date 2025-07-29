@@ -584,15 +584,155 @@ class VisionTestController extends Controller
             }
         }
 
-        // Generate PDF
+        // Generate PDF with Bangla font support
         $pdf = Pdf::loadView('vision-tests.print', [
             'visionTest' => $visionTest,
-            'qrCodeBase64' => $qrCodeBase64  // Pass base64 to view
+            'qrCodeBase64' => $qrCodeBase64
         ]);
 
         $pdf->setPaper('A4', 'portrait');
 
+        // Configure for Bangla support
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'Noto Sans Bengali', // Use Bangla font as default
+            'dpi' => 96,
+            'defaultPaperSize' => 'A4',
+            'orientation' => 'portrait',
+            'isRemoteEnabled' => false,
+            'debugKeepTemp' => false,
+            'chroot' => public_path(),
+            'fontDir' => storage_path('fonts/'), // Point to our font directory
+            'fontCache' => storage_path('fonts/cache/'), // Font cache directory
+            'tempDir' => sys_get_temp_dir(),
+            'rootDir' => public_path(),
+            'isJavascriptEnabled' => false,
+            'defaultMediaType' => 'print',
+            'isFontSubsettingEnabled' => true, // Enable font subsetting for better performance
+            'isUnicode' => true, // Enable Unicode support
+        ]);
+
         $filename = 'vision-test-' . $visionTest->patient->patient_id . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    public function downloadBlankReport(Patient $patient)
+    {
+        // Find the active visit
+        $visit = PatientVisit::with(['patient', 'selectedDoctor.user'])
+            ->where('patient_id', $patient->id)
+            ->where(function ($query) {
+                $query->where('vision_test_status', 'in_progress')
+                    ->orWhere(function ($subQuery) {
+                        $subQuery->where('payment_status', 'paid')
+                            ->where('vision_test_status', 'pending')
+                            ->where('overall_status', 'vision_test');
+                    });
+            })
+            ->latest()
+            ->first();
+
+        if (!$visit) {
+            return back()->withErrors([
+                'error' => 'No active visit found for this patient.'
+            ]);
+        }
+
+        // Create blank vision test object
+        $blankVisionTest = (object) [
+            'id' => 'DEMO',
+            'patient' => $patient,
+            'test_date' => now(),
+            'performedBy' => auth()->user(),
+            // All fields empty for blank form
+            'complains' => '',
+            'right_eye_diagnosis' => '',
+            'left_eye_diagnosis' => '',
+            'right_eye_lids' => '',
+            'left_eye_lids' => '',
+            'right_eye_conjunctiva' => '',
+            'left_eye_conjunctiva' => '',
+            'right_eye_cornea' => '',
+            'left_eye_cornea' => '',
+            'right_eye_anterior_chamber' => '',
+            'left_eye_anterior_chamber' => '',
+            'right_eye_iris' => '',
+            'left_eye_iris' => '',
+            'right_eye_pupil' => '',
+            'left_eye_pupil' => '',
+            'right_eye_lens' => '',
+            'left_eye_lens' => '',
+            'right_eye_ocular_movements' => '',
+            'left_eye_ocular_movements' => '',
+            'right_eye_vision_without_glass' => '',
+            'left_eye_vision_without_glass' => '',
+            'right_eye_vision_with_glass' => '',
+            'left_eye_vision_with_glass' => '',
+            'right_eye_iop' => '',
+            'left_eye_iop' => '',
+            'right_eye_ducts' => '',
+            'left_eye_ducts' => '',
+            'blood_pressure' => '',
+            'urine_sugar' => '',
+            'blood_sugar' => '',
+            'right_eye_fundus' => '',
+            'left_eye_fundus' => '',
+            'detailed_history' => '',
+            'is_one_eyed' => false,
+            'is_diabetic' => false,
+            'is_cardiac' => false,
+            'is_asthmatic' => false,
+            'is_hypertensive' => false,
+            'is_thyroid' => false,
+            'other_conditions' => '',
+            'drugs_used' => '',
+        ];
+
+        // Prepare QR code base64 for PDF
+        $qrCodeBase64 = null;
+        if ($patient->qr_code_image_path) {
+            $qrImagePath = storage_path('app/public/' . $patient->qr_code_image_path);
+            if (file_exists($qrImagePath)) {
+                $imageData = file_get_contents($qrImagePath);
+                if ($imageData) {
+                    $qrCodeBase64 = base64_encode($imageData);
+                }
+            }
+        }
+
+        // Generate PDF with Bangla support
+        $pdf = Pdf::loadView('vision-tests.print', [
+            'visionTest' => $blankVisionTest,
+            'qrCodeBase64' => $qrCodeBase64,
+            'isBlankReport' => true
+        ]);
+
+        $pdf->setPaper('A4', 'portrait');
+
+        // Configure for Bangla support
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isPhpEnabled' => true,
+            'defaultFont' => 'Noto Sans Bengali',
+            'dpi' => 96,
+            'defaultPaperSize' => 'A4',
+            'orientation' => 'portrait',
+            'isRemoteEnabled' => false,
+            'debugKeepTemp' => false,
+            'chroot' => public_path(),
+            'fontDir' => storage_path('fonts/'),
+            'fontCache' => storage_path('fonts/cache/'),
+            'tempDir' => sys_get_temp_dir(),
+            'rootDir' => public_path(),
+            'isJavascriptEnabled' => false,
+            'defaultMediaType' => 'print',
+            'isFontSubsettingEnabled' => true,
+            'isUnicode' => true,
+        ]);
+
+        $filename = 'blank-vision-test-' . $patient->patient_id . '.pdf';
 
         return $pdf->download($filename);
     }

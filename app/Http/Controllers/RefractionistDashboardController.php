@@ -443,4 +443,244 @@ class RefractionistDashboardController extends Controller
 
         return back()->with('success', 'Visit notes updated successfully');
     }
+
+
+
+
+
+
+
+    /**
+     * Generate comprehensive performance report for refractionist
+     */
+    public function performanceReport(Request $request)
+    {
+        $dateFrom = $request->get('date_from', Carbon::today()->subDays(30)->toDateString());
+        $dateTo = $request->get('date_to', Carbon::today()->toDateString());
+
+        // Overall statistics for the period
+        $overallStats = [
+            'total_tests_completed' => PatientVisit::whereBetween('vision_test_completed_at', [$dateFrom, $dateTo])
+                ->whereNotNull('vision_test_completed_at')
+                ->count(),
+            'total_revenue' => PatientVisit::whereBetween('vision_test_completed_at', [$dateFrom, $dateTo])
+                ->whereNotNull('vision_test_completed_at')
+                ->sum('final_amount'),
+            'unique_patients' => PatientVisit::whereBetween('vision_test_completed_at', [$dateFrom, $dateTo])
+                ->whereNotNull('vision_test_completed_at')
+                ->distinct('patient_id')
+                ->count(),
+            'average_test_duration' => $this->getAverageTestDurationForRange($dateFrom, $dateTo),
+            'peak_hour' => $this->getPeakHour($dateFrom, $dateTo),
+            'busiest_day' => $this->getBusiestDay($dateFrom, $dateTo),
+        ];
+
+        // Daily breakdown
+        $dailyStats = PatientVisit::whereBetween('vision_test_completed_at', [$dateFrom, $dateTo])
+            ->whereNotNull('vision_test_completed_at')
+            ->selectRaw('DATE(vision_test_completed_at) as date, COUNT(*) as tests_count, SUM(final_amount) as total_revenue')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->map(function ($stat) {
+                return [
+                    'date' => Carbon::parse($stat->date)->format('M d, Y'),
+                    'day_name' => Carbon::parse($stat->date)->format('l'),
+                    'tests_count' => $stat->tests_count,
+                    'total_revenue' => $stat->total_revenue,
+                    'avg_revenue' => $stat->tests_count > 0 ? round($stat->total_revenue / $stat->tests_count, 2) : 0,
+                ];
+            });
+
+        // Hourly distribution
+        $hourlyDistribution = PatientVisit::whereBetween('vision_test_completed_at', [$dateFrom, $dateTo])
+            ->whereNotNull('vision_test_completed_at')
+            ->selectRaw('HOUR(vision_test_completed_at) as hour, COUNT(*) as count')
+            ->groupBy('hour')
+            ->orderBy('hour')
+            ->pluck('count', 'hour')
+            ->toArray();
+
+        // Fill missing hours
+        $hourlyBreakdown = [];
+        for ($hour = 8; $hour <= 18; $hour++) {
+            $hourlyBreakdown[] = [
+                'hour' => sprintf('%02d:00', $hour),
+                'tests' => $hourlyDistribution[$hour] ?? 0,
+            ];
+        }
+
+        // Performance by doctor
+        $doctorPerformance = PatientVisit::whereBetween('vision_test_completed_at', [$dateFrom, $dateTo])
+            ->whereNotNull('vision_test_completed_at')
+            ->with('selectedDoctor.user')
+            ->get()
+            ->groupBy('selected_doctor_id')
+            ->map(function ($visits, $doctorId) {
+                $doctor = $visits->first()->selectedDoctor;
+                $totalDuration = $visits->sum(function ($visit) {
+                    return $visit->payment_completed_at && $visit->vision_test_completed_at
+                        ? Carbon::parse($visit->payment_completed_at)
+                        ->diffInMinutes(Carbon::parse($visit->vision_test_completed_at))
+                        : 0;
+                });
+
+                return [
+                    'doctor_id' => $doctorId,
+                    'doctor_name' => $doctor && $doctor->user ? $doctor->user->name : 'No Doctor',
+                    'tests_completed' => $visits->count(),
+                    'total_revenue' => $visits->sum('final_amount'),
+                    'avg_duration' => $visits->count() > 0 ? round($totalDuration / $visits->count()) : 0,
+                    'avg_revenue_per_test' => $visits->count() > 0 ? round($visits->sum('final_amount') / $visits->count(), 2) : 0,
+                ];
+            })
+            ->values()
+            ->sortByDesc('tests_completed');
+
+        // Top performing days
+        $topDays = $dailyStats->sortByDesc('tests_count')->take(5)->values()->toArray();
+
+        // Weekly trends
+        $weeklyTrends = $this->getWeeklyTrends($dateFrom, $dateTo);
+
+        // Patient demographics for completed tests
+        $demographics = PatientVisit::whereBetween('vision_test_completed_at', [$dateFrom, $dateTo])
+            ->whereNotNull('vision_test_completed_at')
+            ->with('patient')
+            ->get()
+            ->map(function ($visit) {
+                $age = $visit->patient->date_of_birth
+                    ? Carbon::parse($visit->patient->date_of_birth)->age
+                    : null;
+
+                return [
+                    'gender' => $visit->patient->gender,
+                    'age_group' => $this->getAgeGroup($age),
+                ];
+            });
+
+        $genderDistribution = $demographics->groupBy('gender')->map->count();
+        $ageDistribution = $demographics->groupBy('age_group')->map->count();
+
+        return Inertia::render('Refractionist/PerformanceReport', [
+            'period' => [
+                'from' => Carbon::parse($dateFrom)->format('M d, Y'),
+                'to' => Carbon::parse($dateTo)->format('M d, Y'),
+                'days' => Carbon::parse($dateFrom)->diffInDays(Carbon::parse($dateTo)) + 1,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
+            ],
+            'overallStats' => $overallStats,
+            'dailyStats' => $dailyStats->toArray(),
+            'hourlyBreakdown' => $hourlyBreakdown,
+            'doctorPerformance' => $doctorPerformance->toArray(),
+            'topDays' => $topDays,
+            'weeklyTrends' => $weeklyTrends,
+            'demographics' => [
+                'gender' => $genderDistribution,
+                'age_groups' => $ageDistribution,
+            ],
+        ]);
+    }
+
+    /**
+     * Get average test duration for date range
+     */
+    private function getAverageTestDurationForRange($dateFrom, $dateTo)
+    {
+        $completedVisits = PatientVisit::whereBetween('vision_test_completed_at', [$dateFrom, $dateTo])
+            ->whereNotNull('payment_completed_at')
+            ->whereNotNull('vision_test_completed_at')
+            ->get();
+
+        if ($completedVisits->isEmpty()) {
+            return 0;
+        }
+
+        $totalMinutes = $completedVisits->sum(function ($visit) {
+            return Carbon::parse($visit->payment_completed_at)
+                ->diffInMinutes(Carbon::parse($visit->vision_test_completed_at));
+        });
+
+        return round($totalMinutes / $completedVisits->count());
+    }
+
+    /**
+     * Get peak hour for the period
+     */
+    private function getPeakHour($dateFrom, $dateTo)
+    {
+        $hourlyData = PatientVisit::whereBetween('vision_test_completed_at', [$dateFrom, $dateTo])
+            ->whereNotNull('vision_test_completed_at')
+            ->selectRaw('HOUR(vision_test_completed_at) as hour, COUNT(*) as count')
+            ->groupBy('hour')
+            ->orderByDesc('count')
+            ->first();
+
+        return $hourlyData ? sprintf('%02d:00', $hourlyData->hour) : 'N/A';
+    }
+
+    /**
+     * Get busiest day for the period
+     */
+    private function getBusiestDay($dateFrom, $dateTo)
+    {
+        $busiestDay = PatientVisit::whereBetween('vision_test_completed_at', [$dateFrom, $dateTo])
+            ->whereNotNull('vision_test_completed_at')
+            ->selectRaw('DATE(vision_test_completed_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->orderByDesc('count')
+            ->first();
+
+        return $busiestDay ? Carbon::parse($busiestDay->date)->format('M d, Y') : 'N/A';
+    }
+
+    /**
+     * Get weekly trends
+     */
+    private function getWeeklyTrends($dateFrom, $dateTo)
+    {
+        $startDate = Carbon::parse($dateFrom)->startOfWeek();
+        $endDate = Carbon::parse($dateTo)->endOfWeek();
+
+        $weeklyData = [];
+        $currentWeek = $startDate->copy();
+
+        while ($currentWeek->lte($endDate)) {
+            $weekStart = $currentWeek->copy();
+            $weekEnd = $currentWeek->copy()->endOfWeek();
+
+            $testsCount = PatientVisit::whereBetween('vision_test_completed_at', [$weekStart, $weekEnd])
+                ->whereNotNull('vision_test_completed_at')
+                ->count();
+
+            $revenue = PatientVisit::whereBetween('vision_test_completed_at', [$weekStart, $weekEnd])
+                ->whereNotNull('vision_test_completed_at')
+                ->sum('final_amount');
+
+            $weeklyData[] = [
+                'week_start' => $weekStart->format('M d'),
+                'week_end' => $weekEnd->format('M d, Y'),
+                'tests_count' => $testsCount,
+                'revenue' => $revenue,
+            ];
+
+            $currentWeek->addWeek();
+        }
+
+        return $weeklyData;
+    }
+
+    /**
+     * Get age group for patient
+     */
+    private function getAgeGroup($age)
+    {
+        if ($age === null) return 'Unknown';
+        if ($age < 18) return 'Under 18';
+        if ($age < 30) return '18-29';
+        if ($age < 45) return '30-44';
+        if ($age < 60) return '45-59';
+        return '60+';
+    }
 }

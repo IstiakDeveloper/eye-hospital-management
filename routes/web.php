@@ -98,6 +98,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/vision-tests', [VisionTestController::class, 'index'])->name('visiontests.index');
         Route::get('/vision-tests/{visiontest}', [VisionTestController::class, 'show'])->name('visiontests.show');
         Route::get('/vision-tests/{visiontest}/print', [VisionTestController::class, 'print'])->name('visiontests.print');
+        Route::get('/visiontests/{patient}/download-blank', [VisionTestController::class, 'downloadBlankReport'])
+            ->name('visiontests.download-blank');
     });
 
     // Refractionist only routes
@@ -163,6 +165,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/prescriptions/{prescription}/edit', [PrescriptionController::class, 'edit'])->name('prescriptions.edit')->middleware('doctor');
     Route::put('/prescriptions/{prescription}', [PrescriptionController::class, 'update'])->name('prescriptions.update')->middleware('doctor');
     Route::get('/prescriptions/{prescription}/print', [PrescriptionController::class, 'print'])->name('prescriptions.print');
+    Route::get('/prescriptions/{patient}/download-blank', [PrescriptionController::class, 'downloadBlankPrescription'])
+        ->name('prescriptions.download-blank');
 
     // Super Admin Routes - Only Super Admin
     Route::middleware(['super-admin'])->group(function () {

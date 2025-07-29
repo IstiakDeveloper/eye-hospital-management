@@ -10,8 +10,10 @@ import {
     ClockIcon, Glasses, Palette, DollarSign,
     Package, Layers, Settings, Sparkles, Info,
     CreditCard, Truck, Calendar as CalendarIcon,
-    Copy, Trash2, RotateCcw, BookOpen, Zap
+    Copy, Trash2, RotateCcw, BookOpen, Zap,
+    Download
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // Complete Type definitions
 interface Patient {
@@ -161,6 +163,8 @@ export default function PrescriptionCreate({
     const [showMedicineHelp, setShowMedicineHelp] = useState(false);
     const [showGlassesHelp, setShowGlassesHelp] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDownloadingBlank, setIsDownloadingBlank] = useState(false);
+
 
     // Group medicines by type for easier selection
     const medicinesByType = medicines.reduce((acc, medicine) => {
@@ -236,6 +240,18 @@ export default function PrescriptionCreate({
             sessionStorage.removeItem('duplicate_prescription');
         }
     }, []);
+
+    const handleDownloadBlankPrescription = async () => {
+        setIsDownloadingBlank(true);
+        try {
+            // Use window.open for direct download
+            window.open(route('prescriptions.download-blank', patient.id), '_blank');
+            setIsDownloadingBlank(false);
+        } catch (error) {
+            setIsDownloadingBlank(false);
+            alert('Failed to download blank prescription. Please try again.');
+        }
+    };
 
     // Medicine Management Functions
     const addMedicineItem = () => {
@@ -503,6 +519,27 @@ export default function PrescriptionCreate({
                             <h1 className="text-3xl font-bold text-gray-900">Create Medical Prescription</h1>
                             <p className="text-gray-600 mt-1">Write a comprehensive medical prescription for {patient.name}</p>
                         </div>
+                        <div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleDownloadBlankPrescription}
+                                disabled={isDownloadingBlank}
+                                className="flex items-center space-x-2 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 text-purple-700 hover:from-purple-100 hover:to-indigo-100"
+                            >
+                                {isDownloadingBlank ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                                        <span>Downloading...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download className="h-4 w-4" />
+                                        <span>Download Blank Prescription</span>
+                                    </>
+                                )}
+                            </Button>
+                        </div>
                         <div className="flex items-center space-x-3">
                             <div className="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-lg">
                                 <Stethoscope className="h-4 w-4 text-blue-600" />
@@ -734,108 +771,6 @@ export default function PrescriptionCreate({
                         )}
                     </div>
 
-                    {/* Latest Vision Test */}
-                    {latestVisionTest && (
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                    <Eye className="h-5 w-5 text-purple-600" />
-                                    Latest Vision Test Results ({latestVisionTest.formatted_date})
-                                </h3>
-                                <span className="text-xs text-gray-500 flex items-center gap-1">
-                                    <UserCheck className="h-3 w-3" />
-                                    Performed by: {latestVisionTest.performed_by}
-                                </span>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Right Eye */}
-                                <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-xl p-5">
-                                    <h4 className="font-bold text-red-700 mb-4 flex items-center">
-                                        <Target className="h-4 w-4 mr-2" />
-                                        Right Eye (OD)
-                                    </h4>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                                            <span className="text-sm text-gray-600">Vision:</span>
-                                            <div className="flex items-center space-x-2">
-                                                <span className="font-bold text-gray-900">{latestVisionTest.right_eye_vision || 'N/A'}</span>
-                                                <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
-                                                    {getVisionScore(latestVisionTest.right_eye_vision)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-2 text-xs">
-                                            <div className="bg-white p-2 rounded text-center">
-                                                <span className="text-gray-500">SPH</span>
-                                                <p className="font-medium">{latestVisionTest.right_eye_sphere || 'N/A'}</p>
-                                            </div>
-                                            <div className="bg-white p-2 rounded text-center">
-                                                <span className="text-gray-500">CYL</span>
-                                                <p className="font-medium">{latestVisionTest.right_eye_cylinder || 'N/A'}</p>
-                                            </div>
-                                            <div className="bg-white p-2 rounded text-center">
-                                                <span className="text-gray-500">AXIS</span>
-                                                <p className="font-medium">{latestVisionTest.right_eye_axis || 'N/A'}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Left Eye */}
-                                <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-5">
-                                    <h4 className="font-bold text-blue-700 mb-4 flex items-center">
-                                        <Target className="h-4 w-4 mr-2" />
-                                        Left Eye (OS)
-                                    </h4>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center p-2 bg-white rounded-lg">
-                                            <span className="text-sm text-gray-600">Vision:</span>
-                                            <div className="flex items-center space-x-2">
-                                                <span className="font-bold text-gray-900">{latestVisionTest.left_eye_vision || 'N/A'}</span>
-                                                <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
-                                                    {getVisionScore(latestVisionTest.left_eye_vision)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-2 text-xs">
-                                            <div className="bg-white p-2 rounded text-center">
-                                                <span className="text-gray-500">SPH</span>
-                                                <p className="font-medium">{latestVisionTest.left_eye_sphere || 'N/A'}</p>
-                                            </div>
-                                            <div className="bg-white p-2 rounded text-center">
-                                                <span className="text-gray-500">CYL</span>
-                                                <p className="font-medium">{latestVisionTest.left_eye_cylinder || 'N/A'}</p>
-                                            </div>
-                                            <div className="bg-white p-2 rounded text-center">
-                                                <span className="text-gray-500">AXIS</span>
-                                                <p className="font-medium">{latestVisionTest.left_eye_axis || 'N/A'}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {latestVisionTest.pupillary_distance && (
-                                <div className="mt-4 p-3 bg-purple-50 rounded-lg">
-                                    <span className="text-purple-600 text-sm font-medium flex items-center gap-1">
-                                        <Target className="h-3 w-3" />
-                                        PD: {latestVisionTest.pupillary_distance}mm
-                                    </span>
-                                </div>
-                            )}
-
-                            {latestVisionTest.additional_notes && (
-                                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                                    <span className="text-gray-600 text-sm font-medium flex items-center gap-1">
-                                        <FileText className="h-3 w-3" />
-                                        Notes:
-                                    </span>
-                                    <p className="text-gray-700 text-sm mt-1">{latestVisionTest.additional_notes}</p>
-                                </div>
-                            )}
-                        </div>
-                    )}
 
                     <form onSubmit={handleSubmit}>
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">

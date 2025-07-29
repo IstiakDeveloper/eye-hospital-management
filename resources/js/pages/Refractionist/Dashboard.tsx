@@ -459,14 +459,7 @@ const RefractionistDashboard: React.FC<Props> = ({
                     )}
 
                     {/* Quick Actions */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button
-                            onClick={() => router.visit(route('visiontests.index'))}
-                            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-2xl font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
-                        >
-                            <Eye className="h-6 w-6" />
-                            All Vision Tests
-                        </button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
                         <button
                             onClick={() => router.visit(route('patients.index'))}

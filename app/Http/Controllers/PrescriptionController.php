@@ -897,6 +897,112 @@ class PrescriptionController extends Controller
         }
     }
 
+
+    /**
+     * Download blank prescription form for a patient
+     */
+    public function downloadBlankPrescription($patientId)
+    {
+        try {
+            $user = auth()->user();
+
+            // Check authentication
+            if (!$user) {
+                return redirect()->route('login');
+            }
+
+            // Ensure the user is a doctor
+            $doctor = $user->doctor;
+            if (!$doctor) {
+                $doctor = Doctor::where('user_id', $user->id)->first();
+                if (!$doctor) {
+                    return back()->withErrors([
+                        'error' => 'Only doctors can download prescription forms.'
+                    ]);
+                }
+            }
+
+            // Get patient
+            $patient = Patient::findOrFail($patientId);
+
+            // Create a blank prescription object with patient data only
+            $blankPrescription = (object) [
+                'id' => 'DEMO',
+                'patient' => $patient,
+                'doctor' => $doctor,
+                'created_at' => now(),
+                'appointment' => null,
+
+                // All prescription fields as null/empty for blank form
+                'diagnosis' => '',
+                'advice' => '',
+                'notes' => '',
+                'followup_date' => null,
+                'includes_glasses' => false,
+                'glasses_notes' => '',
+
+                // Empty collections for medicines and glasses
+                'prescriptionMedicines' => collect([]),
+                'prescriptionGlasses' => collect([]),
+            ];
+
+            // Add doctor user relationship
+            $doctor->user = $user;
+
+            // Generate PDF using the same template
+            $pdf = Pdf::loadView('prescriptions.print', [
+                'prescription' => $blankPrescription,
+                'print_date' => now()->format('M d, Y h:i A'),
+                'printed_by' => $user->name,
+                'has_glasses' => false,
+                'glasses_count' => 0,
+                'isBlankPrescription' => true // Flag to indicate this is a blank prescription
+            ]);
+
+            // Set exact A4 portrait with optimized settings
+            $pdf->setPaper('A4', 'portrait');
+            $pdf->setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isPhpEnabled' => true,
+                'defaultFont' => 'Times-Roman',
+                'dpi' => 96,
+                'defaultPaperSize' => 'A4',
+                'orientation' => 'portrait',
+                'isRemoteEnabled' => false,
+                'debugKeepTemp' => false,
+                'chroot' => public_path(),
+                'fontDir' => storage_path('fonts/'),
+                'fontCache' => storage_path('fonts/'),
+                'tempDir' => sys_get_temp_dir(),
+                'rootDir' => public_path(),
+                'isJavascriptEnabled' => false,
+                'defaultMediaType' => 'print'
+            ]);
+
+            $filename = 'blank-prescription-' . $patient->patient_id . '.pdf';
+
+            Log::info('Blank prescription downloaded', [
+                'patient_id' => $patient->id,
+                'patient_code' => $patient->patient_id,
+                'doctor_id' => $doctor->id,
+                'downloaded_by' => $user->name,
+            ]);
+
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            Log::error('Blank Prescription Download Error: ' . $e->getMessage(), [
+                'patient_id' => $patientId,
+                'user_id' => auth()->id(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->withErrors([
+                'error' => 'Failed to download blank prescription: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+
     /**
      * Get prescription history for a patient
      */

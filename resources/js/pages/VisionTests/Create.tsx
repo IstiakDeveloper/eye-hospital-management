@@ -33,7 +33,8 @@ import {
     Check,
     Stethoscope,
     Heart,
-    Pill
+    Pill,
+    Download
 } from 'lucide-react';
 
 interface Patient {
@@ -107,6 +108,8 @@ const STEPS = [
 
 export default function VisionTestCreate({ patient, latestTest }: VisionTestCreateProps) {
     const [currentStep, setCurrentStep] = useState(0);
+
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const { data, setData, post, processing, errors } = useForm({
         // Complaints
@@ -201,13 +204,25 @@ export default function VisionTestCreate({ patient, latestTest }: VisionTestCrea
     const commonIOPValues = ['10', '12', '14', '16', '18', '20', '22'];
     const commonBPValues = ['120/80', '130/85', '140/90', '150/95'];
 
+
+    const handleDownloadBlankReport = async () => {
+        setIsDownloading(true);
+        try {
+            // Use window.open for direct download
+            window.open(route('visiontests.download-blank', patient.id), '_blank');
+            setIsDownloading(false);
+        } catch (error) {
+            setIsDownloading(false);
+            alert('Failed to download blank report. Please try again.');
+        }
+    };
     const QuickSelectButton = ({ value, onClick, current }: { value: string; onClick: () => void; current: string }) => (
         <button
             type="button"
             onClick={onClick}
             className={`px-2 py-1 text-xs rounded-md border transition-all ${current === value
-                    ? 'bg-blue-500 text-white border-blue-500'
-                    : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                ? 'bg-blue-500 text-white border-blue-500'
+                : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
                 }`}
         >
             {value}
@@ -929,6 +944,27 @@ export default function VisionTestCreate({ patient, latestTest }: VisionTestCrea
                                     </div>
                                 )}
                             </div>
+                        </div>
+                        <div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleDownloadBlankReport}
+                                disabled={isDownloading}
+                                className="flex items-center space-x-2 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100"
+                            >
+                                {isDownloading ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                                        <span>Downloading...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Download className="h-4 w-4" />
+                                        <span>Download Demo Report</span>
+                                    </>
+                                )}
+                            </Button>
                         </div>
                     </div>
 

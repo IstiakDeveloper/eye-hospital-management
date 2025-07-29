@@ -19,17 +19,25 @@
             margin: 5mm;
         }
 
+        @font-face {
+            font-family: 'Noto Sans Bengali';
+            src: url('{{ storage_path('fonts/cache/nato.ttf') }}') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+
         html,
         body {
             width: 210mm;
             height: 297mm;
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
+            font-family: 'Noto Sans Bengali', 'SolaimanLipi', Arial, sans-serif;
             font-size: 10px;
-            line-height: 1.3;
+            line-height: 1.4;
             color: #000;
             background: white;
+            unicode-bidi: bidi-override;
         }
 
         /* Main Container */

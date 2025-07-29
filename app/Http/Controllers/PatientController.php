@@ -22,7 +22,27 @@ class PatientController extends Controller
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
         $query = Patient::query()->with('registeredBy');
+        // If user is a doctor, only show their associated patients
+        if ($user->role->name == 'Doctor' && $user->doctor) {
+            // Get patients through visits where this doctor was selected
+            // or through prescriptions created by this doctor
+            // or through appointments with this doctor
+            $query->where(function ($q) use ($user) {
+                $q->whereHas('visits', function ($visitQuery) use ($user) {
+                    $visitQuery->where('selected_doctor_id', $user->doctor->id);
+                })
+                    ->orWhereHas('prescriptions', function ($prescriptionQuery) use ($user) {
+                        $prescriptionQuery->where('doctor_id', $user->doctor->id);
+                    })
+                    ->orWhereHas('appointments', function ($appointmentQuery) use ($user) {
+                        $appointmentQuery->where('doctor_id', $user->doctor->id);
+                    });
+            });
+        }
+        // For admin, receptionist, refractionist - show all patients
+        // No additional filtering needed
 
         // Search functionality
         if ($request->filled('search')) {
@@ -50,6 +70,8 @@ class PatientController extends Controller
         return Inertia::render('Patients/Index', [
             'patients' => $patients,
             'filters' => $request->only(['search', 'gender']),
+            'userRole' => $user->role, // Pass user role to frontend
+            'isDoctorView' => $user->role === 'doctor', // Helper flag
         ]);
     }
 
@@ -324,6 +346,17 @@ class PatientController extends Controller
             'patient' => $patient,
             'visit' => $visit,
             'payment' => $latestPayment,
+        ]);
+    }
+
+
+    /**
+     * Show edit form for patient
+     */
+    public function edit(Patient $patient)
+    {
+        return Inertia::render('Patients/Edit', [
+            'patient' => $patient,
         ]);
     }
 
