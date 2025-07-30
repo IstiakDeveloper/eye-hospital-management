@@ -5,9 +5,12 @@ use App\Http\Controllers\AppointmentDisplayController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\DoctorDashboardController;
+use App\Http\Controllers\HospitalAccount\HospitalAccountController;
+use App\Http\Controllers\MedicineAccount\MedicineAccountController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\MedicineCornerController;
 use App\Http\Controllers\MedicineSellerDashboardController;
+use App\Http\Controllers\OpticsAccount\OpticsAccountController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientVisitController;
 use App\Http\Controllers\PrescriptionController;
@@ -450,6 +453,66 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
         ], 500);
     }
 })->name('patient.save-qr');
+
+
+
+
+
+
+
+
+Route::middleware(['auth', 'super-admin'])->group(function () {
+
+    Route::prefix('hospital-account')->name('hospital-account.')->group(function () {
+        Route::get('/', [HospitalAccountController::class, 'index'])->name('dashboard');
+        Route::post('/fund-in', [HospitalAccountController::class, 'fundIn'])->name('fund-in');
+        Route::post('/fund-out', [HospitalAccountController::class, 'fundOut'])->name('fund-out');
+        Route::post('/expense', [HospitalAccountController::class, 'addExpense'])->name('expense');
+        Route::get('/transactions', [HospitalAccountController::class, 'transactions'])->name('transactions');
+        Route::get('/fund-history', [HospitalAccountController::class, 'fundHistory'])->name('fund-history');
+        Route::get('/categories', [HospitalAccountController::class, 'categories'])->name('categories');
+        Route::post('/categories', [HospitalAccountController::class, 'storeCategory'])->name('categories.store');
+        Route::put('/categories/{category}', [HospitalAccountController::class, 'updateCategory'])->name('categories.update');
+        Route::get('/monthly-report', [HospitalAccountController::class, 'monthlyReport'])->name('monthly-report');
+        Route::get('/balance-sheet', [HospitalAccountController::class, 'balanceSheet'])->name('balance-sheet');
+    });
+
+    Route::prefix('medicine-account')->name('medicine-account.')->group(function () {
+        Route::get('/', [MedicineAccountController::class, 'index'])->name('dashboard');
+        Route::post('/fund-in', [MedicineAccountController::class, 'fundIn'])->name('fund-in');
+        Route::post('/fund-out', [MedicineAccountController::class, 'fundOut'])->name('fund-out');
+        Route::post('/expense', [MedicineAccountController::class, 'addExpense'])->name('expense');
+        Route::get('/transactions', [MedicineAccountController::class, 'transactions'])->name('transactions');
+        Route::get('/fund-history', [MedicineAccountController::class, 'fundHistory'])->name('fund-history');
+        Route::get('/categories', [MedicineAccountController::class, 'categories'])->name('categories');
+        Route::post('/categories', [MedicineAccountController::class, 'storeCategory'])->name('categories.store');
+        Route::put('/categories/{category}', [MedicineAccountController::class, 'updateCategory'])->name('categories.update');
+        Route::get('/monthly-report', [MedicineAccountController::class, 'monthlyReport'])->name('monthly-report');
+        Route::get('/balance-sheet', [MedicineAccountController::class, 'balanceSheet'])->name('balance-sheet');
+        Route::get('/analytics', [MedicineAccountController::class, 'analytics'])->name('analytics');
+        Route::get('/stock-value-report', [MedicineAccountController::class, 'stockValueReport'])->name('stock-value-report');
+        Route::post('/export', [MedicineAccountController::class, 'exportReport'])->name('export');
+    });
+
+    Route::prefix('optics-account')->name('optics-account.')->group(function () {
+        Route::get('/', [OpticsAccountController::class, 'index'])->name('dashboard');
+        Route::post('/fund-in', [OpticsAccountController::class, 'fundIn'])->name('fund-in');
+        Route::post('/fund-out', [OpticsAccountController::class, 'fundOut'])->name('fund-out');
+        Route::post('/expense', [OpticsAccountController::class, 'addExpense'])->name('expense');
+        Route::get('/transactions', [OpticsAccountController::class, 'transactions'])->name('transactions');
+        Route::get('/fund-history', [OpticsAccountController::class, 'fundHistory'])->name('fund-history');
+        Route::get('/categories', [OpticsAccountController::class, 'categories'])->name('categories');
+        Route::post('/categories', [OpticsAccountController::class, 'storeCategory'])->name('categories.store');
+        Route::put('/categories/{category}', [OpticsAccountController::class, 'updateCategory'])->name('categories.update');
+        Route::get('/monthly-report', [OpticsAccountController::class, 'monthlyReport'])->name('monthly-report');
+        Route::get('/balance-sheet', [OpticsAccountController::class, 'balanceSheet'])->name('balance-sheet');
+        Route::get('/analytics', [OpticsAccountController::class, 'analytics'])->name('analytics');
+        Route::get('/inventory-report', [OpticsAccountController::class, 'inventoryReport'])->name('inventory-report');
+        Route::post('/export', [OpticsAccountController::class, 'exportReport'])->name('export');
+    });
+});
+
+
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';

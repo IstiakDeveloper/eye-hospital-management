@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Medicine;
+use App\Models\MedicineAccount;
 use App\Models\MedicineStock;
 use App\Models\MedicineSale;
 use App\Models\MedicineSaleItem;
@@ -181,7 +182,6 @@ class MedicineSellerDashboardController extends Controller
      */
     public function processSale(Request $request)
     {
-        // dd($request->all());
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
             'items.*.medicine_stock_id' => 'required|exists:medicine_stocks,id',
@@ -214,6 +214,7 @@ class MedicineSellerDashboardController extends Controller
             $subtotal = 0;
             $totalProfit = 0;
             $saleItems = [];
+            $medicineNames = [];
 
             foreach ($request->items as $item) {
                 $stock = MedicineStock::findOrFail($item['medicine_stock_id']);
@@ -228,6 +229,7 @@ class MedicineSellerDashboardController extends Controller
 
                 $subtotal += $lineTotal;
                 $totalProfit += $lineProfit;
+                $medicineNames[] = $stock->medicine->name;
 
                 $saleItems[] = [
                     'stock' => $stock,
@@ -290,9 +292,29 @@ class MedicineSellerDashboardController extends Controller
                 $saleItem['stock']->medicine->updateTotalStock();
             }
 
+            // ✅ ADD TO MEDICINE ACCOUNT AS INCOME
+            $customerInfo = $request->patient_id ?
+                "Patient ID: {$request->patient_id}" : ($request->customer_name ? "Customer: {$request->customer_name}" : "Walk-in customer");
+
+            $medicineList = implode(', ', array_slice($medicineNames, 0, 3));
+            if (count($medicineNames) > 3) {
+                $medicineList .= ' + ' . (count($medicineNames) - 3) . ' more';
+            }
+
+            $medicineTransaction = MedicineAccount::addIncome(
+                $totalAmount,
+                'medicine_sale',
+                "Medicine sale - Invoice: {$invoiceNumber} | {$customerInfo} | Medicines: {$medicineList}",
+                'medicine_sales',
+                $sale->id
+            );
+
+            // Link sale to medicine transaction
+            $sale->update(['medicine_transaction_id' => $medicineTransaction->id]);
+
             DB::commit();
 
-            return redirect()->back()->with('success', "Sale completed successfully! Invoice: {$invoiceNumber}");
+            return redirect()->back()->with('success', "Sale completed successfully! Invoice: {$invoiceNumber} | Amount added to Medicine Account: ৳{$totalAmount}");
         } catch (\Exception $e) {
             DB::rollback();
             return redirect()->back()->with('error', 'Sale failed: ' . $e->getMessage());

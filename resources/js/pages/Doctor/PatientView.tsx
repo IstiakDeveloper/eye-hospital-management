@@ -278,8 +278,12 @@ const DoctorPatientView: React.FC<Props> = ({
         }
     };
 
+    const handlePrint = (visionTestId: number) => {
+        window.open(route('visiontests.print', visionTestId), '_blank');
+    };
+
     const printVisionTest = (visionTestId: number) => {
-        window.open(route('vision-tests.print', visionTestId), '_blank');
+        window.open(route('visiontests.print', visionTestId), '_blank');
     };
 
     const printPrescription = (prescriptionId: number) => {
@@ -605,7 +609,7 @@ const DoctorPatientView: React.FC<Props> = ({
                                     </span>
                                 </h2>
                                 <button
-                                    onClick={() => printVisionTest(latestVisionTest.id)}
+                                    onClick={() => handlePrint(latestVisionTest.id)}
                                     className="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
                                 >
                                     <Printer className="h-4 w-4" />
@@ -772,58 +776,50 @@ const DoctorPatientView: React.FC<Props> = ({
                                 <div className="flex items-center">
                                     {/* Payment Step */}
                                     <div className="flex items-center">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                            latestVisit.payment_status === 'paid' ? 'bg-green-500' : 'bg-gray-300'
-                                        }`}>
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${latestVisit.payment_status === 'paid' ? 'bg-green-500' : 'bg-gray-300'
+                                            }`}>
                                             {latestVisit.payment_status === 'paid' ? (
                                                 <CheckCircle className="h-4 w-4 text-white" />
                                             ) : (
                                                 <DollarSign className="h-4 w-4 text-white" />
                                             )}
                                         </div>
-                                        <span className={`ml-2 text-sm font-medium ${
-                                            latestVisit.payment_status === 'paid' ? 'text-green-600' : 'text-gray-500'
-                                        }`}>
+                                        <span className={`ml-2 text-sm font-medium ${latestVisit.payment_status === 'paid' ? 'text-green-600' : 'text-gray-500'
+                                            }`}>
                                             Payment
                                         </span>
                                     </div>
 
-                                    <div className={`flex-1 h-0.5 mx-4 ${
-                                        latestVisit.payment_status === 'paid' ? 'bg-green-500' : 'bg-gray-300'
-                                    }`}></div>
+                                    <div className={`flex-1 h-0.5 mx-4 ${latestVisit.payment_status === 'paid' ? 'bg-green-500' : 'bg-gray-300'
+                                        }`}></div>
 
                                     {/* Vision Test Step */}
                                     <div className="flex items-center">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                            latestVisit.vision_test_status === 'completed' ? 'bg-green-500' :
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${latestVisit.vision_test_status === 'completed' ? 'bg-green-500' :
                                             latestVisit.payment_status === 'paid' ? 'bg-blue-500' : 'bg-gray-300'
-                                        }`}>
+                                            }`}>
                                             <Eye className="h-4 w-4 text-white" />
                                         </div>
-                                        <span className={`ml-2 text-sm font-medium ${
-                                            latestVisit.vision_test_status === 'completed' ? 'text-green-600' :
+                                        <span className={`ml-2 text-sm font-medium ${latestVisit.vision_test_status === 'completed' ? 'text-green-600' :
                                             latestVisit.payment_status === 'paid' ? 'text-blue-600' : 'text-gray-500'
-                                        }`}>
+                                            }`}>
                                             Vision Test
                                         </span>
                                     </div>
 
-                                    <div className={`flex-1 h-0.5 mx-4 ${
-                                        latestVisit.vision_test_status === 'completed' ? 'bg-green-500' : 'bg-gray-300'
-                                    }`}></div>
+                                    <div className={`flex-1 h-0.5 mx-4 ${latestVisit.vision_test_status === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                                        }`}></div>
 
                                     {/* Prescription Step */}
                                     <div className="flex items-center">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                            latestVisit.overall_status === 'completed' ? 'bg-green-500' :
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${latestVisit.overall_status === 'completed' ? 'bg-green-500' :
                                             latestVisit.overall_status === 'prescription' ? 'bg-blue-500' : 'bg-gray-300'
-                                        }`}>
+                                            }`}>
                                             <Stethoscope className="h-4 w-4 text-white" />
                                         </div>
-                                        <span className={`ml-2 text-sm font-medium ${
-                                            latestVisit.overall_status === 'completed' ? 'text-green-600' :
+                                        <span className={`ml-2 text-sm font-medium ${latestVisit.overall_status === 'completed' ? 'text-green-600' :
                                             latestVisit.overall_status === 'prescription' ? 'text-blue-600' : 'text-gray-500'
-                                        }`}>
+                                            }`}>
                                             Prescription
                                         </span>
                                     </div>
@@ -861,16 +857,16 @@ const DoctorPatientView: React.FC<Props> = ({
                             <div className="flex items-center justify-center gap-4">
                                 {/* Ready for Prescription */}
                                 {latestVisit.overall_status === 'prescription' &&
-                                 latestVisit.payment_status === 'paid' &&
-                                 latestVisit.vision_test_status === 'completed' && (
-                                    <button
-                                        onClick={createPrescription}
-                                        className="px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold text-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-3 shadow-xl"
-                                    >
-                                        <Plus className="h-6 w-6" />
-                                        Write Prescription
-                                    </button>
-                                )}
+                                    latestVisit.payment_status === 'paid' &&
+                                    latestVisit.vision_test_status === 'completed' && (
+                                        <button
+                                            onClick={createPrescription}
+                                            className="px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold text-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-3 shadow-xl"
+                                        >
+                                            <Plus className="h-6 w-6" />
+                                            Write Prescription
+                                        </button>
+                                    )}
 
                                 {/* Status Messages */}
                                 {latestVisit.payment_status !== 'paid' && (

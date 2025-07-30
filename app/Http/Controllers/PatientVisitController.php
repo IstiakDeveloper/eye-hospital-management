@@ -61,6 +61,18 @@ class PatientVisitController extends Controller
                         'received_by' => auth()->id(),
                     ]);
 
+                    // ✅ ADD TO HOSPITAL ACCOUNT
+                    $hospitalTransaction = HospitalAccount::addIncome(
+                        $request->payment_amount,
+                        'patient_payment',
+                        "Visit payment from Patient: {$patient->name} (ID: {$patient->patient_id})",
+                        'patient_payments',
+                        $payment->id
+                    );
+
+                    // Link payment to hospital transaction
+                    $payment->update(['hospital_transaction_id' => $hospitalTransaction->id]);
+
                     // Update visit totals
                     $visit->updateTotals();
 
@@ -85,6 +97,7 @@ class PatientVisitController extends Controller
                 ->with('error', 'Visit creation failed: ' . $e->getMessage());
         }
     }
+
 
     /**
      * Show visit details

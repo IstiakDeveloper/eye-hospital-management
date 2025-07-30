@@ -564,14 +564,14 @@ class VisionTestController extends Controller
     }
 
     /**
-     * Print the vision test report.
+     * Print the vision test report (TSX version)
      */
     public function print($id)
     {
         $visionTest = VisionTest::with(['patient', 'performedBy'])
             ->findOrFail($id);
 
-        // Prepare QR code base64 for PDF
+        // Prepare QR code base64 for frontend
         $qrCodeBase64 = null;
         if ($visionTest->patient->qr_code_image_path) {
             $qrImagePath = storage_path('app/public/' . $visionTest->patient->qr_code_image_path);
@@ -584,40 +584,80 @@ class VisionTestController extends Controller
             }
         }
 
-        // Generate PDF with Bangla font support
-        $pdf = Pdf::loadView('vision-tests.print', [
-            'visionTest' => $visionTest,
-            'qrCodeBase64' => $qrCodeBase64
+        // Render TSX print page instead of PDF
+        return Inertia::render('VisionTests/Print', [
+            'visionTest' => [
+                'id' => $visionTest->id,
+                'test_date' => $visionTest->test_date,
+                'complains' => $visionTest->complains,
+                'right_eye_diagnosis' => $visionTest->right_eye_diagnosis,
+                'left_eye_diagnosis' => $visionTest->left_eye_diagnosis,
+                'right_eye_lids' => $visionTest->right_eye_lids,
+                'left_eye_lids' => $visionTest->left_eye_lids,
+                'right_eye_conjunctiva' => $visionTest->right_eye_conjunctiva,
+                'left_eye_conjunctiva' => $visionTest->left_eye_conjunctiva,
+                'right_eye_cornea' => $visionTest->right_eye_cornea,
+                'left_eye_cornea' => $visionTest->left_eye_cornea,
+                'right_eye_anterior_chamber' => $visionTest->right_eye_anterior_chamber,
+                'left_eye_anterior_chamber' => $visionTest->left_eye_anterior_chamber,
+                'right_eye_iris' => $visionTest->right_eye_iris,
+                'left_eye_iris' => $visionTest->left_eye_iris,
+                'right_eye_pupil' => $visionTest->right_eye_pupil,
+                'left_eye_pupil' => $visionTest->left_eye_pupil,
+                'right_eye_lens' => $visionTest->right_eye_lens,
+                'left_eye_lens' => $visionTest->left_eye_lens,
+                'right_eye_ocular_movements' => $visionTest->right_eye_ocular_movements,
+                'left_eye_ocular_movements' => $visionTest->left_eye_ocular_movements,
+                'right_eye_vision_without_glass' => $visionTest->right_eye_vision_without_glass,
+                'left_eye_vision_without_glass' => $visionTest->left_eye_vision_without_glass,
+                'right_eye_vision_with_glass' => $visionTest->right_eye_vision_with_glass,
+                'left_eye_vision_with_glass' => $visionTest->left_eye_vision_with_glass,
+                'right_eye_iop' => $visionTest->right_eye_iop,
+                'left_eye_iop' => $visionTest->left_eye_iop,
+                'right_eye_ducts' => $visionTest->right_eye_ducts,
+                'left_eye_ducts' => $visionTest->left_eye_ducts,
+                'blood_pressure' => $visionTest->blood_pressure,
+                'urine_sugar' => $visionTest->urine_sugar,
+                'blood_sugar' => $visionTest->blood_sugar,
+                'right_eye_fundus' => $visionTest->right_eye_fundus,
+                'left_eye_fundus' => $visionTest->left_eye_fundus,
+                'detailed_history' => $visionTest->detailed_history,
+                'is_one_eyed' => $visionTest->is_one_eyed,
+                'is_diabetic' => $visionTest->is_diabetic,
+                'is_cardiac' => $visionTest->is_cardiac,
+                'is_asthmatic' => $visionTest->is_asthmatic,
+                'is_hypertensive' => $visionTest->is_hypertensive,
+                'is_thyroid' => $visionTest->is_thyroid,
+                'other_conditions' => $visionTest->other_conditions,
+                'drugs_used' => $visionTest->drugs_used,
+                'patient' => [
+                    'id' => $visionTest->patient->id,
+                    'patient_id' => $visionTest->patient->patient_id,
+                    'name' => $visionTest->patient->name,
+                    'phone' => $visionTest->patient->phone,
+                    'address' => $visionTest->patient->address,
+                    'date_of_birth' => $visionTest->patient->date_of_birth,
+                    'gender' => $visionTest->patient->gender,
+                    'age' => $visionTest->patient->date_of_birth ?
+                        \Carbon\Carbon::parse($visionTest->patient->date_of_birth)->age : null,
+                ],
+                'performedBy' => [
+                    'name' => $visionTest->performedBy->name ?? 'N/A',
+                ]
+            ],
+            'qrCodeBase64' => $qrCodeBase64,
+            'hospitalInfo' => [
+                'name' => 'Naogaon Islami Eye Hospital & Phaco Center',
+                'address' => 'Main Road, Beside Naogaon Fisheries Building, Naogaon Sadar, Naogaon',
+                'contact' => 'Mobile: 01307-885566; Email: niehpc@gmail.com'
+            ]
+
         ]);
-
-        $pdf->setPaper('A4', 'portrait');
-
-        // Configure for Bangla support
-        $pdf->setOptions([
-            'isHtml5ParserEnabled' => true,
-            'isPhpEnabled' => true,
-            'defaultFont' => 'Noto Sans Bengali', // Use Bangla font as default
-            'dpi' => 96,
-            'defaultPaperSize' => 'A4',
-            'orientation' => 'portrait',
-            'isRemoteEnabled' => false,
-            'debugKeepTemp' => false,
-            'chroot' => public_path(),
-            'fontDir' => storage_path('fonts/'), // Point to our font directory
-            'fontCache' => storage_path('fonts/cache/'), // Font cache directory
-            'tempDir' => sys_get_temp_dir(),
-            'rootDir' => public_path(),
-            'isJavascriptEnabled' => false,
-            'defaultMediaType' => 'print',
-            'isFontSubsettingEnabled' => true, // Enable font subsetting for better performance
-            'isUnicode' => true, // Enable Unicode support
-        ]);
-
-        $filename = 'vision-test-' . $visionTest->patient->patient_id . '.pdf';
-
-        return $pdf->download($filename);
     }
 
+    /**
+     * Download blank vision test report (TSX version)
+     */
     public function downloadBlankReport(Patient $patient)
     {
         // Find the active visit
@@ -640,57 +680,7 @@ class VisionTestController extends Controller
             ]);
         }
 
-        // Create blank vision test object
-        $blankVisionTest = (object) [
-            'id' => 'DEMO',
-            'patient' => $patient,
-            'test_date' => now(),
-            'performedBy' => auth()->user(),
-            // All fields empty for blank form
-            'complains' => '',
-            'right_eye_diagnosis' => '',
-            'left_eye_diagnosis' => '',
-            'right_eye_lids' => '',
-            'left_eye_lids' => '',
-            'right_eye_conjunctiva' => '',
-            'left_eye_conjunctiva' => '',
-            'right_eye_cornea' => '',
-            'left_eye_cornea' => '',
-            'right_eye_anterior_chamber' => '',
-            'left_eye_anterior_chamber' => '',
-            'right_eye_iris' => '',
-            'left_eye_iris' => '',
-            'right_eye_pupil' => '',
-            'left_eye_pupil' => '',
-            'right_eye_lens' => '',
-            'left_eye_lens' => '',
-            'right_eye_ocular_movements' => '',
-            'left_eye_ocular_movements' => '',
-            'right_eye_vision_without_glass' => '',
-            'left_eye_vision_without_glass' => '',
-            'right_eye_vision_with_glass' => '',
-            'left_eye_vision_with_glass' => '',
-            'right_eye_iop' => '',
-            'left_eye_iop' => '',
-            'right_eye_ducts' => '',
-            'left_eye_ducts' => '',
-            'blood_pressure' => '',
-            'urine_sugar' => '',
-            'blood_sugar' => '',
-            'right_eye_fundus' => '',
-            'left_eye_fundus' => '',
-            'detailed_history' => '',
-            'is_one_eyed' => false,
-            'is_diabetic' => false,
-            'is_cardiac' => false,
-            'is_asthmatic' => false,
-            'is_hypertensive' => false,
-            'is_thyroid' => false,
-            'other_conditions' => '',
-            'drugs_used' => '',
-        ];
-
-        // Prepare QR code base64 for PDF
+        // Prepare QR code base64 for frontend
         $qrCodeBase64 = null;
         if ($patient->qr_code_image_path) {
             $qrImagePath = storage_path('app/public/' . $patient->qr_code_image_path);
@@ -702,40 +692,78 @@ class VisionTestController extends Controller
             }
         }
 
-        // Generate PDF with Bangla support
-        $pdf = Pdf::loadView('vision-tests.print', [
-            'visionTest' => $blankVisionTest,
+        // Render TSX print page with blank data
+        return Inertia::render('VisionTests/Print', [
+            'visionTest' => [
+                'id' => 'DEMO',
+                'test_date' => now(),
+                'complains' => '',
+                'right_eye_diagnosis' => '',
+                'left_eye_diagnosis' => '',
+                'right_eye_lids' => '',
+                'left_eye_lids' => '',
+                'right_eye_conjunctiva' => '',
+                'left_eye_conjunctiva' => '',
+                'right_eye_cornea' => '',
+                'left_eye_cornea' => '',
+                'right_eye_anterior_chamber' => '',
+                'left_eye_anterior_chamber' => '',
+                'right_eye_iris' => '',
+                'left_eye_iris' => '',
+                'right_eye_pupil' => '',
+                'left_eye_pupil' => '',
+                'right_eye_lens' => '',
+                'left_eye_lens' => '',
+                'right_eye_ocular_movements' => '',
+                'left_eye_ocular_movements' => '',
+                'right_eye_vision_without_glass' => '',
+                'left_eye_vision_without_glass' => '',
+                'right_eye_vision_with_glass' => '',
+                'left_eye_vision_with_glass' => '',
+                'right_eye_iop' => '',
+                'left_eye_iop' => '',
+                'right_eye_ducts' => '',
+                'left_eye_ducts' => '',
+                'blood_pressure' => '',
+                'urine_sugar' => '',
+                'blood_sugar' => '',
+                'right_eye_fundus' => '',
+                'left_eye_fundus' => '',
+                'detailed_history' => '',
+                'is_one_eyed' => false,
+                'is_diabetic' => false,
+                'is_cardiac' => false,
+                'is_asthmatic' => false,
+                'is_hypertensive' => false,
+                'is_thyroid' => false,
+                'other_conditions' => '',
+                'drugs_used' => '',
+                'patient' => [
+                    'id' => $patient->id,
+                    'patient_id' => $patient->patient_id,
+                    'name' => $patient->name,
+                    'phone' => $patient->phone,
+                    'address' => $patient->address,
+                    'date_of_birth' => $patient->date_of_birth,
+                    'gender' => $patient->gender,
+                    'age' => $patient->date_of_birth ?
+                        \Carbon\Carbon::parse($patient->date_of_birth)->age : null,
+                ],
+                'performedBy' => [
+                    'name' => auth()->user()->name ?? 'N/A',
+                ]
+            ],
             'qrCodeBase64' => $qrCodeBase64,
-            'isBlankReport' => true
+            'isBlankReport' => true,
+            'hospitalInfo' => [
+                'name' => 'Naogaon Islami Eye Hospital & Phaco Center',
+                'address' => 'Main Road, Beside Naogaon Fisheries Building, Naogaon Sadar, Naogaon',
+                'contact' => 'Mobile: 01307-885566; Email: niehpc@gmail.com'
+            ]
+
         ]);
-
-        $pdf->setPaper('A4', 'portrait');
-
-        // Configure for Bangla support
-        $pdf->setOptions([
-            'isHtml5ParserEnabled' => true,
-            'isPhpEnabled' => true,
-            'defaultFont' => 'Noto Sans Bengali',
-            'dpi' => 96,
-            'defaultPaperSize' => 'A4',
-            'orientation' => 'portrait',
-            'isRemoteEnabled' => false,
-            'debugKeepTemp' => false,
-            'chroot' => public_path(),
-            'fontDir' => storage_path('fonts/'),
-            'fontCache' => storage_path('fonts/cache/'),
-            'tempDir' => sys_get_temp_dir(),
-            'rootDir' => public_path(),
-            'isJavascriptEnabled' => false,
-            'defaultMediaType' => 'print',
-            'isFontSubsettingEnabled' => true,
-            'isUnicode' => true,
-        ]);
-
-        $filename = 'blank-vision-test-' . $patient->patient_id . '.pdf';
-
-        return $pdf->download($filename);
     }
+
 
     /**
      * Get vision test history for a patient

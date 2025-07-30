@@ -820,6 +820,7 @@ class PrescriptionController extends Controller
     /**
      * Print the prescription - Updated for simplified glasses
      */
+
     public function print($id)
     {
         try {
@@ -838,9 +839,9 @@ class PrescriptionController extends Controller
             if ($user->role === 'super_admin') {
                 $canPrint = true;
             } elseif ($user->role->name === 'Doctor' && $user->doctor) {
-                $canPrint = true; // Doctors can print any prescription for reference
+                $canPrint = true;
             } elseif (in_array($user->role, ['receptionist', 'refractionist'])) {
-                $canPrint = true; // Staff can print prescriptions
+                $canPrint = true;
             }
 
             if (!$canPrint) {
@@ -848,55 +849,85 @@ class PrescriptionController extends Controller
                     ->with('error', 'You are not authorized to print this prescription');
             }
 
-            // Generate PDF with enhanced settings
-            $pdf = Pdf::loadView('prescriptions.print', [
-                'prescription' => $prescription,
-                'print_date' => now()->format('M d, Y h:i A'),
-                'printed_by' => $user->name,
-                'has_glasses' => $prescription->prescriptionGlasses->count() > 0,
-                'glasses_count' => $prescription->prescriptionGlasses->count(),
-            ]);
-
-            // Set exact A4 portrait with optimized settings
-            $pdf->setPaper('A4', 'portrait');
-            $pdf->setOptions([
-                'isHtml5ParserEnabled' => true,
-                'isPhpEnabled' => true,
-                'defaultFont' => 'Times-Roman',
-                'dpi' => 96,
-                'defaultPaperSize' => 'A4',
-                'orientation' => 'portrait',
-                'isRemoteEnabled' => false,
-                'debugKeepTemp' => false,
-                'chroot' => public_path(),
-                'fontDir' => storage_path('fonts/'),
-                'fontCache' => storage_path('fonts/'),
-                'tempDir' => sys_get_temp_dir(),
-                'rootDir' => public_path(),
-                'isJavascriptEnabled' => false,
-                'defaultMediaType' => 'print'
-            ]);
-
-            // Set proper filename
-            $filename = 'prescription-' . $prescription->patient->patient_id . '-' .
-                $prescription->created_at->format('Y-m-d') . '.pdf';
-
             // Log print action
-            Log::info('Prescription printed', [
+            Log::info('Prescription accessed for print', [
                 'prescription_id' => $prescription->id,
                 'patient_id' => $prescription->patient_id,
-                'printed_by' => $user->name,
+                'accessed_by' => $user->name,
                 'has_glasses' => $prescription->prescriptionGlasses->count() > 0,
             ]);
 
-            // For download
-            return $pdf->download($filename);
+            // Return Inertia response with data for React component
+            return Inertia::render('Prescriptions/Print', [
+                'prescription' => [
+                    'id' => $prescription->id,
+                    'patient' => [
+                        'id' => $prescription->patient->id,
+                        'patient_id' => $prescription->patient->patient_id,
+                        'name' => $prescription->patient->name,
+                        'age' => $prescription->patient->age,
+                        'gender' => $prescription->patient->gender,
+                        'phone' => $prescription->patient->phone,
+                        'address' => $prescription->patient->address,
+                    ],
+                    'doctor' => [
+                        'id' => $prescription->doctor->id,
+                        'name' => $prescription->doctor->user->name,
+                        'specialization' => $prescription->doctor->specialization,
+                        'bmdc_number' => $prescription->doctor->bmdc_number,
+                        'qualification' => $prescription->doctor->qualification,
+                    ],
+                    'appointment' => $prescription->appointment ? [
+                        'id' => $prescription->appointment->id,
+                        'appointment_date' => $prescription->appointment->appointment_date,
+                        'appointment_time' => $prescription->appointment->appointment_time,
+                    ] : null,
+                    'diagnosis' => $prescription->diagnosis,
+                    'advice' => $prescription->advice,
+                    'notes' => $prescription->notes,
+                    'followup_date' => $prescription->followup_date,
+                    'created_at' => $prescription->created_at->format('Y-m-d H:i:s'),
+                    'medicines' => $prescription->prescriptionMedicines->map(function ($medicine) {
+                        return [
+                            'id' => $medicine->id,
+                            'medicine_name' => $medicine->medicine->name,
+                            'dosage' => $medicine->dosage,
+                            'frequency' => $medicine->frequency,
+                            'duration' => $medicine->duration,
+                            'instructions' => $medicine->instructions,
+                        ];
+                    }),
+                    'glasses' => $prescription->prescriptionGlasses->map(function ($glass) {
+                        return [
+                            'id' => $glass->id,
+                            'eye' => $glass->eye,
+                            'sphere' => $glass->sphere,
+                            'cylinder' => $glass->cylinder,
+                            'axis' => $glass->axis,
+                            'addition' => $glass->addition,
+                            'prism' => $glass->prism,
+                            'notes' => $glass->notes,
+                        ];
+                    }),
+                ],
+                'print_metadata' => [
+                    'print_date' => now()->format('M d, Y h:i A'),
+                    'printed_by' => $user->name,
+                    'has_glasses' => $prescription->prescriptionGlasses->count() > 0,
+                    'glasses_count' => $prescription->prescriptionGlasses->count(),
+                    'filename' => 'prescription-' . $prescription->patient->patient_id . '-' .
+                        $prescription->created_at->format('Y-m-d') . '.pdf',
+                ],
+                'user' => [
+                    'name' => $user->name,
+                    'role' => $user->role,
+                ]
+            ]);
         } catch (\Exception $e) {
             Log::error('Prescription Print Error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Failed to generate prescription PDF');
+            return redirect()->back()->with('error', 'Failed to load prescription for printing');
         }
     }
-
 
     /**
      * Download blank prescription form for a patient
@@ -925,79 +956,64 @@ class PrescriptionController extends Controller
             // Get patient
             $patient = Patient::findOrFail($patientId);
 
-            // Create a blank prescription object with patient data only
-            $blankPrescription = (object) [
-                'id' => 'DEMO',
-                'patient' => $patient,
-                'doctor' => $doctor,
-                'created_at' => now(),
-                'appointment' => null,
-
-                // All prescription fields as null/empty for blank form
-                'diagnosis' => '',
-                'advice' => '',
-                'notes' => '',
-                'followup_date' => null,
-                'includes_glasses' => false,
-                'glasses_notes' => '',
-
-                // Empty collections for medicines and glasses
-                'prescriptionMedicines' => collect([]),
-                'prescriptionGlasses' => collect([]),
-            ];
-
-            // Add doctor user relationship
-            $doctor->user = $user;
-
-            // Generate PDF using the same template
-            $pdf = Pdf::loadView('prescriptions.print', [
-                'prescription' => $blankPrescription,
-                'print_date' => now()->format('M d, Y h:i A'),
-                'printed_by' => $user->name,
-                'has_glasses' => false,
-                'glasses_count' => 0,
-                'isBlankPrescription' => true // Flag to indicate this is a blank prescription
-            ]);
-
-            // Set exact A4 portrait with optimized settings
-            $pdf->setPaper('A4', 'portrait');
-            $pdf->setOptions([
-                'isHtml5ParserEnabled' => true,
-                'isPhpEnabled' => true,
-                'defaultFont' => 'Times-Roman',
-                'dpi' => 96,
-                'defaultPaperSize' => 'A4',
-                'orientation' => 'portrait',
-                'isRemoteEnabled' => false,
-                'debugKeepTemp' => false,
-                'chroot' => public_path(),
-                'fontDir' => storage_path('fonts/'),
-                'fontCache' => storage_path('fonts/'),
-                'tempDir' => sys_get_temp_dir(),
-                'rootDir' => public_path(),
-                'isJavascriptEnabled' => false,
-                'defaultMediaType' => 'print'
-            ]);
-
-            $filename = 'blank-prescription-' . $patient->patient_id . '.pdf';
-
-            Log::info('Blank prescription downloaded', [
+            Log::info('Blank prescription accessed', [
                 'patient_id' => $patient->id,
                 'patient_code' => $patient->patient_id,
                 'doctor_id' => $doctor->id,
-                'downloaded_by' => $user->name,
+                'accessed_by' => $user->name,
             ]);
 
-            return $pdf->download($filename);
+            // Return Inertia response for blank prescription
+            return Inertia::render('Prescriptions/BlankPrint', [
+                'prescription' => [
+                    'id' => 'BLANK',
+                    'patient' => [
+                        'id' => $patient->id,
+                        'patient_id' => $patient->patient_id,
+                        'name' => $patient->name,
+                        'age' => $patient->age,
+                        'gender' => $patient->gender,
+                        'phone' => $patient->phone,
+                        'address' => $patient->address,
+                    ],
+                    'doctor' => [
+                        'id' => $doctor->id,
+                        'name' => $user->name,
+                        'specialization' => $doctor->specialization,
+                        'bmdc_number' => $doctor->bmdc_number,
+                        'qualification' => $doctor->qualification,
+                    ],
+                    'appointment' => null,
+                    'diagnosis' => '',
+                    'advice' => '',
+                    'notes' => '',
+                    'followup_date' => null,
+                    'created_at' => now()->format('Y-m-d H:i:s'),
+                    'medicines' => [],
+                    'glasses' => [],
+                ],
+                'print_metadata' => [
+                    'print_date' => now()->format('M d, Y h:i A'),
+                    'printed_by' => $user->name,
+                    'has_glasses' => false,
+                    'glasses_count' => 0,
+                    'filename' => 'blank-prescription-' . $patient->patient_id . '.pdf',
+                    'is_blank_prescription' => true,
+                ],
+                'user' => [
+                    'name' => $user->name,
+                    'role' => $user->role,
+                ]
+            ]);
         } catch (\Exception $e) {
-            Log::error('Blank Prescription Download Error: ' . $e->getMessage(), [
+            Log::error('Blank Prescription Error: ' . $e->getMessage(), [
                 'patient_id' => $patientId,
                 'user_id' => auth()->id(),
                 'trace' => $e->getTraceAsString()
             ]);
 
             return back()->withErrors([
-                'error' => 'Failed to download blank prescription: ' . $e->getMessage()
+                'error' => 'Failed to load blank prescription: ' . $e->getMessage()
             ]);
         }
     }

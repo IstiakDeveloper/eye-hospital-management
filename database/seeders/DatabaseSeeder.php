@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\MedicineExpenseCategory;
 use App\Models\PaymentMethod;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -22,6 +23,13 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ]
         );
+
+        MedicineExpenseCategory::create([
+            'id' => 1,
+            'name' => 'Medicine Purchase',
+            'is_active' => true
+        ]);
+
         $this->call([
             RoleSeeder::class,
             UserSeeder::class,

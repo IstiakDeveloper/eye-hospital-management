@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-Schema::create('glasses', function (Blueprint $table) {
+        Schema::create('glasses', function (Blueprint $table) {
             $table->id();
             $table->string('brand'); // Ray-Ban, Oakley, etc.
             $table->string('model'); // Frame model name

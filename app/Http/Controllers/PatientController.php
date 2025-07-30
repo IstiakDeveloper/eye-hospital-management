@@ -6,6 +6,7 @@ use App\Models\Patient;
 use App\Models\PatientVisit;
 use App\Models\PatientPayment;
 use App\Models\Doctor;
+use App\Models\HospitalAccount;
 use App\Models\PaymentMethod;
 use App\Models\PatientInvoice;
 use App\Models\InvoiceItem;
@@ -103,6 +104,7 @@ class PatientController extends Controller
     /**
      * Store new patient registration or create new visit for existing patient
      */
+
     public function store(Request $request)
     {
         $request->validate([
@@ -184,6 +186,18 @@ class PatientController extends Controller
                         'received_by' => auth()->id(),
                     ]);
 
+                    // ✅ ADD TO HOSPITAL ACCOUNT
+                    $hospitalTransaction = HospitalAccount::addIncome(
+                        $request->payment_amount,
+                        'patient_payment',
+                        "Registration payment from Patient: {$patient->name} (ID: {$patient->patient_id})",
+                        'patient_payments',
+                        $payment->id
+                    );
+
+                    // Link payment to hospital transaction
+                    $payment->update(['hospital_transaction_id' => $hospitalTransaction->id]);
+
                     // Update visit totals
                     $visit->updateTotals();
 
@@ -208,9 +222,6 @@ class PatientController extends Controller
         }
     }
 
-    /**
-     * Show patient details with visits
-     */
     /**
      * Show patient details with visits
      */

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Medicine;
+use App\Models\MedicineAccount;
 use App\Models\MedicineSale;
 use App\Models\MedicineSaleItem;
 use App\Models\MedicineStock;
@@ -219,12 +220,19 @@ class MedicineCornerController extends Controller
         ]);
 
         if ($validator->fails()) {
-            // For Inertia requests, redirect back with errors
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
         DB::beginTransaction();
         try {
+            $totalPurchaseAmount = $request->quantity * $request->buy_price;
+
+            // Check if medicine account has sufficient balance
+            $medicineBalance = MedicineAccount::getBalance();
+            if ($medicineBalance < $totalPurchaseAmount) {
+                throw new \Exception("Insufficient balance in Medicine Account. Available: ৳{$medicineBalance}, Required: ৳{$totalPurchaseAmount}");
+            }
+
             // Create stock entry
             $stock = MedicineStock::create([
                 'medicine_id' => $request->medicine_id,
@@ -245,24 +253,34 @@ class MedicineCornerController extends Controller
                 'type' => 'purchase',
                 'quantity' => $request->quantity,
                 'unit_price' => $request->buy_price,
-                'total_amount' => $request->quantity * $request->buy_price,
+                'total_amount' => $totalPurchaseAmount,
                 'reason' => 'Stock purchase - Batch: ' . $request->batch_number,
                 'created_by' => auth()->id(),
             ]);
 
-            // Update medicine totals
+            // Get medicine name for description
             $medicine = Medicine::find($request->medicine_id);
+
+            // ✅ ADD TO MEDICINE ACCOUNT AS EXPENSE
+            $medicineTransaction = MedicineAccount::addExpense(
+                $totalPurchaseAmount,
+                'medicine_purchase',
+                "Medicine purchase - {$medicine->name} (Batch: {$request->batch_number})",
+                1
+            );
+
+            // Link stock to medicine transaction
+            $stock->update(['medicine_transaction_id' => $medicineTransaction->id]);
+
+            // Update medicine totals
             $medicine->updateTotalStock();
             $medicine->updateAverageBuyPrice();
 
             DB::commit();
 
-            // For Inertia, redirect with success message
-            return redirect()->back()->with('success', 'Stock added successfully');
+            return redirect()->back()->with('success', "Stock added successfully! Amount deducted from Medicine Account: ৳{$totalPurchaseAmount}");
         } catch (\Exception $e) {
             DB::rollback();
-
-            // For Inertia, redirect back with error
             return redirect()->back()->with('error', 'Failed to add stock: ' . $e->getMessage());
         }
     }

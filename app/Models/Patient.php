@@ -56,16 +56,13 @@ class Patient extends Model
      */
     public static function generatePatientId()
     {
-        $prefix = 'P';
-        $date = now()->format('Ymd');
-        $lastPatient = static::whereDate('created_at', today())
-            ->orderBy('id', 'desc')
-            ->first();
+        $lastPatient = static::orderBy('id', 'desc')->first();
 
-        $sequence = $lastPatient ? (intval(substr($lastPatient->patient_id, -4)) + 1) : 1;
+        $sequence = $lastPatient ? ((int) $lastPatient->patient_id + 1) : 1;
 
-        return $prefix . $date . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        return str_pad($sequence, 4, '0', STR_PAD_LEFT);
     }
+
 
     /**
      * Generate QR code
@@ -135,10 +132,6 @@ class Patient extends Model
     {
         return $this->hasMany(PatientPayment::class);
     }
-
-    // ============================================
-    // HELPER METHODS
-    // ============================================
 
     /**
      * Get patient age
@@ -223,6 +216,4 @@ class Patient extends Model
     {
         return $this->belongsTo(User::class);
     }
-
-
 }

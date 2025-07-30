@@ -30,7 +30,10 @@ import {
     DollarSign,
     CreditCard,
     History,
-    FileBarChart
+    FileBarChart,
+    Calculator,
+    Building2,
+    Glasses
 } from 'lucide-react';
 import FlashMessages from '@/components/FlashMessage';
 
@@ -67,6 +70,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [medicineCornerOpen, setMedicineCornerOpen] = useState(false);
+    const [accountSectionOpen, setAccountSectionOpen] = useState(false);
 
     const userRole = auth.user.role.name;
 
@@ -119,6 +123,16 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 window.location.pathname.includes('/medicine-seller');
         }
 
+        // For account sections
+        if (currentPattern === 'account.*') {
+            return currentRouteName?.includes('hospital-account') ||
+                currentRouteName?.includes('medicine-account') ||
+                currentRouteName?.includes('optics-account') ||
+                window.location.pathname.includes('/hospital-account') ||
+                window.location.pathname.includes('/medicine-account') ||
+                window.location.pathname.includes('/optics-account');
+        }
+
         // For other routes, use pattern matching
         return route().current(currentPattern);
     };
@@ -141,6 +155,26 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
         return medicineCornerPaths.some(path => window.location.pathname === path);
     };
 
+    // Check if account section is active
+    const isAccountSectionActive = () => {
+        return currentRouteName?.includes('hospital-account') ||
+            currentRouteName?.includes('medicine-account') ||
+            currentRouteName?.includes('optics-account') ||
+            window.location.pathname.includes('/hospital-account') ||
+            window.location.pathname.includes('/medicine-account') ||
+            window.location.pathname.includes('/optics-account');
+    };
+
+    // Check if any account section child is active
+    const isAccountSectionChildActive = () => {
+        const accountPaths = [
+            '/hospital-account',
+            '/medicine-account',
+            '/optics-account'
+        ];
+        return accountPaths.some(path => window.location.pathname.startsWith(path));
+    };
+
     // Navigation items with role-based access
     const navigationItems: NavItem[] = [
         {
@@ -157,14 +191,14 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             current: 'patients.*',
             roles: ['Super Admin', 'Doctor', 'Receptionist']
         },
-        {
-            name: 'Appointments',
-            href: route('appointments.today'),
-            icon: Calendar,
-            current: 'appointments.*',
-            roles: ['Super Admin'],
-            badge: 'Today'
-        },
+        // {
+        //     name: 'Appointments',
+        //     href: route('appointments.today'),
+        //     icon: Calendar,
+        //     current: 'appointments.*',
+        //     roles: ['Super Admin'],
+        //     badge: 'Today'
+        // },
         // POS System for Medicine Seller
         {
             name: 'POS System',
@@ -237,6 +271,37 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                     href: '/medicine-corner/alerts',
                     icon: AlertTriangle,
                     current: 'medicine.alerts',
+                    roles: ['Super Admin']
+                }
+            ]
+        },
+        // Account Section with dropdown (Super Admin only)
+        {
+            name: 'Account Management',
+            href: '#',
+            icon: Calculator,
+            current: 'account.*',
+            roles: ['Super Admin'],
+            children: [
+                {
+                    name: 'Hospital Account',
+                    href: '/hospital-account',
+                    icon: Building2,
+                    current: 'hospital-account.*',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Medicine Account',
+                    href: '/medicine-account',
+                    icon: Pill,
+                    current: 'medicine-account.*',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Optics Account',
+                    href: '/optics-account',
+                    icon: Glasses,
+                    current: 'optics-account.*',
                     roles: ['Super Admin']
                 }
             ]
@@ -391,7 +456,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 const Icon = item.icon;
                                 const isActive = isRouteActive(item.current);
                                 const isMedicineCorner = item.name === 'Medicine Corner';
-                                const medicineCornerActive = isMedicineCornerActive();
+                                const isAccountSection = item.name === 'Account Management';
 
                                 // Medicine Corner with dropdown
                                 if (isMedicineCorner) {
@@ -404,8 +469,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                             <button
                                                 onClick={() => setMedicineCornerOpen(!medicineCornerOpen)}
                                                 className={`group flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${shouldShowAsActive
-                                                        ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                                                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                    ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                                                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                                                     }`}
                                             >
                                                 <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${shouldShowAsActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
@@ -427,11 +492,60 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                             key={childItem.name}
                                                             href={childItem.href}
                                                             className={`group flex items-center pl-11 pr-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isChildActive
-                                                                    ? 'bg-blue-100 text-blue-800 border-r-2 border-blue-600'
-                                                                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                ? 'bg-blue-100 text-blue-800 border-r-2 border-blue-600'
+                                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                                                 }`}
                                                         >
                                                             <ChildIcon className={`flex-shrink-0 h-4 w-4 mr-2 ${isChildActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'
+                                                                }`} />
+                                                            <span>{childItem.name}</span>
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                // Account Section with dropdown
+                                if (isAccountSection) {
+                                    const accountSectionActive = isAccountSectionActive();
+                                    const anyAccountChildActive = isAccountSectionChildActive();
+                                    const shouldShowAsActive = accountSectionActive || anyAccountChildActive;
+
+                                    return (
+                                        <div key={item.name}>
+                                            <button
+                                                onClick={() => setAccountSectionOpen(!accountSectionOpen)}
+                                                className={`group flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${shouldShowAsActive
+                                                    ? 'bg-emerald-50 text-emerald-700 border-r-2 border-emerald-700'
+                                                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                    }`}
+                                            >
+                                                <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${shouldShowAsActive ? 'text-emerald-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                    }`} />
+                                                <span className="flex-1 text-left">{item.name}</span>
+                                                <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${accountSectionOpen || anyAccountChildActive ? 'rotate-90' : ''
+                                                    } ${shouldShowAsActive ? 'text-emerald-700' : 'text-gray-400'}`} />
+                                            </button>
+
+                                            {/* Account Dropdown Items */}
+                                            <div className={`mt-1 space-y-1 transition-all duration-200 overflow-hidden ${accountSectionOpen || anyAccountChildActive ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                                }`}>
+                                                {item.children?.map((childItem) => {
+                                                    const ChildIcon = childItem.icon;
+                                                    const isChildActive = window.location.pathname.startsWith(childItem.href);
+
+                                                    return (
+                                                        <Link
+                                                            key={childItem.name}
+                                                            href={childItem.href}
+                                                            className={`group flex items-center pl-11 pr-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isChildActive
+                                                                ? 'bg-emerald-100 text-emerald-800 border-r-2 border-emerald-600'
+                                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                }`}
+                                                        >
+                                                            <ChildIcon className={`flex-shrink-0 h-4 w-4 mr-2 ${isChildActive ? 'text-emerald-600' : 'text-gray-400 group-hover:text-gray-500'
                                                                 }`} />
                                                             <span>{childItem.name}</span>
                                                         </Link>
@@ -448,8 +562,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                         key={item.name}
                                         href={item.href}
                                         className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
-                                                ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                            ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                                             }`}
                                     >
                                         <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
@@ -482,8 +596,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                             key={item.name}
                                             href={item.href}
                                             className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
-                                                    ? 'bg-purple-50 text-purple-700 border-r-2 border-purple-700'
-                                                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                ? 'bg-purple-50 text-purple-700 border-r-2 border-purple-700'
+                                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                                                 }`}
                                         >
                                             <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${isActive ? 'text-purple-700' : 'text-gray-400 group-hover:text-gray-500'

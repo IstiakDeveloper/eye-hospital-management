@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/admin-layout';
+import AdminLayout from '@/layouts/admin-layout';
 import {
     Search,
     Plus,
