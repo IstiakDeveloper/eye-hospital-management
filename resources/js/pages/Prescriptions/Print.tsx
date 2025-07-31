@@ -572,7 +572,7 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                             </div>
                         </div>
                         <div className="hospital-info">
-                            <h1>Naogaon Islamia Chakkhu Hospital and Phaco Center</h1>
+                            <h1>Naogaon Islamia Eye Hospital and Phaco Center</h1>
                             <p>Main Road, Beside of Naogaon Fisheries Building, Naogaon Sadar, Naogaon</p>
                             <p>Mobile: 01307-885566; Email: niehpc@gamil.com</p>
                         </div>

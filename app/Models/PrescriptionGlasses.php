@@ -27,6 +27,8 @@ class PrescriptionGlasses extends Model
         'optical_center_height',
         'prescription_type',
         'special_instructions',
+        'frame_price',
+        'lens_price',
         'total_price',
         'status',
         'expected_delivery',
@@ -44,6 +46,8 @@ class PrescriptionGlasses extends Model
         'pupillary_distance' => 'decimal:1',
         'segment_height' => 'decimal:1',
         'optical_center_height' => 'decimal:1',
+        'frame_price' => 'decimal:2',
+        'lens_price' => 'decimal:2',
         'total_price' => 'decimal:2',
         'expected_delivery' => 'date',
     ];
@@ -65,48 +69,36 @@ class PrescriptionGlasses extends Model
 
     public function getRightEyePrescriptionAttribute(): string
     {
-        $parts = [];
-        if ($this->right_eye_sphere) {
-            $parts[] = "SPH: " . ($this->right_eye_sphere > 0 ? '+' : '') . $this->right_eye_sphere;
-        }
-        if ($this->right_eye_cylinder) {
-            $parts[] = "CYL: " . ($this->right_eye_cylinder > 0 ? '+' : '') . $this->right_eye_cylinder;
-        }
-        if ($this->right_eye_axis) {
-            $parts[] = "AXIS: " . $this->right_eye_axis . "°";
-        }
-        if ($this->right_eye_add) {
-            $parts[] = "ADD: +" . $this->right_eye_add;
-        }
-        return implode(' / ', $parts) ?: 'N/A';
+        $sph = $this->right_eye_sphere ? sprintf('%+.2f', $this->right_eye_sphere) : '0.00';
+        $cyl = $this->right_eye_cylinder ? sprintf('%+.2f', $this->right_eye_cylinder) : '';
+        $axis = $this->right_eye_axis ? "x{$this->right_eye_axis}" : '';
+        $add = $this->right_eye_add ? sprintf(' Add %+.2f', $this->right_eye_add) : '';
+
+        return trim("SPH {$sph} {$cyl} {$axis}{$add}");
     }
 
     public function getLeftEyePrescriptionAttribute(): string
     {
-        $parts = [];
-        if ($this->left_eye_sphere) {
-            $parts[] = "SPH: " . ($this->left_eye_sphere > 0 ? '+' : '') . $this->left_eye_sphere;
-        }
-        if ($this->left_eye_cylinder) {
-            $parts[] = "CYL: " . ($this->left_eye_cylinder > 0 ? '+' : '') . $this->left_eye_cylinder;
-        }
-        if ($this->left_eye_axis) {
-            $parts[] = "AXIS: " . $this->left_eye_axis . "°";
-        }
-        if ($this->left_eye_add) {
-            $parts[] = "ADD: +" . $this->left_eye_add;
-        }
-        return implode(' / ', $parts) ?: 'N/A';
+        $sph = $this->left_eye_sphere ? sprintf('%+.2f', $this->left_eye_sphere) : '0.00';
+        $cyl = $this->left_eye_cylinder ? sprintf('%+.2f', $this->left_eye_cylinder) : '';
+        $axis = $this->left_eye_axis ? "x{$this->left_eye_axis}" : '';
+        $add = $this->left_eye_add ? sprintf(' Add %+.2f', $this->left_eye_add) : '';
+
+        return trim("SPH {$sph} {$cyl} {$axis}{$add}");
     }
 
-    public function getStatusBadgeColorAttribute(): string
+    public function scopeByStatus($query, $status)
     {
-        return match ($this->status) {
-            'pending' => 'yellow',
-            'ordered' => 'blue',
-            'ready' => 'green',
-            'delivered' => 'gray',
-            default => 'gray',
-        };
+        return $query->where('status', $status);
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    public function scopeReady($query)
+    {
+        return $query->where('status', 'ready');
     }
 }

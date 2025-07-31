@@ -16,12 +16,16 @@ class LensType extends Model
         'material',
         'coating',
         'price',
+        'stock_quantity',
+        'minimum_stock_level',
         'description',
         'is_active',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'stock_quantity' => 'integer',
+        'minimum_stock_level' => 'integer',
         'is_active' => 'boolean',
     ];
 
@@ -30,20 +34,34 @@ class LensType extends Model
         return $this->hasMany(PrescriptionGlasses::class);
     }
 
-    public function getFullNameAttribute(): string
+    public function completeGlasses(): HasMany
     {
-        $parts = [$this->name];
-        if ($this->type !== 'clear') {
-            $parts[] = ucfirst($this->type);
-        }
-        if ($this->coating) {
-            $parts[] = $this->coating;
-        }
-        return implode(' - ', $parts);
+        return $this->hasMany(CompleteGlasses::class);
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class, 'item_id')
+            ->where('item_type', 'lens_types');
+    }
+
+    public function getIsLowStockAttribute(): bool
+    {
+        return $this->stock_quantity <= $this->minimum_stock_level;
     }
 
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeInStock($query)
+    {
+        return $query->where('stock_quantity', '>', 0);
+    }
+
+    public function scopeLowStock($query)
+    {
+        return $query->whereRaw('stock_quantity <= minimum_stock_level');
     }
 }

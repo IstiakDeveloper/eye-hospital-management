@@ -11,6 +11,7 @@ use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\MedicineCornerController;
 use App\Http\Controllers\MedicineSellerDashboardController;
 use App\Http\Controllers\OpticsAccount\OpticsAccountController;
+use App\Http\Controllers\OpticsCornerController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientVisitController;
 use App\Http\Controllers\PrescriptionController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\VisionTestController;
 use App\Models\Patient;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -64,6 +66,22 @@ Route::get('/', function () {
     // Fallback to default dashboard
     return redirect()->route('dashboard');
 });
+
+
+
+Route::get('/storage-link', function () {
+    Artisan::call('storage:link');
+    return response()->json(['message' => 'Storage link created successfully.']);
+})->name('storage.link');
+
+Route::get('/migrate', function () {
+    Artisan::call('migrate');
+    return response()->json(['message' => 'Migrations run successfully.']);
+})->name('migrate');
+
+
+
+
 
 Route::middleware(['auth'])->group(function () {
     // Dashboard - All authenticated users
@@ -512,6 +530,42 @@ Route::middleware(['auth', 'super-admin'])->group(function () {
     });
 });
 
+
+
+Route::middleware(['auth', 'super-admin'])->prefix('optics')->name('optics.')->group(function () {
+
+    // Dashboard
+    Route::get('/', [OpticsCornerController::class, 'index'])->name('dashboard');
+
+    // Frames Management
+    Route::get('/frames', [OpticsCornerController::class, 'frames'])->name('frames');
+    Route::get('/frames/create', [OpticsCornerController::class, 'createFrame'])->name('frames.create');
+    Route::post('/frames', [OpticsCornerController::class, 'storeFrame'])->name('frames.store');
+    Route::get('/frames/{frame}/edit', [OpticsCornerController::class, 'editFrame'])->name('frames.edit');
+    Route::put('/frames/{frame}', [OpticsCornerController::class, 'updateFrame'])->name('frames.update');
+
+    // Stock Management
+    Route::get('/stock', [OpticsCornerController::class, 'stockManagement'])->name('stock');
+    Route::get('/stock/add', [OpticsCornerController::class, 'addStock'])->name('stock.add');
+    Route::post('/stock', [OpticsCornerController::class, 'storeStock'])->name('stock.store');
+
+    // Sales Management
+    Route::get('/sales', [OpticsCornerController::class, 'sales'])->name('sales');
+    Route::get('/sales/create', [OpticsCornerController::class, 'createSale'])->name('sales.create');
+    Route::post('/sales', [OpticsCornerController::class, 'storeSale'])->name('sales.store');
+
+    // Lens Types Management
+    Route::get('/lens-types', [OpticsCornerController::class, 'lensTypes'])->name('lens-types');
+    Route::post('/lens-types', [OpticsCornerController::class, 'storeLensType'])->name('lens-types.store');
+
+    // Account Management
+    Route::get('/account', [OpticsCornerController::class, 'account'])->name('account');
+    Route::post('/account/add-fund', [OpticsCornerController::class, 'addFund'])->name('account.add-fund');
+    Route::post('/account/add-expense', [OpticsCornerController::class, 'addExpense'])->name('account.add-expense');
+
+    // Reports
+    Route::get('/reports', [OpticsCornerController::class, 'reports'])->name('reports');
+});
 
 
 require __DIR__ . '/settings.php';

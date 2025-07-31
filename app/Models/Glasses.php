@@ -1,5 +1,6 @@
 <?php
 
+// App\Models\Glasses.php
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +12,7 @@ class Glasses extends Model
     use HasFactory;
 
     protected $fillable = [
+        'sku',
         'brand',
         'model',
         'type',
@@ -23,9 +25,10 @@ class Glasses extends Model
         'bridge_width',
         'temple_length',
         'shape',
-        'price',
+        'purchase_price',
+        'selling_price',
         'stock_quantity',
-        'supplier',
+        'minimum_stock_level',
         'description',
         'image_path',
         'is_active',
@@ -35,14 +38,27 @@ class Glasses extends Model
         'lens_width' => 'decimal:2',
         'bridge_width' => 'decimal:2',
         'temple_length' => 'decimal:2',
-        'price' => 'decimal:2',
+        'purchase_price' => 'decimal:2',
+        'selling_price' => 'decimal:2',
         'stock_quantity' => 'integer',
+        'minimum_stock_level' => 'integer',
         'is_active' => 'boolean',
     ];
 
     public function prescriptionGlasses(): HasMany
     {
         return $this->hasMany(PrescriptionGlasses::class);
+    }
+
+    public function completeGlasses(): HasMany
+    {
+        return $this->hasMany(CompleteGlasses::class, 'frame_id');
+    }
+
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class, 'item_id')
+                    ->where('item_type', 'glasses');
     }
 
     public function getFullNameAttribute(): string
@@ -58,6 +74,24 @@ class Glasses extends Model
         return $this->size ?? 'N/A';
     }
 
+    public function getProfitAttribute(): float
+    {
+        return $this->selling_price - $this->purchase_price;
+    }
+
+    public function getProfitPercentageAttribute(): float
+    {
+        if ($this->purchase_price > 0) {
+            return (($this->selling_price - $this->purchase_price) / $this->purchase_price) * 100;
+        }
+        return 0;
+    }
+
+    public function getIsLowStockAttribute(): bool
+    {
+        return $this->stock_quantity <= $this->minimum_stock_level;
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -66,5 +100,20 @@ class Glasses extends Model
     public function scopeInStock($query)
     {
         return $query->where('stock_quantity', '>', 0);
+    }
+
+    public function scopeLowStock($query)
+    {
+        return $query->whereRaw('stock_quantity <= minimum_stock_level');
+    }
+
+    public function scopeByType($query, $type)
+    {
+        return $query->where('type', $type);
+    }
+
+    public function scopeByGender($query, $gender)
+    {
+        return $query->where('gender', $gender);
     }
 }

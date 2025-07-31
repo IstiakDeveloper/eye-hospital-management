@@ -70,50 +70,64 @@ interface Props {
     csrfToken?: string;
 }
 
-// Auto-Save QR Component
-const AutoSaveQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?: string }> = ({
+// Professional QR Component with Image Support
+const ProfessionalQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?: string }> = ({
     patient,
-    size = 55,
+    size = 80,
     csrfToken
 }) => {
     const qrRef = useRef<HTMLDivElement>(null);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const [hasAttemptedSave, setHasAttemptedSave] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string>('');
+    const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
 
     // Auto-save QR code when component mounts
     useEffect(() => {
         if (patient.qr_code && !hasAttemptedSave && !patient.qr_code_image_path) {
             const timer = setTimeout(() => {
                 autoSaveQRCode();
-            }, 2000); // Increased delay for QR rendering
+            }, 1500);
 
             return () => clearTimeout(timer);
         }
     }, [patient.qr_code, hasAttemptedSave, patient.qr_code_image_path]);
 
+    // Load existing QR code image if available
+    useEffect(() => {
+        if (patient.qr_code_image_path) {
+            // Try to load the saved QR image
+            const imageUrl = patient.qr_code_image_path.startsWith('http')
+                ? patient.qr_code_image_path
+                : `/storage/${patient.qr_code_image_path}`;
+
+            // Test if image exists
+            const img = new Image();
+            img.onload = () => setQrImageUrl(imageUrl);
+            img.onerror = () => {
+                console.warn('Saved QR image not found, will generate new one');
+                setQrImageUrl(null);
+            };
+            img.src = imageUrl;
+        }
+    }, [patient.qr_code_image_path]);
+
     // Get CSRF token from multiple sources
     const getCSRFToken = (): string | null => {
-        // Priority order for token retrieval
-
-        // 1. From props (passed from Laravel)
         if (csrfToken) {
             return csrfToken;
         }
 
-        // 2. From meta tag
         const metaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         if (metaToken) {
             return metaToken;
         }
 
-        // 3. From window object (if set by Laravel)
         const windowToken = (window as any).csrfToken;
         if (windowToken) {
             return windowToken;
         }
 
-        // 4. From cookie (XSRF-TOKEN)
         const cookies = document.cookie.split(';');
         for (let cookie of cookies) {
             const [name, value] = cookie.trim().split('=');
@@ -133,25 +147,22 @@ const AutoSaveQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?: st
         setErrorMessage('');
 
         try {
-            // Get SVG from QR component
             const svgElement = qrRef.current.querySelector('svg');
             if (!svgElement) {
                 throw new Error('QR SVG not found');
             }
 
-            // Create high-quality canvas
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             if (!ctx) {
                 throw new Error('Canvas context not available');
             }
 
-            const scale = 8; // Higher quality scale
+            const scale = 8;
             canvas.width = size * scale;
             canvas.height = size * scale;
             ctx.scale(scale, scale);
 
-            // Convert SVG to image
             const svgData = new XMLSerializer().serializeToString(svgElement);
             const img = new Image();
 
@@ -161,32 +172,25 @@ const AutoSaveQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?: st
                 img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
             });
 
-            // Draw on canvas with white background
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, size, size);
             ctx.drawImage(img, 0, 0, size, size);
 
-            // Convert to base64 PNG
             const dataUrl = canvas.toDataURL('image/png', 1.0);
-
-            // Get CSRF token
             const token = getCSRFToken();
 
-            // Prepare headers
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             };
 
-            // Add CSRF token to headers
             if (token) {
                 headers['X-CSRF-TOKEN'] = token;
             } else {
                 console.warn('No CSRF token found - request may fail');
             }
 
-            // Send to server (using web route only)
             const response = await fetch(`/patient/${patient.id}/save-qr`, {
                 method: 'POST',
                 headers,
@@ -197,7 +201,6 @@ const AutoSaveQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?: st
                 })
             });
 
-            // Handle response
             if (!response.ok) {
                 let errorMsg = `HTTP ${response.status}`;
                 try {
@@ -213,6 +216,12 @@ const AutoSaveQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?: st
 
             if (result.success) {
                 setSaveStatus('saved');
+                if (result.image_path) {
+                    const imageUrl = result.image_path.startsWith('http')
+                        ? result.image_path
+                        : `/storage/${result.image_path}`;
+                    setQrImageUrl(imageUrl);
+                }
                 console.log('QR code auto-saved successfully:', result);
             } else {
                 throw new Error(result.message || 'Save failed');
@@ -225,31 +234,27 @@ const AutoSaveQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?: st
         }
     };
 
-    // Manual retry function
     const retryAutoSave = async () => {
         setHasAttemptedSave(false);
         setSaveStatus('idle');
         setErrorMessage('');
 
-        // Wait a moment then try again
         setTimeout(() => {
             autoSaveQRCode();
         }, 500);
     };
 
-    // Generate QR data
     const getQRCodeData = () => {
         if (patient.qr_code) {
             return patient.qr_code;
         }
 
-        // Generate structured QR data
         return JSON.stringify({
             type: 'patient',
             patient_id: patient.patient_id,
             name: patient.name,
             phone: patient.phone,
-            hospital: 'Naogaon Islamia Chakkhu Hospital',
+            hospital: 'Naogaon Islamia Eye Hospital',
             url: `${window.location.origin}/patient/${patient.patient_id}`,
             generated_at: new Date().toISOString()
         });
@@ -257,20 +262,35 @@ const AutoSaveQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?: st
 
     return (
         <div className="text-center">
-            {/* QR Code Display */}
-            <div ref={qrRef} className="bg-white p-2 border border-gray-400 rounded mx-auto mb-1 w-fit">
-                <QRCode
-                    value={getQRCodeData()}
-                    size={size}
-                    bgColor="#ffffff"
-                    fgColor="#000000"
-                    level="M"
-                />
+            <div className="bg-white p-2 border border-gray-300 rounded mx-auto mb-2 inline-block">
+                {qrImageUrl ? (
+                    // Show saved QR image if available
+                    <img
+                        src={qrImageUrl}
+                        alt="Patient QR Code"
+                        className="block"
+                        style={{ width: size, height: size }}
+                        onError={() => {
+                            console.warn('Failed to load saved QR image, falling back to generated');
+                            setQrImageUrl(null);
+                        }}
+                    />
+                ) : (
+                    // Generate QR code if no saved image
+                    <div ref={qrRef}>
+                        <QRCode
+                            value={getQRCodeData()}
+                            size={size}
+                            bgColor="#ffffff"
+                            fgColor="#000000"
+                            level="M"
+                        />
+                    </div>
+                )}
             </div>
 
-            <p className="text-xs text-gray-400 mb-1">Patient QR Code</p>
+            <p className="text-xs text-gray-500 mb-1 font-medium">Patient QR</p>
 
-            {/* Save Status Indicator */}
             {saveStatus === 'saving' && (
                 <div className="text-xs text-blue-600 mb-1">
                     <Save className="w-3 h-3 inline mr-1" />
@@ -292,14 +312,13 @@ const AutoSaveQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?: st
                         className="hover:underline"
                         title={`Error: ${errorMessage}. Click to retry`}
                     >
-                        ⚠️ Error (Retry)
+                        ⚠️ Retry
                     </button>
                 </div>
             )}
 
-            {/* QR Data Display */}
-            <p className="text-xs text-gray-600 mt-1 font-mono break-all">
-                ID: {patient.patient_id}
+            <p className="text-xs text-gray-700 font-mono font-semibold">
+                {patient.patient_id}
             </p>
         </div>
     );
@@ -322,7 +341,7 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
     const formatDate = (date: string | Date): string => {
         return new Date(date).toLocaleDateString('en-BD', {
             year: 'numeric',
-            month: 'long',
+            month: 'short',
             day: 'numeric'
         });
     };
@@ -361,51 +380,92 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
             )}
 
             <style>{`
-    @media print {
-        @page {
-                size: A4 portrait;
-                margin: 12mm 10mm;
-            }
+                @media print {
+                    @page {
+                        size: A4 portrait;
+                        margin: 15mm 20mm 15mm 20mm;
+                    }
 
-            * {
-                box-sizing: border-box;
-            }
+                    * {
+                        box-sizing: border-box;
+                    }
 
-            html, body {
-                margin: 0 !important;
-                padding: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
-                print-color-adjust: exact;
-                -webkit-print-color-adjust: exact;
-            }
-        .no-print {
-            display: none !important;
-        }
-        .print-container {
-            width: 100%;
-            max-width: 100%;
-            height: auto;
-            min-height: 460px;
-            page-break-inside: avoid;
-            font-size: 10px;
-            margin: 0;
-            padding: 10mm;
-        }
-    }
-    @media screen {
-        .print-container {
-            width: 100%;
-            max-width: 900px;
-            min-height: 400px;
-            margin: 20px auto;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            font-size: 12px;
-            padding: 12px;
-        }
-    }
-`}</style>
+                    html, body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                        print-color-adjust: exact;
+                        -webkit-print-color-adjust: exact;
+                        font-size: 11px;
+                        height: auto !important;
+                        overflow: hidden !important;
+                    }
 
+                    .no-print {
+                        display: none !important;
+                    }
+
+                    .print-container {
+                        width: auto;
+                        max-width: calc(100% - 40mm);
+                        max-width: 100%;
+                        height: 50vh;
+                        max-height: 50vh;
+                        page-break-inside: avoid;
+                        padding: 10px;
+                        margin-top: 8mm;
+                        margin-left: 10mm;
+                        margin-right: 10mm;
+                        overflow: hidden;
+                        font-size: 11px;
+                    }
+
+
+                    .hospital-header h1 {
+                        font-size: 16px !important;
+                        line-height: 1.2 !important;
+                        margin-bottom: 4px !important;
+                    }
+
+                    .hospital-header .text-lg {
+                        font-size: 12px !important;
+                    }
+
+                    .grid-info {
+                        font-size: 10px !important;
+                    }
+
+                    .receipt-title {
+                        font-size: 12px !important;
+                    }
+
+                    .amount-display {
+                        font-size: 14px !important;
+                    }
+
+                    .print-grid {
+                        gap: 8px !important;
+                    }
+
+                    .print-info-grid {
+                        gap: 6px !important;
+                    }
+                }
+
+                @media screen {
+                    .print-container {
+                        width: 100%;
+                        max-width: 1200px;
+                        min-height: 600px;
+                        margin: 20px auto;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+                        font-size: 13px;
+                        padding: 20px;
+                        border-radius: 8px;
+                    }
+                }
+            `}</style>
 
             {/* Screen Only - Print Button */}
             <div className="no-print fixed top-4 right-4 z-50">
@@ -419,214 +479,199 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
             </div>
 
             {/* Auto-Save Status Banner */}
-            <div className="no-print bg-blue-50 border-b border-blue-200 p-2 text-center text-sm text-blue-700">
+            <div className="no-print bg-blue-50 border-b border-blue-200 p-3 text-center text-sm text-blue-700">
                 🔄 QR Code will be automatically saved to database when page loads
             </div>
 
             {/* Receipt Container */}
-            <div className="print-container bg-white border font-mono">
-                <div className="grid grid-cols-10 gap-2 h-full">
+            <div className="print-container bg-white border border-gray-300">
 
-                    {/* Left Section - Hospital Info */}
-                    <div className="col-span-2">
-                        {/* Hospital Header with Logo */}
-                        <div className="text-center border-b-2 border-dashed border-gray-400 pb-2 mb-2">
-                            <div className="flex justify-center mb-1">
-                                <img
-                                    src="/logo.png"
-                                    alt="Hospital Logo"
-                                    className="h-6 w-6 object-contain"
-                                    onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.style.display = 'none';
-                                        const fallback = target.nextElementSibling as HTMLElement;
-                                        if (fallback) {
-                                            fallback.style.display = 'flex';
-                                        }
-                                    }}
-                                />
-                                <div className="h-6 w-6 bg-blue-600 rounded-full hidden items-center justify-center">
-                                    <Building className="h-4 w-4 text-white" />
-                                </div>
-                            </div>
-                            <h1 className="text-xs font-bold text-gray-900 leading-tight">NAOGAON ISLAMIA</h1>
-                            <h2 className="text-xs font-bold text-blue-600">CHAKKHU HOSPITAL</h2>
-                            <p className="text-xs text-gray-600">& Phaco Center</p>
-                            <div className="text-xs text-gray-500 mt-1 space-y-0.5">
-                                <p>Main Road, Naogaon</p>
-                                <p>01307-885566</p>
-                                <p>niehpc@gmail.com</p>
-                            </div>
+                {/* Hospital Header - Compact */}
+                <div className="hospital-header text-center border-b-2 border-blue-600 pb-3 mb-4">
+                    <div className="flex justify-center items-center mb-2">
+                        <img
+                            src="/logo.png"
+                            alt="Hospital Logo"
+                            className="h-10 w-10 object-contain mr-3"
+                            onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const fallback = target.nextElementSibling as HTMLElement;
+                                if (fallback) {
+                                    fallback.style.display = 'flex';
+                                }
+                            }}
+                        />
+                        <div className="h-10 w-10 bg-blue-600 rounded-full hidden items-center justify-center mr-3">
+                            <Building className="h-6 w-6 text-white" />
                         </div>
-
-                        {/* Receipt Info */}
-                        <div className="text-center mb-2">
-                            <div className="bg-green-100 border border-green-300 rounded-lg p-1.5 mb-2">
-                                <div className="flex items-center justify-center gap-1 text-green-700">
-                                    <CheckCircle className="h-3 w-3" />
-                                    <span className="font-semibold text-xs">COMPLETED</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-1 text-xs">
-                                <div>
-                                    <span className="text-gray-600">Receipt:</span>
-                                    <div className="font-bold text-xs">{generateReceiptNumber().split('-').slice(-1)[0]}</div>
-                                </div>
-                                <div>
-                                    <span className="text-gray-600">Visit:</span>
-                                    <div className="font-bold">{visit.visit_id}</div>
-                                </div>
-                                <div>
-                                    <span className="text-gray-600">Date:</span>
-                                    <div className="font-bold">{new Date(visit.created_at).toLocaleDateString('en-BD', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        year: '2-digit'
-                                    })}</div>
-                                </div>
-                                <div>
-                                    <span className="text-gray-600">Time:</span>
-                                    <div className="font-bold">{formatTime(visit.created_at)}</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Status */}
-                        <div className="text-center">
-                            <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${visit.payment_status === 'paid'
-                                ? 'bg-green-100 text-green-800'
-                                : visit.payment_status === 'partial'
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
-                                <CheckCircle className="h-3 w-3" />
-                                {visit.payment_status === 'paid' ? 'PAID' :
-                                    visit.payment_status === 'partial' ? 'PARTIAL' : 'PENDING'}
-                            </div>
+                        <div className="text-left">
+                            <h1 className="text-xl font-bold text-gray-900 leading-tight">
+                                NAOGAON ISLAMIA EYE HOSPITAL & PHACO CENTER
+                            </h1>
                         </div>
                     </div>
 
-                    {/* Patient Information */}
+                    <div className="space-y-1 text-gray-700">
+                        <div className="text-sm font-semibold">
+                            <span className="font-bold">Address:</span> Main Road, Beside of Naogaon Fisheries Building, Naogaon Sadar, Naogaon
+                        </div>
+                        <div className="text-sm font-semibold">
+                            <span className="font-bold">Contacts:</span>
+                            <span className="ml-2">📞 01307-885566</span>
+                            <span className="ml-3">✉️ niehpc@gmail.com</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Receipt Content */}
+                <div className="grid grid-cols-12 print-grid gap-6">
+
+                    {/* Left Section - Receipt Info & Status */}
                     <div className="col-span-3">
-                        <div className="border border-gray-300 rounded-lg p-2 h-full">
-                            <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2 text-xs">
-                                <User className="h-3 w-3" />
-                                PATIENT DETAILS
+                        <div className="bg-green-50 border border-green-300 rounded p-3 mb-3">
+                            <div className="text-center">
+                                <div className="bg-green-600 text-white px-3 py-1 rounded-full mb-2 text-xs">
+                                    <CheckCircle className="h-3 w-3 inline mr-1" />
+                                    <span className="font-bold">COMPLETED</span>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div>
+                                        <span className="text-gray-600 block text-xs">Receipt No.</span>
+                                        <div className="font-bold text-sm">{generateReceiptNumber().split('-').slice(-1)[0]}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600 block text-xs">Visit ID</span>
+                                        <div className="font-bold text-sm">{visit.visit_id}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600 block text-xs">Date & Time</span>
+                                        <div className="font-bold text-xs">
+                                            {formatDate(visit.created_at)}
+                                        </div>
+                                        <div className="font-bold text-xs text-gray-700">
+                                            {formatTime(visit.created_at)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className={`text-center px-3 py-2 rounded font-bold text-sm ${visit.payment_status === 'paid'
+                            ? 'bg-green-100 text-green-800 border border-green-300'
+                            : visit.payment_status === 'partial'
+                                ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+                                : 'bg-red-100 text-red-800 border border-red-300'
+                            }`}>
+                            {visit.payment_status === 'paid' ? 'FULLY PAID' :
+                                visit.payment_status === 'partial' ? 'PARTIALLY PAID' : 'PENDING'}
+                        </div>
+
+                        {/* QR Code Section - Moved Here */}
+                        <div className="border border-gray-300 rounded p-3 mt-3">
+                            <ProfessionalQRCode patient={patient} size={90} csrfToken={csrfToken} />
+                        </div>
+                    </div>
+
+                    {/* Middle Section - Patient Information */}
+                    <div className="col-span-5">
+                        <div className="border border-gray-300 rounded p-3 h-full">
+                            <h3 className="receipt-title font-bold text-gray-800 mb-3 flex items-center gap-2 border-b pb-2">
+                                <User className="h-4 w-4" />
+                                PATIENT INFORMATION
                             </h3>
 
-                            <div className="grid grid-cols-1 gap-y-1.5 text-xs">
-                                <div className="grid grid-cols-2 gap-x-2">
-                                    <div>
-                                        <span className="text-gray-600 block">Patient ID:</span>
-                                        <span className="font-bold">{patient.patient_id}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-600 block">Phone:</span>
-                                        <span className="font-bold">{patient.phone}</span>
-                                    </div>
-                                </div>
-
+                            <div className="grid grid-cols-3 print-info-grid gap-2 grid-info">
                                 <div>
-                                    <span className="text-gray-600 block">Full Name:</span>
+                                    <span className="text-gray-600 block text-xs font-medium">Patient ID</span>
+                                    <span className="font-bold">{patient.patient_id}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-600 block text-xs font-medium">Phone</span>
+                                    <span className="font-bold">{patient.phone}</span>
+                                </div>
+                                <div>
+                                    <span className="text-gray-600 block text-xs font-medium">Gender</span>
+                                    <span className="font-bold capitalize">{patient.gender || 'N/A'}</span>
+                                </div>
+                                <div className="col-span-2">
+                                    <span className="text-gray-600 block text-xs font-medium">Full Name</span>
                                     <span className="font-bold">{patient.name}</span>
                                 </div>
-
+                                <div>
+                                    <span className="text-gray-600 block text-xs font-medium">Date of Birth</span>
+                                    <span className="font-bold text-xs">
+                                        {patient.date_of_birth ? formatDate(patient.date_of_birth) : 'N/A'}
+                                    </span>
+                                </div>
                                 {patient.nid_card && (
-                                    <div>
-                                        <span className="text-gray-600 block">NID Card:</span>
+                                    <div className="col-span-2">
+                                        <span className="text-gray-600 block text-xs font-medium">NID Card</span>
                                         <span className="font-bold">{patient.nid_card}</span>
                                     </div>
                                 )}
-
-                                <div className="grid grid-cols-2 gap-x-2">
-                                    <div>
-                                        <span className="text-gray-600 block">Gender:</span>
-                                        <span className="font-bold capitalize">{patient.gender || 'N/A'}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-600 block">Birth Date:</span>
-                                        <span className="font-bold">
-                                            {patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString('en-BD', {
-                                                day: '2-digit',
-                                                month: '2-digit',
-                                                year: '2-digit'
-                                            }) : 'N/A'}
-                                        </span>
-                                    </div>
-                                </div>
-
                                 {patient.email && (
-                                    <div>
-                                        <span className="text-gray-600 block">Email:</span>
+                                    <div className="col-span-3">
+                                        <span className="text-gray-600 block text-xs font-medium">Email</span>
                                         <span className="font-bold text-xs">{patient.email}</span>
                                     </div>
                                 )}
-
                                 {visit.selected_doctor && (
-                                    <div>
-                                        <span className="text-gray-600 block">Doctor:</span>
+                                    <div className="col-span-3">
+                                        <span className="text-gray-600 block text-xs font-medium">Consulting Doctor</span>
                                         <span className="font-bold">Dr. {visit.selected_doctor.name}</span>
-                                        <span className="text-xs text-gray-500 block">
+                                        <span className="text-xs text-gray-600 block">
                                             {visit.selected_doctor.specialization || 'Ophthalmologist'}
                                         </span>
                                     </div>
                                 )}
-
                                 {visit.chief_complaint && (
-                                    <div>
-                                        <span className="text-gray-600 block">Complaint:</span>
-                                        <span className="font-bold text-xs">
-                                            {visit.chief_complaint.length > 40
-                                                ? visit.chief_complaint.substring(0, 40) + '...'
-                                                : visit.chief_complaint}
-                                        </span>
+                                    <div className="col-span-3">
+                                        <span className="text-gray-600 block text-xs font-medium">Chief Complaint</span>
+                                        <span className="font-bold text-xs">{visit.chief_complaint}</span>
                                     </div>
                                 )}
-
                                 {patient.address && (
-                                    <div>
-                                        <span className="text-gray-600 block">Address:</span>
-                                        <span className="font-bold text-xs">
-                                            {patient.address.length > 50
-                                                ? patient.address.substring(0, 50) + '...'
-                                                : patient.address}
-                                        </span>
+                                    <div className="col-span-3">
+                                        <span className="text-gray-600 block text-xs font-medium">Address</span>
+                                        <span className="font-bold text-xs">{patient.address}</span>
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Payment Details */}
-                    <div className="col-span-3">
-                        <div className="border border-gray-300 rounded-lg p-2 h-full">
-                            <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2 text-xs">
-                                <DollarSign className="h-3 w-3" />
-                                PAYMENT BREAKDOWN
+                    {/* Right Section - Payment Details Only */}
+                    <div className="col-span-4">
+                        {/* Payment Details */}
+                        <div className="border border-gray-300 rounded p-3">
+                            <h3 className="receipt-title font-bold text-gray-800 mb-3 flex items-center gap-2 border-b pb-2">
+                                <DollarSign className="h-4 w-4" />
+                                PAYMENT DETAILS
                             </h3>
 
-                            <div className="space-y-1.5 text-xs">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Registration:</span>
+                            <div className="space-y-2 text-xs">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600">Registration Fee:</span>
                                     <span className="font-bold">{formatCurrency(visit.registration_fee)}</span>
                                 </div>
 
                                 {visit.doctor_fee > 0 && (
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Consultation:</span>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-600">Consultation Fee:</span>
                                         <span className="font-bold">{formatCurrency(visit.doctor_fee)}</span>
                                     </div>
                                 )}
 
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Subtotal:</span>
+                                <div className="flex justify-between items-center border-t pt-2">
+                                    <span className="text-gray-600 font-medium">Subtotal:</span>
                                     <span className="font-bold">{formatCurrency(visit.total_amount)}</span>
                                 </div>
 
                                 {visit.discount_amount > 0 && (
-                                    <div className="flex justify-between text-green-600">
-                                        <span>
+                                    <div className="flex justify-between items-center text-green-600">
+                                        <span className="font-medium">
                                             Discount ({visit.discount_type === 'percentage'
                                                 ? `${visit.discount_value}%`
                                                 : 'Fixed'}):
@@ -635,133 +680,63 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
                                     </div>
                                 )}
 
-                                <div className="border-t-2 border-dashed border-gray-400 pt-1.5 mt-1.5">
-                                    <div className="flex justify-between text-sm font-bold">
-                                        <span>TOTAL:</span>
-                                        <span>{formatCurrency(visit.final_amount)}</span>
+                                <div className="bg-blue-50 p-3 rounded border border-blue-200 my-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-bold text-blue-800">TOTAL AMOUNT:</span>
+                                        <span className="font-bold amount-display text-blue-800">{formatCurrency(visit.final_amount)}</span>
                                     </div>
                                 </div>
 
-                                <div className="flex justify-between text-green-600">
-                                    <span className="font-bold">PAID:</span>
-                                    <span className="font-bold">{formatCurrency(visit.total_paid)}</span>
+                                <div className="flex justify-between items-center text-green-600">
+                                    <span className="font-bold text-sm">AMOUNT PAID:</span>
+                                    <span className="font-bold text-lg">{formatCurrency(visit.total_paid)}</span>
                                 </div>
 
                                 {visit.total_due > 0 && (
-                                    <div className="flex justify-between text-red-600">
-                                        <span className="font-bold">DUE:</span>
-                                        <span className="font-bold">{formatCurrency(visit.total_due)}</span>
+                                    <div className="flex justify-between items-center text-red-600">
+                                        <span className="font-bold text-sm">AMOUNT DUE:</span>
+                                        <span className="font-bold text-lg">{formatCurrency(visit.total_due)}</span>
                                     </div>
                                 )}
 
-                                <div className="bg-gray-50 p-1.5 rounded mt-1.5">
-                                    <div className="text-xs text-gray-600">
-                                        Method: <span className="font-bold">
-                                            {getPaymentMethodName(payment?.payment_method_id || 1)}
-                                        </span>
+                                <div className="bg-gray-50 p-3 rounded mt-3">
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                        <div>
+                                            <span className="text-gray-600 block">Payment Method:</span>
+                                            <span className="font-bold">
+                                                {getPaymentMethodName(payment?.payment_method_id || 1)}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-600 block">Payment Date:</span>
+                                            <span className="font-bold">
+                                                {payment ? formatDate(payment.payment_date)
+                                                    : formatDate(visit.created_at)}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="text-xs text-gray-600">
-                                        Date: <span className="font-bold">
-                                            {payment ? new Date(payment.payment_date).toLocaleDateString('en-BD', {
-                                                day: '2-digit',
-                                                month: '2-digit',
-                                                year: '2-digit'
-                                            }) : new Date(visit.created_at).toLocaleDateString('en-BD', {
-                                                day: '2-digit',
-                                                month: '2-digit',
-                                                year: '2-digit'
-                                            })}
-                                        </span>
-                                    </div>
+                                    {payment?.notes && (
+                                        <div className="mt-2">
+                                            <span className="text-gray-600 block text-xs">Notes:</span>
+                                            <span className="font-bold text-xs">{payment.notes}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    {/* Next Steps & QR */}
-                    <div className="col-span-2">
-                        {/* Next Steps */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-1.5 mb-2">
-                            <h4 className="font-bold text-blue-800 mb-1 flex items-center gap-1 text-xs">
-                                <Clock className="h-3 w-3" />
-                                NEXT STEPS
-                            </h4>
-                            <ul className="text-xs text-blue-700 space-y-0.5">
-                                {visit.payment_status === 'paid' ? (
-                                    <>
-                                        <li>• Vision Test Dept</li>
-                                        <li>• Present receipt</li>
-                                        <li>• Bring docs</li>
-                                        <li>• Follow tech</li>
-                                    </>
-                                ) : (
-                                    <>
-                                        <li>• Complete payment</li>
-                                        <li>• Visit counter</li>
-                                        <li>• Pay: {formatCurrency(visit.total_due)}</li>
-                                        <li>• Then vision test</li>
-                                    </>
-                                )}
-                            </ul>
-                        </div>
-
-                        {/* Visit Status */}
-                        <div className="border border-gray-300 rounded-lg p-1.5 mb-2">
-                            <h4 className="font-bold text-gray-800 mb-1 flex items-center gap-1 text-xs">
-                                <CheckCircle className="h-3 w-3" />
-                                STATUS
-                            </h4>
-                            <div className="text-xs text-gray-700">
-                                <div className="mb-1">
-                                    Payment: <span className={`font-bold ${visit.payment_status === 'paid' ? 'text-green-600' :
-                                        visit.payment_status === 'partial' ? 'text-yellow-600' : 'text-red-600'
-                                        }`}>
-                                        {visit.payment_status.toUpperCase()}
-                                    </span>
-                                </div>
-                                <div>
-                                    Overall: <span className="font-bold text-blue-600">
-                                        {visit.overall_status.toUpperCase().replace('_', ' ')}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Medical History */}
-                        {patient.medical_history && (
-                            <div className="border border-gray-300 rounded-lg p-1.5 mb-2">
-                                <h4 className="font-bold text-gray-800 mb-1 flex items-center gap-1 text-xs">
-                                    <FileText className="h-3 w-3" />
-                                    NOTES
-                                </h4>
-                                <p className="text-xs text-gray-700 leading-relaxed">
-                                    {patient.medical_history.length > 50
-                                        ? patient.medical_history.substring(0, 50) + '...'
-                                        : patient.medical_history}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* QR Code */}
-                        <AutoSaveQRCode patient={patient} size={55} csrfToken={csrfToken} />
-                    </div>
-
                 </div>
 
                 {/* Footer */}
-                <div className="border-t-2 border-dashed border-gray-400 pt-1 mt-2">
+                <div className="border-t border-gray-300 pt-3 mt-4">
                     <div className="flex justify-between items-center text-xs">
-                        <div className="text-gray-600">
-                            Thank you for choosing our hospital
+                        <div className="text-gray-600 font-medium">
+                            Thank you for choosing Naogaon Islamia Eye Hospital
                         </div>
-                        <div className="text-gray-400">
-                            Generated: {new Date().toLocaleDateString('en-BD', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: '2-digit'
-                            })} {formatTime(new Date())}
+                        <div className="text-gray-500">
+                            Generated: {formatDate(new Date())} at {formatTime(new Date())}
                         </div>
-                        <div className="bg-black text-white px-2 py-1 font-mono text-xs tracking-wider rounded">
+                        <div className="bg-black text-white px-3 py-1 font-mono text-sm tracking-wider rounded">
                             {patient.patient_id}
                         </div>
                     </div>

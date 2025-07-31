@@ -33,7 +33,8 @@ import {
     FileBarChart,
     Calculator,
     Building2,
-    Glasses
+    Glasses,
+    ShoppingBag
 } from 'lucide-react';
 import FlashMessages from '@/components/FlashMessage';
 
@@ -71,6 +72,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [medicineCornerOpen, setMedicineCornerOpen] = useState(false);
     const [accountSectionOpen, setAccountSectionOpen] = useState(false);
+    const [opticsCornerOpen, setOpticsCornerOpen] = useState(false);
+
 
     const userRole = auth.user.role.name;
 
@@ -133,6 +136,11 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 window.location.pathname.includes('/optics-account');
         }
 
+        if (currentPattern === 'optics.*') {
+            return currentRouteName?.includes('optics') ||
+                window.location.pathname.includes('/optics');
+        }
+
         // For other routes, use pattern matching
         return route().current(currentPattern);
     };
@@ -173,6 +181,23 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             '/optics-account'
         ];
         return accountPaths.some(path => window.location.pathname.startsWith(path));
+    };
+
+    const isOpticsCornerActive = () => {
+        return currentRouteName?.includes('optics') ||
+            window.location.pathname.includes('/optics');
+    };
+
+    const isOpticsCornerChildActive = () => {
+        const opticsCornerPaths = [
+            '/optics',
+            '/optics/frames',
+            '/optics/stock',
+            '/optics/sales',
+            '/optics/lens-types',
+            '/optics/reports'
+        ];
+        return opticsCornerPaths.some(path => window.location.pathname.startsWith(path));
     };
 
     // Navigation items with role-based access
@@ -275,6 +300,61 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 }
             ]
         },
+
+
+        {
+            name: 'OpticsCorner',
+            href: '#',
+            icon: Glasses,
+            current: 'optics.*',
+            roles: ['Super Admin'],
+            children: [
+                {
+                    name: 'Dashboard',
+                    href: '/optics',
+                    icon: Home,
+                    current: 'optics.dashboard',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Frames Management',
+                    href: '/optics/frames',
+                    icon: Glasses,
+                    current: 'optics.frames.*',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Stock Management',
+                    href: '/optics/stock',
+                    icon: Package,
+                    current: 'optics.stock.*',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Sales Management',
+                    href: '/optics/sales',
+                    icon: ShoppingBag,
+                    current: 'optics.sales.*',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Lens Types',
+                    href: '/optics/lens-types',
+                    icon: Eye,
+                    current: 'optics.lens-types.*',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Reports & Analytics',
+                    href: '/optics/reports',
+                    icon: BarChart3,
+                    current: 'optics.reports.*',
+                    roles: ['Super Admin']
+                }
+            ]
+        },
+
+
         // Account Section with dropdown (Super Admin only)
         {
             name: 'Account Management',
@@ -456,6 +536,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 const Icon = item.icon;
                                 const isActive = isRouteActive(item.current);
                                 const isMedicineCorner = item.name === 'Medicine Corner';
+                                const isOpticsCorner = item.name === 'OpticsCorner';
                                 const isAccountSection = item.name === 'Account Management';
 
                                 // Medicine Corner with dropdown
@@ -497,6 +578,55 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                                 }`}
                                                         >
                                                             <ChildIcon className={`flex-shrink-0 h-4 w-4 mr-2 ${isChildActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'
+                                                                }`} />
+                                                            <span>{childItem.name}</span>
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                // OpticsCorner with dropdown
+                                if (isOpticsCorner) {
+                                    const opticsCornerActive = isOpticsCornerActive();
+                                    const anyChildActive = isOpticsCornerChildActive();
+                                    const shouldShowAsActive = opticsCornerActive || anyChildActive;
+
+                                    return (
+                                        <div key={item.name}>
+                                            <button
+                                                onClick={() => setOpticsCornerOpen(!opticsCornerOpen)}
+                                                className={`group flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${shouldShowAsActive
+                                                    ? 'bg-indigo-50 text-indigo-700 border-r-2 border-indigo-700'
+                                                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                    }`}
+                                            >
+                                                <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${shouldShowAsActive ? 'text-indigo-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                    }`} />
+                                                <span className="flex-1 text-left">{item.name}</span>
+                                                <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${opticsCornerOpen || anyChildActive ? 'rotate-90' : ''
+                                                    } ${shouldShowAsActive ? 'text-indigo-700' : 'text-gray-400'}`} />
+                                            </button>
+
+                                            {/* OpticsCorner Dropdown Items */}
+                                            <div className={`mt-1 space-y-1 transition-all duration-200 overflow-hidden ${opticsCornerOpen || anyChildActive ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                                }`}>
+                                                {item.children?.map((childItem) => {
+                                                    const ChildIcon = childItem.icon;
+                                                    const isChildActive = window.location.pathname.startsWith(childItem.href);
+
+                                                    return (
+                                                        <Link
+                                                            key={childItem.name}
+                                                            href={childItem.href}
+                                                            className={`group flex items-center pl-11 pr-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isChildActive
+                                                                ? 'bg-indigo-100 text-indigo-800 border-r-2 border-indigo-600'
+                                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                }`}
+                                                        >
+                                                            <ChildIcon className={`flex-shrink-0 h-4 w-4 mr-2 ${isChildActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-500'
                                                                 }`} />
                                                             <span>{childItem.name}</span>
                                                         </Link>
@@ -651,13 +781,22 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                             </Link>
                         )}
                         {userRole === 'Super Admin' && (
-                            <Link
-                                href="/medicine-corner/purchase"
-                                className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm font-medium rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all duration-200 shadow-sm"
-                            >
-                                <ShoppingCart className="h-4 w-4 mr-2" />
-                                Quick Purchase
-                            </Link>
+                            <div className="space-y-2">
+                                <Link
+                                    href="/medicine-corner/purchase"
+                                    className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm font-medium rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all duration-200 shadow-sm"
+                                >
+                                    <ShoppingCart className="h-4 w-4 mr-2" />
+                                    Medicine Purchase
+                                </Link>
+                                <Link
+                                    href="/optics/frames/create"
+                                    className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-sm"
+                                >
+                                    <Glasses className="h-4 w-4 mr-2" />
+                                    Add Frame
+                                </Link>
+                            </div>
                         )}
                     </div>
                 </div>

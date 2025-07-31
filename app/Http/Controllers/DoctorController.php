@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Doctor;
 use App\Repositories\DoctorRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -102,7 +104,7 @@ class DoctorController extends Controller
                     Rule::unique('users')->ignore($request->user_id), // Laravel use Illuminate\Validation\Rule
                 ],
                 'phone' => 'nullable|string|max:20',
-               'password' => 'nullable|string|min:6',
+                'password' => 'nullable|string|min:6',
                 'specialization' => 'nullable|string|max:255',
                 'qualification' => 'nullable|string',
                 'experience_years' => 'nullable|integer|min:0',
@@ -206,6 +208,8 @@ class DoctorController extends Controller
         ]);
     }
 
+
+
     /**
      * Update the specified doctor in storage.
      *
@@ -215,13 +219,11 @@ class DoctorController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $doctor = $this->doctorRepository->findById($id);
+        // Find the doctor with the associated user
+        $doctor = Doctor::with('user')->findOrFail($id);
 
-        if (!$doctor) {
-            abort(404, 'Doctor not found');
-        }
-
-        $request->validate([
+        // Validate the request
+        $validatedData = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|email|unique:users,email,' . $doctor->user_id,
             'phone' => 'nullable|string|max:20',
@@ -231,35 +233,68 @@ class DoctorController extends Controller
             'bio' => 'nullable|string',
             'consultation_fee' => 'required|numeric|min:0',
             'is_available' => 'boolean',
+            'experience_years' => 'nullable|integer|min:0',
+            'chamber_address' => 'nullable|string',
+            'visiting_hours' => 'nullable|string',
         ]);
 
-        // Update user details if provided
-        if ($request->has('name') || $request->has('email') || $request->has('phone')) {
-            $userData = $request->only(['name', 'email', 'phone']);
+        // Begin database transaction
+        DB::beginTransaction();
 
-            if (!empty($userData)) {
-                $this->userRepository->update($doctor->user_id, $userData);
+        try {
+            // Update user details if provided
+            $user = $doctor->user;
+
+            // Prepare user update data
+            $userUpdateData = [];
+            if (isset($validatedData['name'])) {
+                $userUpdateData['name'] = $validatedData['name'];
             }
+            if (isset($validatedData['email'])) {
+                $userUpdateData['email'] = $validatedData['email'];
+            }
+            if (isset($validatedData['phone'])) {
+                $userUpdateData['phone'] = $validatedData['phone'];
+            }
+
+            // Update user if there are changes
+            if (!empty($userUpdateData)) {
+                $user->update($userUpdateData);
+            }
+
+            // Prepare doctor update data
+            $doctorUpdateData = [
+                'specialization' => $validatedData['specialization'],
+                'qualification' => $validatedData['qualification'],
+                'bio' => $validatedData['bio'] ?? null,
+                'consultation_fee' => $validatedData['consultation_fee'],
+                'is_available' => $validatedData['is_available'],
+                'registration_number' => $validatedData['registration_number'] ?? null,
+                'experience_years' => $validatedData['experience_years'] ?? null,
+                'chamber_address' => $validatedData['chamber_address'] ?? null,
+                'visiting_hours' => $validatedData['visiting_hours'] ?? null,
+            ];
+
+            // Update doctor
+            $doctor->update($doctorUpdateData);
+
+            // Commit the transaction
+            DB::commit();
+
+            // Redirect with success message
+            return redirect()->route('doctors.show', $doctor->id)
+                ->with('success', 'Doctor profile updated successfully!');
+        } catch (\Exception $e) {
+            // Rollback the transaction
+            DB::rollBack();
+
+            // Log the error
+            \Log::error('Doctor update failed: ' . $e->getMessage());
+
+            // Redirect back with error message
+            return back()->with('error', 'Failed to update doctor profile: ' . $e->getMessage())
+                ->withInput();
         }
-
-        // Update doctor details
-        $doctorData = $request->only([
-            'specialization',
-            'qualification',
-            'bio',
-            'consultation_fee',
-            'is_available',
-            'registration_number'
-        ]);
-
-        $success = $this->doctorRepository->update($id, $doctorData);
-
-        if (!$success) {
-            return back()->with('error', 'Failed to update doctor profile.');
-        }
-
-        return redirect()->route('doctors.show', $id)
-            ->with('success', 'Doctor profile updated successfully!');
     }
 
     /**

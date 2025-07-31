@@ -179,7 +179,7 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
                                     <Eye className="w-8 h-8 text-blue-600" />
                                 </div>
                                 <div>
-                                    <h1 className="text-2xl font-bold">Naogaon Islamia Chakkhu Hospital and Phaco Center</h1>
+                                    <h1 className="text-2xl font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
                                     <p className="text-blue-100">Main Road, Beside of Naogaon Fisheries Building, Naogaon Sadar, Naogaon</p>
                                     <p className="text-blue-100">Mobile: 01307-885566; Email: niehpc@gmail.com</p>
                                 </div>
