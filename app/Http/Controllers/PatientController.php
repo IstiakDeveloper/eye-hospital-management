@@ -175,7 +175,7 @@ class PatientController extends Controller
                 ]);
 
                 // Process payment if amount provided
-                if ($request->payment_amount > 0) {
+                if ($request->payment_amount >= 0) {
                     $payment = PatientPayment::create([
                         'patient_id' => $patient->id,
                         'visit_id' => $visit->id,

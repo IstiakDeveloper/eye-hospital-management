@@ -647,9 +647,9 @@ class VisionTestController extends Controller
             ],
             'qrCodeBase64' => $qrCodeBase64,
             'hospitalInfo' => [
-                'name' => 'Naogaon Islami Eye Hospital & Phaco Center',
-                'address' => 'Main Road, Beside Naogaon Fisheries Building, Naogaon Sadar, Naogaon',
-                'contact' => 'Mobile: 01307-885566; Email: niehpc@gmail.com'
+                'name' => 'নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার',
+                'address' => 'সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।',
+                'contact' => 'মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gmail.com'
             ]
 
         ]);
@@ -756,9 +756,9 @@ class VisionTestController extends Controller
             'qrCodeBase64' => $qrCodeBase64,
             'isBlankReport' => true,
             'hospitalInfo' => [
-                'name' => 'Naogaon Islami Eye Hospital & Phaco Center',
-                'address' => 'Main Road, Beside Naogaon Fisheries Building, Naogaon Sadar, Naogaon',
-                'contact' => 'Mobile: 01307-885566; Email: niehpc@gmail.com'
+                'name' => 'নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার',
+                'address' => 'সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।',
+                'contact' => 'মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gmail.com'
             ]
 
         ]);

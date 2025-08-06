@@ -73,7 +73,7 @@ interface Props {
 // Professional QR Component with Image Support
 const ProfessionalQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?: string }> = ({
     patient,
-    size = 80,
+    size = 90,
     csrfToken
 }) => {
     const qrRef = useRef<HTMLDivElement>(null);
@@ -96,12 +96,10 @@ const ProfessionalQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?
     // Load existing QR code image if available
     useEffect(() => {
         if (patient.qr_code_image_path) {
-            // Try to load the saved QR image
             const imageUrl = patient.qr_code_image_path.startsWith('http')
                 ? patient.qr_code_image_path
                 : `/storage/${patient.qr_code_image_path}`;
 
-            // Test if image exists
             const img = new Image();
             img.onload = () => setQrImageUrl(imageUrl);
             img.onerror = () => {
@@ -264,7 +262,6 @@ const ProfessionalQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?
         <div className="text-center">
             <div className="bg-white p-2 border border-gray-300 rounded mx-auto mb-2 inline-block">
                 {qrImageUrl ? (
-                    // Show saved QR image if available
                     <img
                         src={qrImageUrl}
                         alt="Patient QR Code"
@@ -276,7 +273,6 @@ const ProfessionalQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?
                         }}
                     />
                 ) : (
-                    // Generate QR code if no saved image
                     <div ref={qrRef}>
                         <QRCode
                             value={getQRCodeData()}
@@ -383,7 +379,7 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 15mm 20mm 15mm 20mm;
+                        margin: 8mm;
                     }
 
                     * {
@@ -398,7 +394,6 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
                         print-color-adjust: exact;
                         -webkit-print-color-adjust: exact;
                         font-size: 11px;
-                        height: auto !important;
                         overflow: hidden !important;
                     }
 
@@ -407,29 +402,43 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
                     }
 
                     .print-container {
-                        width: auto;
-                        max-width: calc(100% - 40mm);
-                        max-width: 100%;
-                        height: 50vh;
-                        max-height: 50vh;
-                        page-break-inside: avoid;
-                        padding: 10px;
-                        margin-top: 8mm;
-                        margin-left: 10mm;
-                        margin-right: 10mm;
-                        overflow: hidden;
-                        font-size: 11px;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        height: 50vh !important;
+                        max-height: 50vh !important;
+                        overflow: hidden !important;
+                        page-break-inside: avoid !important;
+                        page-break-after: avoid !important;
+                        page-break-before: avoid !important;
+                        padding: 8px !important;
+                        margin: 0 !important;
+                        font-size: 11px !important;
+                        position: relative !important;
+                        border: none !important;
                     }
 
+                    .print-content {
+                        height: calc(50vh - 50px) !important;
+                        overflow: hidden !important;
+                    }
+
+                    .print-footer {
+                        position: absolute !important;
+                        bottom: 0 !important;
+                        left: 8px !important;
+                        right: 8px !important;
+                        height: 35px !important;
+                        overflow: hidden !important;
+                    }
 
                     .hospital-header h1 {
-                        font-size: 16px !important;
+                        font-size: 14px !important;
                         line-height: 1.2 !important;
-                        margin-bottom: 4px !important;
+                        margin-bottom: 2px !important;
                     }
 
-                    .hospital-header .text-lg {
-                        font-size: 12px !important;
+                    .hospital-header .text-sm {
+                        font-size: 10px !important;
                     }
 
                     .grid-info {
@@ -437,19 +446,30 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
                     }
 
                     .receipt-title {
-                        font-size: 12px !important;
+                        font-size: 11px !important;
                     }
 
                     .amount-display {
-                        font-size: 14px !important;
+                        font-size: 12px !important;
                     }
 
                     .print-grid {
-                        gap: 8px !important;
+                        gap: 6px !important;
                     }
 
                     .print-info-grid {
-                        gap: 6px !important;
+                        gap: 4px !important;
+                    }
+
+                    /* Force single page */
+                    body {
+                        page-break-after: avoid !important;
+                    }
+
+                    .print-container * {
+                        page-break-inside: avoid !important;
+                        page-break-after: avoid !important;
+                        page-break-before: avoid !important;
                     }
                 }
 
@@ -463,6 +483,16 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
                         font-size: 13px;
                         padding: 20px;
                         border-radius: 8px;
+                        position: relative;
+                    }
+
+                    .print-content {
+                        height: auto;
+                    }
+
+                    .print-footer {
+                        position: relative;
+                        height: auto;
                     }
                 }
             `}</style>
@@ -507,228 +537,230 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
                         </div>
                         <div className="text-left">
                             <h1 className="text-xl font-bold text-gray-900 leading-tight">
-                                NAOGAON ISLAMIA EYE HOSPITAL & PHACO CENTER
+                                নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার
                             </h1>
                         </div>
                     </div>
 
                     <div className="space-y-1 text-gray-700">
                         <div className="text-sm font-semibold">
-                            <span className="font-bold">Address:</span> Main Road, Beside of Naogaon Fisheries Building, Naogaon Sadar, Naogaon
+                            <span className="font-bold">ঠিকানা:</span> সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।
                         </div>
                         <div className="text-sm font-semibold">
-                            <span className="font-bold">Contacts:</span>
-                            <span className="ml-2">📞 01307-885566</span>
+                            <span className="font-bold">যোগাযোগ:</span>
+                            <span className="ml-2">📞 ০১৩০৭-৮৮৫৫৬৬</span>
                             <span className="ml-3">✉️ niehpc@gmail.com</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Receipt Content */}
-                <div className="grid grid-cols-12 print-grid gap-6">
+                {/* Print Content */}
+                <div className="print-content">
+                    {/* Receipt Content */}
+                    <div className="grid grid-cols-12 print-grid gap-6">
 
-                    {/* Left Section - Receipt Info & Status */}
-                    <div className="col-span-3">
-                        <div className="bg-green-50 border border-green-300 rounded p-3 mb-3">
-                            <div className="text-center">
-                                <div className="bg-green-600 text-white px-3 py-1 rounded-full mb-2 text-xs">
-                                    <CheckCircle className="h-3 w-3 inline mr-1" />
-                                    <span className="font-bold">COMPLETED</span>
-                                </div>
+                        {/* Left Section - Receipt Info & Status */}
+                        <div className="col-span-3">
+                            <div className="bg-green-50 border border-green-300 rounded p-3 mb-3">
+                                <div className="text-center">
+                                    <div className="bg-green-600 text-white px-3 py-1 rounded-full mb-2 text-xs">
+                                        <CheckCircle className="h-3 w-3 inline mr-1" />
+                                        <span className="font-bold">COMPLETED</span>
+                                    </div>
 
-                                <div className="space-y-2">
-                                    <div>
-                                        <span className="text-gray-600 block text-xs">Receipt No.</span>
-                                        <div className="font-bold text-sm">{generateReceiptNumber().split('-').slice(-1)[0]}</div>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-600 block text-xs">Visit ID</span>
-                                        <div className="font-bold text-sm">{visit.visit_id}</div>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-600 block text-xs">Date & Time</span>
-                                        <div className="font-bold text-xs">
-                                            {formatDate(visit.created_at)}
+                                    <div className="space-y-2">
+                                        <div>
+                                            <span className="text-gray-600 block text-xs">Receipt No.</span>
+                                            <div className="font-bold text-sm">{generateReceiptNumber().split('-').slice(-1)[0]}</div>
                                         </div>
-                                        <div className="font-bold text-xs text-gray-700">
-                                            {formatTime(visit.created_at)}
+                                        <div>
+                                            <span className="text-gray-600 block text-xs">Visit ID</span>
+                                            <div className="font-bold text-sm">{visit.visit_id}</div>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-600 block text-xs">Date & Time</span>
+                                            <div className="font-bold text-xs">
+                                                {formatDate(visit.created_at)}
+                                            </div>
+                                            <div className="font-bold text-xs text-gray-700">
+                                                {formatTime(visit.created_at)}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+
+                            <div className={`text-center px-3 py-2 rounded font-bold text-sm ${visit.payment_status === 'paid'
+                                ? 'bg-green-100 text-green-800 border border-green-300'
+                                : visit.payment_status === 'partial'
+                                    ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+                                    : 'bg-red-100 text-red-800 border border-red-300'
+                                }`}>
+                                {visit.payment_status === 'paid' ? 'FULLY PAID' :
+                                    visit.payment_status === 'partial' ? 'PARTIALLY PAID' : 'PENDING'}
+                            </div>
+
+                            {/* QR Code Section */}
+                            <div className="border border-gray-300 rounded p-3 mt-3">
+                                <ProfessionalQRCode patient={patient} size={90} csrfToken={csrfToken} />
+                            </div>
                         </div>
 
-                        <div className={`text-center px-3 py-2 rounded font-bold text-sm ${visit.payment_status === 'paid'
-                            ? 'bg-green-100 text-green-800 border border-green-300'
-                            : visit.payment_status === 'partial'
-                                ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
-                                : 'bg-red-100 text-red-800 border border-red-300'
-                            }`}>
-                            {visit.payment_status === 'paid' ? 'FULLY PAID' :
-                                visit.payment_status === 'partial' ? 'PARTIALLY PAID' : 'PENDING'}
-                        </div>
+                        {/* Middle Section - Patient Information */}
+                        <div className="col-span-5">
+                            <div className="border border-gray-300 rounded p-3 h-full">
+                                <h3 className="receipt-title font-bold text-gray-800 mb-3 flex items-center gap-2 border-b pb-2">
+                                    <User className="h-4 w-4" />
+                                    PATIENT INFORMATION
+                                </h3>
 
-                        {/* QR Code Section - Moved Here */}
-                        <div className="border border-gray-300 rounded p-3 mt-3">
-                            <ProfessionalQRCode patient={patient} size={90} csrfToken={csrfToken} />
-                        </div>
-                    </div>
-
-                    {/* Middle Section - Patient Information */}
-                    <div className="col-span-5">
-                        <div className="border border-gray-300 rounded p-3 h-full">
-                            <h3 className="receipt-title font-bold text-gray-800 mb-3 flex items-center gap-2 border-b pb-2">
-                                <User className="h-4 w-4" />
-                                PATIENT INFORMATION
-                            </h3>
-
-                            <div className="grid grid-cols-3 print-info-grid gap-2 grid-info">
-                                <div>
-                                    <span className="text-gray-600 block text-xs font-medium">Patient ID</span>
-                                    <span className="font-bold">{patient.patient_id}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-600 block text-xs font-medium">Phone</span>
-                                    <span className="font-bold">{patient.phone}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-600 block text-xs font-medium">Gender</span>
-                                    <span className="font-bold capitalize">{patient.gender || 'N/A'}</span>
-                                </div>
-                                <div className="col-span-2">
-                                    <span className="text-gray-600 block text-xs font-medium">Full Name</span>
-                                    <span className="font-bold">{patient.name}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-600 block text-xs font-medium">Date of Birth</span>
-                                    <span className="font-bold text-xs">
-                                        {patient.date_of_birth ? formatDate(patient.date_of_birth) : 'N/A'}
-                                    </span>
-                                </div>
-                                {patient.nid_card && (
+                                <div className="grid grid-cols-3 print-info-grid gap-2 grid-info">
+                                    <div>
+                                        <span className="text-gray-600 block text-xs font-medium">Patient ID</span>
+                                        <span className="font-bold">{patient.patient_id}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600 block text-xs font-medium">Phone</span>
+                                        <span className="font-bold">{patient.phone}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-600 block text-xs font-medium">Gender</span>
+                                        <span className="font-bold capitalize">{patient.gender || 'N/A'}</span>
+                                    </div>
                                     <div className="col-span-2">
-                                        <span className="text-gray-600 block text-xs font-medium">NID Card</span>
-                                        <span className="font-bold">{patient.nid_card}</span>
+                                        <span className="text-gray-600 block text-xs font-medium">Full Name</span>
+                                        <span className="font-bold">{patient.name}</span>
                                     </div>
-                                )}
-                                {patient.email && (
-                                    <div className="col-span-3">
-                                        <span className="text-gray-600 block text-xs font-medium">Email</span>
-                                        <span className="font-bold text-xs">{patient.email}</span>
-                                    </div>
-                                )}
-                                {visit.selected_doctor && (
-                                    <div className="col-span-3">
-                                        <span className="text-gray-600 block text-xs font-medium">Consulting Doctor</span>
-                                        <span className="font-bold">Dr. {visit.selected_doctor.name}</span>
-                                        <span className="text-xs text-gray-600 block">
-                                            {visit.selected_doctor.specialization || 'Ophthalmologist'}
+                                    <div>
+                                        <span className="text-gray-600 block text-xs font-medium">Date of Birth</span>
+                                        <span className="font-bold text-xs">
+                                            {patient.date_of_birth ? formatDate(patient.date_of_birth) : 'N/A'}
                                         </span>
                                     </div>
-                                )}
-                                {visit.chief_complaint && (
-                                    <div className="col-span-3">
-                                        <span className="text-gray-600 block text-xs font-medium">Chief Complaint</span>
-                                        <span className="font-bold text-xs">{visit.chief_complaint}</span>
-                                    </div>
-                                )}
-                                {patient.address && (
-                                    <div className="col-span-3">
-                                        <span className="text-gray-600 block text-xs font-medium">Address</span>
-                                        <span className="font-bold text-xs">{patient.address}</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right Section - Payment Details Only */}
-                    <div className="col-span-4">
-                        {/* Payment Details */}
-                        <div className="border border-gray-300 rounded p-3">
-                            <h3 className="receipt-title font-bold text-gray-800 mb-3 flex items-center gap-2 border-b pb-2">
-                                <DollarSign className="h-4 w-4" />
-                                PAYMENT DETAILS
-                            </h3>
-
-                            <div className="space-y-2 text-xs">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Registration Fee:</span>
-                                    <span className="font-bold">{formatCurrency(visit.registration_fee)}</span>
-                                </div>
-
-                                {visit.doctor_fee > 0 && (
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-gray-600">Consultation Fee:</span>
-                                        <span className="font-bold">{formatCurrency(visit.doctor_fee)}</span>
-                                    </div>
-                                )}
-
-                                <div className="flex justify-between items-center border-t pt-2">
-                                    <span className="text-gray-600 font-medium">Subtotal:</span>
-                                    <span className="font-bold">{formatCurrency(visit.total_amount)}</span>
-                                </div>
-
-                                {visit.discount_amount > 0 && (
-                                    <div className="flex justify-between items-center text-green-600">
-                                        <span className="font-medium">
-                                            Discount ({visit.discount_type === 'percentage'
-                                                ? `${visit.discount_value}%`
-                                                : 'Fixed'}):
-                                        </span>
-                                        <span className="font-bold">-{formatCurrency(visit.discount_amount)}</span>
-                                    </div>
-                                )}
-
-                                <div className="bg-blue-50 p-3 rounded border border-blue-200 my-3">
-                                    <div className="flex justify-between items-center">
-                                        <span className="font-bold text-blue-800">TOTAL AMOUNT:</span>
-                                        <span className="font-bold amount-display text-blue-800">{formatCurrency(visit.final_amount)}</span>
-                                    </div>
-                                </div>
-
-                                <div className="flex justify-between items-center text-green-600">
-                                    <span className="font-bold text-sm">AMOUNT PAID:</span>
-                                    <span className="font-bold text-lg">{formatCurrency(visit.total_paid)}</span>
-                                </div>
-
-                                {visit.total_due > 0 && (
-                                    <div className="flex justify-between items-center text-red-600">
-                                        <span className="font-bold text-sm">AMOUNT DUE:</span>
-                                        <span className="font-bold text-lg">{formatCurrency(visit.total_due)}</span>
-                                    </div>
-                                )}
-
-                                <div className="bg-gray-50 p-3 rounded mt-3">
-                                    <div className="grid grid-cols-2 gap-2 text-xs">
-                                        <div>
-                                            <span className="text-gray-600 block">Payment Method:</span>
-                                            <span className="font-bold">
-                                                {getPaymentMethodName(payment?.payment_method_id || 1)}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-600 block">Payment Date:</span>
-                                            <span className="font-bold">
-                                                {payment ? formatDate(payment.payment_date)
-                                                    : formatDate(visit.created_at)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    {payment?.notes && (
-                                        <div className="mt-2">
-                                            <span className="text-gray-600 block text-xs">Notes:</span>
-                                            <span className="font-bold text-xs">{payment.notes}</span>
+                                    {patient.nid_card && (
+                                        <div className="col-span-2">
+                                            <span className="text-gray-600 block text-xs font-medium">NID Card</span>
+                                            <span className="font-bold">{patient.nid_card}</span>
                                         </div>
                                     )}
+                                    {patient.email && (
+                                        <div className="col-span-3">
+                                            <span className="text-gray-600 block text-xs font-medium">Email</span>
+                                            <span className="font-bold text-xs">{patient.email}</span>
+                                        </div>
+                                    )}
+                                    {visit.selected_doctor && (
+                                        <div className="col-span-3">
+                                            <span className="text-gray-600 block text-xs font-medium">Consulting Doctor</span>
+                                            <span className="font-bold">Dr. {visit.selected_doctor.name}</span>
+                                            <span className="text-xs text-gray-600 block">
+                                                {visit.selected_doctor.specialization || 'Ophthalmologist'}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {visit.chief_complaint && (
+                                        <div className="col-span-3">
+                                            <span className="text-gray-600 block text-xs font-medium">Chief Complaint</span>
+                                            <span className="font-bold text-xs">{visit.chief_complaint}</span>
+                                        </div>
+                                    )}
+                                    {patient.address && (
+                                        <div className="col-span-3">
+                                            <span className="text-gray-600 block text-xs font-medium">Address</span>
+                                            <span className="font-bold text-xs">{patient.address}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right Section - Payment Details */}
+                        <div className="col-span-4">
+                            <div className="border border-gray-300 rounded p-3">
+                                <h3 className="receipt-title font-bold text-gray-800 mb-3 flex items-center gap-2 border-b pb-2">
+                                    <DollarSign className="h-4 w-4" />
+                                    PAYMENT DETAILS
+                                </h3>
+
+                                <div className="space-y-2 text-xs">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-600">Registration Fee:</span>
+                                        <span className="font-bold">{formatCurrency(visit.registration_fee)}</span>
+                                    </div>
+
+                                    {visit.doctor_fee > 0 && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-600">Consultation Fee:</span>
+                                            <span className="font-bold">{formatCurrency(visit.doctor_fee)}</span>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-between items-center border-t pt-2">
+                                        <span className="text-gray-600 font-medium">Subtotal:</span>
+                                        <span className="font-bold">{formatCurrency(visit.total_amount)}</span>
+                                    </div>
+
+                                    {visit.discount_amount > 0 && (
+                                        <div className="flex justify-between items-center text-green-600">
+                                            <span className="font-medium">
+                                                Discount ({visit.discount_type === 'percentage'
+                                                    ? `${visit.discount_value}%`
+                                                    : 'Fixed'}):
+                                            </span>
+                                            <span className="font-bold">-{formatCurrency(visit.discount_amount)}</span>
+                                        </div>
+                                    )}
+
+                                    <div className="bg-blue-50 p-3 rounded border border-blue-200 my-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-bold text-blue-800">TOTAL AMOUNT:</span>
+                                            <span className="font-bold amount-display text-blue-800">{formatCurrency(visit.final_amount)}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between items-center text-green-600">
+                                        <span className="font-bold text-sm">AMOUNT PAID:</span>
+                                        <span className="font-bold text-lg">{formatCurrency(visit.total_paid)}</span>
+                                    </div>
+
+                                    {visit.total_due > 0 && (
+                                        <div className="flex justify-between items-center text-red-600">
+                                            <span className="font-bold text-sm">AMOUNT DUE:</span>
+                                            <span className="font-bold text-lg">{formatCurrency(visit.total_due)}</span>
+                                        </div>
+                                    )}
+
+                                    <div className="bg-gray-50 p-3 rounded mt-3">
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                            <div>
+                                                <span className="text-gray-600 block">Payment Method:</span>
+                                                <span className="font-bold">
+                                                    {getPaymentMethodName(payment?.payment_method_id || 1)}
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-600 block">Payment Date:</span>
+                                                <span className="font-bold">
+                                                    {payment ? formatDate(payment.payment_date)
+                                                        : formatDate(visit.created_at)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {payment?.notes && (
+                                            <div className="mt-2">
+                                                <span className="text-gray-600 block text-xs">Notes:</span>
+                                                <span className="font-bold text-xs">{payment.notes}</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Footer */}
-                <div className="border-t border-gray-300 pt-3 mt-4">
+                {/* Footer - Fixed Position */}
+                <div className="print-footer border-t border-gray-300 pt-3">
                     <div className="flex justify-between items-center text-xs">
                         <div className="text-gray-600 font-medium">
                             Thank you for choosing Naogaon Islamia Eye Hospital

@@ -6,6 +6,7 @@ use App\Models\Patient;
 use App\Models\PatientVisit;
 use App\Models\PatientPayment;
 use App\Models\Doctor;
+use App\Models\HospitalAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -50,7 +51,7 @@ class PatientVisitController extends Controller
                 ]);
 
                 // Process payment if amount provided
-                if ($request->payment_amount > 0) {
+                if ($request->payment_amount >= 0) {
                     $payment = PatientPayment::create([
                         'patient_id' => $patient->id,
                         'visit_id' => $visit->id,

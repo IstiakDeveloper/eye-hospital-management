@@ -103,8 +103,23 @@ class MedicineController extends Controller
             abort(404, 'Medicine not found');
         }
 
+        // Get existing types and manufacturers for dropdowns (same as create method)
+        $types = Medicine::distinct('type')
+            ->whereNotNull('type')
+            ->where('type', '!=', '')
+            ->pluck('type')
+            ->toArray();
+
+        $manufacturers = Medicine::distinct('manufacturer')
+            ->whereNotNull('manufacturer')
+            ->where('manufacturer', '!=', '')
+            ->pluck('manufacturer')
+            ->toArray();
+
         return Inertia::render('Medicines/Edit', [
-            'medicine' => $medicine
+            'medicine' => $medicine,
+            'types' => $types,
+            'manufacturers' => $manufacturers,
         ]);
     }
 

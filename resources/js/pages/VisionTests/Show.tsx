@@ -179,9 +179,9 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
                                     <Eye className="w-8 h-8 text-blue-600" />
                                 </div>
                                 <div>
-                                    <h1 className="text-2xl font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
-                                    <p className="text-blue-100">Main Road, Beside of Naogaon Fisheries Building, Naogaon Sadar, Naogaon</p>
-                                    <p className="text-blue-100">Mobile: 01307-885566; Email: niehpc@gmail.com</p>
+                                    <h1 className="text-2xl font-bold">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+                                    <p className="text-blue-100">সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।</p>
+                                    <p className="text-blue-100">মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gmail.com</p>
                                 </div>
                             </div>
                             <div className="text-right">

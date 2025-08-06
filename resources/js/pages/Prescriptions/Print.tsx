@@ -567,14 +567,20 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                 <div className="hospital-header">
                     <div className="header-content">
                         <div className="logo-container">
-                            <div className="logo-placeholder">
-                                LOGO
-                            </div>
+                            <img
+                                src="/logo.png"
+                                alt="Hospital Logo"
+                                style={{
+                                    width: '20mm',
+                                    height: '15mm',
+                                    objectFit: 'contain',
+                                }}
+                            />
                         </div>
                         <div className="hospital-info">
-                            <h1>Naogaon Islamia Eye Hospital and Phaco Center</h1>
-                            <p>Main Road, Beside of Naogaon Fisheries Building, Naogaon Sadar, Naogaon</p>
-                            <p>Mobile: 01307-885566; Email: niehpc@gamil.com</p>
+                            <h1 className="text-2xl font-bold">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+                            <p>সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।</p>
+                            <p>মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gmail.com</p>
                         </div>
                     </div>
                 </div>

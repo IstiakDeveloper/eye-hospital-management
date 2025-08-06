@@ -61,21 +61,23 @@ export default function Index({ patients, filters }: Props) {
     // Realtime search with debounce
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            router.get(route('patients.index'), {
+            // Use current URL path instead of route helper if it's not working
+            const currentPath = window.location.pathname;
+
+            router.get(currentPath, {
                 search: searchTerm,
                 gender: genderFilter,
             }, {
                 preserveState: true,
                 replace: true,
             });
-        }, 500); // 500ms delay
+        }, 500);
 
         return () => clearTimeout(timeoutId);
     }, [searchTerm, genderFilter]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        // Form submit will be handled by useEffect
     };
 
     const formatDate = (dateString: string) => {
@@ -98,6 +100,23 @@ export default function Index({ patients, filters }: Props) {
         return age;
     };
 
+    // Handle pagination click
+    const handlePaginationClick = (url: string) => {
+        // Preserve current filters when paginating
+        const urlObj = new URL(url);
+        if (searchTerm) {
+            urlObj.searchParams.set('search', searchTerm);
+        }
+        if (genderFilter) {
+            urlObj.searchParams.set('gender', genderFilter);
+        }
+
+        router.get(urlObj.pathname + urlObj.search, {}, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
+
     return (
         <AdminLayout>
             <Head title="Patients" />
@@ -110,7 +129,7 @@ export default function Index({ patients, filters }: Props) {
                         <p className="text-xs text-gray-500">Manage patient records and information</p>
                     </div>
                     <Link
-                        href={route('patients.create')}
+                        href="/patients/create"
                         className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
                     >
                         <Plus className="h-3 w-3" />
@@ -262,14 +281,14 @@ export default function Index({ patients, filters }: Props) {
                                     <td className="px-3 py-2 text-right">
                                         <div className="flex items-center gap-1 justify-end">
                                             <Link
-                                                href={route('patients.show', patient.id)}
+                                                href={`/patients/${patient.id}`}
                                                 className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
                                             >
                                                 <Eye className="h-3 w-3" />
                                                 View
                                             </Link>
                                             <Link
-                                                href={route('patients.edit', patient.id)}
+                                                href={`/patients/${patient.id}/edit`}
                                                 className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded"
                                             >
                                                 <Edit className="h-3 w-3" />
@@ -289,7 +308,7 @@ export default function Index({ patients, filters }: Props) {
                             <p className="mt-1 text-xs text-gray-500">Get started by creating a new patient record.</p>
                             <div className="mt-4">
                                 <Link
-                                    href={route('patients.create')}
+                                    href="/patients/create"
                                     className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
                                 >
                                     <Plus className="h-3 w-3" />
@@ -300,7 +319,7 @@ export default function Index({ patients, filters }: Props) {
                     )}
                 </div>
 
-                {/* Compact Pagination */}
+                {/* Fixed Pagination */}
                 {patients.total > patients.per_page && (
                     <div className="flex items-center justify-between mt-3">
                         <div className="text-xs text-gray-700">
@@ -321,9 +340,9 @@ export default function Index({ patients, filters }: Props) {
                                 }
 
                                 return (
-                                    <Link
+                                    <button
                                         key={index}
-                                        href={link.url}
+                                        onClick={() => handlePaginationClick(link.url!)}
                                         className={`px-2 py-1 text-xs font-medium rounded ${
                                             link.active
                                                 ? 'bg-blue-600 text-white'
