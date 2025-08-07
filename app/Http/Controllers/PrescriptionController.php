@@ -151,6 +151,9 @@ class PrescriptionController extends Controller
 
             // Get all active medicines
             $medicines = Medicine::where('is_active', true)
+                ->withSum(['stocks as available_quantity' => function ($query) {
+                    $query->where('is_active', true);
+                }], 'available_quantity')
                 ->orderBy('type')
                 ->orderBy('name')
                 ->get()
@@ -161,6 +164,7 @@ class PrescriptionController extends Controller
                         'generic_name' => $medicine->generic_name,
                         'type' => $medicine->type ?? 'General',
                         'manufacturer' => $medicine->manufacturer,
+                        'available_quantity' => $medicine->available_quantity ?? 0,
                     ];
                 });
 

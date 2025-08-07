@@ -74,6 +74,7 @@ interface Medicine {
     generic_name?: string;
     type: string;
     manufacturer?: string;
+    available_quantity?: number;
 }
 
 interface Appointment {
@@ -1357,7 +1358,9 @@ export default function PrescriptionCreate({
                                                                         {medicine.name}
                                                                         {medicine.generic_name && ` (${medicine.generic_name})`}
                                                                         {medicine.manufacturer && ` - ${medicine.manufacturer}`}
+                                                                        {` (${medicine.available_quantity ?? 0})`}
                                                                     </option>
+
                                                                 ))}
                                                         </select>
                                                     </div>
@@ -1379,7 +1382,7 @@ export default function PrescriptionCreate({
                                                         </p>
                                                     </div>
 
-                                                    <div className="grid grid-cols-2 gap-3">
+                                                    <div className="grid grid-cols-1 gap-3">
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                                 Frequency
@@ -1399,26 +1402,149 @@ export default function PrescriptionCreate({
                                                             </select>
                                                         </div>
 
+
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1">
                                                         <div>
                                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                                 Duration
                                                             </label>
-                                                            <select
-                                                                value={item.duration}
-                                                                onChange={(e) => updateMedicineItem(item.id, 'duration', e.target.value)}
-                                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
-                                                            >
-                                                                <option value="">Select duration</option>
-                                                                <option value="3 days">3 days</option>
-                                                                <option value="5 days">5 days</option>
-                                                                <option value="7 days">7 days</option>
-                                                                <option value="10 days">10 days</option>
-                                                                <option value="14 days">14 days</option>
-                                                                <option value="1 month">1 month</option>
-                                                                <option value="2 months">2 months</option>
-                                                                <option value="3 months">3 months</option>
-                                                                <option value="Until finish">Until finish</option>
-                                                            </select>
+
+                                                            {/* Parse current duration for display */}
+                                                            {(() => {
+                                                                const parseDuration = (duration) => {
+                                                                    if (!duration) return { number: '', unit: '' };
+                                                                    if (duration === 'Until finish') return { number: '', unit: 'until_finish' };
+
+                                                                    // Handle temporary unit selection
+                                                                    if (duration.startsWith('__UNIT_SELECTED__')) {
+                                                                        return { number: '', unit: duration.replace('__UNIT_SELECTED__', '') };
+                                                                    }
+
+                                                                    const match = duration.match(/^(\d+)\s*(days?|months?)$/i);
+                                                                    if (match) {
+                                                                        return {
+                                                                            number: match[1],
+                                                                            unit: match[2].toLowerCase().replace(/s$/, '')
+                                                                        };
+                                                                    }
+                                                                    return { number: '', unit: '' };
+                                                                };
+
+                                                                const current = parseDuration(item.duration);
+
+                                                                const handleUnitChange = (unit) => {
+                                                                    if (unit === 'until_finish') {
+                                                                        updateMedicineItem(item.id, 'duration', 'Until finish');
+                                                                    } else if (unit === '') {
+                                                                        updateMedicineItem(item.id, 'duration', '');
+                                                                    } else {
+                                                                        // Unit selected কিন্তু number নেই, তাহলে শুধু unit store করি
+                                                                        if (current.number && unit) {
+                                                                            const plural = parseInt(current.number) > 1 ? 's' : '';
+                                                                            const durationText = `${current.number} ${unit}${plural}`;
+                                                                            updateMedicineItem(item.id, 'duration', durationText);
+                                                                        } else {
+                                                                            // Unit selected কিন্তু number নেই - temporary state
+                                                                            updateMedicineItem(item.id, 'duration', `__UNIT_SELECTED__${unit}`);
+                                                                        }
+                                                                    }
+                                                                };
+
+                                                                const handleNumberChange = (number) => {
+                                                                    if (!number) {
+                                                                        if (current.unit && current.unit !== 'until_finish') {
+                                                                            // Number clear হলে শুধু unit keep করি
+                                                                            updateMedicineItem(item.id, 'duration', `__UNIT_SELECTED__${current.unit}`);
+                                                                        }
+                                                                    } else if (current.unit && current.unit !== 'until_finish') {
+                                                                        const plural = parseInt(number) > 1 ? 's' : '';
+                                                                        const durationText = `${number} ${current.unit}${plural}`;
+                                                                        updateMedicineItem(item.id, 'duration', durationText);
+                                                                    }
+                                                                };
+
+                                                                return (
+                                                                    <>
+                                                                        {/* Main input section */}
+                                                                        <div className="flex gap-2 mb-2">
+                                                                            {/* Unit selector - First */}
+                                                                            <div className="flex-1">
+                                                                                <select
+                                                                                    value={current.unit}
+                                                                                    onChange={(e) => handleUnitChange(e.target.value)}
+                                                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                                                                                >
+                                                                                    <option value="">Select Unit</option>
+                                                                                    <option value="day">Day(s)</option>
+                                                                                    <option value="month">Month(s)</option>
+                                                                                    <option value="until_finish">Until finish</option>
+                                                                                </select>
+                                                                            </div>
+
+                                                                            {/* Number input - Second */}
+                                                                            <div className="flex-1">
+                                                                                <input
+                                                                                    type="number"
+                                                                                    min="1"
+                                                                                    max="365"
+                                                                                    placeholder="Enter number"
+                                                                                    value={current.number}
+                                                                                    onChange={(e) => handleNumberChange(e.target.value)}
+                                                                                    disabled={current.unit === 'until_finish' || current.unit === ''}
+                                                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+
+                                                                        {/* Show helper text */}
+                                                                        {!current.unit && (
+                                                                            <div className="mb-2 text-xs text-gray-500 italic">
+                                                                                First select a unit (Day/Month), then enter the number
+                                                                            </div>
+                                                                        )}
+
+                                                                        {current.unit && current.unit !== 'until_finish' && !current.number && (
+                                                                            <div className="mb-2 text-xs text-amber-600 italic">
+                                                                                Now enter the number of {current.unit}s
+                                                                            </div>
+                                                                        )}
+
+                                                                        {/* Quick select buttons */}
+                                                                        <div className="flex flex-wrap gap-1 mb-2">
+                                                                            <span className="text-xs text-gray-500 mr-1">Quick:</span>
+                                                                            {[
+                                                                                { text: '3d', number: '3', unit: 'day' },
+                                                                                { text: '7d', number: '7', unit: 'day' },
+                                                                                { text: '2w', number: '14', unit: 'day' },
+                                                                                { text: '1m', number: '1', unit: 'month' },
+                                                                                { text: '3m', number: '3', unit: 'month' }
+                                                                            ].map((quick) => (
+                                                                                <button
+                                                                                    key={quick.text}
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        const plural = parseInt(quick.number) > 1 ? 's' : '';
+                                                                                        const durationText = `${quick.number} ${quick.unit}${plural}`;
+                                                                                        updateMedicineItem(item.id, 'duration', durationText);
+                                                                                    }}
+                                                                                    className="px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded hover:bg-amber-200 transition-colors"
+                                                                                >
+                                                                                    {quick.text}
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
+
+                                                                        {/* Show current duration */}
+                                                                        {item.duration && !item.duration.startsWith('__UNIT_SELECTED__') && (
+                                                                            <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                                                                Duration: <span className="font-medium">{item.duration}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </>
+                                                                );
+                                                            })()}
                                                         </div>
                                                     </div>
 
