@@ -25,6 +25,7 @@ class PatientController extends Controller
     {
         $user = auth()->user();
         $query = Patient::query()->with('registeredBy');
+
         // If user is a doctor, only show their associated patients
         if ($user->role->name == 'Doctor' && $user->doctor) {
             // Get patients through visits where this doctor was selected
@@ -63,6 +64,81 @@ class PatientController extends Controller
             $query->where('gender', $request->get('gender'));
         }
 
+        // Date filtering functionality
+        if ($request->filled('date_filter_type')) {
+            $dateFilterType = $request->get('date_filter_type');
+            $dateField = $request->get('date_field', 'created_at'); // Default to registration date
+
+            switch ($dateFilterType) {
+                case 'specific':
+                    if ($request->filled('specific_date')) {
+                        $specificDate = $request->get('specific_date');
+                        $query->whereDate($dateField, $specificDate);
+                    }
+                    break;
+
+                case 'range':
+                    if ($request->filled('start_date')) {
+                        $startDate = $request->get('start_date');
+                        $query->whereDate($dateField, '>=', $startDate);
+                    }
+                    if ($request->filled('end_date')) {
+                        $endDate = $request->get('end_date');
+                        $query->whereDate($dateField, '<=', $endDate);
+                    }
+                    break;
+
+                case 'preset':
+                    $preset = $request->get('date_preset');
+                    $now = now();
+
+                    switch ($preset) {
+                        case 'today':
+                            $query->whereDate($dateField, $now->toDateString());
+                            break;
+                        case 'yesterday':
+                            $query->whereDate($dateField, $now->subDay()->toDateString());
+                            break;
+                        case 'this_week':
+                            $query->whereBetween($dateField, [
+                                $now->startOfWeek()->toDateString(),
+                                $now->endOfWeek()->toDateString()
+                            ]);
+                            break;
+                        case 'last_week':
+                            $lastWeekStart = $now->subWeek()->startOfWeek();
+                            $lastWeekEnd = $now->endOfWeek();
+                            $query->whereBetween($dateField, [
+                                $lastWeekStart->toDateString(),
+                                $lastWeekEnd->toDateString()
+                            ]);
+                            break;
+                        case 'this_month':
+                            $query->whereMonth($dateField, $now->month)
+                                ->whereYear($dateField, $now->year);
+                            break;
+                        case 'last_month':
+                            $lastMonth = $now->subMonth();
+                            $query->whereMonth($dateField, $lastMonth->month)
+                                ->whereYear($dateField, $lastMonth->year);
+                            break;
+                        case 'this_year':
+                            $query->whereYear($dateField, $now->year);
+                            break;
+                        case 'last_7_days':
+                            $query->whereDate($dateField, '>=', $now->subDays(7)->toDateString());
+                            break;
+                        case 'last_30_days':
+                            $query->whereDate($dateField, '>=', $now->subDays(30)->toDateString());
+                            break;
+                        case 'last_90_days':
+                            $query->whereDate($dateField, '>=', $now->subDays(90)->toDateString());
+                            break;
+                    }
+                    break;
+            }
+        }
+
         // Sort by created_at descending by default
         $patients = $query->orderBy('created_at', 'desc')
             ->paginate(15)
@@ -70,7 +146,16 @@ class PatientController extends Controller
 
         return Inertia::render('Patients/Index', [
             'patients' => $patients,
-            'filters' => $request->only(['search', 'gender']),
+            'filters' => $request->only([
+                'search',
+                'gender',
+                'date_filter_type',
+                'date_field',
+                'specific_date',
+                'start_date',
+                'end_date',
+                'date_preset'
+            ]),
             'userRole' => $user->role, // Pass user role to frontend
             'isDoctorView' => $user->role === 'doctor', // Helper flag
         ]);
@@ -110,7 +195,7 @@ class PatientController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
-            'nid_card' => 'nullable|string|max:20',
+            'nid_card' => 'nullable|string|max:20|unique:patients,nid_card',
             'email' => 'nullable|email|max:255',
             'address' => 'nullable|string|max:500',
             'date_of_birth' => 'nullable|date',
@@ -125,44 +210,20 @@ class PatientController extends Controller
 
         try {
             return DB::transaction(function () use ($request) {
-                // Check if patient already exists by phone
-                $existingPatient = Patient::where('phone', $request->phone)->first();
+                // Create new patient every time (no phone check)
+                $patient = Patient::create([
+                    'name' => $request->name,
+                    'phone' => $request->phone,
+                    'nid_card' => $request->nid_card,
+                    'email' => $request->email,
+                    'address' => $request->address,
+                    'date_of_birth' => $request->date_of_birth,
+                    'gender' => $request->gender,
+                    'medical_history' => $request->medical_history,
+                    'registered_by' => auth()->id(),
+                ]);
 
-                // Check NID uniqueness if provided
-                if ($request->nid_card) {
-                    $nidPatient = Patient::where('nid_card', $request->nid_card)->first();
-                    if ($nidPatient && (!$existingPatient || $nidPatient->id !== $existingPatient->id)) {
-                        throw new \Exception('Patient with this NID already exists.');
-                    }
-                }
-
-                if ($existingPatient) {
-                    // Check if patient has active visit
-                    $activeVisit = $existingPatient->visits()
-                        ->whereNotIn('overall_status', ['completed'])
-                        ->first();
-
-                    if ($activeVisit) {
-                        throw new \Exception('This patient already has an active visit. Please complete the current visit first.');
-                    }
-
-                    $patient = $existingPatient;
-                    $message = 'New visit created for existing patient!';
-                } else {
-                    // Create new patient
-                    $patient = Patient::create([
-                        'name' => $request->name,
-                        'phone' => $request->phone,
-                        'nid_card' => $request->nid_card,
-                        'email' => $request->email,
-                        'address' => $request->address,
-                        'date_of_birth' => $request->date_of_birth,
-                        'gender' => $request->gender,
-                        'medical_history' => $request->medical_history,
-                        'registered_by' => auth()->id(),
-                    ]);
-                    $message = 'New patient registered successfully!';
-                }
+                $message = 'New patient registered successfully!';
 
                 // Create new visit
                 $visit = PatientVisit::create([
@@ -459,7 +520,7 @@ class PatientController extends Controller
             'discount_value' => 'nullable|numeric|min:0',
         ]);
 
-        $registrationFee = 200.00;
+        $registrationFee = 100.00;
         $doctorFee = 0;
 
         if ($request->doctor_id) {

@@ -7,6 +7,9 @@ use App\Models\MedicineAccount;
 use App\Models\MedicineSale;
 use App\Models\MedicineSaleItem;
 use App\Models\MedicineStock;
+use App\Models\MedicineVendor;
+use App\Models\MedicineVendorPayment;
+use App\Models\MedicineVendorTransaction;
 use App\Models\Patient;
 use App\Models\StockTransaction;
 use App\Models\StockAlert;
@@ -21,9 +24,12 @@ class MedicineCornerController extends Controller
     /**
      * Stock Management Page
      */
+    /**
+     * Updated Stock List to show vendor information
+     */
     public function stock()
     {
-        $stocks = MedicineStock::with(['medicine', 'addedBy'])
+        $stocks = MedicineStock::with(['medicine', 'vendor', 'addedBy'])
             ->where('available_quantity', '>', 0)
             ->orderBy('expiry_date', 'asc')
             ->paginate(20);
@@ -35,7 +41,7 @@ class MedicineCornerController extends Controller
             ->limit(5)
             ->get();
 
-        $expiringStock = MedicineStock::with('medicine')
+        $expiringStock = MedicineStock::with(['medicine', 'vendor'])
             ->where('expiry_date', '>', now())
             ->where('expiry_date', '<=', now()->addDays(30))
             ->where('available_quantity', '>', 0)
@@ -49,11 +55,20 @@ class MedicineCornerController extends Controller
                 return $stock->available_quantity * $stock->buy_price;
             });
 
+        // Pending payments to vendors
+        $pendingVendorPayments = MedicineStock::with(['vendor', 'medicine'])
+            ->where('payment_status', '!=', 'paid')
+            ->where('due_amount', '>', 0)
+            ->orderBy('purchase_date', 'asc')
+            ->limit(10)
+            ->get();
+
         return Inertia::render('MedicineCorner/Stock', [
             'stocks' => $stocks,
             'lowStockMedicines' => $lowStockMedicines,
             'expiringStock' => $expiringStock,
             'totalStockValue' => $totalStockValue,
+            'pendingVendorPayments' => $pendingVendorPayments,
         ]);
     }
 
@@ -78,13 +93,21 @@ class MedicineCornerController extends Controller
     /**
      * Purchase Entry Page
      */
+    /**
+     * Purchase Entry Page - Updated to include vendors
+     */
     public function purchase()
     {
         $medicines = Medicine::active()
             ->orderBy('name')
             ->get(['id', 'name', 'generic_name', 'standard_sale_price']);
 
-        $recentPurchases = StockTransaction::with(['medicineStock.medicine', 'createdBy'])
+        // Get active vendors
+        $vendors = MedicineVendor::active()
+            ->orderBy('name')
+            ->get(['id', 'name', 'company_name', 'current_balance', 'credit_limit', 'payment_terms_days']);
+
+        $recentPurchases = StockTransaction::with(['medicineStock.medicine', 'medicineStock.vendor', 'createdBy'])
             ->where('type', 'purchase')
             ->orderBy('created_at', 'desc')
             ->limit(10)
@@ -94,83 +117,20 @@ class MedicineCornerController extends Controller
             ->whereDate('created_at', today())
             ->sum('total_amount');
 
+        // Vendors with pending dues
+        $vendorsWithDues = MedicineVendor::withDues()
+            ->limit(5)
+            ->get(['id', 'name', 'current_balance']);
+
         return Inertia::render('MedicineCorner/Purchase', [
             'medicines' => $medicines,
+            'vendors' => $vendors,
             'recentPurchases' => $recentPurchases,
             'todayPurchases' => $todayPurchases,
+            'vendorsWithDues' => $vendorsWithDues,
         ]);
     }
 
-    /**
-     * Reports Page
-     */
-    public function reports(Request $request)
-    {
-        $dateFrom = $request->get('date_from', now()->startOfMonth()->toDateString());
-        $dateTo = $request->get('date_to', now()->toDateString());
-
-        // Purchase Summary
-        $purchaseSummary = StockTransaction::where('type', 'purchase')
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->selectRaw('DATE(created_at) as date, SUM(total_amount) as total, COUNT(*) as count')
-            ->groupBy('date')
-            ->orderBy('date', 'desc')
-            ->get();
-
-        // Top Purchased Medicines
-        $topPurchased = DB::table('stock_transactions')
-            ->join('medicine_stocks', 'stock_transactions.medicine_stock_id', '=', 'medicine_stocks.id')
-            ->join('medicines', 'medicine_stocks.medicine_id', '=', 'medicines.id')
-            ->where('stock_transactions.type', 'purchase')
-            ->whereBetween('stock_transactions.created_at', [$dateFrom, $dateTo])
-            ->select(
-                'medicines.name',
-                DB::raw('SUM(stock_transactions.total_amount) as total_amount'),
-                DB::raw('SUM(stock_transactions.quantity) as total_quantity')
-            )
-            ->groupBy('medicines.id', 'medicines.name')
-            ->orderBy('total_amount', 'desc')
-            ->limit(10)
-            ->get();
-
-        // Stock Valuation
-        $stockValuation = Medicine::with(['stocks' => function ($query) {
-            $query->where('available_quantity', '>', 0);
-        }])
-            ->get()
-            ->map(function ($medicine) {
-                $totalValue = $medicine->stocks->sum(function ($stock) {
-                    return $stock->available_quantity * $stock->buy_price;
-                });
-                return [
-                    'name' => $medicine->name,
-                    'total_stock' => $medicine->total_stock,
-                    'total_value' => $totalValue,
-                    'average_price' => $medicine->total_stock > 0 ? $totalValue / $medicine->total_stock : 0,
-                ];
-            })
-            ->sortByDesc('total_value')
-            ->values();
-
-        // Monthly Purchase Trend
-        $monthlyTrend = StockTransaction::where('type', 'purchase')
-            ->where('created_at', '>=', now()->subMonths(12))
-            ->selectRaw('YEAR(created_at) as year, MONTH(created_at) as month, SUM(total_amount) as total')
-            ->groupBy('year', 'month')
-            ->orderBy('year', 'desc')
-            ->orderBy('month', 'desc')
-            ->get();
-
-        return Inertia::render('MedicineCorner/Reports', [
-            'purchaseSummary' => $purchaseSummary,
-            'topPurchased' => $topPurchased,
-            'stockValuation' => $stockValuation,
-            'monthlyTrend' => $monthlyTrend,
-            'dateFrom' => $dateFrom,
-            'dateTo' => $dateTo,
-            'totalPurchase' => $purchaseSummary->sum('total'),
-        ]);
-    }
 
     /**
      * Alerts Page
@@ -205,17 +165,22 @@ class MedicineCornerController extends Controller
     }
 
     /**
-     * Add New Stock
+     * Updated Add Stock Method (replace the existing one)
      */
     public function addStock(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'vendor_id' => 'required|exists:medicine_vendors,id',
             'medicine_id' => 'required|exists:medicines,id',
             'batch_number' => 'required|string|max:255',
             'expiry_date' => 'required|date|after:today',
             'quantity' => 'required|integer|min:1',
             'buy_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',
+            'paid_amount' => 'nullable|numeric|min:0',
+            'payment_method' => 'nullable|string|in:cash,bank_transfer,cheque,credit',
+            'cheque_no' => 'nullable|string|max:255',
+            'cheque_date' => 'nullable|date',
             'notes' => 'nullable|string',
         ]);
 
@@ -225,52 +190,102 @@ class MedicineCornerController extends Controller
 
         DB::beginTransaction();
         try {
+            $vendor = MedicineVendor::findOrFail($request->vendor_id);
+            $medicine = Medicine::findOrFail($request->medicine_id);
             $totalPurchaseAmount = $request->quantity * $request->buy_price;
+            $paidAmount = $request->paid_amount ?? 0;
+            $dueAmount = $totalPurchaseAmount - $paidAmount;
 
-            // Check if medicine account has sufficient balance
-            $medicineBalance = MedicineAccount::getBalance();
-            if ($medicineBalance < $totalPurchaseAmount) {
-                throw new \Exception("Insufficient balance in Medicine Account. Available: ৳{$medicineBalance}, Required: ৳{$totalPurchaseAmount}");
+            // Check credit limit
+            if ($dueAmount > 0 && ($vendor->current_balance + $dueAmount) > $vendor->credit_limit && $vendor->credit_limit > 0) {
+                throw new \Exception("Credit limit exceeded for {$vendor->name}. Current due: ৳{$vendor->current_balance}, Credit limit: ৳{$vendor->credit_limit}");
             }
 
-            // Create stock entry
+            // If immediate payment, check medicine account balance
+            if ($paidAmount > 0) {
+                $medicineBalance = MedicineAccount::getBalance();
+                if ($medicineBalance < $paidAmount) {
+                    throw new \Exception("Insufficient balance in Medicine Account. Available: ৳{$medicineBalance}, Required: ৳{$paidAmount}");
+                }
+            }
+
+            // Create vendor transaction
+            $vendorTransaction = MedicineVendorTransaction::create([
+                'transaction_no' => MedicineVendorTransaction::generateTransactionNo(),
+                'vendor_id' => $vendor->id,
+                'type' => 'purchase',
+                'amount' => $totalPurchaseAmount,
+                'due_amount' => $dueAmount,
+                'paid_amount' => $paidAmount,
+                'payment_status' => $dueAmount > 0 ? ($paidAmount > 0 ? 'partial' : 'pending') : 'paid',
+                'reference_type' => 'medicine_purchase',
+                'payment_method' => $request->payment_method,
+                'cheque_no' => $request->cheque_no,
+                'cheque_date' => $request->cheque_date,
+                'description' => "Medicine purchase - {$medicine->name} (Batch: {$request->batch_number})",
+                'transaction_date' => now()->toDateString(),
+                'due_date' => now()->addDays($vendor->payment_terms_days)->toDateString(),
+                'created_by' => auth()->id(),
+            ]);
+
+            // Create medicine stock
             $stock = MedicineStock::create([
                 'medicine_id' => $request->medicine_id,
+                'vendor_id' => $vendor->id,
                 'batch_number' => $request->batch_number,
                 'expiry_date' => $request->expiry_date,
                 'quantity' => $request->quantity,
                 'available_quantity' => $request->quantity,
                 'buy_price' => $request->buy_price,
                 'sale_price' => $request->sale_price,
+                'due_amount' => $dueAmount,
+                'payment_status' => $dueAmount > 0 ? ($paidAmount > 0 ? 'partial' : 'pending') : 'paid',
                 'purchase_date' => now()->toDateString(),
                 'notes' => $request->notes,
                 'added_by' => auth()->id(),
             ]);
 
-            // Create purchase transaction
+            // Create stock transaction
             StockTransaction::create([
                 'medicine_stock_id' => $stock->id,
                 'type' => 'purchase',
                 'quantity' => $request->quantity,
                 'unit_price' => $request->buy_price,
                 'total_amount' => $totalPurchaseAmount,
+                'vendor_transaction_id' => $vendorTransaction->id,
                 'reason' => 'Stock purchase - Batch: ' . $request->batch_number,
                 'created_by' => auth()->id(),
             ]);
 
-            // Get medicine name for description
-            $medicine = Medicine::find($request->medicine_id);
+            // Update vendor transaction reference
+            $vendorTransaction->update(['reference_id' => $stock->id]);
 
-            // ✅ ADD TO MEDICINE ACCOUNT AS EXPENSE
-            $medicineTransaction = MedicineAccount::addExpense(
-                $totalPurchaseAmount,
-                'medicine_purchase',
-                "Medicine purchase - {$medicine->name} (Batch: {$request->batch_number})",
-                1
-            );
+            // Handle immediate payment
+            if ($paidAmount > 0) {
+                // Create vendor payment record
+                MedicineVendorPayment::create([
+                    'payment_no' => MedicineVendorPayment::generatePaymentNo(),
+                    'vendor_id' => $vendor->id,
+                    'amount' => $paidAmount,
+                    'payment_method' => $request->payment_method ?? 'cash',
+                    'reference_no' => $request->cheque_no,
+                    'payment_date' => now()->toDateString(),
+                    'description' => "Payment for purchase - {$medicine->name}",
+                    'allocated_transactions' => [$vendorTransaction->id],
+                    'created_by' => auth()->id(),
+                ]);
 
-            // Link stock to medicine transaction
-            $stock->update(['medicine_transaction_id' => $medicineTransaction->id]);
+                // Deduct from medicine account
+                MedicineAccount::addExpense(
+                    $paidAmount,
+                    'vendor_payment',
+                    "Payment to {$vendor->name} for {$medicine->name}",
+                    1
+                );
+            }
+
+            // Update vendor balance
+            $vendor->updateBalance();
 
             // Update medicine totals
             $medicine->updateTotalStock();
@@ -278,7 +293,15 @@ class MedicineCornerController extends Controller
 
             DB::commit();
 
-            return redirect()->back()->with('success', "Stock added successfully! Amount deducted from Medicine Account: ৳{$totalPurchaseAmount}");
+            $message = "Stock added successfully! Total: ৳{$totalPurchaseAmount}";
+            if ($paidAmount > 0) {
+                $message .= ", Paid: ৳{$paidAmount}";
+            }
+            if ($dueAmount > 0) {
+                $message .= ", Due to {$vendor->name}: ৳{$dueAmount}";
+            }
+
+            return redirect()->back()->with('success', $message);
         } catch (\Exception $e) {
             DB::rollback();
             return redirect()->back()->with('error', 'Failed to add stock: ' . $e->getMessage());
@@ -938,6 +961,336 @@ class MedicineCornerController extends Controller
                 'daily_sales' => $dailySales,
                 'top_medicines' => $topMedicines,
                 'payment_status' => $paymentStatus,
+            ]
+        ]);
+    }
+
+
+
+    /**
+     * Enhanced Reports with Vendor Information
+     */
+    public function reports(Request $request)
+    {
+        $dateFrom = $request->get('date_from', now()->startOfMonth()->toDateString());
+        $dateTo = $request->get('date_to', now()->toDateString());
+
+        // Purchase Summary with vendor breakdown
+        $purchaseSummary = StockTransaction::with(['medicineStock.vendor'])
+            ->where('type', 'purchase')
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->selectRaw('DATE(created_at) as date, SUM(total_amount) as total, COUNT(*) as count')
+            ->groupBy('date')
+            ->orderBy('date', 'desc')
+            ->get();
+
+        // Top Vendors by Purchase Volume
+        $topVendors = DB::table('medicine_vendor_transactions')
+            ->join('medicine_vendors', 'medicine_vendor_transactions.vendor_id', '=', 'medicine_vendors.id')
+            ->where('medicine_vendor_transactions.type', 'purchase')
+            ->whereBetween('medicine_vendor_transactions.transaction_date', [$dateFrom, $dateTo])
+            ->select(
+                'medicine_vendors.name as vendor_name',
+                'medicine_vendors.company_name',
+                DB::raw('SUM(medicine_vendor_transactions.amount) as total_amount'),
+                DB::raw('COUNT(*) as transaction_count'),
+                DB::raw('SUM(medicine_vendor_transactions.due_amount) as total_due')
+            )
+            ->groupBy('medicine_vendors.id', 'medicine_vendors.name', 'medicine_vendors.company_name')
+            ->orderBy('total_amount', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Vendor Due Summary
+        $vendorDueSummary = MedicineVendor::withDues()
+            ->select('name', 'current_balance', 'credit_limit')
+            ->orderBy('current_balance', 'desc')
+            ->limit(10)
+            ->get();
+
+        // Payment Summary
+        $paymentSummary = MedicineVendorPayment::whereBetween('payment_date', [$dateFrom, $dateTo])
+            ->selectRaw('DATE(payment_date) as date, SUM(amount) as total, COUNT(*) as count')
+            ->groupBy('date')
+            ->orderBy('date', 'desc')
+            ->get();
+
+        // Stock Valuation with vendor breakdown
+        $stockValuation = Medicine::with(['stocks' => function ($query) {
+            $query->where('available_quantity', '>', 0)->with('vendor');
+        }])
+            ->get()
+            ->map(function ($medicine) {
+                $totalValue = $medicine->stocks->sum(function ($stock) {
+                    return $stock->available_quantity * $stock->buy_price;
+                });
+                return [
+                    'name' => $medicine->name,
+                    'total_stock' => $medicine->total_stock,
+                    'total_value' => $totalValue,
+                    'average_price' => $medicine->total_stock > 0 ? $totalValue / $medicine->total_stock : 0,
+                    'vendors' => $medicine->stocks->groupBy('vendor.name')->map(function ($stocks, $vendorName) {
+                        return [
+                            'vendor' => $vendorName ?? 'Unknown',
+                            'quantity' => $stocks->sum('available_quantity'),
+                            'value' => $stocks->sum(function ($stock) {
+                                return $stock->available_quantity * $stock->buy_price;
+                            })
+                        ];
+                    })->values()
+                ];
+            })
+            ->sortByDesc('total_value')
+            ->values();
+
+        return Inertia::render('MedicineCorner/Reports', [
+            'purchaseSummary' => $purchaseSummary,
+            'topVendors' => $topVendors,
+            'vendorDueSummary' => $vendorDueSummary,
+            'paymentSummary' => $paymentSummary,
+            'stockValuation' => $stockValuation,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'totalPurchase' => $purchaseSummary->sum('total'),
+            'totalPayments' => $paymentSummary->sum('total'),
+            'totalVendorDues' => $vendorDueSummary->sum('current_balance'),
+        ]);
+    }
+
+    /**
+     * Vendor Due Payment Page
+     */
+    public function vendorDues()
+    {
+        $vendorsWithDues = MedicineVendor::with([
+            'transactions' => function ($query) {
+                $query->where('type', 'purchase')
+                    ->where('payment_status', '!=', 'paid')
+                    ->orderBy('due_date', 'asc');
+            }
+        ])
+            ->withDues()
+            ->orderBy('current_balance', 'desc')
+            ->get();
+
+        // Summary
+        $totalDues = $vendorsWithDues->sum('current_balance');
+        $overdueAmount = 0;
+        $nearDueAmount = 0;
+
+        foreach ($vendorsWithDues as $vendor) {
+            foreach ($vendor->transactions as $transaction) {
+                if ($transaction->due_date < now()) {
+                    $overdueAmount += $transaction->due_amount;
+                } elseif ($transaction->due_date <= now()->addDays(7)) {
+                    $nearDueAmount += $transaction->due_amount;
+                }
+            }
+        }
+
+        return Inertia::render('MedicineCorner/VendorDues', [
+            'vendorsWithDues' => $vendorsWithDues,
+            'summary' => [
+                'total_dues' => $totalDues,
+                'overdue_amount' => $overdueAmount,
+                'near_due_amount' => $nearDueAmount,
+                'vendor_count' => $vendorsWithDues->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Make Payment to Vendor (from Medicine Corner)
+     */
+    public function makeVendorPayment(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'vendor_id' => 'required|exists:medicine_vendors,id',
+            'amount' => 'required|numeric|min:1',
+            'payment_method' => 'required|string|in:cash,bank_transfer,cheque,mobile_banking',
+            'reference_no' => 'nullable|string|max:255',
+            'description' => 'required|string|max:500',
+            'allocated_transactions' => 'nullable|array',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        DB::beginTransaction();
+        try {
+            $vendor = MedicineVendor::findOrFail($request->vendor_id);
+
+            // Check medicine account balance
+            $medicineBalance = MedicineAccount::getBalance();
+            if ($medicineBalance < $request->amount) {
+                throw new \Exception("Insufficient balance in Medicine Account. Available: ৳{$medicineBalance}, Required: ৳{$request->amount}");
+            }
+
+            // Create payment record
+            $payment = MedicineVendorPayment::create([
+                'payment_no' => MedicineVendorPayment::generatePaymentNo(),
+                'vendor_id' => $vendor->id,
+                'amount' => $request->amount,
+                'payment_method' => $request->payment_method,
+                'reference_no' => $request->reference_no,
+                'payment_date' => now()->toDateString(),
+                'description' => $request->description,
+                'allocated_transactions' => $request->allocated_transactions ?? [],
+                'created_by' => auth()->id(),
+            ]);
+
+            // Update allocated transactions
+            if (!empty($request->allocated_transactions)) {
+                $remainingAmount = $request->amount;
+
+                foreach ($request->allocated_transactions as $transactionId) {
+                    if ($remainingAmount <= 0) break;
+
+                    $transaction = MedicineVendorTransaction::findOrFail($transactionId);
+                    $paymentForTransaction = min($remainingAmount, $transaction->due_amount);
+
+                    $transaction->paid_amount += $paymentForTransaction;
+                    $transaction->due_amount -= $paymentForTransaction;
+
+                    if ($transaction->due_amount <= 0) {
+                        $transaction->payment_status = 'paid';
+                    } elseif ($transaction->paid_amount > 0) {
+                        $transaction->payment_status = 'partial';
+                    }
+
+                    $transaction->save();
+                    $remainingAmount -= $paymentForTransaction;
+
+                    // Update related stock payment status
+                    if ($transaction->reference_type === 'medicine_purchase' && $transaction->reference_id) {
+                        $stock = MedicineStock::find($transaction->reference_id);
+                        if ($stock) {
+                            $stock->due_amount = $transaction->due_amount;
+                            $stock->payment_status = $transaction->payment_status;
+                            $stock->save();
+                        }
+                    }
+                }
+            }
+
+            // Deduct from medicine account
+            MedicineAccount::addExpense(
+                $request->amount,
+                'vendor_payment',
+                "Payment to {$vendor->name} - {$request->description}",
+                1
+            );
+
+            // Update vendor balance
+            $vendor->updateBalance();
+
+            DB::commit();
+
+            return redirect()->back()->with('success', "Payment of ৳{$request->amount} made successfully to {$vendor->name}");
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Failed to make payment: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get Vendor Purchase History (AJAX)
+     */
+    public function getVendorPurchaseHistory(Request $request)
+    {
+        $vendorId = $request->get('vendor_id');
+
+        if (!$vendorId) {
+            return response()->json(['error' => 'Vendor ID required'], 400);
+        }
+
+        $purchases = MedicineStock::with(['medicine', 'vendor'])
+            ->where('vendor_id', $vendorId)
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get(['id', 'medicine_id', 'batch_number', 'quantity', 'buy_price', 'sale_price', 'purchase_date', 'due_amount', 'payment_status']);
+
+        return response()->json(['purchases' => $purchases]);
+    }
+
+    /**
+     * Update Stock Payment Status
+     */
+    public function updateStockPaymentStatus(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'stock_id' => 'required|exists:medicine_stocks,id',
+            'payment_status' => 'required|in:pending,partial,paid',
+            'due_amount' => 'required|numeric|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        try {
+            $stock = MedicineStock::findOrFail($request->stock_id);
+            $stock->update([
+                'payment_status' => $request->payment_status,
+                'due_amount' => $request->due_amount,
+            ]);
+
+            // Update vendor balance
+            if ($stock->vendor) {
+                $stock->vendor->updateBalance();
+            }
+
+            return response()->json(['success' => true, 'message' => 'Payment status updated successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to update payment status'], 500);
+        }
+    }
+
+    /**
+     * Vendor Purchase Analytics
+     */
+    public function vendorPurchaseAnalytics(Request $request)
+    {
+        $period = $request->get('period', '30'); // days
+        $startDate = now()->subDays($period);
+
+        // Vendor wise purchase summary
+        $vendorPurchases = DB::table('medicine_vendor_transactions')
+            ->join('medicine_vendors', 'medicine_vendor_transactions.vendor_id', '=', 'medicine_vendors.id')
+            ->where('medicine_vendor_transactions.type', 'purchase')
+            ->where('medicine_vendor_transactions.transaction_date', '>=', $startDate)
+            ->select(
+                'medicine_vendors.name as vendor_name',
+                'medicine_vendors.id as vendor_id',
+                DB::raw('SUM(medicine_vendor_transactions.amount) as total_amount'),
+                DB::raw('SUM(medicine_vendor_transactions.due_amount) as total_due'),
+                DB::raw('COUNT(*) as transaction_count')
+            )
+            ->groupBy('medicine_vendors.id', 'medicine_vendors.name')
+            ->orderBy('total_amount', 'desc')
+            ->get();
+
+        // Daily purchase trend
+        $dailyPurchases = MedicineVendorTransaction::where('type', 'purchase')
+            ->where('transaction_date', '>=', $startDate)
+            ->selectRaw('DATE(transaction_date) as date, SUM(amount) as total, COUNT(*) as count')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        // Payment method distribution
+        $paymentMethods = MedicineVendorPayment::where('payment_date', '>=', $startDate)
+            ->selectRaw('payment_method, SUM(amount) as total, COUNT(*) as count')
+            ->groupBy('payment_method')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'vendor_purchases' => $vendorPurchases,
+                'daily_purchases' => $dailyPurchases,
+                'payment_methods' => $paymentMethods,
             ]
         ]);
     }

@@ -9,6 +9,7 @@ use App\Http\Controllers\HospitalAccount\HospitalAccountController;
 use App\Http\Controllers\MedicineAccount\MedicineAccountController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\MedicineCornerController;
+use App\Http\Controllers\MedicineVendorController; // NEW: Vendor Controller
 use App\Http\Controllers\MedicineSellerDashboardController;
 use App\Http\Controllers\OpticsAccount\OpticsAccountController;
 use App\Http\Controllers\OpticsCornerController;
@@ -67,8 +68,6 @@ Route::get('/', function () {
     return redirect()->route('dashboard');
 });
 
-
-
 Route::get('/storage-link', function () {
     Artisan::call('storage:link');
     return response()->json(['message' => 'Storage link created successfully.']);
@@ -78,10 +77,6 @@ Route::get('/migrate', function () {
     Artisan::call('migrate');
     return response()->json(['message' => 'Migrations run successfully.']);
 })->name('migrate');
-
-
-
-
 
 Route::middleware(['auth'])->group(function () {
     // Dashboard - All authenticated users
@@ -243,35 +238,69 @@ Route::get('/appointment-display', [AppointmentDisplayController::class, 'index'
 Route::get('/api/appointment-display-data', [AppointmentDisplayController::class, 'getData'])
     ->name('api.appointment.display.data');
 
+// UPDATED: Medicine Corner Routes with Vendor Integration
+Route::prefix('medicine-corner')->middleware(['auth', 'super-admin'])->name('medicine-corner.')->group(function () {
+    // Main Medicine Corner Pages
+    Route::get('/stock', [MedicineCornerController::class, 'stock'])->name('stock');
+    Route::get('/medicines', [MedicineCornerController::class, 'medicines'])->name('medicines');
+    Route::get('/purchase', [MedicineCornerController::class, 'purchase'])->name('purchase');
+    Route::get('/reports', [MedicineCornerController::class, 'reports'])->name('reports');
+    Route::get('/alerts', [MedicineCornerController::class, 'alerts'])->name('alerts');
 
+    // Medicine & Stock Management
+    Route::post('/store-medicine', [MedicineCornerController::class, 'storeMedicine'])->name('store-medicine');
+    Route::post('/add-stock', [MedicineCornerController::class, 'addStock'])->name('add-stock');
+    Route::post('/adjust-stock', [MedicineCornerController::class, 'adjustStock'])->name('adjust-stock');
+    Route::put('/medicines/{medicine}', [MedicineCornerController::class, 'updateMedicine'])->name('update-medicine');
+    Route::put('/medicines/{medicine}/stock-alert', [MedicineCornerController::class, 'updateStockAlert'])->name('update-stock-alert');
+    Route::get('/medicines/{medicine}/details', [MedicineCornerController::class, 'getMedicineDetails'])->name('medicine-details');
 
+    // Sales Management
+    Route::get('/sales', [MedicineCornerController::class, 'sales'])->name('sales');
+    Route::get('/sales/{sale}', [MedicineCornerController::class, 'saleDetails'])->name('sale-details');
+    Route::get('/sales/{sale}/edit', [MedicineCornerController::class, 'editSale'])->name('edit-sale');
+    Route::put('/sales/{sale}', [MedicineCornerController::class, 'updateSale'])->name('update-sale');
+    Route::put('/sales/{sale}/payment', [MedicineCornerController::class, 'updatePayment'])->name('update-payment');
+    Route::delete('/sales/{sale}', [MedicineCornerController::class, 'deleteSale'])->name('delete-sale');
+    Route::post('/sales/bulk-action', [MedicineCornerController::class, 'bulkAction'])->name('sales-bulk-action');
+    Route::get('/sales-analytics', [MedicineCornerController::class, 'salesAnalytics'])->name('sales-analytics');
 
-Route::prefix('medicine-corner')->middleware(['auth', 'super-admin'])->group(function () {
-    // Page routes
-    Route::get('/stock', [MedicineCornerController::class, 'stock'])->name('medicine.stock');
-    Route::get('/medicines', [MedicineCornerController::class, 'medicines'])->name('medicine.list');
-    Route::get('/purchase', [MedicineCornerController::class, 'purchase'])->name('medicine.purchase');
-    Route::get('/reports', [MedicineCornerController::class, 'reports'])->name('medicine.reports');
-    Route::get('/alerts', [MedicineCornerController::class, 'alerts'])->name('medicine.alerts');
+    // NEW: Vendor Due Management
+    Route::get('/vendor-dues', [MedicineCornerController::class, 'vendorDues'])->name('vendor-dues');
+    Route::post('/vendor-payment', [MedicineCornerController::class, 'makeVendorPayment'])->name('vendor-payment');
+    Route::get('/vendor-purchase-history', [MedicineCornerController::class, 'getVendorPurchaseHistory'])->name('vendor-purchase-history');
+    Route::put('/update-stock-payment-status', [MedicineCornerController::class, 'updateStockPaymentStatus'])->name('update-stock-payment-status');
+    Route::get('/vendor-purchase-analytics', [MedicineCornerController::class, 'vendorPurchaseAnalytics'])->name('vendor-purchase-analytics');
 
-    // API routes
-    Route::post('/medicine/store', [MedicineCornerController::class, 'storeMedicine']);
-    Route::post('/stock/add', [MedicineCornerController::class, 'addStock']);
-    Route::post('/stock/adjust', [MedicineCornerController::class, 'adjustStock']);
-    Route::put('/medicine/{medicine}', [MedicineCornerController::class, 'updateMedicine']);
-    Route::put('/medicine/{medicine}/alert', [MedicineCornerController::class, 'updateStockAlert']);
-    Route::get('/medicine/{medicine}/details', [MedicineCornerController::class, 'getMedicineDetails']);
-
-    Route::get('/sales', [MedicineCornerController::class, 'sales'])->name('medicine-corner.sales');
-    Route::get('/sales/{sale}', [MedicineCornerController::class, 'saleDetails'])->name('medicine-corner.sale-details');
-    Route::get('/sales/{sale}/edit', [MedicineCornerController::class, 'editSale'])->name('medicine-corner.edit-sale');
-    Route::put('/sales/{sale}', [MedicineCornerController::class, 'updateSale'])->name('medicine-corner.update-sale');
-    Route::put('/sales/{sale}/payment', [MedicineCornerController::class, 'updatePayment'])->name('medicine-corner.update-payment');
-    Route::delete('/sales/{sale}', [MedicineCornerController::class, 'deleteSale'])->name('medicine-corner.delete-sale');
-    Route::post('/sales/bulk-action', [MedicineCornerController::class, 'bulkAction'])->name('medicine-corner.bulk-action');
-    Route::get('/analytics/sales', [MedicineCornerController::class, 'salesAnalytics'])->name('medicine-corner.sales-analytics');
+    // Export Reports
+    Route::get('/export-reports', [MedicineCornerController::class, 'exportReports'])->name('export-reports');
 });
 
+// NEW: Medicine Vendor Management Routes
+Route::prefix('medicine-vendors')->middleware(['auth', 'super-admin'])->name('medicine-vendors.')->group(function () {
+    // Vendor CRUD
+    Route::get('/', [MedicineVendorController::class, 'index'])->name('index');
+    Route::post('/', [MedicineVendorController::class, 'store'])->name('store');
+    Route::get('/{vendor}', [MedicineVendorController::class, 'show'])->name('show');
+    Route::put('/{vendor}', [MedicineVendorController::class, 'update'])->name('update');
+
+    // Vendor Transactions & Payments
+    Route::post('/add-stock', [MedicineVendorController::class, 'addStock'])->name('add-stock');
+    Route::post('/make-payment', [MedicineVendorController::class, 'makePayment'])->name('make-payment');
+    Route::post('/adjust-balance', [MedicineVendorController::class, 'adjustBalance'])->name('adjust-balance');
+
+    // Reports & Analytics
+    Route::get('/reports/due-report', [MedicineVendorController::class, 'dueReport'])->name('due-report');
+    Route::get('/reports/payment-history', [MedicineVendorController::class, 'paymentHistory'])->name('payment-history');
+    Route::get('/reports/analytics', [MedicineVendorController::class, 'analytics'])->name('analytics');
+
+    // AJAX Routes
+    Route::get('/api/vendors-for-purchase', [MedicineVendorController::class, 'getVendorsForPurchase'])->name('vendors-for-purchase');
+    Route::get('/api/{vendor}/pending-transactions', [MedicineVendorController::class, 'getVendorPendingTransactions'])->name('pending-transactions');
+
+    // Export
+    Route::get('/export-report', [MedicineVendorController::class, 'exportReport'])->name('export-report');
+});
 
 Route::prefix('medicine-seller')->middleware(['auth'])->group(function () {
     // Dashboard
@@ -298,7 +327,6 @@ Route::prefix('medicine-seller')->middleware(['auth'])->group(function () {
 Route::get('/medicine-seller', function () {
     return redirect()->route('medicine-seller.dashboard');
 })->middleware(['auth', 'role:Medicine Seller']);
-
 
 Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $request) {
     try {
@@ -472,13 +500,6 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
     }
 })->name('patient.save-qr');
 
-
-
-
-
-
-
-
 Route::middleware(['auth', 'super-admin'])->group(function () {
 
     Route::prefix('hospital-account')->name('hospital-account.')->group(function () {
@@ -530,8 +551,6 @@ Route::middleware(['auth', 'super-admin'])->group(function () {
     });
 });
 
-
-
 Route::middleware(['auth', 'super-admin'])->prefix('optics')->name('optics.')->group(function () {
 
     // Dashboard
@@ -566,7 +585,6 @@ Route::middleware(['auth', 'super-admin'])->prefix('optics')->name('optics.')->g
     // Reports
     Route::get('/reports', [OpticsCornerController::class, 'reports'])->name('reports');
 });
-
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';

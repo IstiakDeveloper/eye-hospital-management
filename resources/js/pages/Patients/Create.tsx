@@ -5,7 +5,7 @@ import {
     User, Phone, Mail, MapPin, Calendar, FileText,
     Stethoscope, DollarSign, Percent, Save, X,
     Calculator, Receipt, CreditCard, Users,
-    CheckCircle, AlertCircle, Clock, IdCard
+    CheckCircle, AlertCircle, Clock, IdCard, Hash
 } from 'lucide-react';
 
 // Type definitions
@@ -69,15 +69,100 @@ const PatientCreate: React.FC<Props> = ({ doctors = [], paymentMethods = [] }) =
     });
 
     const [costs, setCosts] = useState<CostBreakdown>({
-        registration_fee: 200,
+        registration_fee: 100,
         doctor_fee: 0,
-        total_amount: 200,
+        total_amount: 100,
         discount_amount: 0,
-        final_amount: 200,
+        final_amount: 100,
     });
 
     const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
+    const [ageInput, setAgeInput] = useState<string>('');
+
+    // Date utility functions for 4-digit year format
+    const ensureValidDateInput = (dateString: string): string => {
+        if (!dateString) return '';
+
+        // Handle various date formats and ensure 4-digit year
+        let cleanDate = dateString.replace(/[^\d-]/g, '');
+
+        // If year appears to be 6 digits, extract the last 4
+        const parts = cleanDate.split('-');
+        if (parts.length === 3 && parts[0].length > 4) {
+            parts[0] = parts[0].slice(-4);
+            cleanDate = parts.join('-');
+        }
+
+        return cleanDate;
+    };
+
+    const formatDateForInput = (date: string | Date): string => {
+        if (!date) return '';
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Calculate age from date of birth
+    const calculateAgeFromDate = (dateOfBirth: string): number => {
+        if (!dateOfBirth) return 0;
+        const today = new Date();
+        const birth = new Date(dateOfBirth);
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+            age--;
+        }
+        return age;
+    };
+
+    // Calculate date of birth from age
+    const calculateDateFromAge = (age: number): string => {
+        if (!age || age < 0 || age > 150) return '';
+
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth(); // 0-based
+        const currentDay = today.getDate();
+
+        // Calculate birth year
+        const birthYear = currentYear - age;
+
+        // Set birth date to current month/day of the calculated year
+        // This gives a reasonable approximation
+        const birthDate = new Date(birthYear, currentMonth, currentDay);
+
+        return formatDateForInput(birthDate);
+    };
+
+    // Handle age input change
+    const handleAgeChange = (ageValue: string) => {
+        setAgeInput(ageValue);
+
+        const age = parseInt(ageValue);
+        if (age && age > 0 && age <= 150) {
+            const calculatedDate = calculateDateFromAge(age);
+            setData('date_of_birth', calculatedDate);
+        } else if (ageValue === '') {
+            setData('date_of_birth', '');
+        }
+    };
+
+    // Handle date of birth change
+    const handleDateOfBirthChange = (dateValue: string) => {
+        const cleanDate = ensureValidDateInput(dateValue);
+        setData('date_of_birth', cleanDate);
+
+        if (cleanDate) {
+            const age = calculateAgeFromDate(cleanDate);
+            setAgeInput(age > 0 ? age.toString() : '');
+        } else {
+            setAgeInput('');
+        }
+    };
 
     // Calculate costs whenever doctor or discount changes
     useEffect(() => {
@@ -121,7 +206,7 @@ const PatientCreate: React.FC<Props> = ({ doctors = [], paymentMethods = [] }) =
     };
 
     const calculateCostsLocally = (): void => {
-        const registrationFee = 200;
+        const registrationFee = 100;
         let doctorFee = 0;
 
         if (data.selected_doctor_id) {
@@ -197,6 +282,31 @@ const PatientCreate: React.FC<Props> = ({ doctors = [], paymentMethods = [] }) =
     return (
         <AdminLayout title="Register New Patient">
             <Head title="Register New Patient" />
+
+            {/* Add CSS for date input styling */}
+            <style>{`
+                .date-input-fixed::-webkit-datetime-edit-year-field {
+                    min-width: 4ch !important;
+                    max-width: 4ch !important;
+                    -webkit-appearance: none;
+                }
+
+                input[type="date"]::-webkit-datetime-edit-year-field {
+                    min-width: 4ch !important;
+                    max-width: 4ch !important;
+                }
+
+                input[type="date"] {
+                    -moz-appearance: textfield;
+                }
+
+                .date-input-fixed {
+                    font-feature-settings: "tnum";
+                    font-variant-numeric: tabular-nums;
+                    direction: ltr;
+                    text-align: left;
+                }
+            `}</style>
 
             <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
                 <div className="max-w-5xl mx-auto">
@@ -354,24 +464,6 @@ const PatientCreate: React.FC<Props> = ({ doctors = [], paymentMethods = [] }) =
                                                 </div>
                                             </div>
 
-                                            {/* Date of Birth Field */}
-                                            <div>
-                                                <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Date of Birth
-                                                </label>
-                                                <div className="relative">
-                                                    <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                                                    <input
-                                                        id="date_of_birth"
-                                                        type="date"
-                                                        value={data.date_of_birth}
-                                                        onChange={(e) => setData('date_of_birth', e.target.value)}
-                                                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-all duration-200"
-                                                        max={new Date().toISOString().split('T')[0]}
-                                                    />
-                                                </div>
-                                            </div>
-
                                             {/* Gender Field */}
                                             <div>
                                                 <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">
@@ -389,6 +481,65 @@ const PatientCreate: React.FC<Props> = ({ doctors = [], paymentMethods = [] }) =
                                                     <option value="other">Other</option>
                                                 </select>
                                             </div>
+                                        </div>
+
+                                        {/* Date of Birth and Age Section */}
+                                        <div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {/* Date of Birth Field */}
+                                                <div>
+                                                    <label htmlFor="date_of_birth" className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Date of Birth
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Calendar className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                                        <input
+                                                            id="date_of_birth"
+                                                            type="date"
+                                                            value={ensureValidDateInput(data.date_of_birth)}
+                                                            onChange={(e) => handleDateOfBirthChange(e.target.value)}
+                                                            max={new Date().toISOString().split('T')[0]}
+                                                            min="1900-01-01"
+                                                            className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-all duration-200 date-input-fixed"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Age Input Field */}
+                                                <div>
+                                                    <label htmlFor="age_input" className="block text-sm font-medium text-gray-700 mb-2">
+                                                        Age (Years)
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Hash className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                                        <input
+                                                            id="age_input"
+                                                            type="number"
+                                                            value={ageInput}
+                                                            onChange={(e) => handleAgeChange(e.target.value)}
+                                                            className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-all duration-200"
+                                                            placeholder="Enter age"
+                                                            min="0"
+                                                            max="150"
+                                                        />
+                                                    </div>
+                                                    <p className="mt-1 text-xs text-gray-500">
+                                                        Enter age to auto-calculate birth year
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Age Display */}
+                                            {data.date_of_birth && (
+                                                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                                    <p className="text-sm text-blue-800">
+                                                        <strong>Calculated Age:</strong> {calculateAgeFromDate(data.date_of_birth)} years old
+                                                        {ageInput && ageInput !== calculateAgeFromDate(data.date_of_birth).toString() && (
+                                                            <span className="text-blue-600 ml-2">(Approximate based on current date)</span>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Medical History */}
@@ -512,8 +663,8 @@ const PatientCreate: React.FC<Props> = ({ doctors = [], paymentMethods = [] }) =
                                                     type="button"
                                                     onClick={() => setData('discount_type', 'percentage')}
                                                     className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${data.discount_type === 'percentage'
-                                                            ? 'bg-blue-600 text-white shadow-md'
-                                                            : 'bg-white text-gray-600 hover:bg-gray-100'
+                                                        ? 'bg-blue-600 text-white shadow-md'
+                                                        : 'bg-white text-gray-600 hover:bg-gray-100'
                                                         }`}
                                                 >
                                                     %
@@ -522,8 +673,8 @@ const PatientCreate: React.FC<Props> = ({ doctors = [], paymentMethods = [] }) =
                                                     type="button"
                                                     onClick={() => setData('discount_type', 'amount')}
                                                     className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${data.discount_type === 'amount'
-                                                            ? 'bg-blue-600 text-white shadow-md'
-                                                            : 'bg-white text-gray-600 hover:bg-gray-100'
+                                                        ? 'bg-blue-600 text-white shadow-md'
+                                                        : 'bg-white text-gray-600 hover:bg-gray-100'
                                                         }`}
                                                 >
                                                     ৳
@@ -671,8 +822,8 @@ const PatientCreate: React.FC<Props> = ({ doctors = [], paymentMethods = [] }) =
                                     type="submit"
                                     disabled={processing}
                                     className={`inline-flex items-center gap-2 px-8 py-3 rounded-xl text-white font-medium transition-all duration-200 ${processing
-                                            ? 'bg-gray-400 cursor-not-allowed'
-                                            : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:ring-2 focus:ring-blue-500 shadow-lg hover:shadow-xl'
+                                        ? 'bg-gray-400 cursor-not-allowed'
+                                        : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:ring-2 focus:ring-blue-500 shadow-lg hover:shadow-xl'
                                         }`}
                                 >
                                     {processing ? (

@@ -9,7 +9,9 @@ import {
     Filter,
     Users,
     Edit,
-    MapPin
+    MapPin,
+    Calendar,
+    X
 } from 'lucide-react';
 
 interface User {
@@ -51,22 +53,74 @@ interface Props {
     filters: {
         search?: string;
         gender?: string;
+        date_filter_type?: string;
+        date_field?: string;
+        specific_date?: string;
+        start_date?: string;
+        end_date?: string;
+        date_preset?: string;
     };
 }
 
 export default function Index({ patients, filters }: Props) {
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [genderFilter, setGenderFilter] = useState(filters.gender || '');
+    const [showDateFilter, setShowDateFilter] = useState(false);
+    const [dateFilterType, setDateFilterType] = useState(filters.date_filter_type || 'preset');
+    const [dateField, setDateField] = useState(filters.date_field || 'created_at');
+    const [specificDate, setSpecificDate] = useState(filters.specific_date || '');
+    const [startDate, setStartDate] = useState(filters.start_date || '');
+    const [endDate, setEndDate] = useState(filters.end_date || '');
+    const [datePreset, setDatePreset] = useState(filters.date_preset || '');
+
+    // Date utility functions to ensure 4-digit year format
+    const ensureValidDateInput = (dateString: string): string => {
+        if (!dateString) return '';
+
+        // Handle various date formats and ensure 4-digit year
+        let cleanDate = dateString.replace(/[^\d-]/g, '');
+
+        // If year appears to be 6 digits, extract the last 4
+        const parts = cleanDate.split('-');
+        if (parts.length === 3 && parts[0].length > 4) {
+            parts[0] = parts[0].slice(-4);
+            cleanDate = parts.join('-');
+        }
+
+        return cleanDate;
+    };
+
+    const formatDateForInput = (date: string | Date): string => {
+        if (!date) return '';
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    // Check if any date filter is active
+    const isDateFilterActive = filters.date_filter_type && (
+        filters.specific_date ||
+        filters.start_date ||
+        filters.end_date ||
+        filters.date_preset
+    );
 
     // Realtime search with debounce
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            // Use current URL path instead of route helper if it's not working
             const currentPath = window.location.pathname;
 
             router.get(currentPath, {
                 search: searchTerm,
                 gender: genderFilter,
+                date_filter_type: dateFilterType,
+                date_field: dateField,
+                specific_date: specificDate,
+                start_date: startDate,
+                end_date: endDate,
+                date_preset: datePreset,
             }, {
                 preserveState: true,
                 replace: true,
@@ -74,7 +128,7 @@ export default function Index({ patients, filters }: Props) {
         }, 500);
 
         return () => clearTimeout(timeoutId);
-    }, [searchTerm, genderFilter]);
+    }, [searchTerm, genderFilter, dateFilterType, dateField, specificDate, startDate, endDate, datePreset]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -100,16 +154,72 @@ export default function Index({ patients, filters }: Props) {
         return age;
     };
 
+    const clearAllFilters = () => {
+        setSearchTerm('');
+        setGenderFilter('');
+        setDateFilterType('preset');
+        setDateField('created_at');
+        setSpecificDate('');
+        setStartDate('');
+        setEndDate('');
+        setDatePreset('');
+        setShowDateFilter(false);
+    };
+
+    const clearDateFilter = () => {
+        setDateFilterType('preset');
+        setSpecificDate('');
+        setStartDate('');
+        setEndDate('');
+        setDatePreset('');
+        setShowDateFilter(false);
+    };
+
+    const getDateFilterLabel = () => {
+        if (!isDateFilterActive) return '';
+
+        const fieldLabel = dateField === 'created_at' ? 'Registration' : 'Birth Date';
+
+        if (filters.date_filter_type === 'specific' && filters.specific_date) {
+            return `${fieldLabel}: ${formatDate(filters.specific_date)}`;
+        }
+
+        if (filters.date_filter_type === 'range') {
+            const start = filters.start_date ? formatDate(filters.start_date) : 'Start';
+            const end = filters.end_date ? formatDate(filters.end_date) : 'End';
+            return `${fieldLabel}: ${start} - ${end}`;
+        }
+
+        if (filters.date_filter_type === 'preset' && filters.date_preset) {
+            const presetLabels = {
+                'today': 'Today',
+                'yesterday': 'Yesterday',
+                'this_week': 'This Week',
+                'last_week': 'Last Week',
+                'this_month': 'This Month',
+                'last_month': 'Last Month',
+                'this_year': 'This Year',
+                'last_7_days': 'Last 7 Days',
+                'last_30_days': 'Last 30 Days',
+                'last_90_days': 'Last 90 Days'
+            };
+            return `${fieldLabel}: ${presetLabels[filters.date_preset] || filters.date_preset}`;
+        }
+
+        return '';
+    };
+
     // Handle pagination click
     const handlePaginationClick = (url: string) => {
-        // Preserve current filters when paginating
         const urlObj = new URL(url);
-        if (searchTerm) {
-            urlObj.searchParams.set('search', searchTerm);
-        }
-        if (genderFilter) {
-            urlObj.searchParams.set('gender', genderFilter);
-        }
+        if (searchTerm) urlObj.searchParams.set('search', searchTerm);
+        if (genderFilter) urlObj.searchParams.set('gender', genderFilter);
+        if (dateFilterType) urlObj.searchParams.set('date_filter_type', dateFilterType);
+        if (dateField) urlObj.searchParams.set('date_field', dateField);
+        if (specificDate) urlObj.searchParams.set('specific_date', specificDate);
+        if (startDate) urlObj.searchParams.set('start_date', startDate);
+        if (endDate) urlObj.searchParams.set('end_date', endDate);
+        if (datePreset) urlObj.searchParams.set('date_preset', datePreset);
 
         router.get(urlObj.pathname + urlObj.search, {}, {
             preserveState: true,
@@ -160,18 +270,148 @@ export default function Index({ patients, filters }: Props) {
                             <option value="female">Female</option>
                             <option value="other">Other</option>
                         </select>
+
+                        {/* Date Filter Toggle Button */}
+                        <button
+                            type="button"
+                            onClick={() => setShowDateFilter(!showDateFilter)}
+                            className={`px-3 py-1.5 text-xs font-medium rounded flex items-center gap-1 ${
+                                isDateFilterActive || showDateFilter
+                                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                        >
+                            <Calendar className="h-3 w-3" />
+                            Date Filter
+                        </button>
+
                         <button
                             type="button"
                             className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded hover:bg-gray-200"
-                            onClick={() => {
-                                setSearchTerm('');
-                                setGenderFilter('');
-                            }}
+                            onClick={clearAllFilters}
                         >
-                            Clear
+                            Clear All
                         </button>
                     </form>
                 </div>
+
+                {/* Active Date Filter Display */}
+                {isDateFilterActive && (
+                    <div className="mb-3 flex items-center gap-2">
+                        <span className="text-xs text-gray-500">Active filter:</span>
+                        <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                            <Calendar className="h-3 w-3" />
+                            {getDateFilterLabel()}
+                            <button
+                                onClick={clearDateFilter}
+                                className="ml-1 hover:text-blue-900"
+                            >
+                                <X className="h-3 w-3" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Date Filter Panel */}
+                {showDateFilter && (
+                    <div className="mb-4 p-3 bg-gray-50 rounded border border-gray-200">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            {/* Date Field Selection */}
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Filter by</label>
+                                <select
+                                    value={dateField}
+                                    onChange={(e) => setDateField(e.target.value)}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value="created_at">Registration Date</option>
+                                    <option value="date_of_birth">Birth Date</option>
+                                </select>
+                            </div>
+
+                            {/* Filter Type */}
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                                <select
+                                    value={dateFilterType}
+                                    onChange={(e) => setDateFilterType(e.target.value)}
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                    <option value="preset">Quick Select</option>
+                                    <option value="specific">Specific Date</option>
+                                    <option value="range">Date Range</option>
+                                </select>
+                            </div>
+
+                            {/* Filter Options */}
+                            <div className="md:col-span-2">
+                                {dateFilterType === 'preset' && (
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Quick Select</label>
+                                        <select
+                                            value={datePreset}
+                                            onChange={(e) => setDatePreset(e.target.value)}
+                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="">Select period...</option>
+                                            <option value="today">Today</option>
+                                            <option value="yesterday">Yesterday</option>
+                                            <option value="this_week">This Week</option>
+                                            <option value="last_week">Last Week</option>
+                                            <option value="this_month">This Month</option>
+                                            <option value="last_month">Last Month</option>
+                                            <option value="this_year">This Year</option>
+                                            <option value="last_7_days">Last 7 Days</option>
+                                            <option value="last_30_days">Last 30 Days</option>
+                                            <option value="last_90_days">Last 90 Days</option>
+                                        </select>
+                                    </div>
+                                )}
+
+                                {dateFilterType === 'specific' && (
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Specific Date</label>
+                                        <input
+                                            type="date"
+                                            value={ensureValidDateInput(specificDate)}
+                                            onChange={(e) => setSpecificDate(ensureValidDateInput(e.target.value))}
+                                            max="9999-12-31"
+                                            min="1900-01-01"
+                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 date-input-fixed"
+                                        />
+                                    </div>
+                                )}
+
+                                {dateFilterType === 'range' && (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">From</label>
+                                            <input
+                                                type="date"
+                                                value={ensureValidDateInput(startDate)}
+                                                onChange={(e) => setStartDate(ensureValidDateInput(e.target.value))}
+                                                max="9999-12-31"
+                                                min="1900-01-01"
+                                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 date-input-fixed"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">To</label>
+                                            <input
+                                                type="date"
+                                                value={ensureValidDateInput(endDate)}
+                                                onChange={(e) => setEndDate(ensureValidDateInput(e.target.value))}
+                                                max="9999-12-31"
+                                                min="1900-01-01"
+                                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 date-input-fixed"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Compact Stats */}
                 <div className="grid grid-cols-3 gap-3 mb-4">

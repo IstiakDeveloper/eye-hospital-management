@@ -123,4 +123,21 @@ class MedicineStock extends Model
             'created_by' => auth()->id(),
         ]);
     }
+
+
+    public function vendor(): BelongsTo
+    {
+        return $this->belongsTo(MedicineVendor::class, 'vendor_id');
+    }
+
+    public function purchaseOrder(): BelongsTo
+    {
+        return $this->belongsTo(MedicinePurchaseOrder::class, 'purchase_order_id');
+    }
+
+    public function vendorTransaction(): BelongsTo
+    {
+        return $this->belongsTo(MedicineVendorTransaction::class, 'vendor_transaction_id');
+    }
+
 }
