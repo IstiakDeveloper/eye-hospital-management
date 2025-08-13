@@ -379,11 +379,10 @@ export default function VendorIndex({ vendors, filters, statistics }: VendorInde
                                             </div>
                                             <div className="w-full bg-gray-200 rounded-full h-2">
                                                 <div
-                                                    className={`h-2 rounded-full transition-all duration-300 ${
-                                                        getCreditUtilization(vendor) > 80 ? 'bg-red-500' :
+                                                    className={`h-2 rounded-full transition-all duration-300 ${getCreditUtilization(vendor) > 80 ? 'bg-red-500' :
                                                         getCreditUtilization(vendor) > 60 ? 'bg-yellow-500' :
-                                                        'bg-green-500'
-                                                    }`}
+                                                            'bg-green-500'
+                                                        }`}
                                                     style={{ width: `${Math.min(getCreditUtilization(vendor), 100)}%` }}
                                                 ></div>
                                             </div>
@@ -411,13 +410,12 @@ export default function VendorIndex({ vendors, filters, statistics }: VendorInde
                                                             <span className="font-medium text-red-600">
                                                                 {formatCurrency(transaction.due_amount)}
                                                             </span>
-                                                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
-                                                                transaction.payment_status === 'paid'
-                                                                    ? 'bg-green-100 text-green-800'
-                                                                    : transaction.payment_status === 'partial'
+                                                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${transaction.payment_status === 'paid'
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : transaction.payment_status === 'partial'
                                                                     ? 'bg-yellow-100 text-yellow-800'
                                                                     : 'bg-red-100 text-red-800'
-                                                            }`}>
+                                                                }`}>
                                                                 {transaction.payment_status}
                                                             </span>
                                                         </div>
@@ -485,7 +483,7 @@ export default function VendorIndex({ vendors, filters, statistics }: VendorInde
 
                 {/* Add Vendor Modal */}
                 {showAddModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
                         <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                             <div className="p-6 border-b border-gray-200">
                                 <div className="flex items-center justify-between">
@@ -707,7 +705,7 @@ export default function VendorIndex({ vendors, filters, statistics }: VendorInde
 
                 {/* Edit Vendor Modal */}
                 {showEditModal && selectedVendor && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
                         <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                             <div className="p-6 border-b border-gray-200">
                                 <div className="flex items-center justify-between">
@@ -912,9 +910,8 @@ export default function VendorIndex({ vendors, filters, statistics }: VendorInde
                                             name="is_active"
                                             value={selectedVendor.is_active ? '1' : '0'}
                                         />
-                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                                            selectedVendor.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                        }`}>
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${selectedVendor.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                            }`}>
                                             {selectedVendor.is_active ? 'Active' : 'Inactive'}
                                         </span>
                                     </div>

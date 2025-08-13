@@ -20,8 +20,8 @@ import {
 interface VendorTransaction {
     id: number;
     transaction_no: string;
-    amount: number;
-    due_amount: number;
+    amount: number | string;
+    due_amount: number | string;
     transaction_date: string;
     due_date: string;
     description: string;
@@ -33,19 +33,19 @@ interface VendorWithDues {
     id: number;
     name: string;
     company_name?: string;
-    current_balance: number;
-    credit_limit: number;
+    current_balance: number | string;
+    credit_limit: number | string;
     payment_terms_days: number;
-    overdue_amount: number;
+    overdue_amount: number | string;
     transactions: VendorTransaction[];
 }
 
 interface VendorDuesProps {
     vendorsWithDues: VendorWithDues[];
     summary: {
-        total_dues: number;
-        overdue_amount: number;
-        near_due_amount: number;
+        total_dues: number | string;
+        overdue_amount: number | string;
+        near_due_amount: number | string;
         vendor_count: number;
     };
 }
@@ -65,10 +65,13 @@ export default function VendorDues({ vendorsWithDues, summary }: VendorDuesProps
         allocated_transactions: [] as number[],
     });
 
-    const formatCurrency = (amount: number) => {
+    const formatCurrency = (amount: number | string) => {
+        const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+        if (isNaN(numAmount) || numAmount === null || numAmount === undefined) return '৳0';
+
         const formatted = new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 0,
-        }).format(amount);
+        }).format(numAmount);
         return `৳${formatted}`;
     };
 
@@ -87,6 +90,11 @@ export default function VendorDues({ vendorsWithDues, summary }: VendorDuesProps
         return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     };
 
+    const parseAmount = (amount: number | string): number => {
+        const parsed = typeof amount === 'string' ? parseFloat(amount) : amount;
+        return isNaN(parsed) ? 0 : parsed;
+    };
+
     const handlePaymentSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         post(route('medicine-corner.vendor-payment'), {
@@ -101,9 +109,10 @@ export default function VendorDues({ vendorsWithDues, summary }: VendorDuesProps
 
     const openPaymentModal = (vendor: VendorWithDues) => {
         setSelectedVendor(vendor);
+        const vendorBalance = parseAmount(vendor.current_balance);
         setData({
             vendor_id: vendor.id.toString(),
-            amount: vendor.current_balance.toString(),
+            amount: vendorBalance.toString(),
             payment_method: 'cash',
             reference_no: '',
             description: `Payment to ${vendor.name}`,
@@ -127,7 +136,7 @@ export default function VendorDues({ vendorsWithDues, summary }: VendorDuesProps
         if (selectedVendor) {
             const totalAmount = selectedVendor.transactions
                 .filter(t => newSelected.includes(t.id))
-                .reduce((sum, t) => sum + t.due_amount, 0);
+                .reduce((sum, t) => sum + parseAmount(t.due_amount), 0);
             setData('amount', totalAmount.toString());
         }
     };
@@ -215,7 +224,7 @@ export default function VendorDues({ vendorsWithDues, summary }: VendorDuesProps
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Vendors with Dues</p>
                                 <p className="text-2xl font-bold text-blue-600 mt-1">
-                                    {summary.vendor_count}
+                                    {summary.vendor_count || 0}
                                 </p>
                             </div>
                             <div className="bg-blue-100 p-3 rounded-lg">
@@ -291,7 +300,7 @@ export default function VendorDues({ vendorsWithDues, summary }: VendorDuesProps
                                     <div>
                                         <p className="text-xs text-gray-500">Payment Terms</p>
                                         <p className="font-semibold text-gray-900">
-                                            {vendor.payment_terms_days} days
+                                            {vendor.payment_terms_days || 0} days
                                         </p>
                                     </div>
                                     <div>
@@ -359,10 +368,10 @@ export default function VendorDues({ vendorsWithDues, summary }: VendorDuesProps
                                                         </td>
                                                         <td className="px-4 py-3">
                                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${transaction.payment_status === 'paid'
-                                                                    ? 'bg-green-100 text-green-800'
-                                                                    : transaction.payment_status === 'partial'
-                                                                        ? 'bg-yellow-100 text-yellow-800'
-                                                                        : 'bg-red-100 text-red-800'
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : transaction.payment_status === 'partial'
+                                                                    ? 'bg-yellow-100 text-yellow-800'
+                                                                    : 'bg-red-100 text-red-800'
                                                                 }`}>
                                                                 {transaction.payment_status}
                                                             </span>
@@ -401,7 +410,7 @@ export default function VendorDues({ vendorsWithDues, summary }: VendorDuesProps
 
                 {/* Payment Modal */}
                 {showPaymentModal && selectedVendor && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
                         <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                             <div className="p-6 border-b border-gray-200">
                                 <div className="flex items-center justify-between">
@@ -437,7 +446,7 @@ export default function VendorDues({ vendorsWithDues, summary }: VendorDuesProps
                                                 onChange={(e) => setData('amount', e.target.value)}
                                                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 placeholder="0.00"
-                                                max={selectedVendor.current_balance}
+                                                max={parseAmount(selectedVendor.current_balance)}
                                             />
                                         </div>
                                         {errors.amount && (

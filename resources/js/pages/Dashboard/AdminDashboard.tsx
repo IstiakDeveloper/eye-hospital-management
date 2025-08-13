@@ -1,604 +1,966 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
-import AdminLayout from '@/layouts/admin-layout';
-import { Button } from '@/components/ui/button';
+import React, { useState } from 'react';
+import { Head, router } from '@inertiajs/react';
+import AuthenticatedLayout from '@/layouts/admin-layout';
 import {
-    Card,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-    CardContent,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import {
+    Wallet,
     Users,
     Calendar,
-    DollarSign,
-    TrendingUp,
-    Eye,
-    FileText,
-    Stethoscope,
-    UserPlus,
-    CalendarPlus,
-    BarChart3,
     Activity,
-    CheckCircle,
-    Clock,
+    TrendingUp,
+    TrendingDown,
     AlertTriangle,
-    Crown,
-    Settings,
-    Database,
-    Shield,
-    Zap
+    Eye,
+    Pill,
+    Glasses,
+    DollarSign,
+    Clock,
+    CheckCircle,
+    XCircle,
+    PlusCircle,
+    MinusCircle,
+    Package,
+    User,
+    FileText,
+    CreditCard,
+    Filter,
+    CalendarDays
 } from 'lucide-react';
 
-interface Stats {
-    totalPatients: number;
-    totalDoctors: number;
-    todayAppointments: number;
-    pendingAppointments: number;
-    completedAppointments: number;
-    monthlyPatients: number;
-    monthlyRevenue: number;
-}
-
-interface Patient {
-    id: number;
-    patient_id: string;
-    name: string;
-    phone: string | null;
-    created_at: string;
-}
-
-interface VisionTest {
-    id: number;
-    test_date: string;
-    patient: {
-        id: number;
-        name: string;
-        patient_id: string;
+interface DashboardProps {
+    auth: any;
+    accountBalances: {
+        hospital: { balance: number | string; currency: string; lastUpdated: string };
+        medicine: { balance: number | string; currency: string; lastUpdated: string };
+        optics: { balance: number | string; currency: string; lastUpdated: string };
+        total: number | string;
     };
-    performed_by: {
-        name: string;
-    } | null;
-}
-
-interface Appointment {
-    id: number;
-    appointment_date: string;
-    appointment_time: string;
-    serial_number: string;
-    status: 'pending' | 'completed' | 'cancelled';
-    patient: {
-        id: number;
-        name: string;
-        patient_id: string;
+    hospitalOverview: {
+        patients: { total: number; today: number; growth?: number };
+        visits: { total: number; today: number; active: number; completed: number; growth?: number };
+        appointments: { total: number; today: number; pending: number; completed: number; growth?: number };
+        doctors: { total: number; available: number };
+        prescriptions: { total: number; today: number; growth?: number };
     };
-    doctor: {
-        id: number;
-        user: {
-            name: string;
+    medicineStockInfo: {
+        overview: {
+            totalMedicines: number;
+            activeMedicines: number;
+            lowStockMedicines: number;
+            totalStockValue: number | string;
+            expiredStock: number;
+            expiringStock: number;
+        };
+        alerts: { lowStock: number; expired: number; expiring: number };
+        topSelling: Array<{ name: string; total_sold: number; total_revenue: number | string }>;
+        periodStats: {
+            totalSales: number | string;
+            totalProfit: number | string;
+            totalSold: number;
+            salesGrowth?: number;
+            profitGrowth?: number;
         };
     };
-}
-
-interface DoctorStat {
-    doctor_name: string;
-    total_patients: number;
-    monthly_patients: number;
-    completion_rate: number;
-    average_consultation_time: number;
-    specialization: string | null;
-}
-
-interface AdminDashboardProps {
-    userRole: string;
-    userName: string;
-    stats: Stats;
-    recentPatients: Patient[];
-    recentVisionTests: VisionTest[];
-    todayAppointments: Appointment[];
-    upcomingAppointments: Appointment[];
-    doctorStats: DoctorStat[];
-    quickStats: {
-        patientsToday: number;
-        visionTestsToday: number;
-        prescriptionsToday: number;
+    opticsStockInfo: {
+        frames: { total: number; active: number; lowStock: number; totalValue: number | string };
+        lenses: { total: number; active: number; lowStock: number; totalValue: number | string };
+        completeGlasses: { total: number; active: number; lowStock: number; totalValue: number | string };
+        alerts: { totalLowStock: number; framesLowStock: number; lensesLowStock: number; completeGlassesLowStock: number };
+        topSellingFrames: Array<{ brand: string; model: string; selling_price: number | string; prescription_glasses_count: number }>;
+        totalStockValue: number | string;
+        periodStats: { prescriptionGlasses: number; prescriptionGlassesGrowth?: number };
+    };
+    recentActivities: {
+        recentPatients: Array<any>;
+        recentVisits: Array<any>;
+        recentPayments: Array<any>;
+    };
+    periodReports: {
+        hospital: { income: number | string; expense: number | string; profit: number | string; balance: number | string; incomeGrowth?: number };
+        medicine: { income: number | string; expense: number | string; profit: number | string; balance: number | string };
+        optics: { income: number | string; expense: number | string; profit: number | string; balance: number | string };
+    };
+    dateRange: {
+        start: string;
+        end: string;
+        period: string;
     };
 }
 
-export default function AdminDashboard({
-    userName,
-    stats,
-    recentPatients,
-    recentVisionTests,
-    todayAppointments,
-    upcomingAppointments,
-    doctorStats,
-    quickStats
-}: AdminDashboardProps) {
+const parseAmount = (amount: number | string): number => {
+    const parsed = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return isNaN(parsed) || parsed === null || parsed === undefined ? 0 : parsed;
+};
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
-            case 'completed':
-                return <Badge className="bg-green-100 text-green-800">Completed</Badge>;
-            case 'pending':
-                return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
-            case 'cancelled':
-                return <Badge className="bg-red-100 text-red-800">Cancelled</Badge>;
-            default:
-                return <Badge variant="outline">{status}</Badge>;
-        }
-    };
+const formatCurrency = (amount: number | string, currency: string = 'BDT') => {
+    const numAmount = parseAmount(amount);
+    return new Intl.NumberFormat('en-BD', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(numAmount).replace(currency, '৳');
+};
 
-    const formatTime = (timeString: string) => {
-        return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
-
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
-    };
-
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-BD', {
-            style: 'currency',
-            currency: 'BDT'
-        }).format(amount);
+const StatCard = ({
+    title,
+    value,
+    icon: Icon,
+    color = 'blue',
+    trend = null,
+    subtitle = null
+}: {
+    title: string;
+    value: string | number;
+    icon: any;
+    color?: string;
+    trend?: { value: number; isPositive: boolean } | null;
+    subtitle?: string | null;
+}) => {
+    const colorClasses = {
+        blue: 'bg-blue-50 text-blue-600 border-blue-200',
+        green: 'bg-green-50 text-green-600 border-green-200',
+        yellow: 'bg-yellow-50 text-yellow-600 border-yellow-200',
+        red: 'bg-red-50 text-red-600 border-red-200',
+        purple: 'bg-purple-50 text-purple-600 border-purple-200',
+        indigo: 'bg-indigo-50 text-indigo-600 border-indigo-200',
     };
 
     return (
-        <AdminLayout title="Admin Dashboard">
-            <Head title="Admin Dashboard" />
+        <div className="bg-white rounded-lg border shadow-sm p-6 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+                <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+                    <div className="flex items-center gap-2">
+                        <p className="text-2xl font-bold text-gray-900">{value}</p>
+                        {trend && (
+                            <span className={`flex items-center text-xs px-2 py-1 rounded-full ${trend.isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}>
+                                {trend.isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                                {Math.abs(trend.value)}%
+                            </span>
+                        )}
+                    </div>
+                    {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+                </div>
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center border ${colorClasses[color]}`}>
+                    <Icon className="w-6 h-6" />
+                </div>
+            </div>
+        </div>
+    );
+};
 
-            {/* Welcome Header */}
-            <div className="mb-8">
-                <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl p-6 text-white">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold mb-2 flex items-center">
-                                <Crown className="h-6 w-6 mr-2" />
-                                Admin Dashboard - {userName} 👑
-                            </h1>
-                            <p className="text-purple-100">Complete overview of your eye care management system</p>
-                        </div>
-                        <div className="flex space-x-3">
-                            <Button
-                                asChild
-                                className="bg-white text-purple-600 hover:bg-purple-50"
+const DateRangeSelector = ({ currentRange, onRangeChange }: {
+    currentRange: { start: string; end: string; period: string };
+    onRangeChange: (period: string, startDate?: string, endDate?: string) => void;
+}) => {
+    const [showCustom, setShowCustom] = useState(currentRange.period === 'custom');
+    const [customStart, setCustomStart] = useState(currentRange.start);
+    const [customEnd, setCustomEnd] = useState(currentRange.end);
+
+    const predefinedRanges = [
+        { value: 'today', label: 'Today' },
+        { value: 'yesterday', label: 'Yesterday' },
+        { value: 'last_7_days', label: 'Last 7 Days' },
+        { value: 'last_30_days', label: 'Last 30 Days' },
+        { value: 'this_month', label: 'This Month' },
+        { value: 'last_month', label: 'Last Month' },
+        { value: 'this_year', label: 'This Year' },
+        { value: 'custom', label: 'Custom Range' },
+    ];
+
+    const handlePeriodChange = (period: string) => {
+        if (period === 'custom') {
+            setShowCustom(true);
+            return;
+        }
+        setShowCustom(false);
+        onRangeChange(period);
+    };
+
+    const handleCustomApply = () => {
+        onRangeChange('custom', customStart, customEnd);
+    };
+
+    return (
+        <div className="bg-white rounded-lg border shadow-sm p-4 mb-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                    <CalendarDays className="w-5 h-5 text-gray-600" />
+                    <h3 className="font-medium text-gray-900">Date Range Filter</h3>
+                </div>
+
+                <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex gap-2 flex-wrap">
+                        {predefinedRanges.map((range) => (
+                            <button
+                                key={range.value}
+                                onClick={() => handlePeriodChange(range.value)}
+                                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${currentRange.period === range.value
+                                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                    }`}
                             >
-                                <Link href={route('users.create')}>
-                                    <UserPlus className="h-4 w-4 mr-2" />
-                                    Add User
-                                </Link>
-                            </Button>
-                            <Button
-                                asChild
-                                variant="outline"
-                                className="bg-white text-purple-600 hover:bg-purple-50"
+                                {range.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {showCustom && (
+                        <div className="flex items-center gap-2 ml-4">
+                            <input
+                                type="date"
+                                value={customStart}
+                                onChange={(e) => setCustomStart(e.target.value)}
+                                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+                            />
+                            <span className="text-gray-500">to</span>
+                            <input
+                                type="date"
+                                value={customEnd}
+                                onChange={(e) => setCustomEnd(e.target.value)}
+                                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+                            />
+                            <button
+                                onClick={handleCustomApply}
+                                className="px-4 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors"
                             >
-                                <Link href={route('profile.edit')}>
-                                    <Settings className="h-4 w-4 mr-2" />
-                                    Settings
-                                </Link>
-                            </Button>
+                                Apply
+                            </button>
                         </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="mt-3 text-sm text-gray-600">
+                <span className="font-medium">Selected Range:</span> {new Date(currentRange.start).toLocaleDateString('en-BD')} - {new Date(currentRange.end).toLocaleDateString('en-BD')}
+            </div>
+        </div>
+    );
+};
+
+const AlertCard = ({
+    title,
+    alerts,
+    color = 'red'
+}: {
+    title: string;
+    alerts: Array<{ label: string; count: number; color?: string }>;
+    color?: string;
+}) => {
+    const totalAlerts = alerts.reduce((sum, alert) => sum + (alert.count || 0), 0);
+
+    if (totalAlerts === 0) return null;
+
+    return (
+        <div className="bg-white rounded-lg border border-red-200 shadow-sm p-4">
+            <div className="flex items-center gap-3 mb-3">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+                <h3 className="font-semibold text-gray-900">{title}</h3>
+                <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full">
+                    {totalAlerts} alert{totalAlerts > 1 ? 's' : ''}
+                </span>
+            </div>
+            <div className="space-y-2">
+                {alerts.map((alert, index) => (
+                    (alert.count || 0) > 0 && (
+                        <div key={index} className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">{alert.label}</span>
+                            <span className={`font-medium ${alert.color || 'text-red-600'}`}>
+                                {alert.count || 0}
+                            </span>
+                        </div>
+                    )
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const RecentActivityCard = ({
+    title,
+    items,
+    icon: Icon,
+    renderItem
+}: {
+    title: string;
+    items: Array<any>;
+    icon: any;
+    renderItem: (item: any) => React.ReactNode;
+}) => (
+    <div className="bg-white rounded-lg border shadow-sm">
+        <div className="px-6 py-4 border-b">
+            <div className="flex items-center gap-3">
+                <Icon className="w-5 h-5 text-gray-600" />
+                <h3 className="font-semibold text-gray-900">{title}</h3>
+            </div>
+        </div>
+        <div className="p-6">
+            {items.length > 0 ? (
+                <div className="space-y-3">
+                    {items.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                            {renderItem(item)}
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-gray-500 text-center py-8">No recent activities in selected period</p>
+            )}
+        </div>
+    </div>
+);
+
+export default function AdminDashboard({
+    auth,
+    accountBalances,
+    hospitalOverview,
+    medicineStockInfo,
+    opticsStockInfo,
+    recentActivities,
+    periodReports,
+    dateRange
+}: DashboardProps) {
+    const handleDateRangeChange = (period: string, startDate?: string, endDate?: string) => {
+        const params: any = { period };
+
+        if (period === 'custom' && startDate && endDate) {
+            params.start_date = startDate;
+            params.end_date = endDate;
+        }
+
+        router.get('/dashboard', params, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
+
+    const getGrowthTrend = (growth?: number) => {
+        if (growth === undefined) return null;
+        return { value: Math.abs(growth), isPositive: growth >= 0 };
+    };
+
+    // Safe calculation helpers
+    const getTotalIncome = () => {
+        return parseAmount(periodReports.hospital.income) +
+               parseAmount(periodReports.medicine.income) +
+               parseAmount(periodReports.optics.income);
+    };
+
+    const getTotalExpense = () => {
+        return parseAmount(periodReports.hospital.expense) +
+               parseAmount(periodReports.medicine.expense) +
+               parseAmount(periodReports.optics.expense);
+    };
+
+    const getTotalProfit = () => {
+        return parseAmount(periodReports.hospital.profit) +
+               parseAmount(periodReports.medicine.profit) +
+               parseAmount(periodReports.optics.profit);
+    };
+
+    return (
+        <AuthenticatedLayout
+            user={auth.user}
+            header={
+                <div className="flex justify-between items-center">
+                    <h2 className="font-semibold text-xl text-gray-800 leading-tight">
+                        Super Admin Dashboard
+                    </h2>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Clock className="w-4 h-4" />
+                        Last updated: {new Date().toLocaleString()}
                     </div>
                 </div>
-            </div>
+            }
+        >
+            <Head title="Super Admin Dashboard" />
 
-            {/* Main Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-blue-600 text-sm font-medium">Total Patients</p>
-                                <p className="text-3xl font-bold text-blue-700">{stats.totalPatients}</p>
-                                <p className="text-xs text-blue-500 mt-1">+{quickStats.patientsToday} today</p>
-                            </div>
-                            <Users className="h-8 w-8 text-blue-500" />
-                        </div>
-                    </CardContent>
-                </Card>
+            <div className="py-6">
+                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-                <Card className="bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-emerald-600 text-sm font-medium">Total Doctors</p>
-                                <p className="text-3xl font-bold text-emerald-700">{stats.totalDoctors}</p>
-                                <p className="text-xs text-emerald-500 mt-1">Active specialists</p>
-                            </div>
-                            <Stethoscope className="h-8 w-8 text-emerald-500" />
-                        </div>
-                    </CardContent>
-                </Card>
+                    {/* Date Range Selector */}
+                    <DateRangeSelector
+                        currentRange={dateRange}
+                        onRangeChange={handleDateRangeChange}
+                    />
 
-                <Card className="bg-gradient-to-br from-orange-50 to-amber-50 border-orange-200">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-orange-600 text-sm font-medium">Today's Appointments</p>
-                                <p className="text-3xl font-bold text-orange-700">{stats.todayAppointments}</p>
-                                <p className="text-xs text-orange-500 mt-1">{stats.pendingAppointments} pending</p>
-                            </div>
-                            <Calendar className="h-8 w-8 text-orange-500" />
-                        </div>
-                    </CardContent>
-                </Card>
+                    {/* Account Balances Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <StatCard
+                            title="Hospital Account"
+                            value={formatCurrency(accountBalances.hospital.balance)}
+                            icon={Eye}
+                            color="blue"
+                            subtitle="Main hospital funds"
+                        />
+                        <StatCard
+                            title="Medicine Account"
+                            value={formatCurrency(accountBalances.medicine.balance)}
+                            icon={Pill}
+                            color="green"
+                            subtitle="Pharmacy funds"
+                        />
+                        <StatCard
+                            title="Optics Account"
+                            value={formatCurrency(accountBalances.optics.balance)}
+                            icon={Glasses}
+                            color="yellow"
+                            subtitle="Optical shop funds"
+                        />
+                        <StatCard
+                            title="Total Balance"
+                            value={formatCurrency(accountBalances.total)}
+                            icon={Wallet}
+                            color="purple"
+                            subtitle="Combined balance"
+                        />
+                    </div>
 
-                <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-purple-600 text-sm font-medium">Monthly Revenue</p>
-                                <p className="text-3xl font-bold text-purple-700">৳{stats.monthlyRevenue.toLocaleString()}</p>
-                                <p className="text-xs text-purple-500 mt-1">This month</p>
-                            </div>
-                            <DollarSign className="h-8 w-8 text-purple-500" />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Secondary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card className="bg-gradient-to-br from-pink-50 to-rose-50 border-pink-200">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-pink-600 text-sm font-medium">Vision Tests Today</p>
-                                <p className="text-2xl font-bold text-pink-700">{quickStats.visionTestsToday}</p>
-                            </div>
-                            <Eye className="h-6 w-6 text-pink-500" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-indigo-50 to-blue-50 border-indigo-200">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-indigo-600 text-sm font-medium">Prescriptions Today</p>
-                                <p className="text-2xl font-bold text-indigo-700">{quickStats.prescriptionsToday}</p>
-                            </div>
-                            <FileText className="h-6 w-6 text-indigo-500" />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-teal-50 to-cyan-50 border-teal-200">
-                    <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-teal-600 text-sm font-medium">Completion Rate</p>
-                                <p className="text-2xl font-bold text-teal-700">
-                                    {stats.todayAppointments > 0 ? Math.round((stats.completedAppointments / stats.todayAppointments) * 100) : 0}%
-                                </p>
-                            </div>
-                            <BarChart3 className="h-6 w-6 text-teal-500" />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column */}
-                <div className="lg:col-span-2 space-y-8">
-                    {/* Today's Appointments Overview */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center space-x-2">
-                                <Activity className="h-5 w-5 text-blue-500" />
-                                <span>Today's Appointments Overview</span>
-                                <Badge variant="outline">{todayAppointments.length}</Badge>
-                            </CardTitle>
-                            <CardDescription>Real-time appointment status across all doctors</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {todayAppointments.length > 0 ? (
-                                    todayAppointments.slice(0, 8).map((appointment) => (
-                                        <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                            <div className="flex items-center space-x-4">
-                                                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-                                                    {appointment.serial_number}
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-semibold text-gray-900">{appointment.patient.name}</h4>
-                                                    <p className="text-sm text-gray-600">ID: {appointment.patient.patient_id}</p>
-                                                    <p className="text-sm text-gray-500">Dr. {appointment.doctor.user.name}</p>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-semibold text-gray-900">{formatTime(appointment.appointment_time)}</p>
-                                                {getStatusBadge(appointment.status)}
-                                                <div className="mt-2">
-                                                    <Button size="sm" variant="outline" asChild>
-                                                        <Link href={route('patients.show', appointment.patient.id)}>
-                                                            View Patient
-                                                        </Link>
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="text-center py-8 text-gray-500">
-                                        <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                                        <p>No appointments scheduled for today</p>
-                                    </div>
+                    {/* Period Reports */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-white rounded-lg border shadow-sm p-6">
+                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                <Eye className="w-5 h-5 text-blue-600" />
+                                Hospital - Selected Period
+                                {periodReports.hospital.incomeGrowth !== undefined && (
+                                    <span className={`text-xs px-2 py-1 rounded-full ${periodReports.hospital.incomeGrowth >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                        }`}>
+                                        {periodReports.hospital.incomeGrowth >= 0 ? '+' : ''}{periodReports.hospital.incomeGrowth}%
+                                    </span>
                                 )}
-                            </div>
-                            {todayAppointments.length > 8 && (
-                                <div className="mt-4 text-center">
-                                    <Button variant="outline" asChild>
-                                        <Link href={route('appointments.index')}>
-                                            View All Appointments
-                                        </Link>
-                                    </Button>
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Income</span>
+                                    <span className="font-medium text-green-600">
+                                        +{formatCurrency(periodReports.hospital.income)}
+                                    </span>
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Expense</span>
+                                    <span className="font-medium text-red-600">
+                                        -{formatCurrency(periodReports.hospital.expense)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between border-t pt-2">
+                                    <span className="font-semibold text-gray-900">Profit</span>
+                                    <span className={`font-bold ${parseAmount(periodReports.hospital.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {formatCurrency(periodReports.hospital.profit)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
 
-                    {/* Doctor Performance */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center space-x-2">
-                                <TrendingUp className="h-5 w-5 text-green-500" />
-                                <span>Doctor Performance</span>
-                            </CardTitle>
-                            <CardDescription>Monthly performance metrics for all doctors</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {doctorStats.map((doctor, index) => (
-                                    <div key={index} className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div>
-                                                <h4 className="font-semibold text-gray-900">Dr. {doctor.doctor_name}</h4>
-                                                {doctor.specialization && (
-                                                    <p className="text-sm text-gray-600">{doctor.specialization}</p>
+                        <div className="bg-white rounded-lg border shadow-sm p-6">
+                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                <Pill className="w-5 h-5 text-green-600" />
+                                Medicine - Selected Period
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Income</span>
+                                    <span className="font-medium text-green-600">
+                                        +{formatCurrency(periodReports.medicine.income)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Expense</span>
+                                    <span className="font-medium text-red-600">
+                                        -{formatCurrency(periodReports.medicine.expense)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between border-t pt-2">
+                                    <span className="font-semibold text-gray-900">Profit</span>
+                                    <span className={`font-bold ${parseAmount(periodReports.medicine.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {formatCurrency(periodReports.medicine.profit)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg border shadow-sm p-6">
+                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                <Glasses className="w-5 h-5 text-yellow-600" />
+                                Optics - Selected Period
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Income</span>
+                                    <span className="font-medium text-green-600">
+                                        +{formatCurrency(periodReports.optics.income)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Expense</span>
+                                    <span className="font-medium text-red-600">
+                                        -{formatCurrency(periodReports.optics.expense)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between border-t pt-2">
+                                    <span className="font-semibold text-gray-900">Profit</span>
+                                    <span className={`font-bold ${parseAmount(periodReports.optics.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {formatCurrency(periodReports.optics.profit)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Hospital Overview */}
+                    <div className="bg-white rounded-lg border shadow-sm">
+                        <div className="px-6 py-4 border-b">
+                            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                                <Activity className="w-5 h-5 text-blue-600" />
+                                Hospital Overview - Selected Period
+                            </h3>
+                        </div>
+                        <div className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                                <StatCard
+                                    title="Total Patients"
+                                    value={(hospitalOverview.patients.total || 0).toLocaleString()}
+                                    icon={Users}
+                                    color="blue"
+                                    trend={getGrowthTrend(hospitalOverview.patients.growth)}
+                                    subtitle={`${hospitalOverview.patients.today || 0} today`}
+                                />
+                                <StatCard
+                                    title="Patient Visits"
+                                    value={(hospitalOverview.visits.total || 0).toLocaleString()}
+                                    icon={Calendar}
+                                    color="green"
+                                    trend={getGrowthTrend(hospitalOverview.visits.growth)}
+                                    subtitle={`${hospitalOverview.visits.today || 0} today, ${hospitalOverview.visits.active || 0} active`}
+                                />
+                                <StatCard
+                                    title="Appointments"
+                                    value={(hospitalOverview.appointments.total || 0).toLocaleString()}
+                                    icon={Clock}
+                                    color="yellow"
+                                    trend={getGrowthTrend(hospitalOverview.appointments.growth)}
+                                    subtitle={`${hospitalOverview.appointments.pending || 0} pending, ${hospitalOverview.appointments.completed || 0} completed`}
+                                />
+                                <StatCard
+                                    title="Doctors"
+                                    value={hospitalOverview.doctors.total || 0}
+                                    icon={User}
+                                    color="purple"
+                                    subtitle={`${hospitalOverview.doctors.available || 0} available`}
+                                />
+                                <StatCard
+                                    title="Prescriptions"
+                                    value={(hospitalOverview.prescriptions.total || 0).toLocaleString()}
+                                    icon={FileText}
+                                    color="indigo"
+                                    trend={getGrowthTrend(hospitalOverview.prescriptions.growth)}
+                                    subtitle={`${hospitalOverview.prescriptions.today || 0} today`}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Medicine Stock Information */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2">
+                            <div className="bg-white rounded-lg border shadow-sm">
+                                <div className="px-6 py-4 border-b">
+                                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                                        <Pill className="w-5 h-5 text-green-600" />
+                                        Medicine Stock Overview
+                                    </h3>
+                                </div>
+                                <div className="p-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                        <StatCard
+                                            title="Total Medicines"
+                                            value={medicineStockInfo.overview.totalMedicines || 0}
+                                            icon={Package}
+                                            color="green"
+                                            subtitle={`${medicineStockInfo.overview.activeMedicines || 0} active`}
+                                        />
+                                        <StatCard
+                                            title="Stock Value"
+                                            value={formatCurrency(medicineStockInfo.overview.totalStockValue)}
+                                            icon={DollarSign}
+                                            color="blue"
+                                        />
+                                        <StatCard
+                                            title="Period Sales"
+                                            value={formatCurrency(medicineStockInfo.periodStats.totalSales)}
+                                            icon={TrendingUp}
+                                            color="purple"
+                                            trend={getGrowthTrend(medicineStockInfo.periodStats.salesGrowth)}
+                                            subtitle={`Profit: ${formatCurrency(medicineStockInfo.periodStats.totalProfit)}`}
+                                        />
+                                    </div>
+
+                                    {/* Top Selling Medicines */}
+                                    <div className="mt-6">
+                                        <h4 className="font-medium text-gray-900 mb-3">Top Selling Medicines (Selected Period)</h4>
+                                        <div className="space-y-2">
+                                            {medicineStockInfo.topSelling.length > 0 ? (
+                                                medicineStockInfo.topSelling.map((medicine, index) => (
+                                                    <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
+                                                        <div>
+                                                            <span className="font-medium text-gray-900">{medicine.name}</span>
+                                                            <span className="text-sm text-gray-500 ml-2">
+                                                                {medicine.total_sold} units sold
+                                                            </span>
+                                                        </div>
+                                                        <span className="font-medium text-green-600">
+                                                            {formatCurrency(medicine.total_revenue)}
+                                                        </span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="text-gray-500 text-center py-4">No sales in selected period</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <AlertCard
+                                title="Medicine Alerts"
+                                alerts={[
+                                    { label: 'Low Stock Items', count: medicineStockInfo.alerts.lowStock || 0, color: 'text-yellow-600' },
+                                    { label: 'Expired Stock', count: medicineStockInfo.alerts.expired || 0, color: 'text-red-600' },
+                                    { label: 'Expiring Soon', count: medicineStockInfo.alerts.expiring || 0, color: 'text-orange-600' },
+                                ]}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Optics Stock Information */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2">
+                            <div className="bg-white rounded-lg border shadow-sm">
+                                <div className="px-6 py-4 border-b">
+                                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                                        <Glasses className="w-5 h-5 text-yellow-600" />
+                                        Optics Stock Overview
+                                    </h3>
+                                </div>
+                                <div className="p-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                        <div className="bg-gray-50 rounded-lg p-4">
+                                            <h4 className="font-medium text-gray-900 mb-3 flex items-center justify-between">
+                                                Frames
+                                                {opticsStockInfo.periodStats.prescriptionGlassesGrowth !== undefined && (
+                                                    <span className={`text-xs px-2 py-1 rounded-full ${opticsStockInfo.periodStats.prescriptionGlassesGrowth >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                        }`}>
+                                                        {opticsStockInfo.periodStats.prescriptionGlassesGrowth >= 0 ? '+' : ''}{opticsStockInfo.periodStats.prescriptionGlassesGrowth}%
+                                                    </span>
                                                 )}
+                                            </h4>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Total:</span>
+                                                    <span className="font-medium">{opticsStockInfo.frames.total || 0}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Active:</span>
+                                                    <span className="font-medium">{opticsStockInfo.frames.active || 0}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Value:</span>
+                                                    <span className="font-medium">{formatCurrency(opticsStockInfo.frames.totalValue)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Low Stock:</span>
+                                                    <span className="font-medium text-red-600">{opticsStockInfo.frames.lowStock || 0}</span>
+                                                </div>
                                             </div>
-                                            <Badge className="bg-green-100 text-green-800">
-                                                {doctor.completion_rate}% completion
-                                            </Badge>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-4 text-sm">
-                                            <div>
-                                                <p className="text-gray-600">Total Patients</p>
-                                                <p className="font-bold text-gray-900">{doctor.total_patients}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-gray-600">This Month</p>
-                                                <p className="font-bold text-gray-900">{doctor.monthly_patients}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-gray-600">Avg. Time</p>
-                                                <p className="font-bold text-gray-900">{doctor.average_consultation_time}m</p>
-                                            </div>
-                                        </div>
-                                        <div className="mt-3 bg-gray-200 rounded-full h-2">
-                                            <div
-                                                className="bg-green-500 h-2 rounded-full"
-                                                style={{ width: `${doctor.completion_rate}%` }}
-                                            ></div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
 
-                {/* Right Column */}
-                <div className="space-y-8">
-                    {/* Recent Patients */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center space-x-2">
-                                <UserPlus className="h-5 w-5 text-blue-500" />
-                                <span>Recent Patients</span>
-                            </CardTitle>
-                            <CardDescription>Latest patient registrations</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                {recentPatients.slice(0, 6).map((patient) => (
-                                    <div key={patient.id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                        <div className="flex items-center space-x-3">
-                                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                                                {patient.name.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <h4 className="font-medium text-gray-900">{patient.name}</h4>
-                                                <p className="text-xs text-gray-600">ID: {patient.patient_id}</p>
-                                                <p className="text-xs text-gray-500">{formatDate(patient.created_at)}</p>
+                                        <div className="bg-gray-50 rounded-lg p-4">
+                                            <h4 className="font-medium text-gray-900 mb-3">Lenses</h4>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Total:</span>
+                                                    <span className="font-medium">{opticsStockInfo.lenses.total || 0}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Active:</span>
+                                                    <span className="font-medium">{opticsStockInfo.lenses.active || 0}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Value:</span>
+                                                    <span className="font-medium">{formatCurrency(opticsStockInfo.lenses.totalValue)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Low Stock:</span>
+                                                    <span className="font-medium text-red-600">{opticsStockInfo.lenses.lowStock || 0}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <Button size="sm" variant="ghost" asChild>
-                                            <Link href={route('patients.show', patient.id)}>
-                                                View
-                                            </Link>
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="mt-4">
-                                <Button variant="outline" className="w-full" asChild>
-                                    <Link href={route('patients.index')}>
-                                        View All Patients
-                                    </Link>
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
 
-                    {/* Recent Vision Tests */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center space-x-2">
-                                <Eye className="h-5 w-5 text-purple-500" />
-                                <span>Recent Vision Tests</span>
-                            </CardTitle>
-                            <CardDescription>Latest vision test activities</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                {recentVisionTests.slice(0, 5).map((test) => (
-                                    <div key={test.id} className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h4 className="font-medium text-gray-900">{test.patient.name}</h4>
-                                            <span className="text-xs text-gray-500">{formatDate(test.test_date)}</span>
-                                        </div>
-                                        <p className="text-xs text-gray-600 mb-1">ID: {test.patient.patient_id}</p>
-                                        {test.performed_by && (
-                                            <p className="text-xs text-gray-500">By: {test.performed_by.name}</p>
-                                        )}
-                                        <div className="mt-2">
-                                            <Button size="sm" variant="ghost" className="h-6 text-xs" asChild>
-                                                <Link href={route('visiontests.show', test.id)}>
-                                                    View Details
-                                                </Link>
-                                            </Button>
+                                        <div className="bg-gray-50 rounded-lg p-4">
+                                            <h4 className="font-medium text-gray-900 mb-3">Complete Glasses</h4>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Total:</span>
+                                                    <span className="font-medium">{opticsStockInfo.completeGlasses.total || 0}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Active:</span>
+                                                    <span className="font-medium">{opticsStockInfo.completeGlasses.active || 0}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Value:</span>
+                                                    <span className="font-medium">{formatCurrency(opticsStockInfo.completeGlasses.totalValue)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Low Stock:</span>
+                                                    <span className="font-medium text-red-600">{opticsStockInfo.completeGlasses.lowStock || 0}</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
 
-                    {/* Quick Actions */}
-                    <Card className="bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200">
-                        <CardHeader>
-                            <CardTitle className="flex items-center space-x-2">
-                                <Zap className="h-5 w-5 text-gray-600" />
-                                <span>Quick Actions</span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                <Button className="w-full justify-start" asChild>
-                                    <Link href={route('patients.create')}>
-                                        <UserPlus className="h-4 w-4 mr-2" />
-                                        Add New Patient
-                                    </Link>
-                                </Button>
-                                <Button variant="outline" className="w-full justify-start" asChild>
-                                    <Link href={route('users.create')}>
-                                        <Shield className="h-4 w-4 mr-2" />
-                                        Add New User
-                                    </Link>
-                                </Button>
-                                <Button variant="outline" className="w-full justify-start" asChild>
-                                    <Link href={route('appointments.create')}>
-                                        <CalendarPlus className="h-4 w-4 mr-2" />
-                                        Schedule Appointment
-                                    </Link>
-                                </Button>
-                                <Button variant="outline" className="w-full justify-start" asChild>
-                                    <Link href="">
-                                        <BarChart3 className="h-4 w-4 mr-2" />
-                                        View Reports
-                                    </Link>
-                                </Button>
-                                <Button variant="outline" className="w-full justify-start" asChild>
-                                    <Link href="">
-                                        <Settings className="h-4 w-4 mr-2" />
-                                        System Settings
-                                    </Link>
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                    {/* Period Stats */}
+                                    <div className="mb-6 bg-blue-50 rounded-lg p-4">
+                                        <h4 className="font-medium text-gray-900 mb-3">Selected Period Statistics</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Prescription Glasses:</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium">{opticsStockInfo.periodStats.prescriptionGlasses || 0}</span>
+                                                    {opticsStockInfo.periodStats.prescriptionGlassesGrowth !== undefined && (
+                                                        <span className={`text-xs px-2 py-1 rounded-full ${opticsStockInfo.periodStats.prescriptionGlassesGrowth >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                            }`}>
+                                                            {opticsStockInfo.periodStats.prescriptionGlassesGrowth >= 0 ? '+' : ''}{opticsStockInfo.periodStats.prescriptionGlassesGrowth}%
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                    {/* System Status */}
-                    <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50">
-                        <CardHeader>
-                            <CardTitle className="flex items-center space-x-2">
-                                <Database className="h-5 w-5 text-green-500" />
-                                <span>System Status</span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-600">Database</span>
-                                    <div className="flex items-center space-x-1">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                        <span className="text-sm text-green-600">Online</span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-600">Backup</span>
-                                    <div className="flex items-center space-x-1">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                        <span className="text-sm text-green-600">Updated</span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-600">Security</span>
-                                    <div className="flex items-center space-x-1">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                        <span className="text-sm text-green-600">Secure</span>
+                                    {/* Top Selling Frames */}
+                                    <div className="mt-6">
+                                        <h4 className="font-medium text-gray-900 mb-3">Top Selling Frames (Selected Period)</h4>
+                                        <div className="space-y-2">
+                                            {opticsStockInfo.topSellingFrames.length > 0 ? (
+                                                opticsStockInfo.topSellingFrames.map((frame, index) => (
+                                                    <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
+                                                        <div>
+                                                            <span className="font-medium text-gray-900">{frame.brand} {frame.model}</span>
+                                                            <span className="text-sm text-gray-500 ml-2">
+                                                                {frame.prescription_glasses_count || 0} sold
+                                                            </span>
+                                                        </div>
+                                                        <span className="font-medium text-green-600">
+                                                            {formatCurrency(frame.selling_price)}
+                                                        </span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p className="text-gray-500 text-center py-4">No frame sales in selected period</p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
+                        </div>
 
-            {/* Upcoming Appointments */}
-            {upcomingAppointments.length > 0 && (
-                <Card className="mt-8">
-                    <CardHeader>
-                        <CardTitle className="flex items-center space-x-2">
-                            <Clock className="h-5 w-5 text-indigo-500" />
-                            <span>Upcoming Appointments</span>
-                            <Badge variant="outline">{upcomingAppointments.length}</Badge>
-                        </CardTitle>
-                        <CardDescription>Appointments scheduled for the next few days</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {upcomingAppointments.slice(0, 9).map((appointment) => (
-                                <div key={appointment.id} className="p-4 bg-indigo-50 rounded-lg border border-indigo-200">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <h4 className="font-semibold text-gray-900">{appointment.patient.name}</h4>
-                                        <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded">
-                                            #{appointment.serial_number}
+                        <div>
+                            <AlertCard
+                                title="Optics Alerts"
+                                alerts={[
+                                    { label: 'Frames Low Stock', count: opticsStockInfo.alerts.framesLowStock || 0, color: 'text-yellow-600' },
+                                    { label: 'Lenses Low Stock', count: opticsStockInfo.alerts.lensesLowStock || 0, color: 'text-orange-600' },
+                                    { label: 'Complete Glasses Low Stock', count: opticsStockInfo.alerts.completeGlassesLowStock || 0, color: 'text-red-600' },
+                                ]}
+                            />
+
+                            <div className="mt-4 bg-white rounded-lg border shadow-sm p-4">
+                                <h4 className="font-medium text-gray-900 mb-3">Total Optics Stock Value</h4>
+                                <div className="text-center">
+                                    <div className="text-3xl font-bold text-yellow-600">
+                                        {formatCurrency(opticsStockInfo.totalStockValue)}
+                                    </div>
+                                    <div className="text-sm text-gray-500 mt-1">
+                                        Combined value of all optics inventory
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Recent Activities */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <RecentActivityCard
+                            title="Recent Patients"
+                            items={recentActivities.recentPatients || []}
+                            icon={Users}
+                            renderItem={(patient) => (
+                                <>
+                                    <div>
+                                        <div className="font-medium text-gray-900">{patient.name}</div>
+                                        <div className="text-sm text-gray-500">ID: {patient.patient_id} • {patient.phone}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-sm text-gray-500">
+                                            {new Date(patient.created_at).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        />
+
+                        <RecentActivityCard
+                            title="Recent Visits"
+                            items={recentActivities.recentVisits || []}
+                            icon={Calendar}
+                            renderItem={(visit) => (
+                                <>
+                                    <div>
+                                        <div className="font-medium text-gray-900">Visit #{visit.visit_id}</div>
+                                        <div className="text-sm text-gray-500">
+                                            {visit.patient?.name} • Dr. {visit.selected_doctor?.user?.name}
+                                        </div>
+                                        <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${visit.overall_status === 'completed' ? 'bg-green-100 text-green-700' :
+                                            visit.overall_status === 'prescription' ? 'bg-blue-100 text-blue-700' :
+                                                visit.overall_status === 'vision_test' ? 'bg-yellow-100 text-yellow-700' :
+                                                    'bg-red-100 text-red-700'
+                                            }`}>
+                                            {visit.overall_status}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-gray-600 mb-1">ID: {appointment.patient.patient_id}</p>
-                                    <p className="text-sm text-gray-600 mb-2">Dr. {appointment.doctor.user.name}</p>
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-xs text-gray-500">
-                                            <p>{formatDate(appointment.appointment_date)}</p>
-                                            <p>{formatTime(appointment.appointment_time)}</p>
+                                    <div className="text-right">
+                                        <div className="font-medium text-gray-900">
+                                            {formatCurrency(visit.final_amount)}
                                         </div>
-                                        <Button size="sm" variant="ghost" asChild>
-                                            <Link href={route('patients.show', appointment.patient.id)}>
-                                                View
-                                            </Link>
-                                        </Button>
+                                        <div className="text-sm text-gray-500">
+                                            {new Date(visit.created_at).toLocaleDateString()}
+                                        </div>
                                     </div>
+                                </>
+                            )}
+                        />
+
+                        <RecentActivityCard
+                            title="Recent Payments"
+                            items={recentActivities.recentPayments || []}
+                            icon={CreditCard}
+                            renderItem={(payment) => (
+                                <>
+                                    <div>
+                                        <div className="font-medium text-gray-900">{payment.payment_number}</div>
+                                        <div className="text-sm text-gray-500">
+                                            {payment.patient?.name}
+                                        </div>
+                                        <div className="text-sm text-gray-500">
+                                            By: {payment.received_by?.name}
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="font-medium text-green-600">
+                                            {formatCurrency(payment.amount)}
+                                        </div>
+                                        <div className="text-sm text-gray-500">
+                                            {new Date(payment.payment_date).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        />
+                    </div>
+
+                    {/* Performance Summary */}
+                    <div className="bg-white rounded-lg border shadow-sm p-6">
+                        <h3 className="font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                            <Activity className="w-5 h-5 text-blue-600" />
+                            Performance Summary - Selected Period
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-blue-600 mb-2">
+                                    {formatCurrency(getTotalIncome())}
                                 </div>
-                            ))}
+                                <div className="text-sm text-gray-600">Total Income</div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                    H: {formatCurrency(periodReports.hospital.income)} |
+                                    M: {formatCurrency(periodReports.medicine.income)} |
+                                    O: {formatCurrency(periodReports.optics.income)}
+                                </div>
+                            </div>
+
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-red-600 mb-2">
+                                    {formatCurrency(getTotalExpense())}
+                                </div>
+                                <div className="text-sm text-gray-600">Total Expense</div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                    H: {formatCurrency(periodReports.hospital.expense)} |
+                                    M: {formatCurrency(periodReports.medicine.expense)} |
+                                    O: {formatCurrency(periodReports.optics.expense)}
+                                </div>
+                            </div>
+
+                            <div className="text-center">
+                                <div className={`text-2xl font-bold mb-2 ${getTotalProfit() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {formatCurrency(getTotalProfit())}
+                                </div>
+                                <div className="text-sm text-gray-600">Total Profit</div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                    H: {formatCurrency(periodReports.hospital.profit)} |
+                                    M: {formatCurrency(periodReports.medicine.profit)} |
+                                    O: {formatCurrency(periodReports.optics.profit)}
+                                </div>
+                            </div>
+
+                            <div className="text-center">
+                                <div className="text-2xl font-bold text-purple-600 mb-2">
+                                    {(hospitalOverview.patients.total || 0) + (hospitalOverview.visits.total || 0) + (hospitalOverview.prescriptions.total || 0)}
+                                </div>
+                                <div className="text-sm text-gray-600">Total Activities</div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                    P: {hospitalOverview.patients.total || 0} |
+                                    V: {hospitalOverview.visits.total || 0} |
+                                    Rx: {hospitalOverview.prescriptions.total || 0}
+                                </div>
+                            </div>
                         </div>
-                    </CardContent>
-                </Card>
-            )}
-        </AdminLayout>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="bg-white rounded-lg border shadow-sm p-6">
+                        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <Filter className="w-5 h-5 text-gray-600" />
+                            Quick Actions
+                        </h3>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <button className="flex items-center justify-center gap-2 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 text-blue-700 transition-colors">
+                                <Users className="w-5 h-5" />
+                                <span className="text-sm font-medium">View Patients</span>
+                            </button>
+
+                            <button className="flex items-center justify-center gap-2 p-4 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 text-green-700 transition-colors">
+                                <Pill className="w-5 h-5" />
+                                <span className="text-sm font-medium">Medicine Stock</span>
+                            </button>
+
+                            <button className="flex items-center justify-center gap-2 p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg border border-yellow-200 text-yellow-700 transition-colors">
+                                <Glasses className="w-5 h-5" />
+                                <span className="text-sm font-medium">Optics Stock</span>
+                            </button>
+
+                            <button className="flex items-center justify-center gap-2 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 text-purple-700 transition-colors">
+                                <FileText className="w-5 h-5" />
+                                <span className="text-sm font-medium">Reports</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </AuthenticatedLayout>
     );
 }

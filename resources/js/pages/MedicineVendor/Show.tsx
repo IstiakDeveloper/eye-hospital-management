@@ -252,11 +252,10 @@ export default function VendorShow({ vendor, overdueTransactions, recentPurchase
                         <div className="mt-4">
                             <div className="w-full bg-gray-200 rounded-full h-2">
                                 <div
-                                    className={`h-2 rounded-full transition-all duration-300 ${
-                                        getCreditUtilization() > 80 ? 'bg-red-500' :
-                                        getCreditUtilization() > 60 ? 'bg-yellow-500' :
-                                        'bg-green-500'
-                                    }`}
+                                    className={`h-2 rounded-full transition-all duration-300 ${getCreditUtilization() > 80 ? 'bg-red-500' :
+                                            getCreditUtilization() > 60 ? 'bg-yellow-500' :
+                                                'bg-green-500'
+                                        }`}
                                     style={{ width: `${Math.min(getCreditUtilization(), 100)}%` }}
                                 ></div>
                             </div>
@@ -318,9 +317,8 @@ export default function VendorShow({ vendor, overdueTransactions, recentPurchase
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-xl font-semibold text-gray-900">Vendor Information</h2>
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                            vendor.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${vendor.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
                             {vendor.is_active ? 'Active' : 'Inactive'}
                         </span>
                     </div>
@@ -422,11 +420,10 @@ export default function VendorShow({ vendor, overdueTransactions, recentPurchase
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
-                                    activeTab === tab.key
+                                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${activeTab === tab.key
                                         ? 'text-blue-600 border-b-2 border-blue-600'
                                         : 'text-gray-500 hover:text-gray-700'
-                                }`}
+                                    }`}
                             >
                                 <tab.icon className="w-4 h-4" />
                                 {tab.label}
@@ -462,7 +459,7 @@ export default function VendorShow({ vendor, overdueTransactions, recentPurchase
                                     <div className="space-y-3">
                                         {[...vendor.transactions, ...vendor.payments]
                                             .sort((a, b) => new Date(b.created_at || b.payment_date || b.transaction_date).getTime() -
-                                                            new Date(a.created_at || a.payment_date || a.transaction_date).getTime())
+                                                new Date(a.created_at || a.payment_date || a.transaction_date).getTime())
                                             .slice(0, 5)
                                             .map((item, index) => (
                                                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -479,7 +476,7 @@ export default function VendorShow({ vendor, overdueTransactions, recentPurchase
                                                         <div>
                                                             <p className="text-sm font-medium text-gray-900">
                                                                 {'payment_no' in item ? `Payment ${item.payment_no}` :
-                                                                 'type' in item ? `${item.type} ${item.transaction_no}` : 'Transaction'}
+                                                                    'type' in item ? `${item.type} ${item.transaction_no}` : 'Transaction'}
                                                             </p>
                                                             <p className="text-xs text-gray-500">
                                                                 {formatDate('payment_date' in item ? item.payment_date : item.transaction_date)}
@@ -487,10 +484,9 @@ export default function VendorShow({ vendor, overdueTransactions, recentPurchase
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className={`text-sm font-medium ${
-                                                            'payment_no' in item || ('type' in item && item.type === 'payment')
+                                                        <p className={`text-sm font-medium ${'payment_no' in item || ('type' in item && item.type === 'payment')
                                                                 ? 'text-green-600' : 'text-red-600'
-                                                        }`}>
+                                                            }`}>
                                                             {formatCurrency(item.amount)}
                                                         </p>
                                                     </div>
@@ -540,11 +536,10 @@ export default function VendorShow({ vendor, overdueTransactions, recentPurchase
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-3">
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                            transaction.type === 'purchase' ? 'bg-blue-100 text-blue-800' :
-                                                            transaction.type === 'payment' ? 'bg-green-100 text-green-800' :
-                                                            'bg-gray-100 text-gray-800'
-                                                        }`}>
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${transaction.type === 'purchase' ? 'bg-blue-100 text-blue-800' :
+                                                                transaction.type === 'payment' ? 'bg-green-100 text-green-800' :
+                                                                    'bg-gray-100 text-gray-800'
+                                                            }`}>
                                                             {transaction.type}
                                                         </span>
                                                     </td>
@@ -555,11 +550,10 @@ export default function VendorShow({ vendor, overdueTransactions, recentPurchase
                                                         {formatCurrency(transaction.due_amount)}
                                                     </td>
                                                     <td className="px-4 py-3">
-                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                            transaction.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
-                                                            transaction.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
-                                                            'bg-red-100 text-red-800'
-                                                        }`}>
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${transaction.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
+                                                                transaction.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
+                                                                    'bg-red-100 text-red-800'
+                                                            }`}>
                                                             {transaction.payment_status}
                                                         </span>
                                                     </td>
@@ -679,7 +673,7 @@ export default function VendorShow({ vendor, overdueTransactions, recentPurchase
 
                 {/* Payment Modal */}
                 {showPaymentModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
                         <div className="bg-white rounded-xl max-w-lg w-full">
                             <div className="p-6 border-b border-gray-200">
                                 <div className="flex items-center justify-between">
@@ -778,7 +772,7 @@ export default function VendorShow({ vendor, overdueTransactions, recentPurchase
 
                 {/* Balance Adjustment Modal */}
                 {showAdjustModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="fixed inset-0 flex items-center justify-center z-50 p-4" style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
                         <div className="bg-white rounded-xl max-w-lg w-full">
                             <div className="p-6 border-b border-gray-200">
                                 <div className="flex items-center justify-between">

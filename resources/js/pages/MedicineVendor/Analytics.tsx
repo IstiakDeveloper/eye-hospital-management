@@ -23,29 +23,29 @@ import {
 interface TopVendor {
     name: string;
     company_name?: string;
-    total_purchases: number;
+    total_purchases: number | string;
     transaction_count: number;
-    current_due: number;
+    current_due: number | string;
 }
 
 interface MonthlyTrend {
     year: number;
     month: number;
-    income: number;
-    expense: number;
+    income: number | string;
+    expense: number | string;
 }
 
 interface PaymentMethod {
     payment_method: string;
-    total: number;
+    total: number | string;
     count: number;
 }
 
 interface VendorMetrics {
     total_active_vendors: number;
     vendors_with_dues: number;
-    average_payment_terms: number;
-    total_credit_limit: number;
+    average_payment_terms: number | string;
+    total_credit_limit: number | string;
 }
 
 interface VendorAnalyticsProps {
@@ -69,24 +69,31 @@ export default function VendorAnalytics({
     const [dateFilter, setDateFilter] = useState({ year: filters.year, month: filters.month });
     const [isLoading, setIsLoading] = useState(false);
 
-    const formatCurrency = (amount: number) => {
+    const parseAmount = (amount: number | string): number => {
+        const parsed = typeof amount === 'string' ? parseFloat(amount) : amount;
+        return isNaN(parsed) || parsed === null || parsed === undefined ? 0 : parsed;
+    };
+
+    const formatCurrency = (amount: number | string) => {
+        const numAmount = parseAmount(amount);
         const formatted = new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 0,
-        }).format(amount);
+        }).format(numAmount);
         return `৳${formatted}`;
     };
 
-    const formatCompactCurrency = (amount: number) => {
-        if (amount >= 10000000) return `৳${(amount / 10000000).toFixed(1)}Cr`;
-        if (amount >= 100000) return `৳${(amount / 100000).toFixed(1)}L`;
-        if (amount >= 1000) return `৳${(amount / 1000).toFixed(1)}K`;
-        return formatCurrency(amount);
+    const formatCompactCurrency = (amount: number | string) => {
+        const numAmount = parseAmount(amount);
+        if (numAmount >= 10000000) return `৳${(numAmount / 10000000).toFixed(1)}Cr`;
+        if (numAmount >= 100000) return `৳${(numAmount / 100000).toFixed(1)}L`;
+        if (numAmount >= 1000) return `৳${(numAmount / 1000).toFixed(1)}K`;
+        return formatCurrency(numAmount);
     };
 
     const getMonthName = (month: number) => {
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return months[month - 1];
+        return months[month - 1] || 'Unknown';
     };
 
     const handleDateFilter = async () => {
@@ -96,12 +103,12 @@ export default function VendorAnalytics({
         });
     };
 
-    // Calculate totals and trends
-    const totalPurchases = topVendors.reduce((sum, vendor) => sum + vendor.total_purchases, 0);
-    const totalDues = topVendors.reduce((sum, vendor) => sum + vendor.current_due, 0);
+    // Calculate totals and trends with safe parsing
+    const totalPurchases = topVendors.reduce((sum, vendor) => sum + parseAmount(vendor.total_purchases), 0);
+    const totalDues = topVendors.reduce((sum, vendor) => sum + parseAmount(vendor.current_due), 0);
     const averagePurchasePerVendor = topVendors.length > 0 ? totalPurchases / topVendors.length : 0;
 
-    // Monthly trend calculations
+    // Monthly trend calculations with safe parsing
     const currentMonthData = monthlyTrend.find(m => m.year === dateFilter.year && m.month === dateFilter.month);
     const previousMonthData = monthlyTrend.find(m => {
         const prevMonth = dateFilter.month === 1 ? 12 : dateFilter.month - 1;
@@ -109,8 +116,11 @@ export default function VendorAnalytics({
         return m.year === prevYear && m.month === prevMonth;
     });
 
-    const purchaseGrowth = currentMonthData && previousMonthData
-        ? ((currentMonthData.expense - previousMonthData.expense) / previousMonthData.expense) * 100
+    const currentExpense = currentMonthData ? parseAmount(currentMonthData.expense) : 0;
+    const previousExpense = previousMonthData ? parseAmount(previousMonthData.expense) : 0;
+
+    const purchaseGrowth = currentExpense > 0 && previousExpense > 0
+        ? ((currentExpense - previousExpense) / previousExpense) * 100
         : 0;
 
     return (
@@ -152,19 +162,19 @@ export default function VendorAnalytics({
                         <div className="flex items-center gap-3">
                             <select
                                 value={dateFilter.month}
-                                onChange={(e) => setDateFilter({...dateFilter, month: parseInt(e.target.value)})}
+                                onChange={(e) => setDateFilter({ ...dateFilter, month: parseInt(e.target.value) })}
                                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                             >
-                                {Array.from({length: 12}, (_, i) => (
+                                {Array.from({ length: 12 }, (_, i) => (
                                     <option key={i + 1} value={i + 1}>{getMonthName(i + 1)}</option>
                                 ))}
                             </select>
                             <select
                                 value={dateFilter.year}
-                                onChange={(e) => setDateFilter({...dateFilter, year: parseInt(e.target.value)})}
+                                onChange={(e) => setDateFilter({ ...dateFilter, year: parseInt(e.target.value) })}
                                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                             >
-                                {Array.from({length: 5}, (_, i) => {
+                                {Array.from({ length: 5 }, (_, i) => {
                                     const year = new Date().getFullYear() - i;
                                     return <option key={year} value={year}>{year}</option>;
                                 })}
@@ -192,7 +202,7 @@ export default function VendorAnalytics({
                             <div>
                                 <p className="text-sm font-medium text-blue-600">Active Vendors</p>
                                 <p className="text-3xl font-bold text-blue-900 mt-1">
-                                    {vendorMetrics.total_active_vendors}
+                                    {vendorMetrics.total_active_vendors || 0}
                                 </p>
                                 <div className="flex items-center gap-1 mt-2">
                                     <Users className="w-4 h-4 text-blue-600" />
@@ -238,7 +248,7 @@ export default function VendorAnalytics({
                                 </p>
                                 <div className="flex items-center gap-1 mt-2">
                                     <AlertTriangle className="w-4 h-4 text-red-600" />
-                                    <span className="text-sm text-red-700">{vendorMetrics.vendors_with_dues} vendors</span>
+                                    <span className="text-sm text-red-700">{vendorMetrics.vendors_with_dues || 0} vendors</span>
                                 </div>
                             </div>
                             <div className="bg-red-200 p-3 rounded-lg">
@@ -274,7 +284,9 @@ export default function VendorAnalytics({
                             <div className="bg-blue-100 p-4 rounded-lg mb-3">
                                 <Zap className="w-8 h-8 text-blue-600 mx-auto" />
                             </div>
-                            <div className="text-2xl font-bold text-gray-900">{vendorMetrics.average_payment_terms.toFixed(0)}</div>
+                            <div className="text-2xl font-bold text-gray-900">
+                                {parseAmount(vendorMetrics.average_payment_terms).toFixed(0)}
+                            </div>
                             <div className="text-sm text-gray-600">Avg. Payment Terms</div>
                             <div className="text-xs text-gray-500 mt-1">Days</div>
                         </div>
@@ -304,7 +316,7 @@ export default function VendorAnalytics({
                                 <Activity className="w-8 h-8 text-orange-600 mx-auto" />
                             </div>
                             <div className="text-2xl font-bold text-gray-900">
-                                {topVendors.reduce((sum, v) => sum + v.transaction_count, 0)}
+                                {topVendors.reduce((sum, v) => sum + (v.transaction_count || 0), 0)}
                             </div>
                             <div className="text-sm text-gray-600">Total Transactions</div>
                             <div className="text-xs text-gray-500 mt-1">This period</div>
@@ -322,8 +334,10 @@ export default function VendorAnalytics({
 
                         <div className="space-y-4">
                             {topVendors.slice(0, 8).map((vendor, index) => {
-                                const maxPurchase = Math.max(...topVendors.map(v => v.total_purchases));
-                                const percentage = maxPurchase > 0 ? (vendor.total_purchases / maxPurchase) * 100 : 0;
+                                const vendorPurchases = parseAmount(vendor.total_purchases);
+                                const vendorDue = parseAmount(vendor.current_due);
+                                const maxPurchase = Math.max(...topVendors.map(v => parseAmount(v.total_purchases)));
+                                const percentage = maxPurchase > 0 ? (vendorPurchases / maxPurchase) * 100 : 0;
 
                                 return (
                                     <div key={vendor.name} className="space-y-2">
@@ -335,17 +349,17 @@ export default function VendorAnalytics({
                                                 <div>
                                                     <p className="font-medium text-gray-900">{vendor.name}</p>
                                                     <p className="text-sm text-gray-500">
-                                                        {vendor.transaction_count} transactions
-                                                        {vendor.current_due > 0 && (
+                                                        {vendor.transaction_count || 0} transactions
+                                                        {vendorDue > 0 && (
                                                             <span className="text-red-500 ml-2">
-                                                                Due: {formatCompactCurrency(vendor.current_due)}
+                                                                Due: {formatCompactCurrency(vendorDue)}
                                                             </span>
                                                         )}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                                                <p className="font-semibold text-green-600">{formatCompactCurrency(vendor.total_purchases)}</p>
+                                                <p className="font-semibold text-green-600">{formatCompactCurrency(vendorPurchases)}</p>
                                             </div>
                                         </div>
                                         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -369,8 +383,9 @@ export default function VendorAnalytics({
 
                         <div className="space-y-4">
                             {paymentMethods.map((method, index) => {
-                                const totalPayments = paymentMethods.reduce((sum, m) => sum + m.total, 0);
-                                const percentage = totalPayments > 0 ? (method.total / totalPayments) * 100 : 0;
+                                const methodTotal = parseAmount(method.total);
+                                const totalPayments = paymentMethods.reduce((sum, m) => sum + parseAmount(m.total), 0);
+                                const percentage = totalPayments > 0 ? (methodTotal / totalPayments) * 100 : 0;
 
                                 const colors = [
                                     'bg-blue-600',
@@ -388,11 +403,11 @@ export default function VendorAnalytics({
                                                 <p className="font-medium text-gray-900 capitalize">
                                                     {method.payment_method.replace('_', ' ')}
                                                 </p>
-                                                <p className="text-sm text-gray-500">{method.count} payments</p>
+                                                <p className="text-sm text-gray-500">{method.count || 0} payments</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-semibold text-gray-900">{formatCompactCurrency(method.total)}</p>
+                                            <p className="font-semibold text-gray-900">{formatCompactCurrency(methodTotal)}</p>
                                             <p className="text-sm text-gray-500">{percentage.toFixed(1)}%</p>
                                         </div>
                                     </div>
@@ -418,13 +433,14 @@ export default function VendorAnalytics({
 
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                         {monthlyTrend.slice(0, 12).map((item, index) => {
-                            const netFlow = item.income - item.expense;
+                            const income = parseAmount(item.income);
+                            const expense = parseAmount(item.expense);
+                            const netFlow = income - expense;
                             const isCurrentMonth = item.year === dateFilter.year && item.month === dateFilter.month;
 
                             return (
-                                <div key={`${item.year}-${item.month}`} className={`p-4 rounded-lg text-center ${
-                                    isCurrentMonth ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'
-                                }`}>
+                                <div key={`${item.year}-${item.month}`} className={`p-4 rounded-lg text-center ${isCurrentMonth ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50'
+                                    }`}>
                                     <div className="text-lg font-bold text-gray-900">
                                         {getMonthName(item.month)} {item.year}
                                     </div>
@@ -433,21 +449,21 @@ export default function VendorAnalytics({
                                         <div>
                                             <p className="text-xs text-gray-500">Purchases</p>
                                             <p className="text-sm font-semibold text-red-600">
-                                                {formatCompactCurrency(item.expense)}
+                                                {formatCompactCurrency(expense)}
                                             </p>
                                         </div>
 
                                         <div>
                                             <p className="text-xs text-gray-500">Payments</p>
                                             <p className="text-sm font-semibold text-green-600">
-                                                {formatCompactCurrency(item.income)}
+                                                {formatCompactCurrency(income)}
                                             </p>
                                         </div>
 
                                         <div>
                                             <p className="text-xs text-gray-500">Net Flow</p>
                                             <p className={`text-sm font-semibold ${netFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {netFlow >= 0 ? '+' : ''}{formatCompactCurrency(netFlow)}
+                                                {netFlow >= 0 ? '+' : ''}{formatCompactCurrency(Math.abs(netFlow))}
                                             </p>
                                         </div>
                                     </div>
@@ -473,7 +489,7 @@ export default function VendorAnalytics({
                         {/* Healthy Vendors */}
                         <div className="text-center p-6 bg-green-50 rounded-lg border border-green-200">
                             <div className="text-3xl font-bold text-green-600">
-                                {topVendors.filter(v => v.current_due === 0).length}
+                                {topVendors.filter(v => parseAmount(v.current_due) === 0).length}
                             </div>
                             <div className="text-sm font-medium text-green-700 mt-1">Healthy Vendors</div>
                             <div className="text-xs text-green-600 mt-2">No outstanding dues</div>
@@ -482,7 +498,10 @@ export default function VendorAnalytics({
                         {/* At-Risk Vendors */}
                         <div className="text-center p-6 bg-yellow-50 rounded-lg border border-yellow-200">
                             <div className="text-3xl font-bold text-yellow-600">
-                                {topVendors.filter(v => v.current_due > 0 && v.current_due <= averagePurchasePerVendor * 0.1).length}
+                                {topVendors.filter(v => {
+                                    const due = parseAmount(v.current_due);
+                                    return due > 0 && due <= averagePurchasePerVendor * 0.1;
+                                }).length}
                             </div>
                             <div className="text-sm font-medium text-yellow-700 mt-1">At-Risk Vendors</div>
                             <div className="text-xs text-yellow-600 mt-2">Minor outstanding amounts</div>
@@ -491,7 +510,7 @@ export default function VendorAnalytics({
                         {/* High-Risk Vendors */}
                         <div className="text-center p-6 bg-red-50 rounded-lg border border-red-200">
                             <div className="text-3xl font-bold text-red-600">
-                                {topVendors.filter(v => v.current_due > averagePurchasePerVendor * 0.1).length}
+                                {topVendors.filter(v => parseAmount(v.current_due) > averagePurchasePerVendor * 0.1).length}
                             </div>
                             <div className="text-sm font-medium text-red-700 mt-1">High-Risk Vendors</div>
                             <div className="text-xs text-red-600 mt-2">Significant overdue amounts</div>

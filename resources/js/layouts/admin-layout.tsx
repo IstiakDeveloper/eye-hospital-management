@@ -117,7 +117,9 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
         // For medicine corner routes (Super Admin)
         if (currentPattern === 'medicine.*') {
             return currentRouteName?.includes('medicine-corner') ||
-                window.location.pathname.includes('/medicine-corner');
+                currentRouteName?.includes('medicine-vendors') ||
+                window.location.pathname.includes('/medicine-corner') ||
+                window.location.pathname.includes('/medicine-vendors');
         }
 
         // For medicine seller routes
@@ -148,7 +150,9 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     // Check if medicine corner is active (parent or any child)
     const isMedicineCornerActive = () => {
         return currentRouteName?.includes('medicine-corner') ||
-            window.location.pathname.includes('/medicine-corner');
+            currentRouteName?.includes('medicine-vendors') ||
+            window.location.pathname.includes('/medicine-corner') ||
+            window.location.pathname.includes('/medicine-vendors');
     };
 
     // Check if any medicine corner child is active
@@ -157,10 +161,21 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             '/medicine-corner/stock',
             '/medicine-corner/medicines',
             '/medicine-corner/purchase',
+            '/medicine-corner/sales',
             '/medicine-corner/reports',
             '/medicine-corner/alerts'
         ];
-        return medicineCornerPaths.some(path => window.location.pathname === path);
+
+        const medicineVendorPaths = [
+            '/medicine-vendors',
+            '/medicine-vendors/reports/due-report',
+            '/medicine-vendors/reports/payment-history',
+            '/medicine-vendors/reports/analytics'
+        ];
+
+        return medicineCornerPaths.some(path => window.location.pathname === path) ||
+            medicineVendorPaths.some(path => window.location.pathname.startsWith(path)) ||
+            currentRouteName?.startsWith('medicine-vendors.');
     };
 
     // Check if account section is active
@@ -260,42 +275,70 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                     name: 'Stock Management',
                     href: '/medicine-corner/stock',
                     icon: Package,
-                    current: 'medicine.stock',
+                    current: 'medicine-corner.stock',
                     roles: ['Super Admin']
                 },
                 {
                     name: 'Medicine List',
                     href: '/medicine-corner/medicines',
                     icon: Pill,
-                    current: 'medicine.list',
+                    current: 'medicine-corner.medicines',
                     roles: ['Super Admin']
                 },
                 {
                     name: 'Purchase Entry',
                     href: '/medicine-corner/purchase',
                     icon: ShoppingCart,
-                    current: 'medicine.purchase',
+                    current: 'medicine-corner.purchase',
                     roles: ['Super Admin']
                 },
                 {
                     name: 'Sales Management',
                     href: '/medicine-corner/sales',
-                    icon: ShoppingCart,
+                    icon: ShoppingBag,
                     current: 'medicine-corner.sales',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Vendor Management',
+                    href: route('medicine-vendors.index'),
+                    icon: Building2,
+                    current: 'medicine-vendors.index',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Vendor Dues',
+                    href: route('medicine-vendors.due-report'),
+                    icon: AlertTriangle,
+                    current: 'medicine-vendors.due-report',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Payment History',
+                    href: route('medicine-vendors.payment-history'),
+                    icon: History,
+                    current: 'medicine-vendors.payment-history',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Vendor Analytics',
+                    href: route('medicine-vendors.analytics'),
+                    icon: BarChart3,
+                    current: 'medicine-vendors.analytics',
                     roles: ['Super Admin']
                 },
                 {
                     name: 'Reports',
                     href: '/medicine-corner/reports',
-                    icon: BarChart3,
-                    current: 'medicine.reports',
+                    icon: FileBarChart,
+                    current: 'medicine-corner.reports',
                     roles: ['Super Admin']
                 },
                 {
                     name: 'Alerts',
                     href: '/medicine-corner/alerts',
                     icon: AlertTriangle,
-                    current: 'medicine.alerts',
+                    current: 'medicine-corner.alerts',
                     roles: ['Super Admin']
                 }
             ]
@@ -566,7 +609,27 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                 }`}>
                                                 {item.children?.map((childItem) => {
                                                     const ChildIcon = childItem.icon;
-                                                    const isChildActive = window.location.pathname === childItem.href;
+                                                    let isChildActive = false;
+
+                                                    // Special handling for medicine vendor routes
+                                                    if (childItem.current === 'medicine-vendors.index') {
+                                                        isChildActive = currentRouteName === 'medicine-vendors.index' ||
+                                                            currentRouteName === 'medicine-vendors.show' ||
+                                                            window.location.pathname === '/medicine-vendors';
+                                                    } else if (childItem.current === 'medicine-vendors.due-report') {
+                                                        isChildActive = currentRouteName === 'medicine-vendors.due-report' ||
+                                                            window.location.pathname === '/medicine-vendors/reports/due-report';
+                                                    } else if (childItem.current === 'medicine-vendors.payment-history') {
+                                                        isChildActive = currentRouteName === 'medicine-vendors.payment-history' ||
+                                                            window.location.pathname === '/medicine-vendors/reports/payment-history';
+                                                    } else if (childItem.current === 'medicine-vendors.analytics') {
+                                                        isChildActive = currentRouteName === 'medicine-vendors.analytics' ||
+                                                            window.location.pathname === '/medicine-vendors/reports/analytics';
+                                                    } else {
+                                                        // For medicine-corner routes
+                                                        isChildActive = window.location.pathname === childItem.href ||
+                                                            currentRouteName === childItem.current;
+                                                    }
 
                                                     return (
                                                         <Link
@@ -789,6 +852,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                     <ShoppingCart className="h-4 w-4 mr-2" />
                                     Medicine Purchase
                                 </Link>
+
+                                <Link
+                                    href={route('medicine-vendors.index')}
+                                    className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-sm"
+                                >
+                                    <Building2 className="h-4 w-4 mr-2" />
+                                    Manage Vendors
+                                </Link>
+
                                 <Link
                                     href="/optics/frames/create"
                                     className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-sm"
