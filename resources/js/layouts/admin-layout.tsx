@@ -34,7 +34,8 @@ import {
     Calculator,
     Building2,
     Glasses,
-    ShoppingBag
+    ShoppingBag,
+    LucideWaypoints
 } from 'lucide-react';
 import FlashMessages from '@/components/FlashMessage';
 
@@ -74,7 +75,6 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     const [accountSectionOpen, setAccountSectionOpen] = useState(false);
     const [opticsCornerOpen, setOpticsCornerOpen] = useState(false);
 
-
     const userRole = auth.user.role.name;
 
     // Role checking helper - Fixed to show only specific role permissions
@@ -94,6 +94,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             'Doctor': 'doctor.dashboard',
             'Refractionist': 'refractionist.dashboard',
             'Medicine Seller': 'medicine-seller.dashboard',
+            'Optics Seller': 'optics-seller.dashboard',
             'Super Admin': 'dashboard'
         };
 
@@ -111,7 +112,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 currentRouteName === 'receptionist.dashboard' ||
                 currentRouteName === 'doctor.dashboard' ||
                 currentRouteName === 'refractionist.dashboard' ||
-                currentRouteName === 'medicine-seller.dashboard';
+                currentRouteName === 'medicine-seller.dashboard' ||
+                currentRouteName === 'optics-seller.dashboard';
         }
 
         // For medicine corner routes (Super Admin)
@@ -126,6 +128,12 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
         if (currentPattern === 'medicine-seller.*') {
             return currentRouteName?.includes('medicine-seller') ||
                 window.location.pathname.includes('/medicine-seller');
+        }
+
+        // For optics seller routes
+        if (currentPattern === 'optics-seller.*') {
+            return currentRouteName?.includes('optics-seller') ||
+                window.location.pathname.includes('/optics-seller');
         }
 
         // For account sections
@@ -222,7 +230,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             href: route(getDashboardRoute()),
             icon: Home,
             current: 'dashboard',
-            roles: ['Super Admin', 'Doctor', 'Receptionist', 'Refractionist', 'Medicine Seller']
+            roles: ['Super Admin', 'Doctor', 'Receptionist', 'Refractionist', 'Medicine Seller', 'Optics Seller']
         },
         {
             name: 'Patients',
@@ -231,14 +239,14 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             current: 'patients.*',
             roles: ['Super Admin', 'Doctor', 'Receptionist']
         },
-        // {
-        //     name: 'Appointments',
-        //     href: route('appointments.today'),
-        //     icon: Calendar,
-        //     current: 'appointments.*',
-        //     roles: ['Super Admin'],
-        //     badge: 'Today'
-        // },
+        {
+            name: 'Pending Visits',
+            href: route('patients.pending-visits'),
+            icon: LucideWaypoints,
+            current: 'patients.*',
+            roles: ['Super Admin', 'Receptionist']
+        },
+
         // POS System for Medicine Seller
         {
             name: 'POS System',
@@ -262,6 +270,30 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             icon: FileBarChart,
             current: 'medicine-seller.report',
             roles: ['Medicine Seller']
+        },
+        // POS System for Optics Seller
+        {
+            name: 'Optics POS',
+            href: route('optics-seller.pos'),
+            icon: Glasses,
+            current: 'optics-seller.pos',
+            roles: ['Optics Seller']
+        },
+        // Sales Management for Optics Seller
+        {
+            name: 'Optics Sales',
+            href: route('optics-seller.sales'),
+            icon: ShoppingBag,
+            current: 'optics-seller.sales',
+            roles: ['Optics Seller']
+        },
+        // My Reports for Optics Seller
+        {
+            name: 'Optics Reports',
+            href: route('optics-seller.report'),
+            icon: BarChart3,
+            current: 'optics-seller.report',
+            roles: ['Optics Seller']
         },
         // Medicine Corner with dropdown (Super Admin only)
         {
@@ -344,7 +376,6 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             ]
         },
 
-
         {
             name: 'OpticsCorner',
             href: '#',
@@ -396,7 +427,6 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 }
             ]
         },
-
 
         // Account Section with dropdown (Super Admin only)
         {
@@ -483,6 +513,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 return 'bg-gradient-to-r from-orange-600 to-orange-700 text-white';
             case 'Medicine Seller':
                 return 'bg-gradient-to-r from-emerald-600 to-emerald-700 text-white';
+            case 'Optics Seller':
+                return 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white';
             default:
                 return 'bg-gray-600 text-white';
         }
@@ -500,6 +532,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 return <Eye className="h-4 w-4" />;
             case 'Medicine Seller':
                 return <Pill className="h-4 w-4" />;
+            case 'Optics Seller':
+                return <Glasses className="h-4 w-4" />;
             default:
                 return <User className="h-4 w-4" />;
         }
@@ -557,7 +591,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                     </div>
                 </div>
 
-                {/* Navigation */}
+                {/* Navigation - Updated section with role filtering */}
                 <div className="flex-1 overflow-y-auto py-4">
                     {/* Main Navigation */}
                     <div className="px-4">
@@ -841,6 +875,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                             >
                                 <CreditCard className="h-4 w-4 mr-2" />
                                 Quick Sale
+                            </Link>
+                        )}
+                        {userRole === 'Optics Seller' && (
+                            <Link
+                                href={route('optics-seller.pos')}
+                                className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-sm"
+                            >
+                                <Glasses className="h-4 w-4 mr-2" />
+                                Optics Sale
                             </Link>
                         )}
                         {userRole === 'Super Admin' && (

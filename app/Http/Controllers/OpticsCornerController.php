@@ -41,7 +41,7 @@ class OpticsCornerController extends Controller
         return Inertia::render('OpticsCorner/Dashboard', compact('stats', 'lowStockItems', 'recentTransactions'));
     }
 
-    // =============== FRAMES MANAGEMENT ===============
+
     public function frames()
     {
         $frames = Glasses::active()
@@ -346,7 +346,6 @@ class OpticsCornerController extends Controller
         return redirect()->route('optics.sales')->with('success', 'Sale recorded successfully!');
     }
 
-    // =============== ACCOUNT MANAGEMENT ===============
     public function account()
     {
         $balance = OpticsAccount::getBalance();

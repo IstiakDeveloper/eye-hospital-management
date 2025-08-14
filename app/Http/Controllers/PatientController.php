@@ -768,4 +768,209 @@ class PatientController extends Controller
             'patient' => $patient,
         ]);
     }
+
+
+    /**
+     * Mark visit as completed manually (for walk-in/simple cases)
+     */
+    public function markVisitComplete(Request $request, PatientVisit $visit)
+    {
+        $request->validate([
+            'completion_type' => 'required|in:vision_only,prescription_only,both,simple_complete',
+            'notes' => 'nullable|string|max:500',
+            'skip_vision_test' => 'boolean',
+            'skip_prescription' => 'boolean',
+        ]);
+
+        try {
+            return DB::transaction(function () use ($request, $visit) {
+                $completionType = $request->completion_type;
+                $notes = $request->notes;
+
+                // Check if visit is already completed
+                if ($visit->overall_status === 'completed') {
+                    return back()->with('error', 'Visit is already completed!');
+                }
+
+                switch ($completionType) {
+                    case 'vision_only':
+                        // Mark only vision test as completed
+                        $visit->update([
+                            'vision_test_status' => 'completed',
+                            'vision_test_completed_at' => now(),
+                            'overall_status' => $request->skip_prescription ? 'completed' : 'prescription',
+                            'visit_notes' => $notes ? "Manual Vision Test Completion: " . $notes : 'Vision test completed manually by receptionist',
+                        ]);
+                        break;
+
+                    case 'prescription_only':
+                        // Mark only prescription as completed
+                        $visit->update([
+                            'prescription_status' => 'completed',
+                            'prescription_completed_at' => now(),
+                            'overall_status' => 'completed',
+                            'visit_notes' => $notes ? "Manual Prescription Completion: " . $notes : 'Prescription completed manually by receptionist',
+                        ]);
+                        break;
+
+                    case 'both':
+                        // Mark both vision test and prescription as completed
+                        $visit->update([
+                            'vision_test_status' => 'completed',
+                            'vision_test_completed_at' => now(),
+                            'prescription_status' => 'completed',
+                            'prescription_completed_at' => now(),
+                            'overall_status' => 'completed',
+                            'visit_notes' => $notes ? "Manual Complete Visit: " . $notes : 'Vision test and prescription completed manually by receptionist',
+                        ]);
+                        break;
+
+                    case 'simple_complete':
+                        // Simple completion for walk-in or basic cases
+                        $visit->update([
+                            'vision_test_status' => 'completed',
+                            'vision_test_completed_at' => now(),
+                            'prescription_status' => 'completed',
+                            'prescription_completed_at' => now(),
+                            'overall_status' => 'completed',
+                            'visit_notes' => $notes ? "Simple Visit Completion: " . $notes : 'Visit completed manually - simple consultation',
+                        ]);
+                        break;
+                }
+
+                return back()->with('success', 'Visit status updated successfully!');
+            });
+        } catch (\Exception $e) {
+            \Log::error('Visit completion failed: ' . $e->getMessage());
+            return back()->withErrors(['error' => 'Failed to update visit: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Get pending/active visits for manual management
+     */
+    /**
+     * Get pending/active visits for manual management
+     */
+    public function getPendingVisits(Request $request)
+    {
+        $query = PatientVisit::with(['patient', 'selectedDoctor.user', 'createdBy'])
+            ->where(function ($q) {
+                $q->where('overall_status', '!=', 'completed')
+                    ->orWhere('overall_status', 'vision_test')
+                    ->orWhere('overall_status', 'prescription');
+            });
+
+        // Filter by status if provided
+        if ($request->filled('status_filter')) {
+            $query->where('overall_status', $request->status_filter);
+        }
+
+        // Filter by payment status
+        if ($request->filled('payment_filter')) {
+            $query->where('payment_status', $request->payment_filter);
+        }
+
+        // Date filtering
+        if ($request->filled('date_filter')) {
+            $dateFilter = $request->date_filter;
+            switch ($dateFilter) {
+                case 'today':
+                    $query->whereDate('created_at', today());
+                    break;
+                case 'yesterday':
+                    $query->whereDate('created_at', yesterday());
+                    break;
+                case 'this_week':
+                    $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                    break;
+                case 'last_week':
+                    $query->whereBetween('created_at', [now()->subWeek()->startOfWeek(), now()->subWeek()->endOfWeek()]);
+                    break;
+            }
+        }
+
+        // Get per_page value from request, default to 20, allow 10, 20, 50, 100
+        $perPage = $request->get('per_page', 20);
+        $allowedPerPage = [10, 20, 50, 100];
+
+        if (!in_array($perPage, $allowedPerPage)) {
+            $perPage = 20;
+        }
+
+        $visits = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+        // Add per_page to pagination links
+        $visits->appends($request->except('page'));
+
+        return Inertia::render('Patients/PendingVisits', [
+            'visits' => $visits,
+            'filters' => $request->only(['status_filter', 'payment_filter', 'date_filter', 'per_page']),
+            'statistics' => [
+                'total_pending' => PatientVisit::where('overall_status', '!=', 'completed')->count(),
+                'ready_for_vision_test' => PatientVisit::readyForVisionTest()->count(),
+                'ready_for_prescription' => PatientVisit::readyForPrescription()->count(),
+                'payment_pending' => PatientVisit::where('payment_status', '!=', 'paid')->count(),
+            ]
+        ]);
+    }
+
+    /**
+     * Bulk complete visits - Fixed version
+     */
+    public function bulkCompleteVisits(Request $request)
+    {
+        // Debug logging
+        \Log::info('Bulk complete request data:', $request->all());
+
+        $request->validate([
+            'visit_ids' => 'required|array|min:1',
+            'visit_ids.*' => 'exists:patient_visits,id',
+            'completion_type' => 'required|in:simple_complete,both',
+            'bulk_notes' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            return DB::transaction(function () use ($request) {
+                $visitIds = $request->visit_ids;
+                $completionType = $request->completion_type;
+                $notes = $request->bulk_notes ?: 'Bulk completion by receptionist';
+
+                // Check if any visits are already completed
+                $alreadyCompleted = PatientVisit::whereIn('id', $visitIds)
+                    ->where('overall_status', 'completed')
+                    ->count();
+
+                if ($alreadyCompleted > 0) {
+                    return back()->withErrors(['error' => "{$alreadyCompleted} visits are already completed!"]);
+                }
+
+                $updateData = [
+                    'vision_test_status' => 'completed',
+                    'vision_test_completed_at' => now(),
+                    'prescription_status' => 'completed',
+                    'prescription_completed_at' => now(),
+                    'overall_status' => 'completed',
+                    'visit_notes' => "Bulk completion: " . $notes,
+                    'updated_at' => now(),
+                ];
+
+                $updatedCount = PatientVisit::whereIn('id', $visitIds)
+                    ->where('overall_status', '!=', 'completed')
+                    ->update($updateData);
+
+                if ($updatedCount === 0) {
+                    return back()->withErrors(['error' => 'No visits were updated. They may already be completed.']);
+                }
+
+                return back()->with('success', "{$updatedCount} visits completed successfully!");
+            });
+        } catch (\Exception $e) {
+            \Log::error('Bulk completion failed: ' . $e->getMessage(), [
+                'visit_ids' => $request->visit_ids,
+                'request_data' => $request->all()
+            ]);
+            return back()->withErrors(['error' => 'Bulk completion failed: ' . $e->getMessage()]);
+        }
+    }
 }

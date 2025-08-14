@@ -289,9 +289,9 @@ class DashboardController extends Controller
                 $q->whereBetween('created_at', [$startDate, $endDate]);
             });
         }])
-        ->orderByDesc('prescription_glasses_count')
-        ->limit(5)
-        ->get(['id', 'brand', 'model', 'selling_price']);
+            ->orderByDesc('prescription_glasses_count')
+            ->limit(5)
+            ->get(['id', 'brand', 'model', 'selling_price']);
 
         return [
             'frames' => [

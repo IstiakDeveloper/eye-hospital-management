@@ -34,6 +34,10 @@ class RoleSeeder extends Seeder
                 'name' => 'Medicine Seller',
                 'description' => 'Can sell medicines, manage sales transactions, and view sales reports',
             ],
+            [
+                'name' => 'Optics Seller',
+                'description' => 'Can sell glasses and lenses, manage optics sales transactions, and view optics sales reports',
+            ],
         ];
 
         foreach ($roles as $role) {

@@ -47,6 +47,7 @@ class AuthenticatedSessionController extends Controller
                 'Doctor' => 'doctor.dashboard',
                 'Refractionist' => 'refractionist.dashboard',
                 'Medicine Seller' => 'medicine-seller.dashboard', // Added Medicine Seller
+                'Optics Seller' => 'optics-seller.dashboard', // Added Medicine Seller
                 'Super Admin' => 'dashboard'
             ];
 

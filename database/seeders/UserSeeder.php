@@ -68,5 +68,14 @@ class UserSeeder extends Seeder
             'phone' => '01700000004',
             'is_active' => true,
         ]);
+
+         User::create([
+            'name' => 'Optics Seller',
+            'email' => 'optics@eyehospital.com',
+            'password' => Hash::make('password'),
+            'role_id' => 6, // Optics Seller
+            'phone' => '01700000005',
+            'is_active' => true,
+        ]);
     }
 }

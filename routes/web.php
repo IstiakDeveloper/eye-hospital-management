@@ -13,6 +13,7 @@ use App\Http\Controllers\MedicineVendorController; // NEW: Vendor Controller
 use App\Http\Controllers\MedicineSellerDashboardController;
 use App\Http\Controllers\OpticsAccount\OpticsAccountController;
 use App\Http\Controllers\OpticsCornerController;
+use App\Http\Controllers\OpticsSellerDashboardController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientVisitController;
 use App\Http\Controllers\PrescriptionController;
@@ -52,6 +53,8 @@ Route::get('/', function () {
             'Receptionist' => 'receptionist.dashboard',
             'Doctor' => 'doctor.dashboard',
             'Refractionist' => 'refractionist.dashboard',
+            'Medicine Seller' => 'medicine-seller.dashboard',
+            'Optics Seller' => 'optics-seller.dashboard',
             'Super Admin' => 'dashboard'
         ];
 
@@ -195,7 +198,13 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/medicines/{medicine}/toggle-status', [MedicineController::class, 'toggleStatus'])->name('medicines.toggle');
         Route::resource('medicines', MedicineController::class);
     });
+
+
+    Route::get('/pending-visits', [PatientController::class, 'getPendingVisits'])->name('patients.pending-visits');
+    Route::patch('/visits/{visit}/complete', [PatientController::class, 'markVisitComplete'])->name('patients.visits.complete');
+    Route::post('/visits/bulk-complete', [PatientController::class, 'bulkCompleteVisits'])->name('patients.visits.bulk-complete');
 });
+
 
 Route::middleware(['auth'])->prefix('receptionist')->name('receptionist.')->group(function () {
     Route::get('/dashboard', [ReceptionistDashboardController::class, 'index'])->name('dashboard');
@@ -327,6 +336,31 @@ Route::prefix('medicine-seller')->middleware(['auth'])->group(function () {
 Route::get('/medicine-seller', function () {
     return redirect()->route('medicine-seller.dashboard');
 })->middleware(['auth', 'role:Medicine Seller']);
+
+Route::prefix('optics-seller')->middleware(['auth'])->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [OpticsSellerDashboardController::class, 'index'])->name('optics-seller.dashboard');
+
+    // POS System
+    Route::get('/pos', [OpticsSellerDashboardController::class, 'pos'])->name('optics-seller.pos');
+    Route::post('/pos/sale', [OpticsSellerDashboardController::class, 'processSale'])->name('optics-seller.process-sale');
+
+    // Sales Management
+    Route::get('/sales', [OpticsSellerDashboardController::class, 'salesHistory'])->name('optics-seller.sales');
+    Route::get('/sales/{transaction}', [OpticsSellerDashboardController::class, 'saleDetails'])->name('optics-seller.sale-details');
+
+    // Reports
+    Route::get('/my-report', [OpticsSellerDashboardController::class, 'myReport'])->name('optics-seller.report');
+
+    // API endpoints
+    Route::get('/api/search-items', [OpticsSellerDashboardController::class, 'searchItems'])->name('optics-seller.search-items');
+});
+
+// Default redirect for Optics Seller
+Route::get('/optics-seller', function () {
+    return redirect()->route('optics-seller.dashboard');
+})->middleware(['auth', 'role:Optics Seller']);
+
 
 Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $request) {
     try {
