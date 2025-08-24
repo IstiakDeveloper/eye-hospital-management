@@ -91,7 +91,7 @@ class PatientVisit extends Model
      */
     public function calculateFees()
     {
-        $this->registration_fee = 200.00; // Base fee
+        $this->registration_fee = 100.00; // Base fee
         $this->doctor_fee = $this->getDoctorFee();
         $this->total_amount = $this->registration_fee + $this->doctor_fee;
         $this->calculateDiscount();

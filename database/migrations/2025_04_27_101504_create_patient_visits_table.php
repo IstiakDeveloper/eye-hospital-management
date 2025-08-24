@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->foreignId('selected_doctor_id')->nullable()->constrained('doctors')->nullOnDelete();
 
             // Visit financial details
-            $table->decimal('registration_fee', 10, 2)->default(200.00);
+            $table->decimal('registration_fee', 10, 2)->default(100.00);
             $table->decimal('doctor_fee', 10, 2)->default(0);
             $table->decimal('total_amount', 10, 2)->default(0);
             $table->enum('discount_type', ['percentage', 'amount'])->nullable();
