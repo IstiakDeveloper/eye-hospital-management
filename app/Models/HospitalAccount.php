@@ -28,10 +28,12 @@ class HospitalAccount extends Model
         return self::first()?->balance ?? 0;
     }
 
-    public static function addFund(float $amount, string $purpose, string $description): void
+    public static function addFund(float $amount, string $purpose, string $description, ?string $date = null): void
     {
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
 
         $fundTransaction = HospitalFundTransaction::create([
             'voucher_no' => self::generateVoucherNo('HFI'),
@@ -39,7 +41,7 @@ class HospitalAccount extends Model
             'amount' => $amount,
             'purpose' => $purpose,
             'description' => $description,
-            'date' => now()->toDateString(),
+            'date' => $transactionDate,
             'added_by' => auth()->id(),
         ]);
 
@@ -54,10 +56,12 @@ class HospitalAccount extends Model
         );
     }
 
-    public static function withdrawFund(float $amount, string $purpose, string $description): void
+    public static function withdrawFund(float $amount, string $purpose, string $description, ?string $date = null): void
     {
         $account = self::firstOrCreate([]);
         $account->decrement('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
 
         $fundTransaction = HospitalFundTransaction::create([
             'voucher_no' => self::generateVoucherNo('HFO'),
@@ -65,7 +69,7 @@ class HospitalAccount extends Model
             'amount' => $amount,
             'purpose' => $purpose,
             'description' => $description,
-            'date' => now()->toDateString(),
+            'date' => $transactionDate,
             'added_by' => auth()->id(),
         ]);
 
@@ -85,64 +89,63 @@ class HospitalAccount extends Model
         string $category,
         string $description,
         ?string $referenceType = null,
-        ?int $referenceId = null
+        ?int $referenceId = null,
+        ?string $date = null
     ): HospitalTransaction {
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
 
-        $today = now()->toDateString();
+        $transactionDate = $date ?? now()->toDateString();
 
-        // 🔹 MainAccountVoucher check for today's hospital income
-        $existingVoucher = MainAccountVoucher::where('source_account', 'hospital')
-            ->where('source_transaction_type', 'income')
-            ->whereDate('date', $today) // use voucher date, not created_at
-            ->value('voucher_no');
-
-        // Generate voucher_no for MainAccountVoucher if not exists
-        $voucherNo = $existingVoucher ?? self::generateVoucherNo('HI');
-
-        // ✅ Always create a new HospitalTransaction
+        // Always create a new HospitalTransaction
         $transaction = HospitalTransaction::create([
-            'transaction_no'   => 'HT-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT), // unique per transaction
+            'transaction_no'   => 'HT-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
             'type'             => 'income',
             'amount'           => $amount,
             'category'         => $category,
             'reference_type'   => $referenceType,
             'reference_id'     => $referenceId,
             'description'      => $description,
-            'transaction_date' => $today,
+            'transaction_date' => $transactionDate,
             'created_by'       => auth()->id(),
         ]);
 
-        // ✅ Create or update MainAccountVoucher
-        if (!$existingVoucher) {
+        // Check if voucher already exists for this date for hospital income
+        $existingVoucher = MainAccountVoucher::where('source_account', 'hospital')
+            ->where('source_transaction_type', 'income')
+            ->where('date', $transactionDate)
+            ->first();
+
+        if ($existingVoucher) {
+            // Update existing voucher
+            $mainAccount = MainAccount::firstOrCreate([]);
+            $mainAccount->increment('balance', $amount);
+
+            $existingVoucher->increment('amount', $amount);
+            $existingVoucher->update([
+                'narration' => $existingVoucher->narration . " + Hospital Income - {$category}: {$description}",
+            ]);
+        } else {
+            // Create new Main Account Debit Voucher (Money coming in)
             MainAccount::createDebitVoucher(
                 amount: $amount,
                 narration: "Hospital Income - {$category}: {$description}",
                 sourceAccount: 'hospital',
                 sourceTransactionType: 'income',
-                sourceVoucherNo: $voucherNo,
+                sourceVoucherNo: $transaction->transaction_no,
                 sourceReferenceId: $transaction->id
             );
-        } else {
-            // Update voucher amount
-            MainAccountVoucher::where('voucher_no', $voucherNo)->increment('amount', $amount);
-
-            // ✅ Also increment MainAccount balance
-            $mainAccount = MainAccount::firstOrCreate([]);
-            $mainAccount->increment('balance', $amount);
         }
 
         return $transaction;
     }
 
-
-
-
-    public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null): HospitalTransaction
+    public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null, ?string $date = null): HospitalTransaction
     {
         $account = self::firstOrCreate([]);
         $account->decrement('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
 
         $transaction = HospitalTransaction::create([
             'transaction_no' => self::generateVoucherNo('HE'),
@@ -151,11 +154,11 @@ class HospitalAccount extends Model
             'category' => $category,
             'expense_category_id' => $categoryId,
             'description' => $description,
-            'transaction_date' => now()->toDateString(),
+            'transaction_date' => $transactionDate,
             'created_by' => auth()->id(),
         ]);
 
-        // Create Main Account Credit Voucher (Money going out)
+        // Always create new voucher for expenses
         MainAccount::createCreditVoucher(
             amount: $amount,
             narration: "Hospital Expense - {$category}: {$description}",

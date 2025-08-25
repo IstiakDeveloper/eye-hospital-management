@@ -37,13 +37,15 @@ interface DashboardProps {
         description: string;
         date: string;
     }>;
+    expenseCategories: Array<{ id: number, name: string }>;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
     balance,
     monthlyReport,
     recentTransactions,
-    recentFundTransactions
+    recentFundTransactions,
+    expenseCategories
 }) => {
     const [fundInModal, setFundInModal] = useState(false);
     const [fundOutModal, setFundOutModal] = useState(false);
@@ -398,10 +400,16 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 name="category"
                                 value={formData.category}
                                 onChange={handleInputChange}
-                                placeholder="e.g., Equipment Cost, Maintenance, Transport etc."
+                                list="expense-categories"
+                                placeholder="Type or select a category"
                                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
                             />
+                            <datalist id="expense-categories">
+                                {expenseCategories?.map((category) => (
+                                    <option key={category.id} value={category.name} />
+                                ))}
+                            </datalist>
                         </div>
                         <div className="mb-4">
                             <label className="block text-sm font-medium mb-2">Date *</label>
@@ -448,4 +456,4 @@ const Dashboard: React.FC<DashboardProps> = ({
     );
 };
 
-export default Dashboard;
+export default Dashboard; 

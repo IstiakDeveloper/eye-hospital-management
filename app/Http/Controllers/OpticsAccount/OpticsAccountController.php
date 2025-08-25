@@ -22,12 +22,18 @@ class OpticsAccountController extends Controller
         $recentFundTransactions = OpticsFundTransaction::with('addedBy')
             ->latest()->take(5)->get();
 
+        // Add expense categories
+        $expenseCategories = OpticsExpenseCategory::all();
+
         return Inertia::render('OpticsAccount/Dashboard', compact(
-            'balance', 'monthlyReport', 'recentTransactions', 'recentFundTransactions'
+            'balance',
+            'monthlyReport',
+            'recentTransactions',
+            'recentFundTransactions',
+            'expenseCategories' // <- Add this
         ));
     }
 
-    // Fund In
     public function fundIn(Request $request)
     {
         $request->validate([
@@ -37,12 +43,16 @@ class OpticsAccountController extends Controller
             'date' => 'required|date',
         ]);
 
-        OpticsAccount::addFund($request->amount, $request->purpose, $request->description);
+        OpticsAccount::addFund(
+            $request->amount,
+            $request->purpose,
+            $request->description,
+            $request->date  // <- Add this parameter
+        );
 
         return back()->with('success', 'Fund added successfully!');
     }
 
-    // Fund Out
     public function fundOut(Request $request)
     {
         $request->validate([
@@ -56,12 +66,16 @@ class OpticsAccountController extends Controller
             return back()->withErrors(['amount' => 'Insufficient balance!']);
         }
 
-        OpticsAccount::withdrawFund($request->amount, $request->purpose, $request->description);
+        OpticsAccount::withdrawFund(
+            $request->amount,
+            $request->purpose,
+            $request->description,
+            $request->date  // <- Add this parameter
+        );
 
         return back()->with('success', 'Fund withdrawn successfully!');
     }
 
-    // Add Expense
     public function addExpense(Request $request)
     {
         $request->validate([
@@ -80,11 +94,13 @@ class OpticsAccountController extends Controller
             $request->amount,
             $request->category,
             $request->description,
-            $request->expense_category_id
+            $request->expense_category_id,
+            $request->date  // <- Add this parameter
         );
 
         return back()->with('success', 'Expense added successfully!');
     }
+
 
     // Transactions List
     public function transactions(Request $request)
@@ -97,7 +113,7 @@ class OpticsAccountController extends Controller
 
         if ($request->month && $request->year) {
             $query->whereMonth('transaction_date', $request->month)
-                  ->whereYear('transaction_date', $request->year);
+                ->whereYear('transaction_date', $request->year);
         }
 
         if ($request->category) {
@@ -194,8 +210,14 @@ class OpticsAccountController extends Controller
             ->sum('amount');
 
         return Inertia::render('OpticsAccount/MonthlyReport', compact(
-            'report', 'categoryExpenses', 'year', 'month',
-            'glassesPurchases', 'glassesSales', 'lensPurchases', 'lensSales'
+            'report',
+            'categoryExpenses',
+            'year',
+            'month',
+            'glassesPurchases',
+            'glassesSales',
+            'lensPurchases',
+            'lensSales'
         ));
     }
 
@@ -240,11 +262,22 @@ class OpticsAccountController extends Controller
             ->sum('amount');
 
         return Inertia::render('OpticsAccount/BalanceSheet', compact(
-            'balance', 'totalIncome', 'totalExpense', 'totalFundIn', 'totalFundOut',
-            'totalGlassesPurchases', 'totalGlassesSales', 'totalLensPurchases', 'totalLensSales',
-            'glassesProfit', 'lensProfit', 'opticsProfit',
-            'currentMonthGlassesPurchases', 'currentMonthGlassesSales',
-            'currentMonthLensPurchases', 'currentMonthLensSales'
+            'balance',
+            'totalIncome',
+            'totalExpense',
+            'totalFundIn',
+            'totalFundOut',
+            'totalGlassesPurchases',
+            'totalGlassesSales',
+            'totalLensPurchases',
+            'totalLensSales',
+            'glassesProfit',
+            'lensProfit',
+            'opticsProfit',
+            'currentMonthGlassesPurchases',
+            'currentMonthGlassesSales',
+            'currentMonthLensPurchases',
+            'currentMonthLensSales'
         ));
     }
 
@@ -324,8 +357,14 @@ class OpticsAccountController extends Controller
         ];
 
         return Inertia::render('OpticsAccount/Analytics', compact(
-            'monthlyTrend', 'purchaseVsSales', 'topExpenseCategories', 'profitMargin',
-            'glassesPerformance', 'lensPerformance', 'year', 'month'
+            'monthlyTrend',
+            'purchaseVsSales',
+            'topExpenseCategories',
+            'profitMargin',
+            'glassesPerformance',
+            'lensPerformance',
+            'year',
+            'month'
         ));
     }
 
@@ -350,8 +389,12 @@ class OpticsAccountController extends Controller
         $totalSold = OpticsTransaction::whereIn('category', ['glasses_sale', 'lens_sale'])->sum('amount');
 
         return Inertia::render('OpticsAccount/InventoryReport', compact(
-            'accountBalance', 'totalInventoryValue', 'totalGlassesValue', 'totalLensValue',
-            'totalInvestment', 'totalSold'
+            'accountBalance',
+            'totalInventoryValue',
+            'totalGlassesValue',
+            'totalLensValue',
+            'totalInvestment',
+            'totalSold'
         ));
     }
 

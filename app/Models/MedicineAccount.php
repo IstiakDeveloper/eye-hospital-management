@@ -28,10 +28,12 @@ class MedicineAccount extends Model
         return self::first()?->balance ?? 0;
     }
 
-    public static function addFund(float $amount, string $purpose, string $description): void
+    public static function addFund(float $amount, string $purpose, string $description, ?string $date = null): void
     {
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
 
         $fundTransaction = MedicineFundTransaction::create([
             'voucher_no' => self::generateVoucherNo('MFI'),
@@ -39,7 +41,7 @@ class MedicineAccount extends Model
             'amount' => $amount,
             'purpose' => $purpose,
             'description' => $description,
-            'date' => now()->toDateString(),
+            'date' => $transactionDate,
             'added_by' => auth()->id(),
         ]);
 
@@ -54,10 +56,12 @@ class MedicineAccount extends Model
         );
     }
 
-    public static function withdrawFund(float $amount, string $purpose, string $description): void
+    public static function withdrawFund(float $amount, string $purpose, string $description, ?string $date = null): void
     {
         $account = self::firstOrCreate([]);
         $account->decrement('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
 
         $fundTransaction = MedicineFundTransaction::create([
             'voucher_no' => self::generateVoucherNo('MFO'),
@@ -65,7 +69,7 @@ class MedicineAccount extends Model
             'amount' => $amount,
             'purpose' => $purpose,
             'description' => $description,
-            'date' => now()->toDateString(),
+            'date' => $transactionDate,
             'added_by' => auth()->id(),
         ]);
 
@@ -80,10 +84,12 @@ class MedicineAccount extends Model
         );
     }
 
-    public static function addIncome(float $amount, string $category, string $description, ?string $referenceType = null, ?int $referenceId = null): MedicineTransaction
+    public static function addIncome(float $amount, string $category, string $description, ?string $referenceType = null, ?int $referenceId = null, ?string $date = null): MedicineTransaction
     {
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
 
         $transaction = MedicineTransaction::create([
             'transaction_no' => self::generateVoucherNo('MI'),
@@ -93,27 +99,46 @@ class MedicineAccount extends Model
             'reference_type' => $referenceType,
             'reference_id' => $referenceId,
             'description' => $description,
-            'transaction_date' => now()->toDateString(),
+            'transaction_date' => $transactionDate,
             'created_by' => auth()->id(),
         ]);
 
-        // Create Main Account Debit Voucher (Money coming in)
-        MainAccount::createDebitVoucher(
-            amount: $amount,
-            narration: "Medicine Income - {$category}: {$description}",
-            sourceAccount: 'medicine',
-            sourceTransactionType: 'income',
-            sourceVoucherNo: $transaction->transaction_no,
-            sourceReferenceId: $transaction->id
-        );
+        // Check if voucher already exists for this date for medicine income
+        $existingVoucher = MainAccountVoucher::where('source_account', 'medicine')
+            ->where('source_transaction_type', 'income')
+            ->where('date', $transactionDate)
+            ->first();
+
+        if ($existingVoucher) {
+            // Update existing voucher
+            $mainAccount = MainAccount::firstOrCreate([]);
+            $mainAccount->increment('balance', $amount);
+
+            $existingVoucher->increment('amount', $amount);
+            $existingVoucher->update([
+                'narration' => $existingVoucher->narration . " + Medicine Income - {$category}: {$description}",
+            ]);
+        } else {
+            // Create new Main Account Debit Voucher (Money coming in)
+            MainAccount::createDebitVoucher(
+                amount: $amount,
+                narration: "Medicine Income - {$category}: {$description}",
+                sourceAccount: 'medicine',
+                sourceTransactionType: 'income',
+                sourceVoucherNo: $transaction->transaction_no,
+                sourceReferenceId: $transaction->id
+            );
+        }
 
         return $transaction;
     }
 
-    public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null): MedicineTransaction
+    public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null, ?string $date = null): MedicineTransaction
     {
         $account = self::firstOrCreate([]);
         $account->decrement('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
 
         $transaction = MedicineTransaction::create([
             'transaction_no' => self::generateVoucherNo('ME'),
@@ -122,11 +147,11 @@ class MedicineAccount extends Model
             'category' => $category,
             'expense_category_id' => $categoryId,
             'description' => $description,
-            'transaction_date' => now()->toDateString(),
+            'transaction_date' => $transactionDate,
             'created_by' => auth()->id(),
         ]);
 
-        // Create Main Account Credit Voucher (Money going out)
+        // Always create new voucher for expenses
         MainAccount::createCreditVoucher(
             amount: $amount,
             narration: "Medicine Expense - {$category}: {$description}",

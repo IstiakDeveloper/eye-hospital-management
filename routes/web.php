@@ -591,7 +591,9 @@ Route::middleware(['auth', 'verified'])->prefix('main-account')->name('main-acco
     Route::get('/vouchers', [MainAccountController::class, 'vouchers'])->name('vouchers');
     Route::get('/vouchers/{voucher}', [MainAccountController::class, 'show'])->name('show');
     Route::get('/reports', [MainAccountController::class, 'reports'])->name('reports');
-    Route::get('/export', [MainAccountController::class, 'export'])->name('export');
+    Route::get('/daily-report', [MainAccountController::class, 'dailyReport'])->name('daily-report');
+    Route::get('/monthly-report', [MainAccountController::class, 'monthlyReport'])->name('monthly-report');
+    Route::get('/yearly-report', [MainAccountController::class, 'yearlyReport'])->name('yearly-report');
 });
 
 Route::middleware(['auth', 'super-admin'])->prefix('optics')->name('optics.')->group(function () {

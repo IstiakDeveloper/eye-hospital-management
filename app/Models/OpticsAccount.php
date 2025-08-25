@@ -86,6 +86,54 @@ class OpticsAccount extends Model
         $account->increment('balance', $amount);
 
         $transaction = OpticsTransaction::create([
+            'transaction_no' => self::generateVoucherNo('OI'),
+            'type' => 'income',
+            'amount' => $amount,
+            'category' => $category,
+            'reference_type' => $referenceType,
+            'reference_id' => $referenceId,
+            'description' => $description,
+            'transaction_date' => now()->toDateString(),
+            'created_by' => auth()->id(),
+        ]);
+
+        // Check if voucher already exists for today's date for optics income
+        $today = now()->toDateString();
+        $existingVoucher = MainAccountVoucher::where('source_account', 'optics')
+            ->where('source_transaction_type', 'income')
+            ->where('date', $today)
+            ->first();
+
+        if ($existingVoucher) {
+            // Update existing voucher
+            $mainAccount = MainAccount::firstOrCreate([]);
+            $mainAccount->increment('balance', $amount);
+
+            $existingVoucher->increment('amount', $amount);
+            $existingVoucher->update([
+                'narration' => $existingVoucher->narration . " + Optics Income - {$category}: {$description}",
+            ]);
+        } else {
+            // Create new Main Account Debit Voucher (Money coming in)
+            MainAccount::createDebitVoucher(
+                amount: $amount,
+                narration: "Optics Income - {$category}: {$description}",
+                sourceAccount: 'optics',
+                sourceTransactionType: 'income',
+                sourceVoucherNo: $transaction->transaction_no,
+                sourceReferenceId: $transaction->id
+            );
+        }
+
+        return $transaction;
+    }
+
+    public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null): OpticsTransaction
+    {
+        $account = self::firstOrCreate([]);
+        $account->decrement('balance', $amount);
+
+        $transaction = OpticsTransaction::create([
             'transaction_no' => self::generateVoucherNo('OE'),
             'type' => 'expense',
             'amount' => $amount,
@@ -96,7 +144,7 @@ class OpticsAccount extends Model
             'created_by' => auth()->id(),
         ]);
 
-        // Create Main Account Credit Voucher (Money going out)
+        // Always create new voucher for expenses
         MainAccount::createCreditVoucher(
             amount: $amount,
             narration: "Optics Expense - {$category}: {$description}",

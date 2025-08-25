@@ -22,14 +22,17 @@ class HospitalAccountController extends Controller
         $recentFundTransactions = HospitalFundTransaction::with('addedBy')
             ->latest()->take(5)->get();
 
+        // Add expense categories
+        $expenseCategories = HospitalExpenseCategory::all();
+
         return Inertia::render('HospitalAccount/Dashboard', compact(
             'balance',
             'monthlyReport',
             'recentTransactions',
-            'recentFundTransactions'
+            'recentFundTransactions',
+            'expenseCategories'  // <- Add this
         ));
     }
-
     // Fund In
     public function fundIn(Request $request)
     {
@@ -37,9 +40,15 @@ class HospitalAccountController extends Controller
             'amount' => 'required|numeric|min:1',
             'purpose' => 'required|string|max:255',
             'description' => 'required|string|max:500',
+            'date' => 'required|date',
         ]);
 
-        HospitalAccount::addFund($request->amount, $request->purpose, $request->description);
+        HospitalAccount::addFund(
+            $request->amount,
+            $request->purpose,
+            $request->description,
+            $request->date  // <- Add date parameter
+        );
 
         return back()->with('success', 'Fund added successfully!');
     }
@@ -51,13 +60,19 @@ class HospitalAccountController extends Controller
             'amount' => 'required|numeric|min:1',
             'purpose' => 'required|string|max:255',
             'description' => 'required|string|max:500',
+            'date' => 'required|date',
         ]);
 
         if ($request->amount > HospitalAccount::getBalance()) {
             return back()->withErrors(['amount' => 'Insufficient balance!']);
         }
 
-        HospitalAccount::withdrawFund($request->amount, $request->purpose, $request->description);
+        HospitalAccount::withdrawFund(
+            $request->amount,
+            $request->purpose,
+            $request->description,
+            $request->date  // <- Add date parameter
+        );
 
         return back()->with('success', 'Fund withdrawn successfully!');
     }
@@ -70,6 +85,7 @@ class HospitalAccountController extends Controller
             'category' => 'required|string|max:255',
             'expense_category_id' => 'nullable|exists:hospital_expense_categories,id',
             'description' => 'required|string|max:500',
+            'date' => 'required|date',
         ]);
 
         if ($request->amount > HospitalAccount::getBalance()) {
@@ -80,7 +96,8 @@ class HospitalAccountController extends Controller
             $request->amount,
             $request->category,
             $request->description,
-            $request->expense_category_id
+            $request->expense_category_id,
+            $request->date  // <- Add date parameter
         );
 
         return back()->with('success', 'Expense added successfully!');

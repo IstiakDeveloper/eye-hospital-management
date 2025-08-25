@@ -22,11 +22,15 @@ class MedicineAccountController extends Controller
         $recentFundTransactions = MedicineFundTransaction::with('addedBy')
             ->latest()->take(5)->get();
 
+        // Add expense categories
+        $expenseCategories = MedicineExpenseCategory::all(); // or ::pluck('name', 'id')
+
         return Inertia::render('MedicineAccount/Dashboard', compact(
             'balance',
             'monthlyReport',
             'recentTransactions',
-            'recentFundTransactions'
+            'recentFundTransactions',
+            'expenseCategories' // <- Add this
         ));
     }
 
@@ -40,12 +44,16 @@ class MedicineAccountController extends Controller
             'date' => 'required|date',
         ]);
 
-        MedicineAccount::addFund($request->amount, $request->purpose, $request->description);
+        MedicineAccount::addFund(
+            $request->amount,
+            $request->purpose,
+            $request->description,
+            $request->date  // <- Add this parameter
+        );
 
         return back()->with('success', 'Fund added successfully!');
     }
 
-    // Fund Out
     public function fundOut(Request $request)
     {
         $request->validate([
@@ -55,14 +63,36 @@ class MedicineAccountController extends Controller
             'date' => 'required|date',
         ]);
 
-        if ($request->amount > MedicineAccount::getBalance()) {
-            return back()->withErrors(['amount' => 'Insufficient balance!']);
-        }
-
-        MedicineAccount::withdrawFund($request->amount, $request->purpose, $request->description);
+        MedicineAccount::withdrawFund(
+            $request->amount,
+            $request->purpose,
+            $request->description,
+            $request->date  // <- Add this parameter
+        );
 
         return back()->with('success', 'Fund withdrawn successfully!');
     }
+
+    public function expense(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'category' => 'required|string|max:255',
+            'description' => 'required|string|max:500',
+            'date' => 'required|date',
+        ]);
+
+        MedicineAccount::addExpense(
+            $request->amount,
+            $request->category,
+            $request->description,
+            null, // categoryId
+            $request->date  // <- Add this parameter
+        );
+
+        return back()->with('success', 'Expense added successfully!');
+    }
+
 
     // Add Expense
     public function addExpense(Request $request)
@@ -83,7 +113,8 @@ class MedicineAccountController extends Controller
             $request->amount,
             $request->category,
             $request->description,
-            $request->expense_category_id
+            $request->expense_category_id,
+            $request->date
         );
 
         return back()->with('success', 'Expense added successfully!');

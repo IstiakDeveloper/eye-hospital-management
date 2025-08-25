@@ -32,7 +32,8 @@ class MainAccount extends Model
         string $sourceAccount,
         string $sourceTransactionType,
         ?string $sourceVoucherNo = null,
-        ?int $sourceReferenceId = null
+        ?int $sourceReferenceId = null,
+        ?string $date = null  // <- Add this parameter
     ): MainAccountVoucher {
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
@@ -40,7 +41,7 @@ class MainAccount extends Model
         return MainAccountVoucher::create([
             'voucher_no' => self::generateVoucherNo(),
             'voucher_type' => 'Debit',
-            'date' => now()->toDateString(),
+            'date' => $date ?? now()->toDateString(),  // <- Use parameter or default
             'narration' => $narration,
             'amount' => $amount,
             'source_account' => $sourceAccount,

@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Carbon\Carbon;
+use NumberFormatter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MainAccountController extends Controller
@@ -61,7 +62,6 @@ class MainAccountController extends Controller
             'todaySummary' => $todaySummary,
             'monthlyReport' => $monthlyReport,
         ]);
-
     }
 
     /**
@@ -104,10 +104,10 @@ class MainAccountController extends Controller
 
         if (!empty($validated['search'])) {
             $search = $validated['search'];
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('voucher_no', 'like', "%{$search}%")
-                  ->orWhere('narration', 'like', "%{$search}%")
-                  ->orWhere('source_voucher_no', 'like', "%{$search}%");
+                    ->orWhere('narration', 'like', "%{$search}%")
+                    ->orWhere('source_voucher_no', 'like', "%{$search}%");
             });
         }
 
@@ -195,266 +195,147 @@ class MainAccountController extends Controller
         ]);
     }
 
-    /**
-     * Generate reports
-     */
-    public function reports(Request $request): Response
+
+    public function dailyReport(Request $request): Response
     {
         $validated = $request->validate([
-            'type' => 'nullable|string|in:monthly,yearly,source_account,daily',
-            'year' => 'nullable|integer|min:2020|max:' . (date('Y') + 1),
-            'month' => 'nullable|integer|min:1|max:12',
-            'date' => 'nullable|date',
+            'date' => 'required|date',
+            'voucher_type' => 'required|in:Debit,Credit',
         ]);
 
-        $reportType = $validated['type'] ?? 'monthly';
-        $year = $validated['year'] ?? now()->year;
-        $month = $validated['month'] ?? now()->month;
-        $date = $validated['date'] ?? today();
+        $date = $validated['date'];
+        $voucherType = $validated['voucher_type'];
 
-        $data = match ($reportType) {
-            'monthly' => $this->getMonthlyReport($year, $month),
-            'yearly' => $this->getYearlyReport($year),
-            'source_account' => $this->getSourceAccountReport($year, $month),
-            'daily' => $this->getDailyReport($date),
-            default => []
-        };
-
-        return Inertia::render('MainAccount/Reports', [
-            'reportType' => $reportType,
-            'data' => $data,
-            'year' => $year,
-            'month' => $month,
-            'date' => $date,
-            'availableYears' => range(2020, now()->year + 1),
-            'availableMonths' => collect(range(1, 12))->map(fn($m) => [
-                'value' => $m,
-                'label' => Carbon::create(null, $m, 1)->format('F')
-            ]),
-        ]);
-    }
-
-    private function getMonthlyReport(int $year, int $month): array
-    {
-        $monthlyReport = MainAccount::getMonthlyReport($year, $month);
-
-        // Get daily breakdown
-        $startDate = Carbon::create($year, $month, 1);
-        $endDate = $startDate->copy()->endOfMonth();
-
-        $dailyData = [];
-        for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
-            $dailyTotals = MainAccountVoucher::getDailyTotals($date->toDateString());
-            $dailyData[] = [
-                'date' => $date->toDateString(),
-                'day' => $date->format('d'),
-                'day_name' => $date->format('l'),
-                'debit' => $dailyTotals['debit_total'],
-                'credit' => $dailyTotals['credit_total'],
-                'net' => $dailyTotals['net_change'],
-                'voucher_count' => $dailyTotals['voucher_count']
-            ];
-        }
-
-        return array_merge($monthlyReport, [
-            'daily_data' => $dailyData,
-            'month_name' => $startDate->format('F Y')
-        ]);
-    }
-
-    private function getYearlyReport(int $year): array
-    {
-        $monthlyData = [];
-        for ($month = 1; $month <= 12; $month++) {
-            $monthReport = MainAccount::getMonthlyReport($year, $month);
-            $monthlyData[] = [
-                'month' => $month,
-                'month_name' => Carbon::create($year, $month, 1)->format('F'),
-                'debit_total' => $monthReport['debit_total'],
-                'credit_total' => $monthReport['credit_total'],
-                'net_change' => $monthReport['net_change']
-            ];
-        }
-
-        return [
-            'year' => $year,
-            'monthly_data' => $monthlyData,
-            'total_debit' => collect($monthlyData)->sum('debit_total'),
-            'total_credit' => collect($monthlyData)->sum('credit_total'),
-            'net_change' => collect($monthlyData)->sum('net_change')
-        ];
-    }
-
-    private function getSourceAccountReport(int $year, int $month): array
-    {
-        $data = MainAccountVoucher::selectRaw('
-            source_account,
-            source_transaction_type,
-            SUM(CASE WHEN voucher_type = "Debit" THEN amount ELSE 0 END) as debit_total,
-            SUM(CASE WHEN voucher_type = "Credit" THEN amount ELSE 0 END) as credit_total,
-            SUM(CASE WHEN voucher_type = "Debit" THEN amount ELSE -amount END) as net_amount,
-            COUNT(*) as transaction_count
-        ')
-        ->whereYear('date', $year)
-        ->whereMonth('date', $month)
-        ->groupBy('source_account', 'source_transaction_type')
-        ->orderBy('source_account')
-        ->orderBy('source_transaction_type')
-        ->get()
-        ->groupBy('source_account')
-        ->map(function ($transactions, $account) {
-            return [
-                'account' => $account,
-                'transactions' => $transactions->map(function ($transaction) {
-                    return [
-                        'type' => $transaction->source_transaction_type,
-                        'debit_total' => $transaction->debit_total,
-                        'credit_total' => $transaction->credit_total,
-                        'net_amount' => $transaction->net_amount,
-                        'transaction_count' => $transaction->transaction_count,
-                    ];
-                }),
-                'account_totals' => [
-                    'debit_total' => $transactions->sum('debit_total'),
-                    'credit_total' => $transactions->sum('credit_total'),
-                    'net_amount' => $transactions->sum('net_amount'),
-                    'transaction_count' => $transactions->sum('transaction_count'),
-                ]
-            ];
-        })
-        ->values();
-
-        return [
-            'accounts' => $data,
-            'period' => Carbon::create($year, $month, 1)->format('F Y')
-        ];
-    }
-
-    private function getDailyReport(string $date): array
-    {
-        $dailyTotals = MainAccountVoucher::getDailyTotals($date);
-        $vouchers = MainAccountVoucher::with('createdBy')
-                                   ->whereDate('date', $date)
-                                   ->orderBy('id')
-                                   ->get()
-                                   ->map(function ($voucher) {
-                                       return [
-                                           'id' => $voucher->id,
-                                           'voucher_no' => $voucher->voucher_no,
-                                           'voucher_type' => $voucher->voucher_type,
-                                           'narration' => $voucher->narration,
-                                           'amount' => $voucher->amount,
-                                           'formatted_amount' => $voucher->formatted_amount,
-                                           'source_account_name' => $voucher->source_account_name,
-                                           'transaction_type_name' => $voucher->transaction_type_name,
-                                           'created_by' => $voucher->createdBy?->name,
-                                       ];
-                                   });
-
-        return array_merge($dailyTotals, [
-            'vouchers' => $vouchers,
-            'date' => $date,
-            'formatted_date' => Carbon::parse($date)->format('l, F j, Y')
-        ]);
-    }
-
-    /**
-     * Export vouchers to CSV
-     */
-    public function export(Request $request): StreamedResponse
-    {
-        $validated = $request->validate([
-            'voucher_type' => 'nullable|string',
-            'source_account' => 'nullable|string',
-            'source_transaction_type' => 'nullable|string',
-            'date_from' => 'nullable|date',
-            'date_to' => 'nullable|date|after_or_equal:date_from',
-            'search' => 'nullable|string|max:255',
-        ]);
-
-        $query = MainAccountVoucher::with('createdBy')->orderBy('id');
-
-        // Apply same filters as vouchers method
-        if (!empty($validated['voucher_type'])) {
-            $query->where('voucher_type', $validated['voucher_type']);
-        }
-
-        if (!empty($validated['source_account'])) {
-            $query->where('source_account', $validated['source_account']);
-        }
-
-        if (!empty($validated['source_transaction_type'])) {
-            $query->where('source_transaction_type', $validated['source_transaction_type']);
-        }
-
-        if (!empty($validated['date_from'])) {
-            $query->whereDate('date', '>=', $validated['date_from']);
-        }
-
-        if (!empty($validated['date_to'])) {
-            $query->whereDate('date', '<=', $validated['date_to']);
-        }
-
-        if (!empty($validated['search'])) {
-            $search = $validated['search'];
-            $query->where(function($q) use ($search) {
-                $q->where('voucher_no', 'like', "%{$search}%")
-                  ->orWhere('narration', 'like', "%{$search}%")
-                  ->orWhere('source_voucher_no', 'like', "%{$search}%");
+        // Get vouchers for the specific date and type
+        $vouchers = MainAccountVoucher::where('date', $date)
+            ->where('voucher_type', $voucherType)
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(function ($voucher, $index) {
+                return [
+                    'sl_no' => str_pad($index + 1, 2, '0', STR_PAD_LEFT),
+                    'voucher_no' => $voucher->voucher_no,
+                    'date' => $voucher->date->format('d/m/Y'),
+                    'narration' => $voucher->narration,
+                    'amount' => number_format($voucher->amount, 2),
+                    'amount_raw' => $voucher->amount,
+                ];
             });
-        }
 
-        $vouchers = $query->get();
+        $totalAmount = $vouchers->sum('amount_raw');
 
-        $filename = 'main_account_vouchers_' . now()->format('Y-m-d_H-i-s') . '.csv';
+        // Convert amount to words (you'll need a helper for this)
+        $amountInWords = $this->convertToWords($totalAmount);
 
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            'Cache-Control' => 'no-cache, no-store, must-revalidate',
-            'Pragma' => 'no-cache',
-            'Expires' => '0',
-        ];
+        return Inertia::render('MainAccount/DailyReport', [
+            'date' => Carbon::parse($date)->format('d/m/Y'),
+            'voucher_type' => $voucherType,
+            'vouchers' => $vouchers,
+            'total_amount' => number_format($totalAmount, 2),
+            'amount_in_words' => $amountInWords,
+            'hospital_name' => 'Naogaon Islamia Eye Hospital and Phaco Center',
+            'hospital_location' => 'Naogaon',
+        ]);
+    }
 
-        return response()->stream(function() use ($vouchers) {
-            $file = fopen('php://output', 'w');
 
-            // Add BOM for proper UTF-8 encoding
-            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+    public function monthlyReport(Request $request): Response
+    {
+        $validated = $request->validate([
+            'month' => 'required|integer|between:1,12',
+            'year' => 'required|integer|min:2020|max:2030',
+            'voucher_type' => 'required|in:Debit,Credit',
+        ]);
 
-            // CSV Header
-            fputcsv($file, [
-                'SL No',
-                'Voucher No',
-                'Voucher Type',
-                'Date',
-                'Narration',
-                'Amount',
-                'Source Account',
-                'Transaction Type',
-                'Source Voucher',
-                'Created By',
-                'Created At'
-            ]);
+        $month = $validated['month'];
+        $year = $validated['year'];
+        $voucherType = $validated['voucher_type'];
 
-            // CSV Data
-            foreach ($vouchers as $voucher) {
-                fputcsv($file, [
-                    $voucher->sl_no,
-                    $voucher->voucher_no,
-                    $voucher->voucher_type,
-                    $voucher->date->format('Y-m-d'),
-                    $voucher->narration,
-                    $voucher->formatted_amount,
-                    $voucher->source_account_name,
-                    $voucher->transaction_type_name,
-                    $voucher->source_voucher_no,
-                    $voucher->createdBy?->name ?? 'N/A',
-                    $voucher->created_at->format('Y-m-d H:i:s')
-                ]);
-            }
+        // Get vouchers for the specific month and type
+        $vouchers = MainAccountVoucher::whereMonth('date', $month)
+            ->whereYear('date', $year)
+            ->where('voucher_type', $voucherType)
+            ->orderBy('date', 'asc')
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(function ($voucher, $index) {
+                return [
+                    'sl_no' => str_pad($index + 1, 2, '0', STR_PAD_LEFT),
+                    'voucher_no' => $voucher->voucher_no,
+                    'date' => $voucher->date->format('d/m/Y'),
+                    'narration' => $voucher->narration,
+                    'amount' => number_format($voucher->amount, 2),
+                    'amount_raw' => $voucher->amount,
+                ];
+            });
 
-            fclose($file);
-        }, 200, $headers);
+        $totalAmount = $vouchers->sum('amount_raw');
+        $amountInWords = $this->convertToWords($totalAmount);
+
+        return Inertia::render('MainAccount/MonthlyReport', [
+            'month_name' => Carbon::createFromDate($year, $month)->format('F Y'),
+            'voucher_type' => $voucherType,
+            'vouchers' => $vouchers,
+            'total_amount' => number_format($totalAmount, 2),
+            'amount_in_words' => $amountInWords,
+            'hospital_name' => 'Naogaon Islamia Eye Hospital and Phaco Center',
+            'hospital_location' => 'Naogaon',
+        ]);
+    }
+
+
+    public function yearlyReport(Request $request): Response
+    {
+        $validated = $request->validate([
+            'year' => 'required|integer|min:2020|max:2030',
+            'voucher_type' => 'required|in:Debit,Credit',
+        ]);
+
+        $year = $validated['year'];
+        $voucherType = $validated['voucher_type'];
+
+        // Get vouchers for the specific year and type
+        $vouchers = MainAccountVoucher::whereYear('date', $year)
+            ->where('voucher_type', $voucherType)
+            ->orderBy('date', 'asc')
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(function ($voucher, $index) {
+                return [
+                    'sl_no' => str_pad($index + 1, 2, '0', STR_PAD_LEFT),
+                    'voucher_no' => $voucher->voucher_no,
+                    'date' => $voucher->date->format('d/m/Y'),
+                    'narration' => $voucher->narration,
+                    'amount' => number_format($voucher->amount, 2),
+                    'amount_raw' => $voucher->amount,
+                ];
+            });
+
+        $totalAmount = $vouchers->sum('amount_raw');
+        $amountInWords = $this->convertToWords($totalAmount);
+
+        return Inertia::render('MainAccount/YearlyReport', [
+            'year' => $year,
+            'voucher_type' => $voucherType,
+            'vouchers' => $vouchers,
+            'total_amount' => number_format($totalAmount, 2),
+            'amount_in_words' => $amountInWords,
+            'hospital_name' => 'Naogaon Islamia Eye Hospital and Phaco Center',
+            'hospital_location' => 'Naogaon',
+        ]);
+    }
+
+
+    public function reports(): Response
+    {
+        return Inertia::render('MainAccount/Reports');
+    }
+
+
+    private function convertToWords(float $amount): string
+    {
+        $formatter = new NumberFormatter('en', NumberFormatter::SPELLOUT);
+        $words = $formatter->format($amount);
+        return ucwords($words) . ' Taka Only';
     }
 }

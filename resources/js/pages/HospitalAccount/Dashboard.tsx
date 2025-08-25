@@ -35,13 +35,15 @@ interface DashboardProps {
         description: string;
         date: string;
     }>;
+    expenseCategories: Array<{id: number, name: string}>;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
     balance,
     monthlyReport,
     recentTransactions,
-    recentFundTransactions
+    recentFundTransactions,
+    expenseCategories
 }) => {
     const [fundInModal, setFundInModal] = useState(false);
     const [fundOutModal, setFundOutModal] = useState(false);
@@ -51,7 +53,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         purpose: '',
         description: '',
         category: '',
-        date: new Date().toISOString().split('T')[0] // Today's date
+        date: new Date().toISOString().split('T')[0]
     });
 
     const formatDate = (dateString: string) => {
@@ -60,6 +62,15 @@ const Dashboard: React.FC<DashboardProps> = ({
             month: 'short',
             year: 'numeric'
         });
+    };
+
+    const formatAmount = (amount: number) => {
+        return new Intl.NumberFormat('en-BD', {
+            style: 'currency',
+            currency: 'BDT',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount).replace('BDT', '৳');
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -104,7 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-600">Current Balance</p>
-                            <p className="text-2xl font-bold text-gray-900">৳{balance.toLocaleString()}</p>
+                            <p className="text-2xl font-bold text-gray-900">{formatAmount(balance)}</p>
                         </div>
                         <CreditCard className="w-8 h-8 text-blue-600" />
                     </div>
@@ -114,7 +125,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-600">Monthly Income</p>
-                            <p className="text-2xl font-bold text-green-600">৳{monthlyReport.income.toLocaleString()}</p>
+                            <p className="text-2xl font-bold text-green-600">{formatAmount(monthlyReport.income)}</p>
                         </div>
                         <TrendingUp className="w-8 h-8 text-green-600" />
                     </div>
@@ -124,7 +135,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-600">Monthly Expense</p>
-                            <p className="text-2xl font-bold text-red-600">৳{monthlyReport.expense.toLocaleString()}</p>
+                            <p className="text-2xl font-bold text-red-600">{formatAmount(monthlyReport.expense)}</p>
                         </div>
                         <TrendingDown className="w-8 h-8 text-red-600" />
                     </div>
@@ -135,7 +146,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <div>
                             <p className="text-sm font-medium text-gray-600">Monthly Profit</p>
                             <p className={`text-2xl font-bold ${monthlyReport.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                ৳{monthlyReport.profit.toLocaleString()}
+                                {formatAmount(monthlyReport.profit)}
                             </p>
                         </div>
                         <BarChart3 className="w-8 h-8 text-blue-600" />
@@ -179,11 +190,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                             <div key={transaction.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
                                 <div>
                                     <p className="font-medium">{transaction.category}</p>
-                                    <p className="text-sm text-gray-600">{transaction.description}</p>
+                                    <p className="text-sm text-gray-600 truncate max-w-xs">{transaction.description}</p>
                                 </div>
                                 <div className="text-right">
                                     <p className={`font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                                        {transaction.type === 'income' ? '+' : '-'}৳{transaction.amount}
+                                        {transaction.type === 'income' ? '+' : '-'}{formatAmount(transaction.amount)}
                                     </p>
                                     <p className="text-sm text-gray-600">{formatDate(transaction.transaction_date)}</p>
                                 </div>
@@ -201,11 +212,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                             <div key={fund.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
                                 <div>
                                     <p className="font-medium">{fund.purpose}</p>
-                                    <p className="text-sm text-gray-600">{fund.description}</p>
+                                    <p className="text-sm text-gray-600 truncate max-w-xs">{fund.description}</p>
                                 </div>
                                 <div className="text-right">
                                     <p className={`font-medium ${fund.type === 'fund_in' ? 'text-green-600' : 'text-red-600'}`}>
-                                        {fund.type === 'fund_in' ? '+' : '-'}৳{fund.amount}
+                                        {fund.type === 'fund_in' ? '+' : '-'}{formatAmount(fund.amount)}
                                     </p>
                                     <p className="text-sm text-gray-600">{formatDate(fund.date)}</p>
                                 </div>
@@ -239,7 +250,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 name="purpose"
                                 value={formData.purpose}
                                 onChange={handleInputChange}
-                                placeholder="e.g., Owner Investment, Loan etc."
+                                placeholder="e.g., Owner Investment, Equipment Fund etc."
                                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
                             />
@@ -303,7 +314,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
                                 required
                             />
-                            <p className="text-xs text-gray-500 mt-1">Available balance: ৳{balance.toLocaleString()}</p>
+                            <p className="text-xs text-gray-500 mt-1">Available balance: {formatAmount(balance)}</p>
                         </div>
                         <div className="mb-4">
                             <label className="block text-sm font-medium mb-2">Purpose *</label>
@@ -376,7 +387,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
                             />
-                            <p className="text-xs text-gray-500 mt-1">Available balance: ৳{balance.toLocaleString()}</p>
+                            <p className="text-xs text-gray-500 mt-1">Available balance: {formatAmount(balance)}</p>
                         </div>
                         <div className="mb-4">
                             <label className="block text-sm font-medium mb-2">Category *</label>
@@ -385,10 +396,16 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 name="category"
                                 value={formData.category}
                                 onChange={handleInputChange}
-                                placeholder="e.g., Salary, Utilities, Equipment etc."
+                                list="expense-categories"
+                                placeholder="Type or select a category"
                                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
                             />
+                            <datalist id="expense-categories">
+                                {expenseCategories?.map((category) => (
+                                    <option key={category.id} value={category.name} />
+                                ))}
+                            </datalist>
                         </div>
                         <div className="mb-4">
                             <label className="block text-sm font-medium mb-2">Date *</label>
