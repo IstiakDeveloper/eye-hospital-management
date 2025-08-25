@@ -33,7 +33,7 @@ class MedicineAccount extends Model
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
 
-        MedicineFundTransaction::create([
+        $fundTransaction = MedicineFundTransaction::create([
             'voucher_no' => self::generateVoucherNo('MFI'),
             'type' => 'fund_in',
             'amount' => $amount,
@@ -42,6 +42,16 @@ class MedicineAccount extends Model
             'date' => now()->toDateString(),
             'added_by' => auth()->id(),
         ]);
+
+        // Create Main Account Debit Voucher (Money coming in)
+        MainAccount::createDebitVoucher(
+            amount: $amount,
+            narration: "Medicine Fund In - {$purpose}: {$description}",
+            sourceAccount: 'medicine',
+            sourceTransactionType: 'fund_in',
+            sourceVoucherNo: $fundTransaction->voucher_no,
+            sourceReferenceId: $fundTransaction->id
+        );
     }
 
     public static function withdrawFund(float $amount, string $purpose, string $description): void
@@ -49,7 +59,7 @@ class MedicineAccount extends Model
         $account = self::firstOrCreate([]);
         $account->decrement('balance', $amount);
 
-        MedicineFundTransaction::create([
+        $fundTransaction = MedicineFundTransaction::create([
             'voucher_no' => self::generateVoucherNo('MFO'),
             'type' => 'fund_out',
             'amount' => $amount,
@@ -58,6 +68,16 @@ class MedicineAccount extends Model
             'date' => now()->toDateString(),
             'added_by' => auth()->id(),
         ]);
+
+        // Create Main Account Credit Voucher (Money going out)
+        MainAccount::createCreditVoucher(
+            amount: $amount,
+            narration: "Medicine Fund Out - {$purpose}: {$description}",
+            sourceAccount: 'medicine',
+            sourceTransactionType: 'fund_out',
+            sourceVoucherNo: $fundTransaction->voucher_no,
+            sourceReferenceId: $fundTransaction->id
+        );
     }
 
     public static function addIncome(float $amount, string $category, string $description, ?string $referenceType = null, ?int $referenceId = null): MedicineTransaction
@@ -65,7 +85,7 @@ class MedicineAccount extends Model
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
 
-        return MedicineTransaction::create([
+        $transaction = MedicineTransaction::create([
             'transaction_no' => self::generateVoucherNo('MI'),
             'type' => 'income',
             'amount' => $amount,
@@ -76,6 +96,18 @@ class MedicineAccount extends Model
             'transaction_date' => now()->toDateString(),
             'created_by' => auth()->id(),
         ]);
+
+        // Create Main Account Debit Voucher (Money coming in)
+        MainAccount::createDebitVoucher(
+            amount: $amount,
+            narration: "Medicine Income - {$category}: {$description}",
+            sourceAccount: 'medicine',
+            sourceTransactionType: 'income',
+            sourceVoucherNo: $transaction->transaction_no,
+            sourceReferenceId: $transaction->id
+        );
+
+        return $transaction;
     }
 
     public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null): MedicineTransaction
@@ -83,7 +115,7 @@ class MedicineAccount extends Model
         $account = self::firstOrCreate([]);
         $account->decrement('balance', $amount);
 
-        return MedicineTransaction::create([
+        $transaction = MedicineTransaction::create([
             'transaction_no' => self::generateVoucherNo('ME'),
             'type' => 'expense',
             'amount' => $amount,
@@ -93,6 +125,18 @@ class MedicineAccount extends Model
             'transaction_date' => now()->toDateString(),
             'created_by' => auth()->id(),
         ]);
+
+        // Create Main Account Credit Voucher (Money going out)
+        MainAccount::createCreditVoucher(
+            amount: $amount,
+            narration: "Medicine Expense - {$category}: {$description}",
+            sourceAccount: 'medicine',
+            sourceTransactionType: 'expense',
+            sourceVoucherNo: $transaction->transaction_no,
+            sourceReferenceId: $transaction->id
+        );
+
+        return $transaction;
     }
 
     private static function generateVoucherNo(string $prefix): string

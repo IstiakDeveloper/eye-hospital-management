@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\DoctorDashboardController;
 use App\Http\Controllers\HospitalAccount\HospitalAccountController;
+use App\Http\Controllers\MainAccountController;
 use App\Http\Controllers\MedicineAccount\MedicineAccountController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\MedicineCornerController;
@@ -583,6 +584,14 @@ Route::middleware(['auth', 'super-admin'])->group(function () {
         Route::get('/inventory-report', [OpticsAccountController::class, 'inventoryReport'])->name('inventory-report');
         Route::post('/export', [OpticsAccountController::class, 'exportReport'])->name('export');
     });
+});
+
+Route::middleware(['auth', 'verified'])->prefix('main-account')->name('main-account.')->group(function () {
+    Route::get('/', [MainAccountController::class, 'index'])->name('index');
+    Route::get('/vouchers', [MainAccountController::class, 'vouchers'])->name('vouchers');
+    Route::get('/vouchers/{voucher}', [MainAccountController::class, 'show'])->name('show');
+    Route::get('/reports', [MainAccountController::class, 'reports'])->name('reports');
+    Route::get('/export', [MainAccountController::class, 'export'])->name('export');
 });
 
 Route::middleware(['auth', 'super-admin'])->prefix('optics')->name('optics.')->group(function () {

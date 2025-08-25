@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -32,7 +33,7 @@ class OpticsAccount extends Model
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
 
-        OpticsFundTransaction::create([
+        $fundTransaction = OpticsFundTransaction::create([
             'voucher_no' => self::generateVoucherNo('OFI'),
             'type' => 'fund_in',
             'amount' => $amount,
@@ -41,6 +42,16 @@ class OpticsAccount extends Model
             'date' => now()->toDateString(),
             'added_by' => auth()->id(),
         ]);
+
+        // Create Main Account Debit Voucher (Money coming in)
+        MainAccount::createDebitVoucher(
+            amount: $amount,
+            narration: "Optics Fund In - {$purpose}: {$description}",
+            sourceAccount: 'optics',
+            sourceTransactionType: 'fund_in',
+            sourceVoucherNo: $fundTransaction->voucher_no,
+            sourceReferenceId: $fundTransaction->id
+        );
     }
 
     public static function withdrawFund(float $amount, string $purpose, string $description): void
@@ -48,7 +59,7 @@ class OpticsAccount extends Model
         $account = self::firstOrCreate([]);
         $account->decrement('balance', $amount);
 
-        OpticsFundTransaction::create([
+        $fundTransaction = OpticsFundTransaction::create([
             'voucher_no' => self::generateVoucherNo('OFO'),
             'type' => 'fund_out',
             'amount' => $amount,
@@ -57,6 +68,16 @@ class OpticsAccount extends Model
             'date' => now()->toDateString(),
             'added_by' => auth()->id(),
         ]);
+
+        // Create Main Account Credit Voucher (Money going out)
+        MainAccount::createCreditVoucher(
+            amount: $amount,
+            narration: "Optics Fund Out - {$purpose}: {$description}",
+            sourceAccount: 'optics',
+            sourceTransactionType: 'fund_out',
+            sourceVoucherNo: $fundTransaction->voucher_no,
+            sourceReferenceId: $fundTransaction->id
+        );
     }
 
     public static function addIncome(float $amount, string $category, string $description, ?string $referenceType = null, ?int $referenceId = null): OpticsTransaction
@@ -64,25 +85,7 @@ class OpticsAccount extends Model
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
 
-        return OpticsTransaction::create([
-            'transaction_no' => self::generateVoucherNo('OI'),
-            'type' => 'income',
-            'amount' => $amount,
-            'category' => $category,
-            'reference_type' => $referenceType,
-            'reference_id' => $referenceId,
-            'description' => $description,
-            'transaction_date' => now()->toDateString(),
-            'created_by' => auth()->id(),
-        ]);
-    }
-
-    public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null): OpticsTransaction
-    {
-        $account = self::firstOrCreate([]);
-        $account->decrement('balance', $amount);
-
-        return OpticsTransaction::create([
+        $transaction = OpticsTransaction::create([
             'transaction_no' => self::generateVoucherNo('OE'),
             'type' => 'expense',
             'amount' => $amount,
@@ -92,6 +95,18 @@ class OpticsAccount extends Model
             'transaction_date' => now()->toDateString(),
             'created_by' => auth()->id(),
         ]);
+
+        // Create Main Account Credit Voucher (Money going out)
+        MainAccount::createCreditVoucher(
+            amount: $amount,
+            narration: "Optics Expense - {$category}: {$description}",
+            sourceAccount: 'optics',
+            sourceTransactionType: 'expense',
+            sourceVoucherNo: $transaction->transaction_no,
+            sourceReferenceId: $transaction->id
+        );
+
+        return $transaction;
     }
 
     private static function generateVoucherNo(string $prefix): string

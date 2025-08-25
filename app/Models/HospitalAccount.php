@@ -33,7 +33,7 @@ class HospitalAccount extends Model
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
 
-        HospitalFundTransaction::create([
+        $fundTransaction = HospitalFundTransaction::create([
             'voucher_no' => self::generateVoucherNo('HFI'),
             'type' => 'fund_in',
             'amount' => $amount,
@@ -42,6 +42,16 @@ class HospitalAccount extends Model
             'date' => now()->toDateString(),
             'added_by' => auth()->id(),
         ]);
+
+        // Create Main Account Debit Voucher (Money coming in)
+        MainAccount::createDebitVoucher(
+            amount: $amount,
+            narration: "Hospital Fund In - {$purpose}: {$description}",
+            sourceAccount: 'hospital',
+            sourceTransactionType: 'fund_in',
+            sourceVoucherNo: $fundTransaction->voucher_no,
+            sourceReferenceId: $fundTransaction->id
+        );
     }
 
     public static function withdrawFund(float $amount, string $purpose, string $description): void
@@ -49,7 +59,7 @@ class HospitalAccount extends Model
         $account = self::firstOrCreate([]);
         $account->decrement('balance', $amount);
 
-        HospitalFundTransaction::create([
+        $fundTransaction = HospitalFundTransaction::create([
             'voucher_no' => self::generateVoucherNo('HFO'),
             'type' => 'fund_out',
             'amount' => $amount,
@@ -58,32 +68,83 @@ class HospitalAccount extends Model
             'date' => now()->toDateString(),
             'added_by' => auth()->id(),
         ]);
+
+        // Create Main Account Credit Voucher (Money going out)
+        MainAccount::createCreditVoucher(
+            amount: $amount,
+            narration: "Hospital Fund Out - {$purpose}: {$description}",
+            sourceAccount: 'hospital',
+            sourceTransactionType: 'fund_out',
+            sourceVoucherNo: $fundTransaction->voucher_no,
+            sourceReferenceId: $fundTransaction->id
+        );
     }
 
-    public static function addIncome(float $amount, string $category, string $description, ?string $referenceType = null, ?int $referenceId = null): HospitalTransaction
-    {
+    public static function addIncome(
+        float $amount,
+        string $category,
+        string $description,
+        ?string $referenceType = null,
+        ?int $referenceId = null
+    ): HospitalTransaction {
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
 
-        return HospitalTransaction::create([
-            'transaction_no' => self::generateVoucherNo('HI'),
-            'type' => 'income',
-            'amount' => $amount,
-            'category' => $category,
-            'reference_type' => $referenceType,
-            'reference_id' => $referenceId,
-            'description' => $description,
-            'transaction_date' => now()->toDateString(),
-            'created_by' => auth()->id(),
+        $today = now()->toDateString();
+
+        // 🔹 MainAccountVoucher check for today's hospital income
+        $existingVoucher = MainAccountVoucher::where('source_account', 'hospital')
+            ->where('source_transaction_type', 'income')
+            ->whereDate('date', $today) // use voucher date, not created_at
+            ->value('voucher_no');
+
+        // Generate voucher_no for MainAccountVoucher if not exists
+        $voucherNo = $existingVoucher ?? self::generateVoucherNo('HI');
+
+        // ✅ Always create a new HospitalTransaction
+        $transaction = HospitalTransaction::create([
+            'transaction_no'   => 'HT-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT), // unique per transaction
+            'type'             => 'income',
+            'amount'           => $amount,
+            'category'         => $category,
+            'reference_type'   => $referenceType,
+            'reference_id'     => $referenceId,
+            'description'      => $description,
+            'transaction_date' => $today,
+            'created_by'       => auth()->id(),
         ]);
+
+        // ✅ Create or update MainAccountVoucher
+        if (!$existingVoucher) {
+            MainAccount::createDebitVoucher(
+                amount: $amount,
+                narration: "Hospital Income - {$category}: {$description}",
+                sourceAccount: 'hospital',
+                sourceTransactionType: 'income',
+                sourceVoucherNo: $voucherNo,
+                sourceReferenceId: $transaction->id
+            );
+        } else {
+            // Update voucher amount
+            MainAccountVoucher::where('voucher_no', $voucherNo)->increment('amount', $amount);
+
+            // ✅ Also increment MainAccount balance
+            $mainAccount = MainAccount::firstOrCreate([]);
+            $mainAccount->increment('balance', $amount);
+        }
+
+        return $transaction;
     }
+
+
+
 
     public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null): HospitalTransaction
     {
         $account = self::firstOrCreate([]);
         $account->decrement('balance', $amount);
 
-        return HospitalTransaction::create([
+        $transaction = HospitalTransaction::create([
             'transaction_no' => self::generateVoucherNo('HE'),
             'type' => 'expense',
             'amount' => $amount,
@@ -93,6 +154,18 @@ class HospitalAccount extends Model
             'transaction_date' => now()->toDateString(),
             'created_by' => auth()->id(),
         ]);
+
+        // Create Main Account Credit Voucher (Money going out)
+        MainAccount::createCreditVoucher(
+            amount: $amount,
+            narration: "Hospital Expense - {$category}: {$description}",
+            sourceAccount: 'hospital',
+            sourceTransactionType: 'expense',
+            sourceVoucherNo: $transaction->transaction_no,
+            sourceReferenceId: $transaction->id
+        );
+
+        return $transaction;
     }
 
     private static function generateVoucherNo(string $prefix): string
