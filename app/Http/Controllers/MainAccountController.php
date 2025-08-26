@@ -22,6 +22,24 @@ class MainAccountController extends Controller
         $summary = MainAccount::getAccountSummary();
         $sourceAccountSummary = MainAccount::getSourceAccountSummary();
 
+        // Debug: Check what's actually coming from the methods
+        \Log::info('Debug MainAccount Data:', [
+            'balance' => $balance,
+            'summary' => $summary,
+            'sourceAccountSummary' => $sourceAccountSummary
+        ]);
+
+        // Debug: Manual calculation
+        $manualDebit = MainAccountVoucher::where('voucher_type', 'Debit')->sum('amount');
+        $manualCredit = MainAccountVoucher::where('voucher_type', 'Credit')->sum('amount');
+
+        \Log::info('Manual Calculation:', [
+            'debit' => $manualDebit,
+            'credit' => $manualCredit,
+            'count_debit' => MainAccountVoucher::where('voucher_type', 'Debit')->count(),
+            'count_credit' => MainAccountVoucher::where('voucher_type', 'Credit')->count()
+        ]);
+
         // Recent vouchers (last 10)
         $recentVouchers = MainAccountVoucher::with('createdBy')
             ->orderBy('id', 'desc')
@@ -53,6 +71,20 @@ class MainAccountController extends Controller
         // This month's summary
         $monthlyReport = MainAccount::getMonthlyReport(now()->year, now()->month);
 
+        // Debug today's and monthly data
+        \Log::info('Daily and Monthly Data:', [
+            'todaySummary' => $todaySummary,
+            'monthlyReport' => $monthlyReport
+        ]);
+
+        // Fallback: If summary is null or empty, calculate manually
+        if (!$summary || ($summary['total_debit'] == 0 && $summary['total_credit'] == 0)) {
+            $summary = [
+                'total_debit' => $manualDebit,
+                'total_credit' => $manualCredit,
+                'net_balance' => $manualCredit - $manualDebit
+            ];
+        }
 
         return Inertia::render('MainAccount/Index', [
             'balance' => $balance,

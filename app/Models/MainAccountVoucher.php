@@ -138,4 +138,5 @@ class MainAccountVoucher extends Model
             'voucher_count' => $vouchers->count()
         ];
     }
+
 }

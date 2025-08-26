@@ -28,10 +28,12 @@ class OpticsAccount extends Model
         return self::first()?->balance ?? 0;
     }
 
-    public static function addFund(float $amount, string $purpose, string $description): void
+    public static function addFund(float $amount, string $purpose, string $description, ?string $date = null): void
     {
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
 
         $fundTransaction = OpticsFundTransaction::create([
             'voucher_no' => self::generateVoucherNo('OFI'),
@@ -39,25 +41,28 @@ class OpticsAccount extends Model
             'amount' => $amount,
             'purpose' => $purpose,
             'description' => $description,
-            'date' => now()->toDateString(),
+            'date' => $transactionDate,  // <- Use parameter or default
             'added_by' => auth()->id(),
         ]);
 
-        // Create Main Account Debit Voucher (Money coming in)
+        // Create Main Account Debit Voucher (Money coming in) - Pass date parameter
         MainAccount::createDebitVoucher(
             amount: $amount,
             narration: "Optics Fund In - {$purpose}: {$description}",
             sourceAccount: 'optics',
             sourceTransactionType: 'fund_in',
             sourceVoucherNo: $fundTransaction->voucher_no,
-            sourceReferenceId: $fundTransaction->id
+            sourceReferenceId: $fundTransaction->id,
+            date: $transactionDate  // <- Pass the transaction date
         );
     }
 
-    public static function withdrawFund(float $amount, string $purpose, string $description): void
+    public static function withdrawFund(float $amount, string $purpose, string $description, ?string $date = null): void
     {
         $account = self::firstOrCreate([]);
         $account->decrement('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
 
         $fundTransaction = OpticsFundTransaction::create([
             'voucher_no' => self::generateVoucherNo('OFO'),
@@ -65,25 +70,28 @@ class OpticsAccount extends Model
             'amount' => $amount,
             'purpose' => $purpose,
             'description' => $description,
-            'date' => now()->toDateString(),
+            'date' => $transactionDate,  // <- Use parameter or default
             'added_by' => auth()->id(),
         ]);
 
-        // Create Main Account Credit Voucher (Money going out)
+        // Create Main Account Credit Voucher (Money going out) - Pass date parameter
         MainAccount::createCreditVoucher(
             amount: $amount,
             narration: "Optics Fund Out - {$purpose}: {$description}",
             sourceAccount: 'optics',
             sourceTransactionType: 'fund_out',
             sourceVoucherNo: $fundTransaction->voucher_no,
-            sourceReferenceId: $fundTransaction->id
+            sourceReferenceId: $fundTransaction->id,
+            date: $transactionDate  // <- Pass the transaction date
         );
     }
 
-    public static function addIncome(float $amount, string $category, string $description, ?string $referenceType = null, ?int $referenceId = null): OpticsTransaction
+    public static function addIncome(float $amount, string $category, string $description, ?string $referenceType = null, ?int $referenceId = null, ?string $date = null): OpticsTransaction
     {
         $account = self::firstOrCreate([]);
         $account->increment('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
 
         $transaction = OpticsTransaction::create([
             'transaction_no' => self::generateVoucherNo('OI'),
@@ -93,15 +101,14 @@ class OpticsAccount extends Model
             'reference_type' => $referenceType,
             'reference_id' => $referenceId,
             'description' => $description,
-            'transaction_date' => now()->toDateString(),
+            'transaction_date' => $transactionDate,  // <- Use parameter or default
             'created_by' => auth()->id(),
         ]);
 
-        // Check if voucher already exists for today's date for optics income
-        $today = now()->toDateString();
+        // Check if voucher already exists for this date for optics income
         $existingVoucher = MainAccountVoucher::where('source_account', 'optics')
             ->where('source_transaction_type', 'income')
-            ->where('date', $today)
+            ->where('date', $transactionDate)  // <- Use transactionDate instead of $today
             ->first();
 
         if ($existingVoucher) {
@@ -114,24 +121,27 @@ class OpticsAccount extends Model
                 'narration' => $existingVoucher->narration . " + Optics Income - {$category}: {$description}",
             ]);
         } else {
-            // Create new Main Account Debit Voucher (Money coming in)
+            // Create new Main Account Debit Voucher (Money coming in) - Pass date parameter
             MainAccount::createDebitVoucher(
                 amount: $amount,
                 narration: "Optics Income - {$category}: {$description}",
                 sourceAccount: 'optics',
                 sourceTransactionType: 'income',
                 sourceVoucherNo: $transaction->transaction_no,
-                sourceReferenceId: $transaction->id
+                sourceReferenceId: $transaction->id,
+                date: $transactionDate  // <- Pass the transaction date
             );
         }
 
         return $transaction;
     }
 
-    public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null): OpticsTransaction
+    public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null, ?string $date = null): OpticsTransaction
     {
         $account = self::firstOrCreate([]);
         $account->decrement('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
 
         $transaction = OpticsTransaction::create([
             'transaction_no' => self::generateVoucherNo('OE'),
@@ -140,18 +150,19 @@ class OpticsAccount extends Model
             'category' => $category,
             'expense_category_id' => $categoryId,
             'description' => $description,
-            'transaction_date' => now()->toDateString(),
+            'transaction_date' => $transactionDate,  // <- Use parameter or default
             'created_by' => auth()->id(),
         ]);
 
-        // Always create new voucher for expenses
+        // Create Main Account Credit Voucher - Pass date parameter
         MainAccount::createCreditVoucher(
             amount: $amount,
             narration: "Optics Expense - {$category}: {$description}",
             sourceAccount: 'optics',
             sourceTransactionType: 'expense',
             sourceVoucherNo: $transaction->transaction_no,
-            sourceReferenceId: $transaction->id
+            sourceReferenceId: $transaction->id,
+            date: $transactionDate  // <- Pass the transaction date
         );
 
         return $transaction;
