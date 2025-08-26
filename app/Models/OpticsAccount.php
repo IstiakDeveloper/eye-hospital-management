@@ -41,19 +41,19 @@ class OpticsAccount extends Model
             'amount' => $amount,
             'purpose' => $purpose,
             'description' => $description,
-            'date' => $transactionDate,  // <- Use parameter or default
+            'date' => $transactionDate,
             'added_by' => auth()->id(),
         ]);
 
-        // Create Main Account Debit Voucher (Money coming in) - Pass date parameter
-        MainAccount::createDebitVoucher(
+        // Create Main Account Credit Voucher (Money coming in - RECEIPT)
+        MainAccount::createCreditVoucher(
             amount: $amount,
             narration: "Optics Fund In - {$purpose}: {$description}",
             sourceAccount: 'optics',
             sourceTransactionType: 'fund_in',
             sourceVoucherNo: $fundTransaction->voucher_no,
             sourceReferenceId: $fundTransaction->id,
-            date: $transactionDate  // <- Pass the transaction date
+            date: $transactionDate
         );
     }
 
@@ -70,19 +70,19 @@ class OpticsAccount extends Model
             'amount' => $amount,
             'purpose' => $purpose,
             'description' => $description,
-            'date' => $transactionDate,  // <- Use parameter or default
+            'date' => $transactionDate,
             'added_by' => auth()->id(),
         ]);
 
-        // Create Main Account Credit Voucher (Money going out) - Pass date parameter
-        MainAccount::createCreditVoucher(
+        // Create Main Account Debit Voucher (Money going out - PAYMENT)
+        MainAccount::createDebitVoucher(
             amount: $amount,
             narration: "Optics Fund Out - {$purpose}: {$description}",
             sourceAccount: 'optics',
             sourceTransactionType: 'fund_out',
             sourceVoucherNo: $fundTransaction->voucher_no,
             sourceReferenceId: $fundTransaction->id,
-            date: $transactionDate  // <- Pass the transaction date
+            date: $transactionDate
         );
     }
 
@@ -101,14 +101,14 @@ class OpticsAccount extends Model
             'reference_type' => $referenceType,
             'reference_id' => $referenceId,
             'description' => $description,
-            'transaction_date' => $transactionDate,  // <- Use parameter or default
+            'transaction_date' => $transactionDate,
             'created_by' => auth()->id(),
         ]);
 
         // Check if voucher already exists for this date for optics income
         $existingVoucher = MainAccountVoucher::where('source_account', 'optics')
             ->where('source_transaction_type', 'income')
-            ->where('date', $transactionDate)  // <- Use transactionDate instead of $today
+            ->where('date', $transactionDate)
             ->first();
 
         if ($existingVoucher) {
@@ -121,15 +121,15 @@ class OpticsAccount extends Model
                 'narration' => $existingVoucher->narration . " + Optics Income - {$category}: {$description}",
             ]);
         } else {
-            // Create new Main Account Debit Voucher (Money coming in) - Pass date parameter
-            MainAccount::createDebitVoucher(
+            // Create new Main Account Credit Voucher (Money coming in - RECEIPT)
+            MainAccount::createCreditVoucher(
                 amount: $amount,
                 narration: "Optics Income - {$category}: {$description}",
                 sourceAccount: 'optics',
                 sourceTransactionType: 'income',
                 sourceVoucherNo: $transaction->transaction_no,
                 sourceReferenceId: $transaction->id,
-                date: $transactionDate  // <- Pass the transaction date
+                date: $transactionDate
             );
         }
 
@@ -150,19 +150,19 @@ class OpticsAccount extends Model
             'category' => $category,
             'expense_category_id' => $categoryId,
             'description' => $description,
-            'transaction_date' => $transactionDate,  // <- Use parameter or default
+            'transaction_date' => $transactionDate,
             'created_by' => auth()->id(),
         ]);
 
-        // Create Main Account Credit Voucher - Pass date parameter
-        MainAccount::createCreditVoucher(
+        // Create Main Account Debit Voucher (Money going out - PAYMENT)
+        MainAccount::createDebitVoucher(
             amount: $amount,
             narration: "Optics Expense - {$category}: {$description}",
             sourceAccount: 'optics',
             sourceTransactionType: 'expense',
             sourceVoucherNo: $transaction->transaction_no,
             sourceReferenceId: $transaction->id,
-            date: $transactionDate  // <- Pass the transaction date
+            date: $transactionDate
         );
 
         return $transaction;

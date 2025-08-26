@@ -45,15 +45,15 @@ class HospitalAccount extends Model
             'added_by' => auth()->id(),
         ]);
 
-        // Create Main Account Debit Voucher (Money coming in) - Pass date parameter
-        MainAccount::createDebitVoucher(
+        // Create Main Account Credit Voucher (Money coming in - RECEIPT)
+        MainAccount::createCreditVoucher(
             amount: $amount,
             narration: "Hospital Fund In - {$purpose}: {$description}",
             sourceAccount: 'hospital',
             sourceTransactionType: 'fund_in',
             sourceVoucherNo: $fundTransaction->voucher_no,
             sourceReferenceId: $fundTransaction->id,
-            date: $transactionDate  // <- Pass the transaction date
+            date: $transactionDate
         );
     }
 
@@ -74,15 +74,15 @@ class HospitalAccount extends Model
             'added_by' => auth()->id(),
         ]);
 
-        // Create Main Account Credit Voucher (Money going out) - Pass date parameter
-        MainAccount::createCreditVoucher(
+        // Create Main Account Debit Voucher (Money going out - PAYMENT)
+        MainAccount::createDebitVoucher(
             amount: $amount,
             narration: "Hospital Fund Out - {$purpose}: {$description}",
             sourceAccount: 'hospital',
             sourceTransactionType: 'fund_out',
             sourceVoucherNo: $fundTransaction->voucher_no,
             sourceReferenceId: $fundTransaction->id,
-            date: $transactionDate  // <- Pass the transaction date
+            date: $transactionDate
         );
     }
 
@@ -128,15 +128,15 @@ class HospitalAccount extends Model
                 'narration' => $existingVoucher->narration . " + Hospital Income - {$category}: {$description}",
             ]);
         } else {
-            // Create new Main Account Debit Voucher (Money coming in) - Pass date parameter
-            MainAccount::createDebitVoucher(
+            // Create new Main Account Credit Voucher (Money coming in - RECEIPT)
+            MainAccount::createCreditVoucher(
                 amount: $amount,
                 narration: "Hospital Income - {$category}: {$description}",
                 sourceAccount: 'hospital',
                 sourceTransactionType: 'income',
                 sourceVoucherNo: $transaction->transaction_no,
                 sourceReferenceId: $transaction->id,
-                date: $transactionDate  // <- Pass the transaction date
+                date: $transactionDate
             );
         }
 
@@ -161,15 +161,15 @@ class HospitalAccount extends Model
             'created_by' => auth()->id(),
         ]);
 
-        // Create Main Account Credit Voucher - Pass date parameter
-        MainAccount::createCreditVoucher(
+        // Create Main Account Debit Voucher (Money going out - PAYMENT)
+        MainAccount::createDebitVoucher(
             amount: $amount,
             narration: "Hospital Expense - {$category}: {$description}",
             sourceAccount: 'hospital',
             sourceTransactionType: 'expense',
             sourceVoucherNo: $transaction->transaction_no,
             sourceReferenceId: $transaction->id,
-            date: $transactionDate  // <- Pass the transaction date
+            date: $transactionDate
         );
 
         return $transaction;

@@ -114,9 +114,9 @@ class MainAccountVoucher extends Model
 
         $balance = 0;
         foreach ($vouchers as $voucher) {
-            if ($voucher->voucher_type === 'Debit') {
+            if ($voucher->voucher_type === 'Credit') { // আসা (+)
                 $balance += $voucher->amount;
-            } else {
+            } else { // Debit - যাওয়া (-)
                 $balance -= $voucher->amount;
             }
         }
@@ -124,19 +124,21 @@ class MainAccountVoucher extends Model
         return $balance;
     }
 
-    public static function getDailyTotals($date): array
+    public static function getDailyTotals($date)
     {
-        $vouchers = self::whereDate('date', $date)->get();
+        $debitTotal = self::where('date', $date)
+            ->where('voucher_type', 'Debit')
+            ->sum('amount'); // যাওয়া
 
-        $debitTotal = $vouchers->where('voucher_type', 'Debit')->sum('amount');
-        $creditTotal = $vouchers->where('voucher_type', 'Credit')->sum('amount');
+        $creditTotal = self::where('date', $date)
+            ->where('voucher_type', 'Credit')
+            ->sum('amount'); // আসা
 
         return [
-            'debit_total' => $debitTotal,
-            'credit_total' => $creditTotal,
-            'net_change' => $debitTotal - $creditTotal,
-            'voucher_count' => $vouchers->count()
+            'debit_total' => (float) $debitTotal,
+            'credit_total' => (float) $creditTotal,
+            'net_change' => (float) ($creditTotal - $debitTotal), // আসা - যাওয়া
+            'voucher_count' => self::where('date', $date)->count()
         ];
     }
-
 }

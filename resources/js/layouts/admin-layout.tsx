@@ -138,9 +138,11 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
 
         // For account sections
         if (currentPattern === 'account.*') {
-            return currentRouteName?.includes('hospital-account') ||
+            return currentRouteName?.includes('main-account') ||
+                currentRouteName?.includes('hospital-account') ||
                 currentRouteName?.includes('medicine-account') ||
                 currentRouteName?.includes('optics-account') ||
+                window.location.pathname.includes('/main-account') ||
                 window.location.pathname.includes('/hospital-account') ||
                 window.location.pathname.includes('/medicine-account') ||
                 window.location.pathname.includes('/optics-account');
@@ -188,9 +190,11 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
 
     // Check if account section is active
     const isAccountSectionActive = () => {
-        return currentRouteName?.includes('hospital-account') ||
+        return currentRouteName?.includes('main-account') ||
+            currentRouteName?.includes('hospital-account') ||
             currentRouteName?.includes('medicine-account') ||
             currentRouteName?.includes('optics-account') ||
+            window.location.pathname.includes('/main-account') ||
             window.location.pathname.includes('/hospital-account') ||
             window.location.pathname.includes('/medicine-account') ||
             window.location.pathname.includes('/optics-account');
@@ -199,6 +203,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     // Check if any account section child is active
     const isAccountSectionChildActive = () => {
         const accountPaths = [
+            '/main-account',
             '/hospital-account',
             '/medicine-account',
             '/optics-account'
@@ -429,6 +434,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
         },
 
         // Account Section with dropdown (Super Admin only)
+
         {
             name: 'Account Management',
             href: '#',
@@ -436,6 +442,13 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             current: 'account.*',
             roles: ['Super Admin'],
             children: [
+                {
+                    name: 'Main Account',
+                    href: route('main-account.index'),
+                    icon: DollarSign,
+                    current: 'main-account.*',
+                    roles: ['Super Admin']
+                },
                 {
                     name: 'Hospital Account',
                     href: '/hospital-account',
@@ -757,11 +770,20 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                             </button>
 
                                             {/* Account Dropdown Items */}
-                                            <div className={`mt-1 space-y-1 transition-all duration-200 overflow-hidden ${accountSectionOpen || anyAccountChildActive ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                                }`}>
+                                            <div className={`mt-1 space-y-1 transition-all duration-200 overflow-hidden ${accountSectionOpen || anyAccountChildActive ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
                                                 {item.children?.map((childItem) => {
                                                     const ChildIcon = childItem.icon;
-                                                    const isChildActive = window.location.pathname.startsWith(childItem.href);
+                                                    let isChildActive = false;
+
+                                                    // Special handling for main-account routes
+                                                    if (childItem.current === 'main-account.*') {
+                                                        isChildActive = currentRouteName?.startsWith('main-account') ||
+                                                            window.location.pathname.startsWith('/main-account');
+                                                    } else {
+                                                        // For other account routes
+                                                        isChildActive = window.location.pathname.startsWith(childItem.href) ||
+                                                            currentRouteName?.startsWith(childItem.current.replace('.*', ''));
+                                                    }
 
                                                     return (
                                                         <Link
@@ -772,8 +794,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                                                                 }`}
                                                         >
-                                                            <ChildIcon className={`flex-shrink-0 h-4 w-4 mr-2 ${isChildActive ? 'text-emerald-600' : 'text-gray-400 group-hover:text-gray-500'
-                                                                }`} />
+                                                            <ChildIcon className={`flex-shrink-0 h-4 w-4 mr-2 ${isChildActive ? 'text-emerald-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
                                                             <span>{childItem.name}</span>
                                                         </Link>
                                                     );

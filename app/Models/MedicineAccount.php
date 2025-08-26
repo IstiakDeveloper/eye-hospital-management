@@ -45,15 +45,15 @@ class MedicineAccount extends Model
             'added_by' => auth()->id(),
         ]);
 
-        // Create Main Account Debit Voucher (Money coming in) - Pass date parameter
-        MainAccount::createDebitVoucher(
+        // Create Main Account Credit Voucher (Money coming in - RECEIPT)
+        MainAccount::createCreditVoucher(
             amount: $amount,
             narration: "Medicine Fund In - {$purpose}: {$description}",
             sourceAccount: 'medicine',
             sourceTransactionType: 'fund_in',
             sourceVoucherNo: $fundTransaction->voucher_no,
             sourceReferenceId: $fundTransaction->id,
-            date: $transactionDate  // <- Pass the transaction date
+            date: $transactionDate
         );
     }
 
@@ -74,15 +74,15 @@ class MedicineAccount extends Model
             'added_by' => auth()->id(),
         ]);
 
-        // Create Main Account Credit Voucher (Money going out) - Pass date parameter
-        MainAccount::createCreditVoucher(
+        // Create Main Account Debit Voucher (Money going out - PAYMENT)
+        MainAccount::createDebitVoucher(
             amount: $amount,
             narration: "Medicine Fund Out - {$purpose}: {$description}",
             sourceAccount: 'medicine',
             sourceTransactionType: 'fund_out',
             sourceVoucherNo: $fundTransaction->voucher_no,
             sourceReferenceId: $fundTransaction->id,
-            date: $transactionDate  // <- Pass the transaction date
+            date: $transactionDate
         );
     }
 
@@ -121,15 +121,15 @@ class MedicineAccount extends Model
                 'narration' => $existingVoucher->narration . " + Medicine Income - {$category}: {$description}",
             ]);
         } else {
-            // Create new Main Account Debit Voucher (Money coming in) - Pass date parameter
-            MainAccount::createDebitVoucher(
+            // Create new Main Account Credit Voucher (Money coming in - RECEIPT)
+            MainAccount::createCreditVoucher(
                 amount: $amount,
                 narration: "Medicine Income - {$category}: {$description}",
                 sourceAccount: 'medicine',
                 sourceTransactionType: 'income',
                 sourceVoucherNo: $transaction->transaction_no,
                 sourceReferenceId: $transaction->id,
-                date: $transactionDate  // <- Pass the transaction date
+                date: $transactionDate
             );
         }
 
@@ -154,15 +154,15 @@ class MedicineAccount extends Model
             'created_by' => auth()->id(),
         ]);
 
-        // Create Main Account Credit Voucher - Pass date parameter
-        MainAccount::createCreditVoucher(
+        // Create Main Account Debit Voucher (Money going out - PAYMENT)
+        MainAccount::createDebitVoucher(
             amount: $amount,
             narration: "Medicine Expense - {$category}: {$description}",
             sourceAccount: 'medicine',
             sourceTransactionType: 'expense',
             sourceVoucherNo: $transaction->transaction_no,
             sourceReferenceId: $transaction->id,
-            date: $transactionDate  // <- Pass the transaction date
+            date: $transactionDate
         );
 
         return $transaction;

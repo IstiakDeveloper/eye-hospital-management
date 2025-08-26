@@ -216,7 +216,7 @@ const PrintableContent = ({
             <h1 className="text-xl font-bold text-black mb-2">{hospital_name}</h1>
             <p className="text-base text-black mb-3">{hospital_location}</p>
             <p className="text-base font-semibold text-black">
-                Yearly {voucher_type === 'Debit' ? 'Debit/Receipt' : 'Credit/Payment'} Voucher Report
+                Yearly {voucher_type === 'Debit' ? 'Debit/Payment' : 'Credit/Receipt'} Voucher Report
             </p>
         </div>
 

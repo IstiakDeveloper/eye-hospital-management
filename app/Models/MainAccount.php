@@ -16,10 +16,9 @@ class MainAccount extends Model
         return $this->hasMany(MainAccountVoucher::class, 'id', 'id');
     }
 
-
     /**
-     * Create a debit voucher entry (Money coming into main account)
-     * This happens when sub-accounts receive income or fund_in
+     * Create a debit voucher entry (Money going out from main account - PAYMENT)
+     * This happens when sub-accounts have expenses or fund_out
      */
     public static function createDebitVoucher(
         float $amount,
@@ -31,7 +30,7 @@ class MainAccount extends Model
         ?string $date = null
     ): MainAccountVoucher {
         $account = self::firstOrCreate([]);
-        $account->increment('balance', $amount);
+        $account->decrement('balance', $amount); // টাকা কমবে
 
         return MainAccountVoucher::create([
             'voucher_no' => self::generateVoucherNo(),
@@ -48,8 +47,8 @@ class MainAccount extends Model
     }
 
     /**
-     * Create a credit voucher entry (Money going out from main account)
-     * This happens when sub-accounts have expenses or fund_out
+     * Create a credit voucher entry (Money coming into main account - RECEIPT)
+     * This happens when sub-accounts receive income or fund_in
      */
     public static function createCreditVoucher(
         float $amount,
@@ -58,15 +57,15 @@ class MainAccount extends Model
         string $sourceTransactionType,
         ?string $sourceVoucherNo = null,
         ?int $sourceReferenceId = null,
-        ?string $date = null  // <- Add this parameter
+        ?string $date = null
     ): MainAccountVoucher {
         $account = self::firstOrCreate([]);
-        $account->decrement('balance', $amount);
+        $account->increment('balance', $amount); // টাকা বাড়বে
 
         return MainAccountVoucher::create([
             'voucher_no' => self::generateVoucherNo(),
             'voucher_type' => 'Credit',
-            'date' => $date ?? now()->toDateString(),  // <- Use parameter or default
+            'date' => $date ?? now()->toDateString(),
             'narration' => $narration,
             'amount' => $amount,
             'source_account' => $sourceAccount,
@@ -97,46 +96,44 @@ class MainAccount extends Model
             ->get();
     }
 
+    public static function getBalance()
+    {
+        $totalCredit = MainAccountVoucher::where('voucher_type', 'Credit')->sum('amount'); // আসা
+        $totalDebit = MainAccountVoucher::where('voucher_type', 'Debit')->sum('amount');   // যাওয়া
 
+        return $totalCredit - $totalDebit; // আসা - যাওয়া
+    }
 
-public static function getBalance()
-{
-    $totalCredit = MainAccountVoucher::where('voucher_type', 'Credit')->sum('amount');
-    $totalDebit = MainAccountVoucher::where('voucher_type', 'Debit')->sum('amount');
+    public static function getAccountSummary()
+    {
+        $totalDebit = MainAccountVoucher::where('voucher_type', 'Debit')->sum('amount');   // যাওয়া
+        $totalCredit = MainAccountVoucher::where('voucher_type', 'Credit')->sum('amount'); // আসা
 
-    return $totalCredit - $totalDebit;
-}
+        return [
+            'total_debit' => (float) $totalDebit,
+            'total_credit' => (float) $totalCredit,
+            'net_balance' => (float) ($totalCredit - $totalDebit) // আসা - যাওয়া
+        ];
+    }
 
-public static function getAccountSummary()
-{
-    $totalDebit = MainAccountVoucher::where('voucher_type', 'Debit')->sum('amount');
-    $totalCredit = MainAccountVoucher::where('voucher_type', 'Credit')->sum('amount');
+    public static function getMonthlyReport($year, $month)
+    {
+        $totalDebit = MainAccountVoucher::whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->where('voucher_type', 'Debit')
+            ->sum('amount');
 
-    return [
-        'total_debit' => (float) $totalDebit,
-        'total_credit' => (float) $totalCredit,
-        'net_balance' => (float) ($totalCredit - $totalDebit)
-    ];
-}
+        $totalCredit = MainAccountVoucher::whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->where('voucher_type', 'Credit')
+            ->sum('amount');
 
-public static function getMonthlyReport($year, $month)
-{
-    $totalDebit = MainAccountVoucher::whereYear('date', $year)
-        ->whereMonth('date', $month)
-        ->where('voucher_type', 'Debit')
-        ->sum('amount');
-
-    $totalCredit = MainAccountVoucher::whereYear('date', $year)
-        ->whereMonth('date', $month)
-        ->where('voucher_type', 'Credit')
-        ->sum('amount');
-
-    return [
-        'debit_total' => (float) $totalDebit,
-        'credit_total' => (float) $totalCredit,
-        'net_change' => (float) ($totalCredit - $totalDebit)
-    ];
-}
+        return [
+            'debit_total' => (float) $totalDebit,
+            'credit_total' => (float) $totalCredit,
+            'net_change' => (float) ($totalCredit - $totalDebit) // আসা - যাওয়া
+        ];
+    }
 
     public static function getSourceAccountSummary(): array
     {
@@ -152,6 +149,4 @@ public static function getMonthlyReport($year, $month)
             ->groupBy('source_account')
             ->toArray();
     }
-
-
 }

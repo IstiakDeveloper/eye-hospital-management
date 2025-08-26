@@ -82,7 +82,7 @@ class MainAccountController extends Controller
             $summary = [
                 'total_debit' => $manualDebit,
                 'total_credit' => $manualCredit,
-                'net_balance' => $manualCredit - $manualDebit
+                'net_balance' => $manualCredit - $manualDebit // Credit - Debit (আসা - যাওয়া)
             ];
         }
 
