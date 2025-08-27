@@ -37,7 +37,7 @@ interface DashboardProps {
         description: string;
         date: string;
     }>;
-    expenseCategories: Array<{ id: number, name: string }>; // <- Add this line
+    expenseCategories: Array<{ id: number, name: string }>;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -45,8 +45,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     monthlyReport,
     recentTransactions,
     recentFundTransactions,
-    expenseCategories // <- Add this line
-
+    expenseCategories
 }) => {
     const [fundInModal, setFundInModal] = useState(false);
     const [fundOutModal, setFundOutModal] = useState(false);
@@ -56,10 +55,10 @@ const Dashboard: React.FC<DashboardProps> = ({
         purpose: '',
         description: '',
         category: '',
+        expense_category_id: '',
         date: new Date().toISOString().split('T')[0]
     });
 
-    // Format date helper
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-GB', {
             day: '2-digit',
@@ -68,7 +67,6 @@ const Dashboard: React.FC<DashboardProps> = ({
         });
     };
 
-    // Format amount helper
     const formatAmount = (amount: number) => {
         return new Intl.NumberFormat('en-BD', {
             style: 'currency',
@@ -78,10 +76,32 @@ const Dashboard: React.FC<DashboardProps> = ({
         }).format(amount).replace('BDT', '৳');
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+
+        if (name === 'expense_category_id') {
+            const selectedCategory = expenseCategories.find(cat => cat.id.toString() === value);
+            setFormData({
+                ...formData,
+                expense_category_id: value,
+                category: selectedCategory?.name || ''
+            });
+        } else {
+            setFormData({
+                ...formData,
+                [name]: value
+            });
+        }
+    };
+
+    const resetForm = () => {
         setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
+            amount: '',
+            purpose: '',
+            description: '',
+            category: '',
+            expense_category_id: '',
+            date: new Date().toISOString().split('T')[0]
         });
     };
 
@@ -89,7 +109,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         router.post('/medicine-account/fund-in', formData, {
             onSuccess: () => {
                 setFundInModal(false);
-                setFormData({ amount: '', purpose: '', description: '', category: '', date: new Date().toISOString().split('T')[0] });
+                resetForm();
             }
         });
     };
@@ -98,16 +118,24 @@ const Dashboard: React.FC<DashboardProps> = ({
         router.post('/medicine-account/fund-out', formData, {
             onSuccess: () => {
                 setFundOutModal(false);
-                setFormData({ amount: '', purpose: '', description: '', category: '', date: new Date().toISOString().split('T')[0] });
+                resetForm();
             }
         });
     };
 
     const handleExpense = () => {
-        router.post('/medicine-account/expense', formData, {
+        const expenseData = {
+            amount: formData.amount,
+            category: formData.category,
+            expense_category_id: formData.expense_category_id || null,
+            description: formData.description,
+            date: formData.date
+        };
+
+        router.post('/medicine-account/expense', expenseData, {
             onSuccess: () => {
                 setExpenseModal(false);
-                setFormData({ amount: '', purpose: '', description: '', category: '', date: new Date().toISOString().split('T')[0] });
+                resetForm();
             }
         });
     };
@@ -396,21 +424,32 @@ const Dashboard: React.FC<DashboardProps> = ({
                         </div>
                         <div className="mb-4">
                             <label className="block text-sm font-medium mb-2">Category *</label>
-                            <input
-                                type="text"
-                                name="category"
-                                value={formData.category}
+                            <select
+                                name="expense_category_id"
+                                value={formData.expense_category_id}
                                 onChange={handleInputChange}
-                                list="expense-categories"
-                                placeholder="Type or select a category"
                                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
-                            />
-                            <datalist id="expense-categories">
+                            >
+                                <option value="">Select Category</option>
                                 {expenseCategories?.map((category) => (
-                                    <option key={category.id} value={category.name} />
+                                    <option key={category.id} value={category.id}>
+                                        {category.name}
+                                    </option>
                                 ))}
-                            </datalist>
+                            </select>
+                            {!formData.expense_category_id && (
+                                <div className="mt-2">
+                                    <input
+                                        type="text"
+                                        name="category"
+                                        value={formData.category}
+                                        onChange={handleInputChange}
+                                        placeholder="Or type custom category"
+                                        className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+                            )}
                         </div>
                         <div className="mb-4">
                             <label className="block text-sm font-medium mb-2">Date *</label>
@@ -438,7 +477,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <div className="flex gap-2">
                             <button
                                 onClick={handleExpense}
-                                disabled={!formData.amount || !formData.category || !formData.description || parseFloat(formData.amount) > balance}
+                                disabled={!formData.amount || (!formData.category && !formData.expense_category_id) || !formData.description || parseFloat(formData.amount) > balance}
                                 className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                             >
                                 Add Expense

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
-import AdminLayout from '@/layouts/admin-layout';
+import AdminLayout from '@/layouts/MainAccountLayout';
 import { Calendar, FileText, TrendingUp, TrendingDown } from 'lucide-react';
 
 const Reports: React.FC = () => {
@@ -48,9 +48,6 @@ const Reports: React.FC = () => {
     return (
         <AdminLayout>
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-3xl font-bold text-gray-900">Main Account Reports</h1>
-                </div>
 
                 <div className="bg-white rounded-lg shadow-sm border p-8 max-w-2xl mx-auto">
                     <form onSubmit={handleSubmit} className="space-y-6">

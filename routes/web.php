@@ -549,6 +549,8 @@ Route::middleware(['auth', 'super-admin'])->group(function () {
         Route::put('/categories/{category}', [HospitalAccountController::class, 'updateCategory'])->name('categories.update');
         Route::get('/monthly-report', [HospitalAccountController::class, 'monthlyReport'])->name('monthly-report');
         Route::get('/balance-sheet', [HospitalAccountController::class, 'balanceSheet'])->name('balance-sheet');
+        Route::post('/other-income', [HospitalAccountController::class, 'addOtherIncome'])->name('other-income');
+        Route::delete('/fund-transactions/{fundTransaction}', [HospitalAccountController::class, 'deleteFundTransaction'])->name('fund-transactions.delete');
     });
 
     Route::prefix('medicine-account')->name('medicine-account.')->group(function () {
@@ -594,6 +596,7 @@ Route::middleware(['auth', 'verified'])->prefix('main-account')->name('main-acco
     Route::get('/daily-report', [MainAccountController::class, 'dailyReport'])->name('daily-report');
     Route::get('/monthly-report', [MainAccountController::class, 'monthlyReport'])->name('monthly-report');
     Route::get('/yearly-report', [MainAccountController::class, 'yearlyReport'])->name('yearly-report');
+    Route::get('/bank-report', [MainAccountController::class, 'bankReport'])->name('bank-report');
 });
 
 Route::middleware(['auth', 'super-admin'])->prefix('optics')->name('optics.')->group(function () {

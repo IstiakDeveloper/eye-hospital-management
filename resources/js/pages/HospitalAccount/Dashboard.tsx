@@ -35,7 +35,7 @@ interface DashboardProps {
         description: string;
         date: string;
     }>;
-    expenseCategories: Array<{id: number, name: string}>;
+    expenseCategories: Array<{ id: number, name: string }>;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -48,11 +48,14 @@ const Dashboard: React.FC<DashboardProps> = ({
     const [fundInModal, setFundInModal] = useState(false);
     const [fundOutModal, setFundOutModal] = useState(false);
     const [expenseModal, setExpenseModal] = useState(false);
+    const [otherIncomeModal, setOtherIncomeModal] = useState(false);
+
     const [formData, setFormData] = useState({
         amount: '',
         purpose: '',
         description: '',
         category: '',
+        expense_category_id: '', // Add this field
         date: new Date().toISOString().split('T')[0]
     });
 
@@ -73,10 +76,33 @@ const Dashboard: React.FC<DashboardProps> = ({
         }).format(amount).replace('BDT', '৳');
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+
+        // If category is selected, also set the category name
+        if (name === 'expense_category_id') {
+            const selectedCategory = expenseCategories.find(cat => cat.id.toString() === value);
+            setFormData({
+                ...formData,
+                expense_category_id: value,
+                category: selectedCategory?.name || ''
+            });
+        } else {
+            setFormData({
+                ...formData,
+                [name]: value
+            });
+        }
+    };
+
+    const resetForm = () => {
         setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
+            amount: '',
+            purpose: '',
+            description: '',
+            category: '',
+            expense_category_id: '',
+            date: new Date().toISOString().split('T')[0]
         });
     };
 
@@ -84,7 +110,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         router.post('/hospital-account/fund-in', formData, {
             onSuccess: () => {
                 setFundInModal(false);
-                setFormData({ amount: '', purpose: '', description: '', category: '', date: new Date().toISOString().split('T')[0] });
+                resetForm();
             }
         });
     };
@@ -93,16 +119,41 @@ const Dashboard: React.FC<DashboardProps> = ({
         router.post('/hospital-account/fund-out', formData, {
             onSuccess: () => {
                 setFundOutModal(false);
-                setFormData({ amount: '', purpose: '', description: '', category: '', date: new Date().toISOString().split('T')[0] });
+                resetForm();
             }
         });
     };
 
     const handleExpense = () => {
-        router.post('/hospital-account/expense', formData, {
+        // Prepare data for expense
+        const expenseData = {
+            amount: formData.amount,
+            category: formData.category,
+            expense_category_id: formData.expense_category_id || null,
+            description: formData.description,
+            date: formData.date
+        };
+
+        router.post('/hospital-account/expense', expenseData, {
             onSuccess: () => {
                 setExpenseModal(false);
-                setFormData({ amount: '', purpose: '', description: '', category: '', date: new Date().toISOString().split('T')[0] });
+                resetForm();
+            }
+        });
+    };
+
+    const handleOtherIncome = () => {
+        const incomeData = {
+            amount: formData.amount,
+            category: formData.category,
+            description: formData.description,
+            date: formData.date
+        };
+
+        router.post('/hospital-account/other-income', incomeData, {
+            onSuccess: () => {
+                setOtherIncomeModal(false);
+                resetForm();
             }
         });
     };
@@ -176,6 +227,13 @@ const Dashboard: React.FC<DashboardProps> = ({
                 >
                     <TrendingDown className="w-4 h-4 mr-2" />
                     Add Expense
+                </button>
+                <button
+                    onClick={() => setOtherIncomeModal(true)}
+                    className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                >
+                    <PlusCircle className="w-4 h-4 mr-2" />
+                    Other Income
                 </button>
             </div>
 
@@ -391,21 +449,32 @@ const Dashboard: React.FC<DashboardProps> = ({
                         </div>
                         <div className="mb-4">
                             <label className="block text-sm font-medium mb-2">Category *</label>
-                            <input
-                                type="text"
-                                name="category"
-                                value={formData.category}
+                            <select
+                                name="expense_category_id"
+                                value={formData.expense_category_id}
                                 onChange={handleInputChange}
-                                list="expense-categories"
-                                placeholder="Type or select a category"
                                 className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
-                            />
-                            <datalist id="expense-categories">
+                            >
+                                <option value="">Select Category</option>
                                 {expenseCategories?.map((category) => (
-                                    <option key={category.id} value={category.name} />
+                                    <option key={category.id} value={category.id}>
+                                        {category.name}
+                                    </option>
                                 ))}
-                            </datalist>
+                            </select>
+                            {!formData.expense_category_id && (
+                                <div className="mt-2">
+                                    <input
+                                        type="text"
+                                        name="category"
+                                        value={formData.category}
+                                        onChange={handleInputChange}
+                                        placeholder="Or type custom category"
+                                        className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+                            )}
                         </div>
                         <div className="mb-4">
                             <label className="block text-sm font-medium mb-2">Date *</label>
@@ -433,13 +502,84 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <div className="flex gap-2">
                             <button
                                 onClick={handleExpense}
-                                disabled={!formData.amount || !formData.category || !formData.description || parseFloat(formData.amount) > balance}
+                                disabled={!formData.amount || (!formData.category && !formData.expense_category_id) || !formData.description || parseFloat(formData.amount) > balance}
                                 className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                             >
                                 Add Expense
                             </button>
                             <button
                                 onClick={() => setExpenseModal(false)}
+                                className="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {otherIncomeModal && (
+                <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
+                    <div className="bg-white rounded-lg p-6 w-96 max-w-lg mx-4">
+                        <h3 className="text-lg font-semibold mb-4">Add Other Income</h3>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Amount *</label>
+                            <input
+                                type="number"
+                                name="amount"
+                                value={formData.amount}
+                                onChange={handleInputChange}
+                                placeholder="Enter amount"
+                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                required
+                            />
+                        </div>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Category *</label>
+                            <input
+                                type="text"
+                                name="category"
+                                value={formData.category}
+                                onChange={handleInputChange}
+                                placeholder="e.g., Bank Interest, Commission, Refund etc."
+                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                required
+                            />
+                        </div>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Date *</label>
+                            <input
+                                type="date"
+                                name="date"
+                                value={formData.date}
+                                onChange={handleInputChange}
+                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                required
+                            />
+                        </div>
+                        <div className="mb-4">
+                            <label className="block text-sm font-medium mb-2">Description *</label>
+                            <textarea
+                                name="description"
+                                value={formData.description}
+                                onChange={handleInputChange}
+                                placeholder="Enter description"
+                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                rows={3}
+                                required
+                            />
+                        </div>
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleOtherIncome}
+                                disabled={!formData.amount || !formData.category || !formData.description}
+                                className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            >
+                                Add Income
+                            </button>
+                            <button
+                                onClick={() => setOtherIncomeModal(false)}
                                 className="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600"
                             >
                                 Cancel

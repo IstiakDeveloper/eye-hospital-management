@@ -22,12 +22,13 @@ class MedicineTransaction extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
-        'transaction_date' => 'date'
+        'transaction_date' => 'date',
     ];
 
+    // Relationships
     public function expenseCategory(): BelongsTo
     {
-        return $this->belongsTo(MedicineExpenseCategory::class);
+        return $this->belongsTo(MedicineExpenseCategory::class, 'expense_category_id');
     }
 
     public function createdBy(): BelongsTo
@@ -46,14 +47,24 @@ class MedicineTransaction extends Model
         return $query->where('type', 'expense');
     }
 
-    public function scopeByCategory($query, string $category)
+    public function scopeByCategory($query, $categoryId)
     {
-        return $query->where('category', $category);
+        return $query->where('expense_category_id', $categoryId);
+    }
+
+    public function scopeByDateRange($query, $startDate, $endDate)
+    {
+        return $query->whereBetween('transaction_date', [$startDate, $endDate]);
     }
 
     public function scopeThisMonth($query)
     {
         return $query->whereMonth('transaction_date', now()->month)
-            ->whereYear('transaction_date', now()->year);
+                    ->whereYear('transaction_date', now()->year);
+    }
+
+    public function scopeThisYear($query)
+    {
+        return $query->whereYear('transaction_date', now()->year);
     }
 }

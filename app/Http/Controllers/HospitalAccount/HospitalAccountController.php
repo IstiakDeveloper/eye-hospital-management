@@ -4,7 +4,7 @@ namespace App\Http\Controllers\HospitalAccount;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\{HospitalAccount, HospitalFundTransaction, HospitalTransaction, HospitalExpenseCategory};
+use App\Models\{HospitalAccount, HospitalFundTransaction, HospitalTransaction, HospitalExpenseCategory, MainAccount, MainAccountVoucher};
 use Inertia\Inertia;
 use DB;
 
@@ -23,16 +23,17 @@ class HospitalAccountController extends Controller
             ->latest()->take(5)->get();
 
         // Add expense categories
-        $expenseCategories = HospitalExpenseCategory::all();
+        $expenseCategories = HospitalExpenseCategory::where('is_active', true)->get();
 
         return Inertia::render('HospitalAccount/Dashboard', compact(
             'balance',
             'monthlyReport',
             'recentTransactions',
             'recentFundTransactions',
-            'expenseCategories'  // <- Add this
+            'expenseCategories'
         ));
     }
+
     // Fund In
     public function fundIn(Request $request)
     {
@@ -47,7 +48,7 @@ class HospitalAccountController extends Controller
             $request->amount,
             $request->purpose,
             $request->description,
-            $request->date  // <- Add date parameter
+            $request->date
         );
 
         return back()->with('success', 'Fund added successfully!');
@@ -71,13 +72,13 @@ class HospitalAccountController extends Controller
             $request->amount,
             $request->purpose,
             $request->description,
-            $request->date  // <- Add date parameter
+            $request->date
         );
 
         return back()->with('success', 'Fund withdrawn successfully!');
     }
 
-    // Add Expense
+    // Add Expense - UPDATED
     public function addExpense(Request $request)
     {
         $request->validate([
@@ -92,12 +93,31 @@ class HospitalAccountController extends Controller
             return back()->withErrors(['amount' => 'Insufficient balance!']);
         }
 
+        // If expense_category_id is provided, get the category name from it
+        $categoryName = $request->category;
+        $categoryId = $request->expense_category_id;
+
+        // If category ID is provided but category name is empty, get the name
+        if ($categoryId && empty($categoryName)) {
+            $category = HospitalExpenseCategory::find($categoryId);
+            $categoryName = $category ? $category->name : $request->category;
+        }
+
+        // If category name is provided but no ID, try to find or create the category
+        if (!$categoryId && $categoryName) {
+            $category = HospitalExpenseCategory::firstOrCreate(
+                ['name' => $categoryName],
+                ['is_active' => true]
+            );
+            $categoryId = $category->id;
+        }
+
         HospitalAccount::addExpense(
-            $request->amount,
-            $request->category,
-            $request->description,
-            $request->expense_category_id,
-            $request->date  // <- Add date parameter
+            amount: $request->amount,
+            category: $categoryName,
+            description: $request->description,
+            categoryId: $categoryId,
+            date: $request->date
         );
 
         return back()->with('success', 'Expense added successfully!');
@@ -118,7 +138,7 @@ class HospitalAccountController extends Controller
         }
 
         $transactions = $query->latest('transaction_date')->paginate(20);
-        $categories = HospitalExpenseCategory::active()->get();
+        $categories = HospitalExpenseCategory::where('is_active', true)->get();
 
         return Inertia::render('HospitalAccount/Transactions', compact('transactions', 'categories'));
     }
@@ -200,5 +220,65 @@ class HospitalAccountController extends Controller
             'totalFundIn',
             'totalFundOut'
         ));
+    }
+
+
+    public function addOtherIncome(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'category' => 'required|string|max:255',
+            'description' => 'required|string|max:500',
+            'date' => 'required|date',
+        ]);
+
+        HospitalAccount::addIncome(
+            amount: $request->amount,
+            category: $request->category,
+            description: $request->description,
+            referenceType: 'other_income',
+            referenceId: null,
+            date: $request->date
+        );
+
+        return back()->with('success', 'Other income added successfully!');
+    }
+
+    public function deleteFundTransaction(HospitalFundTransaction $fundTransaction)
+    {
+        // Reverse the fund transaction
+        $account = HospitalAccount::firstOrCreate([]);
+
+        if ($fundTransaction->type === 'fund_in') {
+            // Reverse fund in - decrease balance
+            $account->decrement('balance', $fundTransaction->amount);
+        } else {
+            // Reverse fund out - increase balance
+            $account->increment('balance', $fundTransaction->amount);
+        }
+
+        // Find and delete the related main account voucher
+        $mainAccountVoucher = MainAccountVoucher::where('source_voucher_no', $fundTransaction->voucher_no)
+            ->where('source_account', 'hospital')
+            ->where('source_reference_id', $fundTransaction->id)
+            ->first();
+
+        if ($mainAccountVoucher) {
+            // Reverse main account balance
+            $mainAccount = MainAccount::firstOrCreate([]);
+
+            if ($fundTransaction->type === 'fund_in') {
+                $mainAccount->decrement('balance', $fundTransaction->amount);
+            } else {
+                $mainAccount->increment('balance', $fundTransaction->amount);
+            }
+
+            $mainAccountVoucher->delete();
+        }
+
+        // Delete the fund transaction
+        $fundTransaction->delete();
+
+        return back()->with('success', 'Fund transaction deleted successfully!');
     }
 }

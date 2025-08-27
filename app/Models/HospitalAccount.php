@@ -99,7 +99,6 @@ class HospitalAccount extends Model
 
         $transactionDate = $date ?? now()->toDateString();
 
-        // Always create a new HospitalTransaction
         $transaction = HospitalTransaction::create([
             'transaction_no'   => 'HT-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
             'type'             => 'income',
@@ -112,14 +111,16 @@ class HospitalAccount extends Model
             'created_by'       => auth()->id(),
         ]);
 
-        // Check if voucher already exists for this date for hospital income
+        // 👉 Determine source_transaction_type dynamically
+        $sourceTransactionType = in_array($referenceType, ['other_income', 'bank_interest']) ? $referenceType : 'income';
+
+        // Check if voucher already exists
         $existingVoucher = MainAccountVoucher::where('source_account', 'hospital')
-            ->where('source_transaction_type', 'income')
+            ->where('source_transaction_type', $sourceTransactionType)
             ->where('date', $transactionDate)
             ->first();
 
         if ($existingVoucher) {
-            // Update existing voucher
             $mainAccount = MainAccount::firstOrCreate([]);
             $mainAccount->increment('balance', $amount);
 
@@ -128,12 +129,12 @@ class HospitalAccount extends Model
                 'narration' => $existingVoucher->narration . " + Hospital Income - {$category}: {$description}",
             ]);
         } else {
-            // Create new Main Account Credit Voucher (Money coming in - RECEIPT)
+            // 👉 Use dynamic sourceTransactionType here
             MainAccount::createCreditVoucher(
                 amount: $amount,
                 narration: "Hospital Income - {$category}: {$description}",
                 sourceAccount: 'hospital',
-                sourceTransactionType: 'income',
+                sourceTransactionType: $sourceTransactionType,
                 sourceVoucherNo: $transaction->transaction_no,
                 sourceReferenceId: $transaction->id,
                 date: $transactionDate
@@ -142,6 +143,7 @@ class HospitalAccount extends Model
 
         return $transaction;
     }
+
 
     public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null, ?string $date = null): HospitalTransaction
     {

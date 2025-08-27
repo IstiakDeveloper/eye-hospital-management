@@ -82,7 +82,7 @@ class MainAccountController extends Controller
             $summary = [
                 'total_debit' => $manualDebit,
                 'total_credit' => $manualCredit,
-                'net_balance' => $manualCredit - $manualDebit // Credit - Debit (আসা - যাওয়া)
+                'net_balance' => $manualCredit - $manualDebit
             ];
         }
 
@@ -370,4 +370,112 @@ class MainAccountController extends Controller
         $words = $formatter->format($amount);
         return ucwords($words) . ' Taka Only';
     }
+
+
+
+
+    public function bankReport(Request $request): Response
+    {
+        $validated = $request->validate([
+            'month' => 'nullable|integer|between:1,12',
+            'year' => 'nullable|integer|min:2020|max:2030',
+        ]);
+
+        $month = $validated['month'] ?? now()->month;
+        $year = $validated['year'] ?? now()->year;
+
+        // Get previous month balance
+        $previousMonth = $month == 1 ? 12 : $month - 1;
+        $previousYear = $month == 1 ? $year - 1 : $year;
+
+        $previousMonthBalance = MainAccountVoucher::whereMonth('date', '<', $month)
+            ->whereYear('date', '<=', $year)
+            ->selectRaw('
+            SUM(CASE WHEN voucher_type = "Credit" THEN amount ELSE 0 END) -
+            SUM(CASE WHEN voucher_type = "Debit" THEN amount ELSE 0 END) as balance
+        ')
+            ->first()->balance ?? 0;
+
+        // Get all dates in the month with transactions
+        $dates = MainAccountVoucher::whereMonth('date', $month)
+            ->whereYear('date', $year)
+            ->distinct()
+            ->pluck('date')
+            ->map(function ($date) {
+                return Carbon::parse($date)->format('Y-m-d');
+            })
+            ->sort()
+            ->values();
+
+        $bankData = [];
+        $runningBalance = $previousMonthBalance;
+
+        foreach ($dates as $date) {
+            $dayVouchers = MainAccountVoucher::whereDate('date', $date)
+                ->with(['createdBy'])
+                ->get();
+
+            // Credit Section
+            $fundIn = $dayVouchers->where('voucher_type', 'Credit')
+                ->where('source_transaction_type', 'fund_in')
+                ->sum('amount');
+
+            $income = $dayVouchers->where('voucher_type', 'Credit')
+                ->where('source_transaction_type', 'income')
+                ->sum('amount');
+
+            $otherIncome = $dayVouchers->where('voucher_type', 'Credit')
+                ->whereIn('source_transaction_type', ['other_income', 'bank_interest'])
+                ->sum('amount');
+
+            // Debit Section
+            $fundOut = $dayVouchers->where('voucher_type', 'Debit')
+                ->where('source_transaction_type', 'fund_out')
+                ->sum('amount');
+
+            $fixedAsset = $dayVouchers->where('voucher_type', 'Debit')
+                ->where('source_transaction_type', 'expense')
+                ->where('narration', 'like', '%Fixed Asset%')
+                ->sum('amount');
+
+            $expense = $dayVouchers->where('voucher_type', 'Debit')
+                ->where('source_transaction_type', 'expense')
+                ->where('narration', 'not like', '%Fixed Asset%')
+                ->sum('amount');
+
+            $totalCredit = $fundIn + $income + $otherIncome;
+            $totalDebit = $fundOut + $fixedAsset + $expense;
+
+            $runningBalance += ($totalCredit - $totalDebit);
+
+            $bankData[] = [
+                'date' => Carbon::parse($date)->format('d/m/Y'),
+                'date_raw' => $date,
+                'credit' => [
+                    'fund_in' => $fundIn,
+                    'income' => $income,
+                    'other_income' => $otherIncome,
+                    'total' => $totalCredit
+                ],
+                'debit' => [
+                    'fund_out' => $fundOut,
+                    'fixed_asset' => $fixedAsset,
+                    'expense' => $expense,
+                    'total' => $totalDebit
+                ],
+                'running_balance' => $runningBalance
+            ];
+        }
+
+        return Inertia::render('MainAccount/BankReport', [
+            'bankData' => $bankData,
+            'month' => $month,
+            'year' => $year,
+            'monthName' => Carbon::createFromDate($year, $month)->format('F Y'),
+            'previousMonthBalance' => $previousMonthBalance,
+            'currentBalance' => $runningBalance,
+        ]);
+    }
+
+
 }

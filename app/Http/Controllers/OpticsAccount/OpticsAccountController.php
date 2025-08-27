@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\{OpticsAccount, OpticsFundTransaction, OpticsTransaction, OpticsExpenseCategory};
 use Inertia\Inertia;
-use DB;
+use Inertia\Response;
+use Carbon\Carbon;
+use NumberFormatter;
 
 class OpticsAccountController extends Controller
 {
-    // Dashboard
-    public function index()
+    public function index(): Response
     {
         $balance = OpticsAccount::getBalance();
         $monthlyReport = OpticsAccount::monthlyReport(now()->year, now()->month);
@@ -22,15 +23,14 @@ class OpticsAccountController extends Controller
         $recentFundTransactions = OpticsFundTransaction::with('addedBy')
             ->latest()->take(5)->get();
 
-        // Add expense categories
-        $expenseCategories = OpticsExpenseCategory::all();
+        $expenseCategories = OpticsExpenseCategory::where('is_active', true)->get();
 
         return Inertia::render('OpticsAccount/Dashboard', compact(
             'balance',
             'monthlyReport',
             'recentTransactions',
             'recentFundTransactions',
-            'expenseCategories' // <- Add this
+            'expenseCategories'
         ));
     }
 
@@ -47,7 +47,7 @@ class OpticsAccountController extends Controller
             $request->amount,
             $request->purpose,
             $request->description,
-            $request->date  // <- Add this parameter
+            $request->date
         );
 
         return back()->with('success', 'Fund added successfully!');
@@ -70,7 +70,7 @@ class OpticsAccountController extends Controller
             $request->amount,
             $request->purpose,
             $request->description,
-            $request->date  // <- Add this parameter
+            $request->date
         );
 
         return back()->with('success', 'Fund withdrawn successfully!');
@@ -90,44 +90,89 @@ class OpticsAccountController extends Controller
             return back()->withErrors(['amount' => 'Insufficient balance!']);
         }
 
+        $categoryName = $request->category;
+        $categoryId = $request->expense_category_id;
+
+        if ($categoryId && empty($categoryName)) {
+            $category = OpticsExpenseCategory::find($categoryId);
+            $categoryName = $category ? $category->name : $request->category;
+        }
+
+        if (!$categoryId && $categoryName) {
+            $category = OpticsExpenseCategory::firstOrCreate(
+                ['name' => $categoryName],
+                ['is_active' => true]
+            );
+            $categoryId = $category->id;
+        }
+
         OpticsAccount::addExpense(
-            $request->amount,
-            $request->category,
-            $request->description,
-            $request->expense_category_id,
-            $request->date  // <- Add this parameter
+            amount: $request->amount,
+            category: $categoryName,
+            description: $request->description,
+            categoryId: $categoryId,
+            date: $request->date
         );
 
         return back()->with('success', 'Expense added successfully!');
     }
 
-
-    // Transactions List
-    public function transactions(Request $request)
+    public function transactions(Request $request): Response
     {
+        $validated = $request->validate([
+            'type' => 'nullable|string',
+            'category' => 'nullable|string',
+            'expense_category_id' => 'nullable|integer',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+            'search' => 'nullable|string|max:255',
+            'per_page' => 'nullable|integer|min:10|max:100',
+        ]);
+
         $query = OpticsTransaction::with(['expenseCategory', 'createdBy']);
 
-        if ($request->type) {
-            $query->where('type', $request->type);
+        if (!empty($validated['type'])) {
+            $query->where('type', $validated['type']);
         }
 
-        if ($request->month && $request->year) {
-            $query->whereMonth('transaction_date', $request->month)
-                ->whereYear('transaction_date', $request->year);
+        if (!empty($validated['category'])) {
+            $query->where('category', $validated['category']);
         }
 
-        if ($request->category) {
-            $query->where('category', $request->category);
+        if (!empty($validated['expense_category_id'])) {
+            $query->where('expense_category_id', $validated['expense_category_id']);
         }
 
-        $transactions = $query->latest('transaction_date')->paginate(20);
-        $categories = OpticsExpenseCategory::active()->get();
+        if (!empty($validated['date_from'])) {
+            $query->whereDate('transaction_date', '>=', $validated['date_from']);
+        }
 
-        return Inertia::render('OpticsAccount/Transactions', compact('transactions', 'categories'));
+        if (!empty($validated['date_to'])) {
+            $query->whereDate('transaction_date', '<=', $validated['date_to']);
+        }
+
+        if (!empty($validated['search'])) {
+            $search = $validated['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('transaction_no', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%");
+            });
+        }
+
+        $perPage = $validated['per_page'] ?? 50;
+        $transactions = $query->latest('transaction_date')->paginate($perPage)->withQueryString();
+
+        $categories = OpticsExpenseCategory::where('is_active', true)->get();
+
+        return Inertia::render('OpticsAccount/Transactions', [
+            'transactions' => $transactions,
+            'categories' => $categories,
+            'filters' => array_filter($request->only(['type', 'category', 'expense_category_id', 'date_from', 'date_to', 'search']))
+        ]);
     }
 
-    // Fund History
-    public function fundHistory()
+    public function fundHistory(): Response
     {
         $fundTransactions = OpticsFundTransaction::with('addedBy')
             ->latest('date')->paginate(20);
@@ -135,15 +180,13 @@ class OpticsAccountController extends Controller
         return Inertia::render('OpticsAccount/FundHistory', compact('fundTransactions'));
     }
 
-    // Expense Categories
-    public function categories()
+    public function categories(): Response
     {
         $categories = OpticsExpenseCategory::withCount('transactions')->get();
 
         return Inertia::render('OpticsAccount/Categories', compact('categories'));
     }
 
-    // Store Category
     public function storeCategory(Request $request)
     {
         $request->validate([
@@ -155,7 +198,6 @@ class OpticsAccountController extends Controller
         return back()->with('success', 'Category created successfully!');
     }
 
-    // Update Category
     public function updateCategory(Request $request, OpticsExpenseCategory $category)
     {
         $request->validate([
@@ -168,8 +210,7 @@ class OpticsAccountController extends Controller
         return back()->with('success', 'Category updated successfully!');
     }
 
-    // Monthly Report
-    public function monthlyReport(Request $request)
+    public function monthlyReport(Request $request): Response
     {
         $year = $request->year ?? now()->year;
         $month = $request->month ?? now()->month;
@@ -184,7 +225,6 @@ class OpticsAccountController extends Controller
             ->groupBy('expenseCategory.name')
             ->map(fn($items) => $items->sum('amount'));
 
-        // Optics specific metrics
         $glassesPurchases = OpticsTransaction::where('type', 'expense')
             ->where('category', 'glasses_purchase')
             ->whereYear('transaction_date', $year)
@@ -221,8 +261,7 @@ class OpticsAccountController extends Controller
         ));
     }
 
-    // Balance Sheet
-    public function balanceSheet()
+    public function balanceSheet(): Response
     {
         $balance = OpticsAccount::getBalance();
         $totalIncome = OpticsTransaction::income()->sum('amount');
@@ -230,7 +269,6 @@ class OpticsAccountController extends Controller
         $totalFundIn = OpticsFundTransaction::fundIn()->sum('amount');
         $totalFundOut = OpticsFundTransaction::fundOut()->sum('amount');
 
-        // Optics specific metrics
         $totalGlassesPurchases = OpticsTransaction::where('category', 'glasses_purchase')->sum('amount');
         $totalGlassesSales = OpticsTransaction::where('category', 'glasses_sale')->sum('amount');
         $totalLensPurchases = OpticsTransaction::where('category', 'lens_purchase')->sum('amount');
@@ -240,7 +278,6 @@ class OpticsAccountController extends Controller
         $lensProfit = $totalLensSales - $totalLensPurchases;
         $opticsProfit = $glassesProfit + $lensProfit;
 
-        // Current month metrics
         $currentMonthGlassesPurchases = OpticsTransaction::where('category', 'glasses_purchase')
             ->whereMonth('transaction_date', now()->month)
             ->whereYear('transaction_date', now()->year)
@@ -281,13 +318,11 @@ class OpticsAccountController extends Controller
         ));
     }
 
-    // Optics Business Analytics
-    public function analytics(Request $request)
+    public function analytics(Request $request): Response
     {
         $year = $request->year ?? now()->year;
         $month = $request->month ?? now()->month;
 
-        // Monthly trend for last 12 months
         $monthlyTrend = OpticsTransaction::where('created_at', '>=', now()->subMonths(12))
             ->selectRaw('
                 YEAR(transaction_date) as year,
@@ -301,7 +336,6 @@ class OpticsAccountController extends Controller
             ->limit(12)
             ->get();
 
-        // Purchase vs Sales comparison for glasses and lens
         $purchaseVsSales = OpticsTransaction::where('transaction_date', '>=', now()->subMonths(6))
             ->whereIn('category', ['glasses_purchase', 'glasses_sale', 'lens_purchase', 'lens_sale'])
             ->selectRaw('
@@ -313,7 +347,6 @@ class OpticsAccountController extends Controller
             ->orderBy('month', 'desc')
             ->get();
 
-        // Top expense categories
         $topExpenseCategories = OpticsTransaction::where('type', 'expense')
             ->whereYear('transaction_date', $year)
             ->whereMonth('transaction_date', $month)
@@ -328,7 +361,6 @@ class OpticsAccountController extends Controller
             ->sortByDesc('amount')
             ->values();
 
-        // Calculate totals for profit margin
         $totalGlassesSales = OpticsTransaction::where('category', 'glasses_sale')->sum('amount');
         $totalGlassesPurchases = OpticsTransaction::where('category', 'glasses_purchase')->sum('amount');
         $totalLensSales = OpticsTransaction::where('category', 'lens_sale')->sum('amount');
@@ -337,11 +369,9 @@ class OpticsAccountController extends Controller
         $totalSales = $totalGlassesSales + $totalLensSales;
         $totalPurchases = $totalGlassesPurchases + $totalLensPurchases;
 
-        // Profit margin analysis
         $profitMargin = $totalSales > 0 ?
             (($totalSales - $totalPurchases) / $totalSales) * 100 : 0;
 
-        // Product-wise performance
         $glassesPerformance = [
             'sales' => $totalGlassesSales,
             'purchases' => $totalGlassesPurchases,
@@ -368,23 +398,19 @@ class OpticsAccountController extends Controller
         ));
     }
 
-    // Inventory Value Report
-    public function inventoryReport()
+    public function inventoryReport(): Response
     {
         $accountBalance = OpticsAccount::getBalance();
 
-        // Get total inventory value from glasses and lens stocks
         $totalGlassesValue = \DB::table('glasses')
             ->where('is_active', true)
             ->selectRaw('SUM(stock_quantity * price) as total_value')
             ->first()->total_value ?? 0;
 
-        // If you have lens inventory table, add it here
-        $totalLensValue = 0; // Add lens inventory calculation if available
+        $totalLensValue = 0;
 
         $totalInventoryValue = $totalGlassesValue + $totalLensValue;
 
-        // Investment vs Current Inventory Value
         $totalInvestment = OpticsTransaction::whereIn('category', ['glasses_purchase', 'lens_purchase'])->sum('amount');
         $totalSold = OpticsTransaction::whereIn('category', ['glasses_sale', 'lens_sale'])->sum('amount');
 
@@ -398,14 +424,56 @@ class OpticsAccountController extends Controller
         ));
     }
 
-    // Export Reports
+    public function dailyReport(Request $request): Response
+    {
+        $validated = $request->validate([
+            'date' => 'required|date',
+            'type' => 'required|in:income,expense',
+        ]);
+
+        $date = $validated['date'];
+        $type = $validated['type'];
+
+        $transactions = OpticsTransaction::where('transaction_date', $date)
+            ->where('type', $type)
+            ->with('expenseCategory')
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(function ($transaction, $index) {
+                return [
+                    'sl_no' => str_pad($index + 1, 2, '0', STR_PAD_LEFT),
+                    'transaction_no' => $transaction->transaction_no,
+                    'date' => $transaction->transaction_date->format('d/m/Y'),
+                    'category' => $transaction->category,
+                    'description' => $transaction->description,
+                    'amount' => number_format($transaction->amount, 2),
+                    'amount_raw' => $transaction->amount,
+                ];
+            });
+
+        $totalAmount = $transactions->sum('amount_raw');
+        $amountInWords = $this->convertToWords($totalAmount);
+
+        return Inertia::render('OpticsAccount/DailyReport', [
+            'date' => Carbon::parse($date)->format('d/m/Y'),
+            'type' => $type,
+            'transactions' => $transactions,
+            'total_amount' => number_format($totalAmount, 2),
+            'amount_in_words' => $amountInWords,
+            'hospital_name' => 'Naogaon Islamia Eye Hospital and Phaco Center',
+            'hospital_location' => 'Naogaon',
+        ]);
+    }
+
+    public function reports(): Response
+    {
+        return Inertia::render('OpticsAccount/Reports');
+    }
+
     public function exportReport(Request $request)
     {
         $type = $request->get('type', 'transactions');
         $format = $request->get('format', 'excel');
-
-        // Implementation for exporting reports
-        // This can use Laravel Excel or similar package
 
         return response()->json([
             'success' => true,
@@ -413,5 +481,12 @@ class OpticsAccountController extends Controller
             'type' => $type,
             'format' => $format
         ]);
+    }
+
+    private function convertToWords(float $amount): string
+    {
+        $formatter = new NumberFormatter('en', NumberFormatter::SPELLOUT);
+        $words = $formatter->format($amount);
+        return ucwords($words) . ' Taka Only';
     }
 }

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { router } from '@inertiajs/react';
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
-import { TrendingUp, TrendingDown, Calendar, User, FileText, DollarSign } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { TrendingUp, TrendingDown, Calendar, User, FileText, DollarSign, Trash2 } from 'lucide-react';
 
 interface FundTransaction {
     id: number;
@@ -16,6 +16,12 @@ interface FundTransaction {
     };
 }
 
+interface PaginationLinks {
+    url: string | null;
+    label: string;
+    active: boolean;
+}
+
 interface FundHistoryProps {
     fundTransactions: {
         data: FundTransaction[];
@@ -23,10 +29,46 @@ interface FundHistoryProps {
         last_page: number;
         per_page: number;
         total: number;
+        from: number;
+        to: number;
+        links: PaginationLinks[];
     };
 }
 
 const FundHistory: React.FC<FundHistoryProps> = ({ fundTransactions }) => {
+    const [deleteModal, setDeleteModal] = useState<{ show: boolean; transaction: FundTransaction | null }>({
+        show: false,
+        transaction: null
+    });
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+    };
+
+    const handleDelete = (transaction: FundTransaction) => {
+        setDeleteModal({ show: true, transaction });
+    };
+
+    const confirmDelete = () => {
+        if (deleteModal.transaction) {
+            router.delete(`/hospital-account/fund-transactions/${deleteModal.transaction.id}`, {
+                onSuccess: () => {
+                    setDeleteModal({ show: false, transaction: null });
+                }
+            });
+        }
+    };
+
+    const handlePagination = (url: string | null) => {
+        if (url) {
+            router.get(url);
+        }
+    };
+
     // Safe calculation with fallback for empty data
     const totalFundIn = fundTransactions.data
         ?.filter(t => t.type === 'fund_in')
@@ -145,6 +187,9 @@ const FundHistory: React.FC<FundHistoryProps> = ({ fundTransactions }) => {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Description
                                     </th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Actions
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
@@ -200,6 +245,15 @@ const FundHistory: React.FC<FundHistoryProps> = ({ fundTransactions }) => {
                                                 {transaction.description || 'No description'}
                                             </div>
                                         </td>
+                                        <td className="px-6 py-4 text-sm">
+                                            <button
+                                                onClick={() => handleDelete(transaction)}
+                                                className="text-red-600 hover:text-red-800 transition-colors duration-150"
+                                                title="Delete transaction"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -216,39 +270,107 @@ const FundHistory: React.FC<FundHistoryProps> = ({ fundTransactions }) => {
                     </div>
                 )}
 
-                {/* Pagination */}
+                {/* Fixed Pagination */}
                 {fundTransactions.total > fundTransactions.per_page && (
                     <div className="px-6 py-4 border-t bg-gray-50 rounded-b-lg">
                         <div className="flex justify-between items-center">
                             <div className="text-sm text-gray-700">
-                                Showing {((fundTransactions.current_page - 1) * fundTransactions.per_page) + 1} to{' '}
-                                {Math.min(fundTransactions.current_page * fundTransactions.per_page, fundTransactions.total)} of{' '}
-                                {fundTransactions.total} results
+                                Showing {fundTransactions.from || 0} to {fundTransactions.to || 0} of {fundTransactions.total} results
                             </div>
 
-                            <div className="flex space-x-2">
-                                <button
-                                    disabled={fundTransactions.current_page === 1}
-                                    className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Previous
-                                </button>
+                            <div className="flex items-center space-x-1">
+                                {fundTransactions.links?.map((link, index) => {
+                                    if (link.label === '&laquo; Previous') {
+                                        return (
+                                            <button
+                                                key={index}
+                                                onClick={() => handlePagination(link.url)}
+                                                disabled={!link.url}
+                                                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                Previous
+                                            </button>
+                                        );
+                                    }
 
-                                <span className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md">
-                                    {fundTransactions.current_page}
-                                </span>
+                                    if (link.label === 'Next &raquo;') {
+                                        return (
+                                            <button
+                                                key={index}
+                                                onClick={() => handlePagination(link.url)}
+                                                disabled={!link.url}
+                                                className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                Next
+                                            </button>
+                                        );
+                                    }
 
-                                <button
-                                    disabled={fundTransactions.current_page === fundTransactions.last_page}
-                                    className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Next
-                                </button>
+                                    if (link.label === '...') {
+                                        return (
+                                            <span key={index} className="px-3 py-2 text-sm font-medium text-gray-500">
+                                                ...
+                                            </span>
+                                        );
+                                    }
+
+                                    return (
+                                        <button
+                                            key={index}
+                                            onClick={() => handlePagination(link.url)}
+                                            disabled={!link.url}
+                                            className={`px-3 py-2 text-sm font-medium border ${
+                                                link.active
+                                                    ? 'bg-blue-50 text-blue-600 border-blue-300'
+                                                    : 'text-gray-500 bg-white border-gray-300 hover:bg-gray-50'
+                                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                        >
+                                            {link.label}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {deleteModal.show && (
+                <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
+                    <div className="bg-white rounded-lg p-6 w-96 max-w-lg mx-4">
+                        <h3 className="text-lg font-semibold mb-4 text-red-600">Delete Fund Transaction</h3>
+                        <div className="mb-4">
+                            <p className="text-gray-700 mb-2">
+                                Are you sure you want to delete this fund transaction?
+                            </p>
+                            <div className="bg-gray-50 p-3 rounded">
+                                <p><strong>Voucher:</strong> {deleteModal.transaction?.voucher_no}</p>
+                                <p><strong>Type:</strong> {deleteModal.transaction?.type}</p>
+                                <p><strong>Amount:</strong> ৳{Number(deleteModal.transaction?.amount).toLocaleString('en-BD')}</p>
+                                <p><strong>Purpose:</strong> {deleteModal.transaction?.purpose}</p>
+                            </div>
+                            <p className="text-red-600 text-sm mt-2">
+                                This action will reverse the transaction and update account balances accordingly.
+                            </p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={confirmDelete}
+                                className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700"
+                            >
+                                Delete
+                            </button>
+                            <button
+                                onClick={() => setDeleteModal({ show: false, transaction: null })}
+                                className="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </HospitalAccountLayout>
     );
 };

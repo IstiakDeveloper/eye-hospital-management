@@ -1,5 +1,6 @@
 import React from 'react';
-import AdminLayout from '@/layouts/admin-layout';
+import MainAccountLayout from '@/layouts/MainAccountLayout';
+
 import { Head, Link } from '@inertiajs/react';
 import {
     Wallet,
@@ -96,7 +97,7 @@ export default function Index({
     };
 
     return (
-        <AdminLayout>
+        <MainAccountLayout>
             <Head title="Main Account Dashboard" />
 
             <div className="space-y-6">
@@ -114,13 +115,7 @@ export default function Index({
                             <FileText className="w-4 h-4 mr-2" />
                             View All Vouchers
                         </Link>
-                        <Link
-                            href="/main-account/reports"
-                            className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors shadow-sm"
-                        >
-                            <PieChart className="w-4 h-4 mr-2" />
-                            Reports
-                        </Link>
+
                     </div>
                 </div>
 
@@ -365,6 +360,6 @@ export default function Index({
                     </div>
                 </div>
             </div>
-        </AdminLayout>
+        </MainAccountLayout>
     );
 }

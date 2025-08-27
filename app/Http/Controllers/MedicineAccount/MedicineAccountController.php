@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\{MedicineAccount, MedicineFundTransaction, MedicineTransaction, MedicineExpenseCategory};
 use Inertia\Inertia;
-use DB;
+use Inertia\Response;
+use Carbon\Carbon;
+use NumberFormatter;
 
 class MedicineAccountController extends Controller
 {
-    // Dashboard
-    public function index()
+    public function index(): Response
     {
         $balance = MedicineAccount::getBalance();
         $monthlyReport = MedicineAccount::monthlyReport(now()->year, now()->month);
@@ -22,19 +23,17 @@ class MedicineAccountController extends Controller
         $recentFundTransactions = MedicineFundTransaction::with('addedBy')
             ->latest()->take(5)->get();
 
-        // Add expense categories
-        $expenseCategories = MedicineExpenseCategory::all(); // or ::pluck('name', 'id')
+        $expenseCategories = MedicineExpenseCategory::where('is_active', true)->get();
 
         return Inertia::render('MedicineAccount/Dashboard', compact(
             'balance',
             'monthlyReport',
             'recentTransactions',
             'recentFundTransactions',
-            'expenseCategories' // <- Add this
+            'expenseCategories'
         ));
     }
 
-    // Fund In
     public function fundIn(Request $request)
     {
         $request->validate([
@@ -48,7 +47,7 @@ class MedicineAccountController extends Controller
             $request->amount,
             $request->purpose,
             $request->description,
-            $request->date  // <- Add this parameter
+            $request->date
         );
 
         return back()->with('success', 'Fund added successfully!');
@@ -63,38 +62,20 @@ class MedicineAccountController extends Controller
             'date' => 'required|date',
         ]);
 
+        if ($request->amount > MedicineAccount::getBalance()) {
+            return back()->withErrors(['amount' => 'Insufficient balance!']);
+        }
+
         MedicineAccount::withdrawFund(
             $request->amount,
             $request->purpose,
             $request->description,
-            $request->date  // <- Add this parameter
+            $request->date
         );
 
         return back()->with('success', 'Fund withdrawn successfully!');
     }
 
-    public function expense(Request $request)
-    {
-        $request->validate([
-            'amount' => 'required|numeric|min:1',
-            'category' => 'required|string|max:255',
-            'description' => 'required|string|max:500',
-            'date' => 'required|date',
-        ]);
-
-        MedicineAccount::addExpense(
-            $request->amount,
-            $request->category,
-            $request->description,
-            null, // categoryId
-            $request->date  // <- Add this parameter
-        );
-
-        return back()->with('success', 'Expense added successfully!');
-    }
-
-
-    // Add Expense
     public function addExpense(Request $request)
     {
         $request->validate([
@@ -109,43 +90,89 @@ class MedicineAccountController extends Controller
             return back()->withErrors(['amount' => 'Insufficient balance!']);
         }
 
+        $categoryName = $request->category;
+        $categoryId = $request->expense_category_id;
+
+        if ($categoryId && empty($categoryName)) {
+            $category = MedicineExpenseCategory::find($categoryId);
+            $categoryName = $category ? $category->name : $request->category;
+        }
+
+        if (!$categoryId && $categoryName) {
+            $category = MedicineExpenseCategory::firstOrCreate(
+                ['name' => $categoryName],
+                ['is_active' => true]
+            );
+            $categoryId = $category->id;
+        }
+
         MedicineAccount::addExpense(
-            $request->amount,
-            $request->category,
-            $request->description,
-            $request->expense_category_id,
-            $request->date
+            amount: $request->amount,
+            category: $categoryName,
+            description: $request->description,
+            categoryId: $categoryId,
+            date: $request->date
         );
 
         return back()->with('success', 'Expense added successfully!');
     }
 
-    // Transactions List
-    public function transactions(Request $request)
+    public function transactions(Request $request): Response
     {
+        $validated = $request->validate([
+            'type' => 'nullable|string',
+            'category' => 'nullable|string',
+            'expense_category_id' => 'nullable|integer',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+            'search' => 'nullable|string|max:255',
+            'per_page' => 'nullable|integer|min:10|max:100',
+        ]);
+
         $query = MedicineTransaction::with(['expenseCategory', 'createdBy']);
 
-        if ($request->type) {
-            $query->where('type', $request->type);
+        if (!empty($validated['type'])) {
+            $query->where('type', $validated['type']);
         }
 
-        if ($request->month && $request->year) {
-            $query->whereMonth('transaction_date', $request->month)
-                ->whereYear('transaction_date', $request->year);
+        if (!empty($validated['category'])) {
+            $query->where('category', $validated['category']);
         }
 
-        if ($request->category) {
-            $query->where('category', $request->category);
+        if (!empty($validated['expense_category_id'])) {
+            $query->where('expense_category_id', $validated['expense_category_id']);
         }
 
-        $transactions = $query->latest('transaction_date')->paginate(20);
-        $categories = MedicineExpenseCategory::active()->get();
+        if (!empty($validated['date_from'])) {
+            $query->whereDate('transaction_date', '>=', $validated['date_from']);
+        }
 
-        return Inertia::render('MedicineAccount/Transactions', compact('transactions', 'categories'));
+        if (!empty($validated['date_to'])) {
+            $query->whereDate('transaction_date', '<=', $validated['date_to']);
+        }
+
+        if (!empty($validated['search'])) {
+            $search = $validated['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('transaction_no', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%");
+            });
+        }
+
+        $perPage = $validated['per_page'] ?? 50;
+        $transactions = $query->latest('transaction_date')->paginate($perPage)->withQueryString();
+
+        $categories = MedicineExpenseCategory::where('is_active', true)->get();
+
+        return Inertia::render('MedicineAccount/Transactions', [
+            'transactions' => $transactions,
+            'categories' => $categories,
+            'filters' => array_filter($request->only(['type', 'category', 'expense_category_id', 'date_from', 'date_to', 'search']))
+        ]);
     }
 
-    // Fund History
-    public function fundHistory()
+    public function fundHistory(): Response
     {
         $fundTransactions = MedicineFundTransaction::with('addedBy')
             ->latest('date')->paginate(20);
@@ -153,15 +180,13 @@ class MedicineAccountController extends Controller
         return Inertia::render('MedicineAccount/FundHistory', compact('fundTransactions'));
     }
 
-    // Expense Categories
-    public function categories()
+    public function categories(): Response
     {
         $categories = MedicineExpenseCategory::withCount('transactions')->get();
 
         return Inertia::render('MedicineAccount/Categories', compact('categories'));
     }
 
-    // Store Category
     public function storeCategory(Request $request)
     {
         $request->validate([
@@ -173,7 +198,6 @@ class MedicineAccountController extends Controller
         return back()->with('success', 'Category created successfully!');
     }
 
-    // Update Category
     public function updateCategory(Request $request, MedicineExpenseCategory $category)
     {
         $request->validate([
@@ -186,8 +210,7 @@ class MedicineAccountController extends Controller
         return back()->with('success', 'Category updated successfully!');
     }
 
-    // Monthly Report
-    public function monthlyReport(Request $request)
+    public function monthlyReport(Request $request): Response
     {
         $year = $request->year ?? now()->year;
         $month = $request->month ?? now()->month;
@@ -202,7 +225,6 @@ class MedicineAccountController extends Controller
             ->groupBy('expenseCategory.name')
             ->map(fn($items) => $items->sum('amount'));
 
-        // Medicine specific metrics
         $medicinePurchases = MedicineTransaction::where('type', 'expense')
             ->where('category', 'medicine_purchase')
             ->whereYear('transaction_date', $year)
@@ -225,8 +247,7 @@ class MedicineAccountController extends Controller
         ));
     }
 
-    // Balance Sheet
-    public function balanceSheet()
+    public function balanceSheet(): Response
     {
         $balance = MedicineAccount::getBalance();
         $totalIncome = MedicineTransaction::income()->sum('amount');
@@ -234,12 +255,10 @@ class MedicineAccountController extends Controller
         $totalFundIn = MedicineFundTransaction::fundIn()->sum('amount');
         $totalFundOut = MedicineFundTransaction::fundOut()->sum('amount');
 
-        // Medicine specific metrics
         $totalMedicinePurchases = MedicineTransaction::where('category', 'medicine_purchase')->sum('amount');
         $totalMedicineSales = MedicineTransaction::where('category', 'medicine_sale')->sum('amount');
         $medicineProfit = $totalMedicineSales - $totalMedicinePurchases;
 
-        // Current month metrics
         $currentMonthPurchases = MedicineTransaction::where('category', 'medicine_purchase')
             ->whereMonth('transaction_date', now()->month)
             ->whereYear('transaction_date', now()->year)
@@ -264,39 +283,35 @@ class MedicineAccountController extends Controller
         ));
     }
 
-    // Medicine Business Analytics
-    public function analytics(Request $request)
+    public function analytics(Request $request): Response
     {
         $year = $request->year ?? now()->year;
         $month = $request->month ?? now()->month;
 
-        // Monthly trend for last 12 months
         $monthlyTrend = MedicineTransaction::where('created_at', '>=', now()->subMonths(12))
             ->selectRaw('
-            YEAR(transaction_date) as year,
-            MONTH(transaction_date) as month,
-            SUM(CASE WHEN type = "income" THEN amount ELSE 0 END) as income,
-            SUM(CASE WHEN type = "expense" THEN amount ELSE 0 END) as expense
-        ')
+                YEAR(transaction_date) as year,
+                MONTH(transaction_date) as month,
+                SUM(CASE WHEN type = "income" THEN amount ELSE 0 END) as income,
+                SUM(CASE WHEN type = "expense" THEN amount ELSE 0 END) as expense
+            ')
             ->groupBy('year', 'month')
             ->orderBy('year', 'desc')
             ->orderBy('month', 'desc')
             ->limit(12)
             ->get();
 
-        // Purchase vs Sales comparison
         $purchaseVsSales = MedicineTransaction::where('transaction_date', '>=', now()->subMonths(6))
             ->whereIn('category', ['medicine_purchase', 'medicine_sale'])
             ->selectRaw('
-            DATE_FORMAT(transaction_date, "%Y-%m") as month,
-            category,
-            SUM(amount) as total
-        ')
+                DATE_FORMAT(transaction_date, "%Y-%m") as month,
+                category,
+                SUM(amount) as total
+            ')
             ->groupBy('month', 'category')
             ->orderBy('month', 'desc')
             ->get();
 
-        // Top expense categories
         $topExpenseCategories = MedicineTransaction::where('type', 'expense')
             ->whereYear('transaction_date', $year)
             ->whereMonth('transaction_date', $month)
@@ -311,11 +326,9 @@ class MedicineAccountController extends Controller
             ->sortByDesc('amount')
             ->values();
 
-        // ✅ Add missing variables
         $totalMedicineSales = MedicineTransaction::where('category', 'medicine_sale')->sum('amount');
         $totalMedicinePurchases = MedicineTransaction::where('category', 'medicine_purchase')->sum('amount');
 
-        // Profit margin analysis
         $profitMargin = $totalMedicineSales > 0 ?
             (($totalMedicineSales - $totalMedicinePurchases) / $totalMedicineSales) * 100 : 0;
 
@@ -329,21 +342,15 @@ class MedicineAccountController extends Controller
         ));
     }
 
-    // Stock Value Report
-    public function stockValueReport()
+    public function stockValueReport(): Response
     {
-        // This would integrate with medicine stock to show current inventory value
-        // vs account balance for reconciliation
-
         $accountBalance = MedicineAccount::getBalance();
 
-        // Get total stock value from medicine stocks
         $totalStockValue = \DB::table('medicine_stocks')
             ->where('available_quantity', '>', 0)
             ->selectRaw('SUM(available_quantity * buy_price) as total_value')
             ->first()->total_value ?? 0;
 
-        // Investment vs Current Stock Value
         $totalInvestment = MedicineTransaction::where('category', 'medicine_purchase')->sum('amount');
         $totalSold = MedicineTransaction::where('category', 'medicine_sale')->sum('amount');
 
@@ -355,14 +362,56 @@ class MedicineAccountController extends Controller
         ));
     }
 
-    // Export Reports
+    public function dailyReport(Request $request): Response
+    {
+        $validated = $request->validate([
+            'date' => 'required|date',
+            'type' => 'required|in:income,expense',
+        ]);
+
+        $date = $validated['date'];
+        $type = $validated['type'];
+
+        $transactions = MedicineTransaction::where('transaction_date', $date)
+            ->where('type', $type)
+            ->with('expenseCategory')
+            ->orderBy('id', 'asc')
+            ->get()
+            ->map(function ($transaction, $index) {
+                return [
+                    'sl_no' => str_pad($index + 1, 2, '0', STR_PAD_LEFT),
+                    'transaction_no' => $transaction->transaction_no,
+                    'date' => $transaction->transaction_date->format('d/m/Y'),
+                    'category' => $transaction->category,
+                    'description' => $transaction->description,
+                    'amount' => number_format($transaction->amount, 2),
+                    'amount_raw' => $transaction->amount,
+                ];
+            });
+
+        $totalAmount = $transactions->sum('amount_raw');
+        $amountInWords = $this->convertToWords($totalAmount);
+
+        return Inertia::render('MedicineAccount/DailyReport', [
+            'date' => Carbon::parse($date)->format('d/m/Y'),
+            'type' => $type,
+            'transactions' => $transactions,
+            'total_amount' => number_format($totalAmount, 2),
+            'amount_in_words' => $amountInWords,
+            'hospital_name' => 'Naogaon Islamia Eye Hospital and Phaco Center',
+            'hospital_location' => 'Naogaon',
+        ]);
+    }
+
+    public function reports(): Response
+    {
+        return Inertia::render('MedicineAccount/Reports');
+    }
+
     public function exportReport(Request $request)
     {
         $type = $request->get('type', 'transactions');
         $format = $request->get('format', 'excel');
-
-        // Implementation for exporting reports
-        // This can use Laravel Excel or similar package
 
         return response()->json([
             'success' => true,
@@ -370,5 +419,12 @@ class MedicineAccountController extends Controller
             'type' => $type,
             'format' => $format
         ]);
+    }
+
+    private function convertToWords(float $amount): string
+    {
+        $formatter = new NumberFormatter('en', NumberFormatter::SPELLOUT);
+        $words = $formatter->format($amount);
+        return ucwords($words) . ' Taka Only';
     }
 }
