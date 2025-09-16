@@ -96,10 +96,11 @@ const formatCurrency = (amount: number | string, currency: string = 'BDT') => {
     return new Intl.NumberFormat('en-BD', {
         style: 'currency',
         currency: currency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
     }).format(numAmount).replace(currency, '৳');
 };
+
 
 const StatCard = ({
     title,
@@ -343,20 +344,20 @@ export default function AdminDashboard({
     // Safe calculation helpers
     const getTotalIncome = () => {
         return parseAmount(periodReports.hospital.income) +
-               parseAmount(periodReports.medicine.income) +
-               parseAmount(periodReports.optics.income);
+            parseAmount(periodReports.medicine.income) +
+            parseAmount(periodReports.optics.income);
     };
 
     const getTotalExpense = () => {
         return parseAmount(periodReports.hospital.expense) +
-               parseAmount(periodReports.medicine.expense) +
-               parseAmount(periodReports.optics.expense);
+            parseAmount(periodReports.medicine.expense) +
+            parseAmount(periodReports.optics.expense);
     };
 
     const getTotalProfit = () => {
         return parseAmount(periodReports.hospital.profit) +
-               parseAmount(periodReports.medicine.profit) +
-               parseAmount(periodReports.optics.profit);
+            parseAmount(periodReports.medicine.profit) +
+            parseAmount(periodReports.optics.profit);
     };
 
     return (

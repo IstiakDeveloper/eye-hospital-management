@@ -3,14 +3,7 @@ import { router } from '@inertiajs/react';
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
 import { formatDate } from '@/lib/utils';
 import {
-    TrendingUp,
-    TrendingDown,
     Filter,
-    X,
-    Calendar,
-    DollarSign,
-    FileText,
-    User,
     Search,
     RefreshCw
 } from 'lucide-react';
@@ -43,17 +36,66 @@ interface TransactionsProps {
         id: number;
         name: string;
     }>;
+    filters?: {
+        type?: string;
+        date_from?: string;
+        date_to?: string;
+        category?: string;
+    };
 }
 
-const Transactions: React.FC<TransactionsProps> = ({ transactions, categories }) => {
+const Transactions: React.FC<TransactionsProps> = ({ transactions, categories, filters = {} }) => {
     const [filter, setFilter] = useState({
-        type: '',
-        month: '',
-        year: '',
-        category: ''
+        type: filters.type || '',
+        date_from: filters.date_from || '',
+        date_to: filters.date_to || '',
+        category: filters.category || ''
     });
 
-    // Safe calculations with fallbacks
+    // Auto filter function with debouncing
+    const applyFilters = (newFilters: any) => {
+        const params = new URLSearchParams();
+
+        if (newFilters.type) params.set('type', newFilters.type);
+        if (newFilters.date_from) params.set('date_from', newFilters.date_from);
+        if (newFilters.date_to) params.set('date_to', newFilters.date_to);
+        if (newFilters.category) params.set('category', newFilters.category);
+
+        router.get('/hospital-account/transactions?' + params.toString());
+    };
+
+    const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+        const { name, value } = e.target;
+        const newFilters = { ...filter, [name]: value };
+
+        setFilter(newFilters);
+
+        // Auto apply filters with slight delay for better UX
+        setTimeout(() => {
+            applyFilters(newFilters);
+        }, 300);
+    };
+
+    const clearFilters = () => {
+        const emptyFilters = { type: '', date_from: '', date_to: '', category: '' };
+        setFilter(emptyFilters);
+        router.get('/hospital-account/transactions');
+    };
+
+    const handlePagination = (page: number) => {
+        // Preserve filters when paginating
+        const params = new URLSearchParams();
+
+        if (filter.type) params.set('type', filter.type);
+        if (filter.date_from) params.set('date_from', filter.date_from);
+        if (filter.date_to) params.set('date_to', filter.date_to);
+        if (filter.category) params.set('category', filter.category);
+        params.set('page', page.toString());
+
+        router.get('/hospital-account/transactions?' + params.toString());
+    };
+
+    // Calculate totals
     const totalIncome = transactions.data
         ?.filter(t => t.type === 'income')
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0) || 0;
@@ -64,43 +106,23 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories })
 
     const netAmount = totalIncome - totalExpense;
 
-    const handleFilter = () => {
-        router.get('/hospital-account/transactions', filter);
-    };
-
-    const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-        const { name, value } = e.target;
-
-        if (name === 'month_year' && value) {
-            const [year, month] = value.split('-');
-            setFilter({ ...filter, year, month: parseInt(month).toString() });
-        } else {
-            setFilter({ ...filter, [name]: value });
-        }
-    };
-
-    const clearFilters = () => {
-        setFilter({ type: '', month: '', year: '', category: '' });
-        router.get('/hospital-account/transactions');
-    };
-
     return (
         <HospitalAccountLayout title="Transactions">
-            {/* Enhanced Filters */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
-                <div className="flex items-center mb-4">
-                    <Filter className="w-5 h-5 text-gray-600 mr-2" />
-                    <h3 className="text-lg font-medium text-gray-900">Filter Transactions</h3>
+            {/* Simple Filter Section */}
+            <div className="bg-white border rounded p-4 mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                    <Filter className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm font-medium">Filters</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-end">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                        <label className="block text-xs text-gray-600 mb-1">Type</label>
                         <select
                             name="type"
                             value={filter.type}
                             onChange={handleFilterChange}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full text-xs border rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
                         >
                             <option value="">All Types</option>
                             <option value="income">Income</option>
@@ -109,22 +131,34 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories })
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Month & Year</label>
+                        <label className="block text-xs text-gray-600 mb-1">From Date</label>
                         <input
-                            type="month"
-                            name="month_year"
+                            type="date"
+                            name="date_from"
+                            value={filter.date_from}
                             onChange={handleFilterChange}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full text-xs border rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <label className="block text-xs text-gray-600 mb-1">To Date</label>
+                        <input
+                            type="date"
+                            name="date_to"
+                            value={filter.date_to}
+                            onChange={handleFilterChange}
+                            className="w-full text-xs border rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs text-gray-600 mb-1">Category</label>
                         <select
                             name="category"
                             value={filter.category}
                             onChange={handleFilterChange}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full text-xs border rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
                         >
                             <option value="">All Categories</option>
                             {categories?.map((category) => (
@@ -135,178 +169,77 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories })
                         </select>
                     </div>
 
-                    <div className="flex flex-col justify-end">
-                        <button
-                            onClick={handleFilter}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center"
-                        >
-                            <Search className="w-4 h-4 mr-2" />
-                            Filter
-                        </button>
-                    </div>
-
-                    <div className="flex flex-col justify-end">
+                    <div className="flex gap-2">
                         <button
                             onClick={clearFilters}
-                            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors duration-200 flex items-center justify-center"
+                            className="bg-gray-500 text-white px-3 py-1.5 rounded text-xs hover:bg-gray-600 flex items-center gap-1"
                         >
-                            <RefreshCw className="w-4 h-4 mr-2" />
+                            <RefreshCw className="w-3 h-3" />
                             Clear
                         </button>
-                    </div>
-                </div>
-            </div>
 
-            {/* Enhanced Summary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                {/* Total Income Card */}
-                <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg shadow-sm border-l-4 border-green-500">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-sm font-medium text-green-700">Total Income</h3>
-                            <p className="text-3xl font-bold text-green-800 mb-1">
-                                ৳{totalIncome.toLocaleString('en-BD')}
-                            </p>
-                            <p className="text-xs text-green-600">
-                                {transactions.data?.filter(t => t.type === 'income').length || 0} transactions
-                            </p>
-                        </div>
-                        <div className="bg-green-500 p-3 rounded-full">
-                            <TrendingUp className="w-6 h-6 text-white" />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Total Expense Card */}
-                <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg shadow-sm border-l-4 border-red-500">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-sm font-medium text-red-700">Total Expense</h3>
-                            <p className="text-3xl font-bold text-red-800 mb-1">
-                                ৳{totalExpense.toLocaleString('en-BD')}
-                            </p>
-                            <p className="text-xs text-red-600">
-                                {transactions.data?.filter(t => t.type === 'expense').length || 0} transactions
-                            </p>
-                        </div>
-                        <div className="bg-red-500 p-3 rounded-full">
-                            <TrendingDown className="w-6 h-6 text-white" />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Net Amount Card */}
-                <div className={`bg-gradient-to-br ${netAmount >= 0
-                        ? 'from-blue-50 to-blue-100 border-blue-500'
-                        : 'from-orange-50 to-orange-100 border-orange-500'
-                    } p-6 rounded-lg shadow-sm border-l-4`}>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className={`text-sm font-medium ${netAmount >= 0 ? 'text-blue-700' : 'text-orange-700'
-                                }`}>
-                                Net Amount
-                            </h3>
-                            <p className={`text-3xl font-bold mb-1 ${netAmount >= 0 ? 'text-blue-800' : 'text-orange-800'
-                                }`}>
-                                ৳{Math.abs(netAmount).toLocaleString('en-BD')}
-                            </p>
-                            <p className={`text-xs ${netAmount >= 0 ? 'text-blue-600' : 'text-orange-600'
-                                }`}>
-                                {netAmount >= 0 ? 'Profit' : 'Loss'}
-                            </p>
-                        </div>
-                        <div className={`p-3 rounded-full ${netAmount >= 0 ? 'bg-blue-500' : 'bg-orange-500'
-                            }`}>
-                            <DollarSign className="w-6 h-6 text-white" />
+                        {/* Quick Summary */}
+                        <div className="text-xs text-gray-600 bg-gray-50 px-3 py-1.5 rounded">
+                            <div>Income: ৳{totalIncome.toLocaleString()}</div>
+                            <div>Expense: ৳{totalExpense.toLocaleString()}</div>
+                            <div className={netAmount >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                Net: ৳{Math.abs(netAmount).toLocaleString()} {netAmount >= 0 ? '↑' : '↓'}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Enhanced Transactions Table */}
-            <div className="bg-white rounded-lg shadow-sm border">
-                <div className="px-6 py-4 border-b bg-gray-50 rounded-t-lg">
-                    <div className="flex justify-between items-center">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                            Transactions ({transactions.total || 0} total)
-                        </h3>
-                        <div className="text-sm text-gray-500">
-                            Page {transactions.current_page} of {transactions.last_page}
-                        </div>
-                    </div>
+            {/* Simple Data Table */}
+            <div className="bg-white border rounded">
+                <div className="px-4 py-2 bg-gray-50 border-b flex justify-between items-center">
+                    <span className="text-sm font-medium">
+                        Transactions ({transactions.total || 0} total)
+                    </span>
+                    <span className="text-xs text-gray-500">
+                        Page {transactions.current_page} of {transactions.last_page}
+                    </span>
                 </div>
 
                 {transactions.data && transactions.data.length > 0 ? (
                     <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Transaction No
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Type
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Category
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Amount
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Date
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Description
-                                    </th>
+                        <table className="w-full text-xs">
+                            <thead>
+                                <tr className="bg-gray-50 border-b">
+                                    <th className="px-3 py-2 text-left font-medium text-gray-700">Trans. No</th>
+                                    <th className="px-3 py-2 text-left font-medium text-gray-700">Type</th>
+                                    <th className="px-3 py-2 text-left font-medium text-gray-700">Category</th>
+                                    <th className="px-3 py-2 text-right font-medium text-gray-700">Amount</th>
+                                    <th className="px-3 py-2 text-left font-medium text-gray-700">Date</th>
+                                    <th className="px-3 py-2 text-left font-medium text-gray-700">Description</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {transactions.data.map((transaction) => (
-                                    <tr key={transaction.id} className="hover:bg-gray-50 transition-colors duration-150">
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-900 font-mono">
-                                            {transaction.transaction_no}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${transaction.type === 'income'
-                                                    ? 'bg-green-100 text-green-800 border border-green-200'
-                                                    : 'bg-red-100 text-red-800 border border-red-200'
-                                                }`}>
-                                                {transaction.type === 'income' ? (
-                                                    <>
-                                                        <TrendingUp className="w-3 h-3 mr-1" />
-                                                        Income
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <TrendingDown className="w-3 h-3 mr-1" />
-                                                        Expense
-                                                    </>
-                                                )}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-900">
-                                            <div className="flex items-center">
-                                                <FileText className="w-4 h-4 text-gray-400 mr-2" />
-                                                {transaction.category || 'Uncategorized'}
-                                            </div>
-                                        </td>
-                                        <td className={`px-6 py-4 text-sm font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                            <tbody>
+                                {transactions.data.map((transaction, index) => (
+                                    <tr key={transaction.id} className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}>
+                                        <td className="px-3 py-2 font-mono text-blue-600">{transaction.transaction_no}</td>
+                                        <td className="px-3 py-2">
+                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                                transaction.type === 'income'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-red-100 text-red-700'
                                             }`}>
-                                            <span className="font-mono">
-                                                {transaction.type === 'income' ? '+' : '-'}৳{Number(transaction.amount).toLocaleString('en-BD')}
+                                                {transaction.type}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
-                                            <div className="flex items-center">
-                                                <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-                                                {formatDate(transaction.transaction_date)}
-                                            </div>
+                                        <td className="px-3 py-2 text-gray-700">
+                                            {transaction.category || 'Uncategorized'}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">
-                                            <div className="max-w-xs break-words overflow-hidden" title={transaction.description}>
-                                                {transaction.description || 'No description'}
-                                            </div>
+                                        <td className={`px-3 py-2 text-right font-mono font-medium ${
+                                            transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                                        }`}>
+                                            {transaction.type === 'income' ? '+' : '-'}৳{Number(transaction.amount).toLocaleString()}
+                                        </td>
+                                        <td className="px-3 py-2 text-gray-600">
+                                            {formatDate(transaction.transaction_date)}
+                                        </td>
+                                        <td className="px-3 py-2 text-gray-700 max-w-xs truncate" title={transaction.description}>
+                                            {transaction.description || 'No description'}
                                         </td>
                                     </tr>
                                 ))}
@@ -314,53 +247,65 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories })
                         </table>
                     </div>
                 ) : (
-                    /* Empty State */
-                    <div className="text-center py-12">
-                        <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                        <h3 className="mt-2 text-sm font-medium text-gray-900">No transactions found</h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                            Try adjusting your filters or add your first transaction.
-                        </p>
+                    <div className="text-center py-8">
+                        <p className="text-sm text-gray-500">No transactions found</p>
+                        <p className="text-xs text-gray-400 mt-1">Try adjusting your filters</p>
                     </div>
                 )}
 
-                {/* Enhanced Pagination */}
+                {/* Simple Pagination */}
                 {transactions.last_page > 1 && (
-                    <div className="px-6 py-4 border-t bg-gray-50 rounded-b-lg">
-                        <div className="flex justify-between items-center">
-                            <div className="text-sm text-gray-700">
-                                Showing {((transactions.current_page - 1) * transactions.per_page) + 1} to{' '}
-                                {Math.min(transactions.current_page * transactions.per_page, transactions.total)} of{' '}
-                                {transactions.total} results
-                            </div>
+                    <div className="px-4 py-3 border-t bg-gray-50 flex justify-between items-center">
+                        <div className="text-xs text-gray-600">
+                            Showing {((transactions.current_page - 1) * transactions.per_page) + 1} to{' '}
+                            {Math.min(transactions.current_page * transactions.per_page, transactions.total)} of{' '}
+                            {transactions.total} results
+                        </div>
 
-                            <div className="flex space-x-2">
-                                <button
-                                    onClick={() => router.get('/hospital-account/transactions', {
-                                        ...filter,
-                                        page: transactions.current_page - 1
-                                    })}
-                                    disabled={transactions.current_page === 1}
-                                    className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                                >
-                                    Previous
-                                </button>
+                        <div className="flex gap-1">
+                            <button
+                                onClick={() => handlePagination(transactions.current_page - 1)}
+                                disabled={transactions.current_page === 1}
+                                className="px-2 py-1 text-xs border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Previous
+                            </button>
 
-                                <span className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md">
-                                    {transactions.current_page} of {transactions.last_page}
-                                </span>
+                            {/* Page numbers */}
+                            {Array.from({ length: Math.min(5, transactions.last_page) }, (_, i) => {
+                                let pageNum;
+                                if (transactions.last_page <= 5) {
+                                    pageNum = i + 1;
+                                } else if (transactions.current_page <= 3) {
+                                    pageNum = i + 1;
+                                } else if (transactions.current_page >= transactions.last_page - 2) {
+                                    pageNum = transactions.last_page - 4 + i;
+                                } else {
+                                    pageNum = transactions.current_page - 2 + i;
+                                }
 
-                                <button
-                                    onClick={() => router.get('/hospital-account/transactions', {
-                                        ...filter,
-                                        page: transactions.current_page + 1
-                                    })}
-                                    disabled={transactions.current_page === transactions.last_page}
-                                    className="px-3 py-1 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                                >
-                                    Next
-                                </button>
-                            </div>
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => handlePagination(pageNum)}
+                                        className={`px-2 py-1 text-xs border rounded ${
+                                            pageNum === transactions.current_page
+                                                ? 'bg-blue-500 text-white border-blue-500'
+                                                : 'hover:bg-gray-100'
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+
+                            <button
+                                onClick={() => handlePagination(transactions.current_page + 1)}
+                                disabled={transactions.current_page === transactions.last_page}
+                                className="px-2 py-1 text-xs border rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Next
+                            </button>
                         </div>
                     </div>
                 )}

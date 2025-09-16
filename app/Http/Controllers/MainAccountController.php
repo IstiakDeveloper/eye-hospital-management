@@ -391,9 +391,9 @@ class MainAccountController extends Controller
         $previousMonthBalance = MainAccountVoucher::whereMonth('date', '<', $month)
             ->whereYear('date', '<=', $year)
             ->selectRaw('
-            SUM(CASE WHEN voucher_type = "Credit" THEN amount ELSE 0 END) -
-            SUM(CASE WHEN voucher_type = "Debit" THEN amount ELSE 0 END) as balance
-        ')
+        SUM(CASE WHEN voucher_type = "Credit" THEN amount ELSE 0 END) -
+        SUM(CASE WHEN voucher_type = "Debit" THEN amount ELSE 0 END) as balance
+    ')
             ->first()->balance ?? 0;
 
         // Get all dates in the month with transactions
@@ -433,14 +433,20 @@ class MainAccountController extends Controller
                 ->where('source_transaction_type', 'fund_out')
                 ->sum('amount');
 
+            // Fixed Asset: Check for "- Fixed Asset" in narration
             $fixedAsset = $dayVouchers->where('voucher_type', 'Debit')
                 ->where('source_transaction_type', 'expense')
-                ->where('narration', 'like', '%Fixed Asset%')
+                ->filter(function ($voucher) {
+                    return str_contains($voucher->narration, '- Fixed Asset');
+                })
                 ->sum('amount');
 
+            // Expense: All other expenses that don't contain "- Fixed Asset"
             $expense = $dayVouchers->where('voucher_type', 'Debit')
                 ->where('source_transaction_type', 'expense')
-                ->where('narration', 'not like', '%Fixed Asset%')
+                ->filter(function ($voucher) {
+                    return !str_contains($voucher->narration, '- Fixed Asset');
+                })
                 ->sum('amount');
 
             $totalCredit = $fundIn + $income + $otherIncome;
@@ -476,6 +482,5 @@ class MainAccountController extends Controller
             'currentBalance' => $runningBalance,
         ]);
     }
-
 
 }

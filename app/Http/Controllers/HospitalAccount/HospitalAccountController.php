@@ -123,33 +123,129 @@ class HospitalAccountController extends Controller
         return back()->with('success', 'Expense added successfully!');
     }
 
-    // Transactions List
     public function transactions(Request $request)
     {
         $query = HospitalTransaction::with(['expenseCategory', 'createdBy']);
 
+        // Apply filters
         if ($request->type) {
             $query->where('type', $request->type);
         }
 
-        if ($request->month && $request->year) {
-            $query->whereMonth('transaction_date', $request->month)
-                ->whereYear('transaction_date', $request->year);
+        // Date range filtering
+        if ($request->date_from) {
+            $query->whereDate('transaction_date', '>=', $request->date_from);
+        }
+
+        if ($request->date_to) {
+            $query->whereDate('transaction_date', '<=', $request->date_to);
+        }
+
+        if ($request->category) {
+            $query->where('category', $request->category);
         }
 
         $transactions = $query->latest('transaction_date')->paginate(20);
+        $transactions->appends(request()->query()); // Preserve query parameters in pagination links
+
         $categories = HospitalExpenseCategory::where('is_active', true)->get();
 
-        return Inertia::render('HospitalAccount/Transactions', compact('transactions', 'categories'));
+        // Pass current filters to the view
+        $filters = [
+            'type' => $request->type,
+            'date_from' => $request->date_from,
+            'date_to' => $request->date_to,
+            'category' => $request->category,
+        ];
+
+        return Inertia::render('HospitalAccount/Transactions', compact('transactions', 'categories', 'filters'));
     }
 
     // Fund History
-    public function fundHistory()
+    public function fundHistory(Request $request)
     {
-        $fundTransactions = HospitalFundTransaction::with('addedBy')
-            ->latest('date')->paginate(20);
+        $query = HospitalFundTransaction::with('addedBy');
 
-        return Inertia::render('HospitalAccount/FundHistory', compact('fundTransactions'));
+        // Apply filters
+        if ($request->type) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->date_from) {
+            $query->whereDate('date', '>=', $request->date_from);
+        }
+
+        if ($request->date_to) {
+            $query->whereDate('date', '<=', $request->date_to);
+        }
+
+        if ($request->purpose) {
+            $query->where('purpose', 'like', '%' . $request->purpose . '%');
+        }
+
+        $fundTransactions = $query->latest('date')->paginate(20);
+        $fundTransactions->appends(request()->query());
+
+        // Create fresh query builder instances for totals
+        $fundInQuery = HospitalFundTransaction::query();
+        $fundOutQuery = HospitalFundTransaction::query();
+
+        // Apply same filters to both queries
+        if ($request->type) {
+            if ($request->type === 'fund_in') {
+                $fundInQuery->where('type', 'fund_in');
+                // Don't apply type filter to fundOutQuery if filtering by fund_in
+            } elseif ($request->type === 'fund_out') {
+                $fundOutQuery->where('type', 'fund_out');
+                // Don't apply type filter to fundInQuery if filtering by fund_out
+            } else {
+                $fundInQuery->where('type', 'fund_in');
+                $fundOutQuery->where('type', 'fund_out');
+            }
+        } else {
+            $fundInQuery->where('type', 'fund_in');
+            $fundOutQuery->where('type', 'fund_out');
+        }
+
+        if ($request->date_from) {
+            $fundInQuery->whereDate('date', '>=', $request->date_from);
+            $fundOutQuery->whereDate('date', '>=', $request->date_from);
+        }
+
+        if ($request->date_to) {
+            $fundInQuery->whereDate('date', '<=', $request->date_to);
+            $fundOutQuery->whereDate('date', '<=', $request->date_to);
+        }
+
+        if ($request->purpose) {
+            $fundInQuery->where('purpose', 'like', '%' . $request->purpose . '%');
+            $fundOutQuery->where('purpose', 'like', '%' . $request->purpose . '%');
+        }
+
+        // Calculate totals
+        $totalFundIn = $request->type === 'fund_out' ? 0 : $fundInQuery->sum('amount');
+        $totalFundOut = $request->type === 'fund_in' ? 0 : $fundOutQuery->sum('amount');
+
+        $purposes = HospitalFundTransaction::distinct()
+            ->whereNotNull('purpose')
+            ->where('purpose', '!=', '')
+            ->pluck('purpose')
+            ->toArray();
+
+        $filters = [
+            'type' => $request->type,
+            'date_from' => $request->date_from,
+            'date_to' => $request->date_to,
+            'purpose' => $request->purpose,
+        ];
+
+        $totals = [
+            'total_fund_in' => $totalFundIn,
+            'total_fund_out' => $totalFundOut,
+            'net_fund' => $totalFundIn - $totalFundOut
+        ];
+
+        return Inertia::render('HospitalAccount/FundHistory', compact('fundTransactions', 'purposes', 'filters', 'totals'));
     }
 
     // Expense Categories
