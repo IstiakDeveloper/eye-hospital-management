@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import AdminLayout from '@/layouts/admin-layout';
+import AdminLayout from '@/layouts/MainAccountLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     FileText,

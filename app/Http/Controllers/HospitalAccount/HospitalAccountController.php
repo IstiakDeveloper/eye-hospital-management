@@ -318,7 +318,6 @@ class HospitalAccountController extends Controller
         ));
     }
 
-
     public function addOtherIncome(Request $request)
     {
         $request->validate([
@@ -377,4 +376,5 @@ class HospitalAccountController extends Controller
 
         return back()->with('success', 'Fund transaction deleted successfully!');
     }
+
 }

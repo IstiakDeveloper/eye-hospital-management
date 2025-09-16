@@ -26,37 +26,43 @@ const MainAccountLayout: React.FC<MainAccountLayoutProps> = ({
       name: 'Dashboard',
       href: '/main-account',
       icon: BarChart3,
-      current: route().current('main-account.index') || route().current('main-account.dashboard')
+      current: route().current('main-account.index')
+    },
+    {
+      name: 'All Vouchers',
+      href: '/main-account/vouchers',
+      icon: FileText,
+      current: route().current('main-account.vouchers') || route().current('main-account.show')
     },
     {
       name: 'Bank Report',
       href: '/main-account/bank-report',
       icon: Building2,
-      current: route().current('main-account.bank-report*')
+      current: route().current('main-account.bank-report')
     },
     {
       name: 'Receipt & Payment',
-      href: '/main-account/receipt-payment',
+      href: '/main-account/receipt-payment-report',
       icon: Receipt,
-      current: route().current('main-account.receipt-payment*')
+      current: route().current('main-account.receipt-payment-report') || route().current('main-account.main-account.receipt-payment-report')
     },
     {
       name: 'Income Expenditure',
-      href: '/main-account/income-expenditure',
+      href: '/main-account/income-expenditure-report',
       icon: TrendingUp,
-      current: route().current('main-account.income-expenditure*')
+      current: route().current('main-account.income-expenditure-report') || route().current('main-account.main-account.income-expenditure-report')
     },
     {
       name: 'Balance Sheet',
       href: '/main-account/balance-sheet',
       icon: Wallet,
-      current: route().current('main-account.balance-sheet*')
+      current: route().current('main-account.balance-sheet') || route().current('main-account.main-account.balance-sheet')
     },
     {
       name: 'Voucher Reports',
       href: '/main-account/reports',
       icon: TrendingDown,
-      current: route().current('main-account.reports*')
+      current: route().current('main-account.reports') || route().current('main-account.daily-report') || route().current('main-account.monthly-report') || route().current('main-account.yearly-report')
     }
   ];
 

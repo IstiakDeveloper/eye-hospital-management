@@ -86,8 +86,8 @@ const Reports: React.FC = () => {
                             <label className="block text-sm font-medium text-gray-700 mb-3">Voucher Type</label>
                             <div className="grid grid-cols-2 gap-4">
                                 {[
-                                    { value: 'Debit', label: 'Debit Voucher', icon: TrendingUp },
-                                    { value: 'Credit', label: 'Credit Voucher', icon: TrendingDown },
+                                    { value: 'Debit', label: 'Debit Voucher', icon: TrendingDown },
+                                    { value: 'Credit', label: 'Credit Voucher', icon: TrendingUp },
                                 ].map((option) => (
                                     <label key={option.value} className="relative">
                                         <input
@@ -102,7 +102,7 @@ const Reports: React.FC = () => {
                                                 ? 'border-green-500 bg-green-50'
                                                 : 'border-gray-200 hover:border-gray-300'
                                             }`}>
-                                            <option.icon className={`w-6 h-6 mx-auto mb-2 ${option.value === 'Debit' ? 'text-green-600' : 'text-red-600'
+                                            <option.icon className={`w-6 h-6 mx-auto mb-2 ${option.value === 'Debit' ? 'text-red-600' : 'text-green-600'
                                                 }`} />
                                             <span className="text-sm font-medium">{option.label}</span>
                                         </div>

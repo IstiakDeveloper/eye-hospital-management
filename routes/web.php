@@ -597,6 +597,12 @@ Route::middleware(['auth', 'verified'])->prefix('main-account')->name('main-acco
     Route::get('/monthly-report', [MainAccountController::class, 'monthlyReport'])->name('monthly-report');
     Route::get('/yearly-report', [MainAccountController::class, 'yearlyReport'])->name('yearly-report');
     Route::get('/bank-report', [MainAccountController::class, 'bankReport'])->name('bank-report');
+    Route::get('/receipt-payment-report', [MainAccountController::class, 'receiptAndPaymentReport'])
+        ->name('main-account.receipt-payment-report');
+    Route::get('/income-expenditure-report', [MainAccountController::class, 'incomeExpenditureReport'])
+        ->name('main-account.income-expenditure-report');
+    Route::get('/balance-sheet', [MainAccountController::class, 'balanceSheet'])
+        ->name('main-account.balance-sheet');
 });
 
 Route::middleware(['auth', 'super-admin'])->prefix('optics')->name('optics.')->group(function () {
