@@ -280,6 +280,7 @@ class OpticsCornerController extends Controller
 
         return redirect()->route('optics.stock')->with('success', 'Stock added successfully!');
     }
+
     public function editStock($id)
     {
         $movement = StockMovement::with(['user'])->findOrFail($id);
@@ -320,7 +321,7 @@ class OpticsCornerController extends Controller
 
         return Inertia::render('OpticsCorner/Stock/Edit', compact('movement', 'frames', 'lensTypes', 'completeGlasses'));
     }
-    
+
     public function updateStock(Request $request, $id)
     {
         $movement = StockMovement::findOrFail($id);
@@ -408,6 +409,7 @@ class OpticsCornerController extends Controller
 
         return redirect()->route('optics.stock')->with('success', 'Stock movement updated successfully!');
     }
+    
     public function deleteStock($id)
     {
         $movement = StockMovement::findOrFail($id);
