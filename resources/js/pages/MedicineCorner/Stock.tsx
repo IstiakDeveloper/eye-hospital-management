@@ -115,6 +115,7 @@ export default function Stock({
         );
     };
 
+
     const totalPendingPayments = pendingVendorPayments.reduce((sum, payment) => sum + payment.due_amount, 0);
 
     return (
@@ -389,15 +390,13 @@ export default function Stock({
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2">
                                                     <button
-                                                        onClick={() => {
-                                                            setSelectedStock(stock);
-                                                            setShowAdjustModal(true);
-                                                        }}
-                                                        className="inline-flex items-center p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-                                                        title="Adjust Stock"
+                                                        onClick={() => router.visit(route('medicine-corner.edit-stock', stock.id))}
+                                                        className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors text-sm"
                                                     >
                                                         <Edit3 className="w-4 h-4" />
+
                                                     </button>
+
                                                     <button
                                                         className="inline-flex items-center p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
                                                         title="View Details"

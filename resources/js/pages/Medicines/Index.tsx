@@ -1,24 +1,6 @@
-import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent
-} from '@/components/ui/card';
-import Pagination from '@/components/ui/pagination';
 import {
   Search,
   Pill,
@@ -30,15 +12,14 @@ import {
   Download,
   Building2,
   Activity,
-  TrendingUp,
-  AlertCircle,
   CheckCircle,
   Eye,
-  MoreVertical,
+  Timer,
+  ChevronDown,
+  ArrowUpDown,
+  Trash2,
   Package,
-  ShoppingCart,
-  Zap,
-  Timer
+  TrendingUp
 } from 'lucide-react';
 
 interface Medicine {
@@ -57,6 +38,19 @@ interface PaginationLinks {
   active: boolean;
 }
 
+interface FilterOptions {
+  types: string[];
+  manufacturers: string[];
+}
+
+interface Stats {
+  total_medicines: number;
+  active_medicines: number;
+  inactive_medicines: number;
+  unique_types: number;
+  unique_manufacturers: number;
+}
+
 interface MedicinesIndexProps {
   medicines: {
     data: Medicine[];
@@ -67,65 +61,198 @@ interface MedicinesIndexProps {
     to: number;
     total: number;
   };
-  types: string[];
+  filterOptions: FilterOptions;
+  stats: Stats;
+  filters: {
+    search: string;
+    type: string;
+    status: string;
+    manufacturer: string;
+    sort_by: string;
+    sort_order: string;
+  };
 }
 
-export default function MedicinesIndex({ medicines, types }: MedicinesIndexProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [isSearching, setIsSearching] = useState(false);
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSearching(true);
-    try {
-      await router.get(route('medicines.index'), {
-        search: searchTerm,
-        type: typeFilter,
-        status: statusFilter
-      }, { preserveState: true });
-    } finally {
-      setIsSearching(false);
-    }
+const Button = ({ children, className = '', variant = 'primary', size = 'md', disabled = false, onClick, href, ...props }: any) => {
+  const baseClasses = 'inline-flex items-center justify-center font-medium transition-colors rounded-lg';
+  const variants = {
+    primary: 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300',
+    secondary: 'bg-gray-600 text-white hover:bg-gray-700 disabled:bg-gray-300',
+    outline: 'border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50',
+    ghost: 'text-gray-700 hover:bg-gray-100 disabled:opacity-50',
+    success: 'bg-green-600 text-white hover:bg-green-700 disabled:bg-green-300',
+    danger: 'bg-red-600 text-white hover:bg-red-700 disabled:bg-red-300'
+  };
+  const sizes = {
+    sm: 'px-2 py-1 text-sm',
+    md: 'px-4 py-2',
+    lg: 'px-6 py-3 text-lg'
   };
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    if (name === 'type') {
-      setTypeFilter(value);
-    } else if (name === 'status') {
-      setStatusFilter(value);
-    }
-    router.get(route('medicines.index'), {
-      search: searchTerm,
-      type: name === 'type' ? value : typeFilter,
-      status: name === 'status' ? value : statusFilter
-    }, { preserveState: true });
-  };
+  const classes = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`;
 
-  const clearFilters = () => {
-    setSearchTerm('');
-    setTypeFilter('all');
-    setStatusFilter('all');
-    router.get(route('medicines.index'), {}, { preserveState: true });
-  };
+  if (href) {
+    return (
+      <a href={href} className={classes} {...props}>
+        {children}
+      </a>
+    );
+  }
 
-  const toggleMedicineStatus = (id: number, currentStatus: boolean) => {
-    router.put(route('medicines.toggle', id), {}, {
-      onSuccess: () => {
-        // Status will be updated automatically
-      },
-      preserveState: true
+  return (
+    <button
+      className={classes}
+      disabled={disabled}
+      onClick={onClick}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
+
+const Badge = ({ children, className = '' }: any) => (
+  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${className}`}>
+    {children}
+  </span>
+);
+
+const Card = ({ children, className = '' }: any) => (
+  <div className={`bg-white rounded-xl shadow-sm border border-gray-200 ${className}`}>
+    {children}
+  </div>
+);
+
+const CardHeader = ({ children, className = '' }: any) => (
+  <div className={`px-6 py-4 ${className}`}>
+    {children}
+  </div>
+);
+
+const CardTitle = ({ children, className = '' }: any) => (
+  <h3 className={`text-lg font-semibold text-gray-900 ${className}`}>
+    {children}
+  </h3>
+);
+
+const CardContent = ({ children, className = '' }: any) => (
+  <div className={className}>
+    {children}
+  </div>
+);
+
+export default function MedicinesIndex({ medicines, filterOptions, stats, filters }: MedicinesIndexProps) {
+  const [search, setSearch] = useState(filters?.search || '');
+  const [localFilters, setLocalFilters] = useState({
+    type: filters?.type || 'all',
+    status: filters?.status || 'all',
+    manufacturer: filters?.manufacturer || 'all',
+    sort_by: filters?.sort_by || 'name',
+    sort_order: filters?.sort_order || 'asc'
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedMedicines, setSelectedMedicines] = useState<number[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Auto search with debounce
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (search !== (filters?.search || '')) {
+        applyFilters();
+      }
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [search]);
+
+  // Apply filters when they change
+  useEffect(() => {
+    applyFilters();
+  }, [localFilters]);
+
+  const applyFilters = () => {
+    const params = {
+      search: search || undefined,
+      ...Object.fromEntries(
+        Object.entries(localFilters).filter(([_, v]) => v !== 'all' && v !== '' && v !== null)
+      )
+    };
+
+    router.get('/medicines', params, {
+      preserveState: true,
+      preserveScroll: true,
+      replace: true
     });
   };
 
-  // Calculate stats
-  const totalMedicines = medicines.total;
-  const currentPageCount = medicines.data.length;
-  const activeMedicines = medicines.data.filter(m => m.is_active).length;
-  const inactiveMedicines = medicines.data.filter(m => !m.is_active).length;
-  const uniqueTypes = new Set(medicines.data.map(m => m.type)).size;
+  const clearFilters = () => {
+    setSearch('');
+    setLocalFilters({
+      type: 'all',
+      status: 'all',
+      manufacturer: 'all',
+      sort_by: 'name',
+      sort_order: 'asc'
+    });
+    router.get('/medicines', {}, { preserveState: true });
+  };
+
+  const handleSort = (field: string) => {
+    const newOrder = localFilters.sort_by === field && localFilters.sort_order === 'asc' ? 'desc' : 'asc';
+    setLocalFilters(prev => ({ ...prev, sort_by: field, sort_order: newOrder }));
+  };
+
+  const toggleMedicineStatus = async (id: number) => {
+    setIsLoading(true);
+    try {
+      router.put(`/medicines/${id}/toggle`, {}, {
+        preserveState: true,
+        preserveScroll: true,
+        onFinish: () => setIsLoading(false)
+      });
+    } catch (error) {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBulkAction = async (action: string) => {
+    if (selectedMedicines.length === 0) return;
+
+    if (action === 'delete') {
+      if (!confirm('Are you sure you want to delete selected medicines? This action cannot be undone.')) {
+        return;
+      }
+    }
+
+    setIsLoading(true);
+    try {
+      router.post('/medicines/bulk-action', {
+        action,
+        medicine_ids: selectedMedicines
+      }, {
+        preserveState: true,
+        onSuccess: () => setSelectedMedicines([]),
+        onFinish: () => setIsLoading(false)
+      });
+    } catch (error) {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedMedicines.length === medicines.data.length) {
+      setSelectedMedicines([]);
+    } else {
+      setSelectedMedicines(medicines.data.map(m => m.id));
+    }
+  };
+
+  const toggleSelectMedicine = (id: number) => {
+    setSelectedMedicines(prev =>
+      prev.includes(id)
+        ? prev.filter(medId => medId !== id)
+        : [...prev, id]
+    );
+  };
 
   const getStatusBadge = (isActive: boolean) => {
     return isActive ? (
@@ -158,341 +285,524 @@ export default function MedicinesIndex({ medicines, types }: MedicinesIndexProps
     );
   };
 
+  const hasActiveFilters = search || Object.values(localFilters).some(v => v !== 'all' && v !== 'name' && v !== 'asc');
+
+  // Safe data access
+  const medicineData = medicines?.data || [];
+  const medicineStats = stats || {
+    total_medicines: 0,
+    active_medicines: 0,
+    inactive_medicines: 0,
+    unique_types: 0,
+    unique_manufacturers: 0
+  };
+  const options = filterOptions || { types: [], manufacturers: [] };
+
   return (
-    <AdminLayout title="Medicine Management">
+    <AdminLayout>
       <Head title="Medicine Management" />
 
-      {/* Header Section */}
-      <div className="mb-8">
+      <div className="space-y-6">
+        {/* Header Section */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Medicine Management</h1>
-            <p className="text-gray-600">Manage your pharmacy inventory and medicine database</p>
+            <h1 className="text-3xl font-bold text-gray-900">Medicine Management</h1>
+            <p className="text-gray-600 mt-1">
+              Manage your pharmacy inventory and medicine database ({medicines?.total || 0} total medicines)
+            </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button variant="outline" leftIcon={<Download className="h-4 w-4" />}>
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
               Export Data
             </Button>
-            <Button href={route('medicines.create')} leftIcon={<Plus className="h-4 w-4" />} size="lg">
+            <Button href="/medicines/create" size="lg">
+              <Plus className="h-4 w-4 mr-2" />
               Add New Medicine
             </Button>
           </div>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-shadow duration-300">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-shadow duration-300">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-blue-600 mb-1">Total</p>
+                  <p className="text-2xl font-bold text-blue-900">{medicineStats.total_medicines}</p>
+                </div>
+                <div className="p-2 bg-blue-500 rounded-lg">
+                  <Pill className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover:shadow-lg transition-shadow duration-300">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-emerald-600 mb-1">Active</p>
+                  <p className="text-2xl font-bold text-emerald-900">{medicineStats.active_medicines}</p>
+                </div>
+                <div className="p-2 bg-emerald-500 rounded-lg">
+                  <CheckCircle className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 hover:shadow-lg transition-shadow duration-300">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-600 mb-1">Inactive</p>
+                  <p className="text-2xl font-bold text-gray-900">{medicineStats.inactive_medicines}</p>
+                </div>
+                <div className="p-2 bg-gray-500 rounded-lg">
+                  <Timer className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow duration-300">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-purple-600 mb-1">Types</p>
+                  <p className="text-2xl font-bold text-purple-900">{medicineStats.unique_types}</p>
+                </div>
+                <div className="p-2 bg-purple-500 rounded-lg">
+                  <Package className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-lg transition-shadow duration-300">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-amber-600 mb-1">Brands</p>
+                  <p className="text-2xl font-bold text-amber-900">{medicineStats.unique_manufacturers}</p>
+                </div>
+                <div className="p-2 bg-amber-500 rounded-lg">
+                  <Building2 className="h-4 w-4 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Search and Filters */}
+        <Card className="shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
+            <CardTitle className="flex items-center space-x-2">
+              <Search className="h-5 w-5 text-gray-600" />
+              <span>Search & Filters</span>
+            </CardTitle>
+          </CardHeader>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-600 mb-1">Total Medicines</p>
-                <p className="text-3xl font-bold text-blue-900">{totalMedicines.toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-blue-500 rounded-xl">
-                <Pill className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-emerald-600 mb-1">Active</p>
-                <p className="text-3xl font-bold text-emerald-900">{activeMedicines}</p>
-              </div>
-              <div className="p-3 bg-emerald-500 rounded-xl">
-                <CheckCircle className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Inactive</p>
-                <p className="text-3xl font-bold text-gray-900">{inactiveMedicines}</p>
-              </div>
-              <div className="p-3 bg-gray-500 rounded-xl">
-                <Timer className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-600 mb-1">Medicine Types</p>
-                <p className="text-3xl font-bold text-purple-900">{uniqueTypes}</p>
-              </div>
-              <div className="p-3 bg-purple-500 rounded-xl">
-                <Package className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-lg transition-shadow duration-300">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-amber-600 mb-1">This Page</p>
-                <p className="text-3xl font-bold text-amber-900">{currentPageCount}</p>
-              </div>
-              <div className="p-3 bg-amber-500 rounded-xl">
-                <Activity className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search and Filters */}
-      <Card className="mb-8 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
-          <CardTitle className="flex items-center space-x-2">
-            <Search className="h-5 w-5 text-gray-600" />
-            <span>Search & Filters</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <form onSubmit={handleSearch} className="flex flex-col lg:flex-row gap-4 mb-4">
-            <div className="flex-1">
-              <Input
-                type="text"
-                placeholder="Search by medicine name, generic name, or manufacturer..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                leftIcon={<Search className="h-4 w-4" />}
-                className="w-full"
-              />
-            </div>
-            <div className="flex gap-3">
-              <Button
-                type="submit"
-                isLoading={isSearching}
-                loadingText="Searching..."
-                className="min-w-[120px]"
-              >
-                Search
-              </Button>
-              {(searchTerm || typeFilter !== 'all' || statusFilter !== 'all') && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={clearFilters}
+            <div className="flex flex-col space-y-4">
+              {/* Search Bar */}
+              <div className="flex space-x-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search by medicine name, generic name, manufacturer, type..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg font-medium transition-colors ${
+                    showFilters ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
                 >
-                  Clear All
-                </Button>
+                  <Filter className="w-4 h-4" />
+                  Filters
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                </button>
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium transition-colors"
+                  >
+                    <XIcon className="w-4 h-4" />
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Advanced Filters */}
+              {showFilters && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <select
+                      value={localFilters.type}
+                      onChange={(e) => setLocalFilters(prev => ({ ...prev, type: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="all">All Types</option>
+                      {options.types.map(type => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select
+                      value={localFilters.status}
+                      onChange={(e) => setLocalFilters(prev => ({ ...prev, status: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="active">Active Only</option>
+                      <option value="inactive">Inactive Only</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Manufacturer</label>
+                    <select
+                      value={localFilters.manufacturer}
+                      onChange={(e) => setLocalFilters(prev => ({ ...prev, manufacturer: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="all">All Manufacturers</option>
+                      {options.manufacturers.map(manufacturer => (
+                        <option key={manufacturer} value={manufacturer}>{manufacturer}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                    <div className="flex space-x-2">
+                      <select
+                        value={localFilters.sort_by}
+                        onChange={(e) => setLocalFilters(prev => ({ ...prev, sort_by: e.target.value }))}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="name">Name</option>
+                        <option value="type">Type</option>
+                        <option value="manufacturer">Manufacturer</option>
+                        <option value="status">Status</option>
+                        <option value="created_at">Date Added</option>
+                      </select>
+                      <button
+                        onClick={() => setLocalFilters(prev => ({
+                          ...prev,
+                          sort_order: prev.sort_order === 'asc' ? 'desc' : 'asc'
+                        }))}
+                        className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <ArrowUpDown className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
-          </form>
+          </CardContent>
+        </Card>
 
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-            <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Filter by:</span>
-            </div>
-
-            <div className="flex flex-wrap gap-3 flex-1">
-              <div className="flex-1 min-w-[200px]">
-                <select
-                  name="type"
-                  value={typeFilter}
-                  onChange={handleFilterChange}
-                  className="flex h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 shadow-sm transition-all duration-200 hover:border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
-                >
-                  <option value="all">All Types</option>
-                  {types?.map((type) => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex-1 min-w-[200px]">
-                <select
-                  name="status"
-                  value={statusFilter}
-                  onChange={handleFilterChange}
-                  className="flex h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 shadow-sm transition-all duration-200 hover:border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active Only</option>
-                  <option value="inactive">Inactive Only</option>
-                </select>
-              </div>
-            </div>
+        {/* Active Filters Display */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap gap-2">
+            {search && (
+              <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                Search: "{search}"
+              </span>
+            )}
+            {Object.entries(localFilters).map(([key, value]) =>
+              value && value !== 'all' && value !== 'name' && value !== 'asc' && (
+                <span key={key} className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm">
+                  {key.replace('_', ' ')}: {value}
+                </span>
+              )
+            )}
           </div>
-        </CardContent>
-      </Card>
+        )}
 
-      {/* Main Content */}
-      <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-        <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Bulk Actions */}
+        {selectedMedicines.length > 0 && (
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-blue-900">
+                  {selectedMedicines.length} medicine(s) selected
+                </span>
+                <div className="flex space-x-2">
+                  <Button
+                    size="sm"
+                    variant="success"
+                    onClick={() => handleBulkAction('activate')}
+                    disabled={isLoading}
+                  >
+                    <Check className="w-4 h-4 mr-1" />
+                    Activate
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => handleBulkAction('deactivate')}
+                    disabled={isLoading}
+                  >
+                    <XIcon className="w-4 h-4 mr-1" />
+                    Deactivate
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => handleBulkAction('delete')}
+                    disabled={isLoading}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Results Info */}
+        <div className="flex justify-between items-center text-sm text-gray-600">
+          <span>
+            Showing {medicines?.from || 0} to {medicines?.to || 0} of {medicines?.total || 0} medicines
+          </span>
+          <span>
+            {hasActiveFilters && `${medicines?.total || 0} filtered results`}
+          </span>
+        </div>
+
+        {/* Main Table */}
+        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
             <CardTitle className="flex items-center space-x-2">
               <Pill className="h-5 w-5 text-gray-600" />
               <span>Medicine Directory</span>
             </CardTitle>
-            <div className="flex items-center space-x-4">
-              <p className="text-sm text-gray-600 bg-white px-3 py-1 rounded-lg border">
-                Showing <span className="font-semibold">{medicines.from}</span> to <span className="font-semibold">{medicines.to}</span> of <span className="font-semibold">{medicines.total}</span> medicines
-              </p>
-            </div>
-          </div>
-        </CardHeader>
+          </CardHeader>
 
-        <CardContent className="p-0">
-          {medicines.data.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50 hover:bg-gray-50">
-                    <TableHead className="font-bold text-gray-800 py-4">
-                      <div className="flex items-center space-x-2">
-                        <Pill className="h-4 w-4" />
-                        <span>Medicine Details</span>
-                      </div>
-                    </TableHead>
-                    <TableHead className="font-bold text-gray-800">Generic Name</TableHead>
-                    <TableHead className="font-bold text-gray-800">Type & Category</TableHead>
-                    <TableHead className="font-bold text-gray-800">
-                      <div className="flex items-center space-x-2">
-                        <Building2 className="h-4 w-4" />
-                        <span>Manufacturer</span>
-                      </div>
-                    </TableHead>
-                    <TableHead className="font-bold text-gray-800">Status</TableHead>
-                    <TableHead className="text-right font-bold text-gray-800">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {medicines.data.map((medicine, index) => (
-                    <TableRow
-                      key={medicine.id}
-                      className="hover:bg-blue-50 transition-colors duration-200 group"
-                    >
-                      <TableCell className="font-medium py-4">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                            {medicine.name.charAt(0).toUpperCase()}
+          <CardContent className="p-0">
+            {medicineData.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50 border-b">
+                      <th className="w-12 px-4 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          checked={selectedMedicines.length === medicineData.length && medicineData.length > 0}
+                          onChange={toggleSelectAll}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </th>
+                      <th className="px-4 py-3 text-left font-bold text-gray-800">
+                        <button
+                          onClick={() => handleSort('name')}
+                          className="flex items-center space-x-2 hover:text-blue-600 transition-colors"
+                        >
+                          <Pill className="h-4 w-4" />
+                          <span>Medicine Details</span>
+                          <ArrowUpDown className="h-3 w-3" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-3 text-left font-bold text-gray-800">Generic Name</th>
+                      <th className="px-4 py-3 text-left font-bold text-gray-800">
+                        <button
+                          onClick={() => handleSort('type')}
+                          className="flex items-center space-x-2 hover:text-blue-600 transition-colors"
+                        >
+                          <span>Type & Category</span>
+                          <ArrowUpDown className="h-3 w-3" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-3 text-left font-bold text-gray-800">
+                        <button
+                          onClick={() => handleSort('manufacturer')}
+                          className="flex items-center space-x-2 hover:text-blue-600 transition-colors"
+                        >
+                          <Building2 className="h-4 w-4" />
+                          <span>Manufacturer</span>
+                          <ArrowUpDown className="h-3 w-3" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-3 text-left font-bold text-gray-800">
+                        <button
+                          onClick={() => handleSort('status')}
+                          className="flex items-center space-x-2 hover:text-blue-600 transition-colors"
+                        >
+                          <span>Status</span>
+                          <ArrowUpDown className="h-3 w-3" />
+                        </button>
+                      </th>
+                      <th className="px-4 py-3 text-right font-bold text-gray-800">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {medicineData.map((medicine) => (
+                      <tr
+                        key={medicine.id}
+                        className="border-b hover:bg-blue-50 transition-colors duration-200 group"
+                      >
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedMedicines.includes(medicine.id)}
+                            onChange={() => toggleSelectMedicine(medicine.id)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                              {medicine.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-bold text-gray-900">{medicine.name}</p>
+                              <p className="text-xs text-gray-500">ID #{medicine.id}</p>
+                            </div>
                           </div>
+                        </td>
+
+                        <td className="px-4 py-3">
                           <div>
-                            <p className="font-bold text-gray-900">{medicine.name}</p>
-                            <p className="text-xs text-gray-500">ID #{medicine.id}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {medicine.generic_name || 'N/A'}
-                          </p>
-                          {medicine.generic_name && (
-                            <p className="text-xs text-gray-500">Generic</p>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        {getTypeBadge(medicine.type)}
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Building2 className="h-4 w-4 text-gray-400" />
-                          <span className="font-medium text-gray-900">
-                            {medicine.manufacturer || 'Not specified'}
-                          </span>
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        {getStatusBadge(medicine.is_active)}
-                      </TableCell>
-
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            href={route('medicines.show', medicine.id)}
-                            className="hover:bg-blue-100 transition-all duration-300 group-hover:scale-110"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            href={route('medicines.edit', medicine.id)}
-                            className="hover:bg-gray-100 transition-all duration-300 group-hover:scale-110"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => toggleMedicineStatus(medicine.id, medicine.is_active)}
-                            className={`transition-all duration-300 group-hover:scale-110 ${
-                              medicine.is_active
-                                ? 'text-red-600 hover:text-red-800 hover:bg-red-100'
-                                : 'text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100'
-                            }`}
-                          >
-                            {medicine.is_active ? (
-                              <XIcon className="h-4 w-4" />
-                            ) : (
-                              <Check className="h-4 w-4" />
+                            <p className="font-semibold text-gray-900">
+                              {medicine.generic_name || 'N/A'}
+                            </p>
+                            {medicine.generic_name && (
+                              <p className="text-xs text-gray-500">Generic</p>
                             )}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center py-16">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Pill className="h-12 w-12 text-gray-400" />
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {getTypeBadge(medicine.type)}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <div className="flex items-center space-x-2">
+                            <Building2 className="h-4 w-4 text-gray-400" />
+                            <span className="font-medium text-gray-900">
+                              {medicine.manufacturer || 'Not specified'}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {getStatusBadge(medicine.is_active)}
+                        </td>
+
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end space-x-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              href={`/medicines/${medicine.id}`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              href={`/medicines/${medicine.id}/edit`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => toggleMedicineStatus(medicine.id)}
+                              disabled={isLoading}
+                              className={medicine.is_active ? 'text-red-600 hover:bg-red-100' : 'text-green-600 hover:bg-green-100'}
+                            >
+                              {medicine.is_active ? (
+                                <XIcon className="h-4 w-4" />
+                              ) : (
+                                <Check className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No medicines found</h3>
-              <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                {searchTerm || typeFilter !== 'all' || statusFilter !== 'all'
-                  ? "No medicines match your current search and filter criteria. Try adjusting your filters."
-                  : "Get started by adding your first medicine to the database."
-                }
-              </p>
-              <div className="flex justify-center space-x-3">
-                {(searchTerm || typeFilter !== 'all' || statusFilter !== 'all') && (
-                  <Button variant="outline" onClick={clearFilters}>
-                    Clear Filters
+            ) : (
+              <div className="text-center py-16">
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Pill className="h-12 w-12 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No medicines found</h3>
+                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                  {hasActiveFilters
+                    ? "No medicines match your current search and filter criteria. Try adjusting your filters."
+                    : "Get started by adding your first medicine to the database."
+                  }
+                </p>
+                <div className="flex justify-center space-x-3">
+                  {hasActiveFilters && (
+                    <Button variant="outline" onClick={clearFilters}>
+                      <XIcon className="w-4 h-4 mr-2" />
+                      Clear Filters
+                    </Button>
+                  )}
+                  <Button href="/medicines/create">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add First Medicine
                   </Button>
-                )}
-                <Button href={route('medicines.create')} leftIcon={<Plus className="h-4 w-4" />}>
-                  Add First Medicine
-                </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+
+          {/* Pagination */}
+          {medicineData.length > 0 && medicines?.links && (
+            <div className="border-t bg-gray-50 px-6 py-4">
+              <div className="flex justify-center">
+                <div className="flex space-x-1">
+                  {medicines.links.map((link: any, index: number) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        if (link.url) {
+                          router.visit(link.url, {
+                            preserveState: true,
+                            preserveScroll: false
+                          });
+                        }
+                      }}
+                      disabled={!link.url}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        link.active
+                          ? 'bg-blue-600 text-white'
+                          : link.url
+                            ? 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 cursor-pointer'
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}
+                      dangerouslySetInnerHTML={{ __html: link.label }}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           )}
-        </CardContent>
-
-        {medicines.data.length > 0 && (
-          <div className="border-t bg-gray-50 px-6 py-4">
-            <Pagination links={medicines.links} />
-          </div>
-        )}
-      </Card>
+        </Card>
+      </div>
     </AdminLayout>
   );
 }

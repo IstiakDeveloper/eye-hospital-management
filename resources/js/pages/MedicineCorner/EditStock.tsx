@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
 import {
     ShoppingCart,
-    Plus,
+    Save,
     Calendar,
     Package,
     DollarSign,
     AlertCircle,
     CheckCircle,
     Search,
-    Clock,
+    ArrowLeft,
     User,
     TrendingUp,
     Building2,
     CreditCard,
     AlertTriangle,
-    History
+    Edit
 } from 'lucide-react';
 
 interface Medicine {
@@ -24,8 +24,6 @@ interface Medicine {
     name: string;
     generic_name: string;
     standard_sale_price: number;
-    latest_buy_price: number;
-    latest_sale_price: number;
 }
 
 interface Vendor {
@@ -37,65 +35,66 @@ interface Vendor {
     payment_terms_days: number;
 }
 
-interface RecentPurchase {
+interface StockData {
     id: number;
+    vendor_id: number;
+    medicine_id: number;
+    batch_number: string;
+    expiry_date: string;
     quantity: number;
-    unit_price: number;
-    total_amount: number;
-    created_at: string;
-    medicine_stock: {
-        batch_number: string;
-        medicine: {
-            name: string;
-        };
-        vendor?: {
-            name: string;
-        };
-    };
-    created_by: {
-        name: string;
-    };
+    available_quantity: number;
+    buy_price: number;
+    sale_price: number;
+    notes?: string;
+    purchase_date: string;
+    paid_amount?: number;
+    payment_method?: string;
+    cheque_no?: string;
+    cheque_date?: string;
+    medicine?: Medicine;
+    vendor?: Vendor;
+    total_purchase_amount: number;
+    due_amount?: number;
+    payment_status?: string;
 }
 
-interface VendorWithDue {
-    id: number;
-    name: string;
-    current_balance: number;
-}
-
-interface PurchasePageProps {
+interface EditStockProps {
+    stock: StockData;
     medicines: Medicine[];
     vendors: Vendor[];
-    recentPurchases: RecentPurchase[];
-    todayPurchases: number;
-    vendorsWithDues: VendorWithDue[];
 }
 
-export default function Purchase({
-    medicines,
-    vendors,
-    recentPurchases,
-    todayPurchases,
-    vendorsWithDues
-}: PurchasePageProps) {
+export default function EditStock({ stock, medicines, vendors }: EditStockProps) {
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
-    const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+    const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(stock.medicine || null);
+    const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(stock.vendor || null);
 
-    const { data, setData, post, processing, errors, reset } = useForm({
-        vendor_id: '',
-        medicine_id: '',
-        batch_number: '',
-        expiry_date: '',
-        quantity: '',
-        buy_price: '',
-        sale_price: '',
-        paid_amount: '',
-        payment_method: 'credit',
-        cheque_no: '',
-        cheque_date: '',
-        notes: '',
+    const { data, setData, put, processing, errors, reset } = useForm({
+        vendor_id: stock.vendor_id ? stock.vendor_id.toString() : '',
+        medicine_id: stock.medicine_id ? stock.medicine_id.toString() : '',
+        batch_number: stock.batch_number || '',
+        expiry_date: stock.expiry_date || '',
+        quantity: stock.quantity ? stock.quantity.toString() : '',
+        buy_price: stock.buy_price ? stock.buy_price.toString() : '',
+        sale_price: stock.sale_price ? stock.sale_price.toString() : '',
+        paid_amount: stock.paid_amount ? stock.paid_amount.toString() : '0',
+        payment_method: stock.payment_method || 'credit',
+        cheque_no: stock.cheque_no || '',
+        cheque_date: stock.cheque_date || '',
+        notes: stock.notes || '',
     });
+
+    // Set selected medicine and vendor from medicines and vendors arrays if not in stock object
+    useEffect(() => {
+        if (!selectedMedicine && stock.medicine_id) {
+            const medicine = medicines.find(m => m.id === stock.medicine_id);
+            if (medicine) setSelectedMedicine(medicine);
+        }
+        if (!selectedVendor && stock.vendor_id) {
+            const vendor = vendors.find(v => v.id === stock.vendor_id);
+            if (vendor) setSelectedVendor(vendor);
+        }
+    }, [medicines, vendors, stock.medicine_id, stock.vendor_id, selectedMedicine, selectedVendor]);
 
     const formatCurrency = (amount: number) => {
         const formatted = new Intl.NumberFormat('en-US', {
@@ -108,8 +107,7 @@ export default function Purchase({
         return new Date(date).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short',
-            hour: '2-digit',
-            minute: '2-digit'
+            year: 'numeric'
         });
     };
 
@@ -120,13 +118,7 @@ export default function Purchase({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(route('medicine-corner.add-stock'), {
-            onSuccess: () => {
-                reset();
-                setSelectedMedicine(null);
-                setSelectedVendor(null);
-            }
-        });
+        put(route('medicine-corner.update-stock', stock.id));
     };
 
     const handleMedicineSelect = (medicine: Medicine) => {
@@ -134,8 +126,7 @@ export default function Purchase({
         setData({
             ...data,
             medicine_id: medicine.id.toString(),
-            buy_price: medicine.latest_buy_price > 0 ? medicine.latest_buy_price.toString() : '',
-            sale_price: medicine.latest_sale_price.toString()
+            sale_price: medicine.standard_sale_price.toString()
         });
         setSearchTerm('');
     };
@@ -163,59 +154,91 @@ export default function Purchase({
 
     const getCreditUtilization = () => {
         if (!selectedVendor || selectedVendor.credit_limit === 0) return 0;
-        const newDue = selectedVendor.current_balance + getDueAmount();
+        const stockDueAmount = stock.due_amount || 0;
+        const currentDue = selectedVendor.id === stock.vendor_id
+            ? selectedVendor.current_balance - stockDueAmount
+            : selectedVendor.current_balance;
+        const newDue = currentDue + getDueAmount();
         return (newDue / selectedVendor.credit_limit) * 100;
+    };
+
+    const getQuantityChangeWarning = () => {
+        const newQuantity = parseInt(data.quantity) || 0;
+        const quantityDifference = newQuantity - stock.quantity;
+
+        if (quantityDifference < 0 && Math.abs(quantityDifference) > stock.available_quantity) {
+            return `Cannot reduce quantity by ${Math.abs(quantityDifference)}. Only ${stock.available_quantity} units available.`;
+        }
+        return null;
     };
 
     return (
         <AdminLayout>
-            <Head title="Purchase Entry" />
+            <Head title="Edit Stock Entry" />
 
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Purchase Entry</h1>
-                        <p className="text-gray-600 mt-1">Add new stock from vendors to your medicine inventory</p>
-                    </div>
                     <div className="flex items-center gap-4">
-                        <div className="text-right">
-                            <p className="text-sm text-gray-600">Today's Purchases</p>
-                            <p className="text-xl font-bold text-green-600">{formatCurrency(todayPurchases)}</p>
+                        <button
+                            onClick={() => window.history.back()}
+                            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                            <span>Back</span>
+                        </button>
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">Edit Stock Entry</h1>
+                            <p className="text-gray-600 mt-1">
+                                Update stock information for batch: {stock.batch_number}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-sm text-gray-600">Original Purchase Date</p>
+                        <p className="text-lg font-semibold text-blue-600">{formatDate(stock.purchase_date)}</p>
+                    </div>
+                </div>
+
+                {/* Current Stock Info */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                        <AlertCircle className="w-5 h-5 text-blue-600" />
+                        <h3 className="text-lg font-medium text-blue-900">Current Stock Information</h3>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                            <span className="text-blue-700">Original Quantity:</span>
+                            <div className="font-semibold text-blue-900">{stock.quantity} units</div>
+                        </div>
+                        <div>
+                            <span className="text-blue-700">Available:</span>
+                            <div className="font-semibold text-green-600">{stock.available_quantity} units</div>
+                        </div>
+                        <div>
+                            <span className="text-blue-700">Sold:</span>
+                            <div className="font-semibold text-red-600">{stock.quantity - stock.available_quantity} units</div>
+                        </div>
+                        <div>
+                            <span className="text-blue-700">Payment Status:</span>
+                            <div className={`font-semibold ${(stock.payment_status || 'pending') === 'paid' ? 'text-green-600' :
+                                    (stock.payment_status || 'pending') === 'partial' ? 'text-yellow-600' : 'text-red-600'
+                                }`}>
+                                {(stock.payment_status || 'pending').toUpperCase()}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Vendor Due Alert */}
-                {vendorsWithDues.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                        <div className="flex items-center gap-3">
-                            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                            <div className="flex-1">
-                                <h3 className="text-sm font-medium text-amber-800">Vendor Due Alert</h3>
-                                <p className="text-sm text-amber-700 mt-1">
-                                    {vendorsWithDues.length} vendors have pending dues.
-                                    <button
-                                        onClick={() => window.open(route('medicine-corner.vendor-dues'), '_blank')}
-                                        className="ml-2 text-amber-800 underline hover:no-underline"
-                                    >
-                                        View Details
-                                    </button>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Purchase Form */}
+                    {/* Edit Form */}
                     <div className="lg:col-span-2">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                             <div className="flex items-center gap-3 mb-6">
-                                <div className="bg-blue-100 p-2 rounded-lg">
-                                    <Plus className="w-5 h-5 text-blue-600" />
+                                <div className="bg-orange-100 p-2 rounded-lg">
+                                    <Edit className="w-5 h-5 text-orange-600" />
                                 </div>
-                                <h2 className="text-xl font-semibold text-gray-900">Add New Stock</h2>
+                                <h2 className="text-xl font-semibold text-gray-900">Update Stock Information</h2>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-6">
@@ -251,6 +274,11 @@ export default function Purchase({
                                                 <span className="font-medium text-green-900">
                                                     {selectedVendor.name}
                                                 </span>
+                                                {selectedVendor.id !== stock.vendor_id && (
+                                                    <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
+                                                        Vendor Changed
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="grid grid-cols-2 gap-4 text-sm">
                                                 <div>
@@ -270,7 +298,7 @@ export default function Purchase({
                                                     <span className="font-semibold">{selectedVendor.payment_terms_days} days</span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-green-700">Credit Used: </span>
+                                                    <span className="text-green-700">New Credit Used: </span>
                                                     <span className={`font-semibold ${getCreditUtilization() > 80 ? 'text-red-600' : 'text-green-600'}`}>
                                                         {getCreditUtilization().toFixed(1)}%
                                                     </span>
@@ -285,11 +313,43 @@ export default function Purchase({
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Select Medicine *
                                     </label>
+
+                                    {/* Current Medicine Display */}
+                                    {selectedMedicine ? (
+                                        <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <div className="flex items-center gap-2">
+                                                <CheckCircle className="w-4 h-4 text-blue-600" />
+                                                <span className="font-medium text-blue-900">
+                                                    Current: {selectedMedicine.name}
+                                                </span>
+                                                {selectedMedicine.id !== stock.medicine_id && (
+                                                    <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
+                                                        Medicine Changed
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {selectedMedicine.generic_name && (
+                                                <div className="text-sm text-blue-700 mt-1">
+                                                    {selectedMedicine.generic_name}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                            <div className="flex items-center gap-2">
+                                                <AlertCircle className="w-4 h-4 text-yellow-600" />
+                                                <span className="font-medium text-yellow-800">
+                                                    No medicine selected - Please select a medicine
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                                         <input
                                             type="text"
-                                            placeholder="Search medicines..."
+                                            placeholder="Search to change medicine..."
                                             value={searchTerm}
                                             onChange={(e) => setSearchTerm(e.target.value)}
                                             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -303,54 +363,21 @@ export default function Purchase({
                                                     key={medicine.id}
                                                     type="button"
                                                     onClick={() => handleMedicineSelect(medicine)}
-                                                    className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                                                    className={`w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors ${medicine.id === selectedMedicine.id ? 'bg-blue-50' : ''
+                                                        }`}
                                                 >
                                                     <div className="font-medium text-gray-900">{medicine.name}</div>
                                                     {medicine.generic_name && (
                                                         <div className="text-sm text-gray-600">{medicine.generic_name}</div>
                                                     )}
-                                                    <div className="flex justify-between items-center mt-2">
-                                                        <div className="text-sm text-blue-600">
-                                                            Standard: {formatCurrency(medicine.standard_sale_price)}
-                                                        </div>
-                                                        {medicine.latest_buy_price > 0 && (
-                                                            <div className="flex items-center gap-1 text-sm text-green-600">
-                                                                <History className="w-3 h-3" />
-                                                                Last Buy: {formatCurrency(medicine.latest_buy_price)}
-                                                            </div>
-                                                        )}
+                                                    <div className="text-sm text-blue-600">
+                                                        Standard Price: {formatCurrency(medicine.standard_sale_price)}
                                                     </div>
-                                                    {medicine.latest_sale_price !== medicine.standard_sale_price && (
-                                                        <div className="text-xs text-purple-600 mt-1">
-                                                            Last Sale: {formatCurrency(medicine.latest_sale_price)}
-                                                        </div>
-                                                    )}
                                                 </button>
                                             ))}
                                             {filteredMedicines.length === 0 && (
                                                 <div className="px-4 py-3 text-gray-500 text-center">
                                                     No medicines found
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {selectedMedicine && (
-                                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <CheckCircle className="w-4 h-4 text-blue-600" />
-                                                <span className="font-medium text-blue-900">
-                                                    Selected: {selectedMedicine.name}
-                                                </span>
-                                            </div>
-                                            {selectedMedicine.generic_name && (
-                                                <div className="text-sm text-blue-700 mt-1">
-                                                    {selectedMedicine.generic_name}
-                                                </div>
-                                            )}
-                                            {selectedMedicine.latest_buy_price > 0 && (
-                                                <div className="text-sm text-green-600 mt-1">
-                                                    Last purchase: Buy {formatCurrency(selectedMedicine.latest_buy_price)} → Sale {formatCurrency(selectedMedicine.latest_sale_price)}
                                                 </div>
                                             )}
                                         </div>
@@ -419,6 +446,9 @@ export default function Purchase({
                                         {errors.quantity && (
                                             <p className="mt-1 text-sm text-red-600">{errors.quantity}</p>
                                         )}
+                                        {getQuantityChangeWarning() && (
+                                            <p className="mt-1 text-sm text-red-600">{getQuantityChangeWarning()}</p>
+                                        )}
                                     </div>
 
                                     <div>
@@ -433,31 +463,12 @@ export default function Purchase({
                                                 value={data.buy_price}
                                                 onChange={(e) => setData('buy_price', e.target.value)}
                                                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                placeholder={selectedMedicine && selectedMedicine.latest_buy_price > 0
-                                                    ? `Last: ${formatCurrency(selectedMedicine.latest_buy_price)}`
-                                                    : "0.00"
-                                                }
+                                                placeholder="0.00"
                                                 min="0"
                                             />
-                                            {selectedMedicine && selectedMedicine.latest_buy_price > 0 && !data.buy_price && (
-                                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setData('buy_price', selectedMedicine.latest_buy_price.toString())}
-                                                        className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 transition-colors"
-                                                    >
-                                                        Use Last
-                                                    </button>
-                                                </div>
-                                            )}
                                         </div>
                                         {errors.buy_price && (
                                             <p className="mt-1 text-sm text-red-600">{errors.buy_price}</p>
-                                        )}
-                                        {selectedMedicine && selectedMedicine.latest_buy_price > 0 && (
-                                            <p className="mt-1 text-xs text-green-600">
-                                                Last purchase price: {formatCurrency(selectedMedicine.latest_buy_price)}
-                                            </p>
                                         )}
                                     </div>
 
@@ -473,31 +484,12 @@ export default function Purchase({
                                                 value={data.sale_price}
                                                 onChange={(e) => setData('sale_price', e.target.value)}
                                                 className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                placeholder={selectedMedicine
-                                                    ? `Last: ${formatCurrency(selectedMedicine.latest_sale_price)}`
-                                                    : "0.00"
-                                                }
+                                                placeholder="0.00"
                                                 min="0"
                                             />
-                                            {selectedMedicine && selectedMedicine.latest_sale_price > 0 && !data.sale_price && (
-                                                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setData('sale_price', selectedMedicine.latest_sale_price.toString())}
-                                                        className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded hover:bg-purple-200 transition-colors"
-                                                    >
-                                                        Use Last
-                                                    </button>
-                                                </div>
-                                            )}
                                         </div>
                                         {errors.sale_price && (
                                             <p className="mt-1 text-sm text-red-600">{errors.sale_price}</p>
-                                        )}
-                                        {selectedMedicine && (
-                                            <p className="mt-1 text-xs text-purple-600">
-                                                Last sale price: {formatCurrency(selectedMedicine.latest_sale_price)}
-                                            </p>
                                         )}
                                     </div>
                                 </div>
@@ -540,6 +532,11 @@ export default function Purchase({
                                                     max={getTotalAmount()}
                                                 />
                                             </div>
+                                            {parseFloat(data.paid_amount || '0') !== (stock.paid_amount || 0) && (
+                                                <p className="mt-1 text-sm text-blue-600">
+                                                    Original payment: {formatCurrency(stock.paid_amount || 0)}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
@@ -573,39 +570,71 @@ export default function Purchase({
                                     )}
                                 </div>
 
-                                {/* Total Calculation */}
-                                {data.quantity && data.buy_price && (
+                                {/* Total Calculation & Changes Comparison */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Original Values */}
                                     <div className="bg-gray-50 rounded-lg p-4">
-                                        <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <h4 className="font-medium text-gray-900 mb-3">Original Values</h4>
+                                        <div className="space-y-2 text-sm">
                                             <div className="flex justify-between">
-                                                <span className="font-medium text-gray-700">Total Purchase:</span>
-                                                <span className="font-bold text-green-600">
-                                                    {formatCurrency(getTotalAmount())}
+                                                <span className="text-gray-700">Total Purchase:</span>
+                                                <span className="font-semibold text-gray-900">
+                                                    {formatCurrency(stock.total_purchase_amount || 0)}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between">
-                                                <span className="font-medium text-gray-700">Paid Amount:</span>
-                                                <span className="font-bold text-blue-600">
-                                                    {formatCurrency(parseFloat(data.paid_amount) || 0)}
+                                                <span className="text-gray-700">Paid Amount:</span>
+                                                <span className="font-semibold text-blue-600">
+                                                    {formatCurrency(stock.paid_amount || 0)}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between">
-                                                <span className="font-medium text-gray-700">Due Amount:</span>
-                                                <span className={`font-bold ${getDueAmount() > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                    {formatCurrency(getDueAmount())}
+                                                <span className="text-gray-700">Due Amount:</span>
+                                                <span className="font-semibold text-red-600">
+                                                    {formatCurrency(stock.due_amount || 0)}
                                                 </span>
                                             </div>
-                                            {data.sale_price && (
-                                                <div className="flex justify-between">
-                                                    <span className="font-medium text-gray-700">Expected Profit:</span>
-                                                    <span className="font-bold text-purple-600">
-                                                        {formatCurrency((parseFloat(data.sale_price) - parseFloat(data.buy_price)) * parseFloat(data.quantity))}
-                                                    </span>
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
-                                )}
+
+                                    {/* New Values */}
+                                    {(data.quantity && data.buy_price) && (
+                                        <div className="bg-blue-50 rounded-lg p-4">
+                                            <h4 className="font-medium text-blue-900 mb-3">New Values</h4>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-blue-700">Total Purchase:</span>
+                                                    <span className={`font-semibold ${getTotalAmount() !== (stock.total_purchase_amount || 0) ? 'text-orange-600' : 'text-blue-900'
+                                                        }`}>
+                                                        {formatCurrency(getTotalAmount())}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-blue-700">Paid Amount:</span>
+                                                    <span className={`font-semibold ${parseFloat(data.paid_amount || '0') !== (stock.paid_amount || 0) ? 'text-orange-600' : 'text-blue-600'
+                                                        }`}>
+                                                        {formatCurrency(parseFloat(data.paid_amount) || 0)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-blue-700">Due Amount:</span>
+                                                    <span className={`font-semibold ${getDueAmount() > 0 ? 'text-red-600' : 'text-green-600'
+                                                        }`}>
+                                                        {formatCurrency(getDueAmount())}
+                                                    </span>
+                                                </div>
+                                                {data.sale_price && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-blue-700">Expected Profit:</span>
+                                                        <span className="font-semibold text-purple-600">
+                                                            {formatCurrency((parseFloat(data.sale_price) - parseFloat(data.buy_price)) * parseFloat(data.quantity))}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
 
                                 {/* Notes */}
                                 <div>
@@ -617,7 +646,7 @@ export default function Purchase({
                                         onChange={(e) => setData('notes', e.target.value)}
                                         rows={3}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Any additional notes about this purchase..."
+                                        placeholder="Any additional notes about this purchase update..."
                                     />
                                     {errors.notes && (
                                         <p className="mt-1 text-sm text-red-600">{errors.notes}</p>
@@ -627,106 +656,132 @@ export default function Purchase({
                                 {/* Submit Button */}
                                 <div className="flex items-center gap-4 pt-4 border-t border-gray-200">
                                     <button
+                                        type="submit"
+                                        disabled={processing || getQuantityChangeWarning() !== null || !selectedMedicine || !selectedVendor}
+                                        className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                                    >
+                                        {processing ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                Updating Stock...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save className="w-4 h-4" />
+                                                Update Stock
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
                                         type="button"
-                                        onClick={() => {
-                                            reset();
-                                            setSelectedMedicine(null);
-                                            setSelectedVendor(null);
-                                            setSearchTerm('');
-                                        }}
+                                        onClick={() => window.history.back()}
                                         className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
                                     >
-                                        Clear Form
+                                        Cancel
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
 
-                    {/* Recent Purchases */}
+                    {/* Stock History & Information */}
                     <div className="lg:col-span-1">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                             <div className="flex items-center gap-3 mb-6">
-                                <div className="bg-green-100 p-2 rounded-lg">
-                                    <Clock className="w-5 h-5 text-green-600" />
+                                <div className="bg-purple-100 p-2 rounded-lg">
+                                    <Package className="w-5 h-5 text-purple-600" />
                                 </div>
-                                <h2 className="text-lg font-semibold text-gray-900">Recent Purchases</h2>
+                                <h2 className="text-lg font-semibold text-gray-900">Stock Information</h2>
                             </div>
 
                             <div className="space-y-4">
-                                {recentPurchases.map((purchase) => (
-                                    <div key={purchase.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="flex-1">
-                                                <h4 className="font-medium text-gray-900 text-sm">
-                                                    {purchase.medicine_stock.medicine.name}
-                                                </h4>
-                                                <p className="text-xs text-gray-600">
-                                                    Batch: {purchase.medicine_stock.batch_number}
-                                                </p>
-                                                {purchase.medicine_stock.vendor && (
-                                                    <p className="text-xs text-blue-600">
-                                                        Vendor: {purchase.medicine_stock.vendor.name}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <span className="text-sm font-semibold text-green-600">
-                                                {formatCurrency(purchase.total_amount)}
+                                {/* Stock Status */}
+                                <div className="border border-gray-200 rounded-lg p-4">
+                                    <h4 className="font-medium text-gray-900 mb-3">Current Status</h4>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Batch Number:</span>
+                                            <span className="font-semibold">{stock.batch_number}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Expiry Date:</span>
+                                            <span className="font-semibold">{formatDate(stock.expiry_date)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Purchase Date:</span>
+                                            <span className="font-semibold">{formatDate(stock.purchase_date)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Units Sold:</span>
+                                            <span className="font-semibold text-red-600">
+                                                {stock.quantity - stock.available_quantity}
                                             </span>
                                         </div>
+                                    </div>
+                                </div>
 
-                                        <div className="flex justify-between items-center text-xs text-gray-500">
-                                            <div className="flex items-center gap-1">
-                                                <Package className="w-3 h-3" />
-                                                <span>{purchase.quantity} units</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <User className="w-3 h-3" />
-                                                <span>{purchase.created_by.name}</span>
-                                            </div>
+                                {/* Warning Messages */}
+                                {stock.available_quantity !== stock.quantity && (
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                        <div className="flex items-center gap-2">
+                                            <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                                            <span className="text-sm font-medium text-yellow-800">
+                                                Partial Stock Sold
+                                            </span>
                                         </div>
+                                        <p className="text-xs text-yellow-700 mt-1">
+                                            {stock.quantity - stock.available_quantity} units have been sold from this batch.
+                                            Quantity changes may affect availability.
+                                        </p>
+                                    </div>
+                                )}
 
-                                        <div className="text-xs text-gray-500 mt-1">
-                                            {formatDate(purchase.created_at)}
+                                {/* Vendor Information */}
+                                {selectedVendor ? (
+                                    <div className="border border-gray-200 rounded-lg p-4">
+                                        <h4 className="font-medium text-gray-900 mb-3">Original Vendor</h4>
+                                        <div className="space-y-1 text-sm">
+                                            <div className="font-medium text-blue-600">{selectedVendor.name}</div>
+                                            {selectedVendor.company_name && (
+                                                <div className="text-gray-600">{selectedVendor.company_name}</div>
+                                            )}
+                                            <div className="text-gray-600">
+                                                Current Due: {formatCurrency(selectedVendor.current_balance)}
+                                            </div>
                                         </div>
                                     </div>
-                                ))}
+                                ) : (
+                                    <div className="border border-yellow-200 rounded-lg p-4 bg-yellow-50">
+                                        <h4 className="font-medium text-yellow-800 mb-3">Vendor Information</h4>
+                                        <div className="text-sm text-yellow-700">
+                                            No vendor information available. Please select a vendor.
+                                        </div>
+                                    </div>
+                                )}
 
-                                {recentPurchases.length === 0 && (
-                                    <div className="text-center py-8">
-                                        <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                        <p className="text-gray-500 text-sm">No recent purchases</p>
+                                {/* Medicine Information */}
+                                {selectedMedicine ? (
+                                    <div className="border border-gray-200 rounded-lg p-4">
+                                        <h4 className="font-medium text-gray-900 mb-3">Original Medicine</h4>
+                                        <div className="space-y-1 text-sm">
+                                            <div className="font-medium text-blue-600">{selectedMedicine.name}</div>
+                                            {selectedMedicine.generic_name && (
+                                                <div className="text-gray-600">{selectedMedicine.generic_name}</div>
+                                            )}
+                                            <div className="text-gray-600">
+                                                Standard Price: {formatCurrency(selectedMedicine.standard_sale_price)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="border border-yellow-200 rounded-lg p-4 bg-yellow-50">
+                                        <h4 className="font-medium text-yellow-800 mb-3">Medicine Information</h4>
+                                        <div className="text-sm text-yellow-700">
+                                            No medicine information available. Please select a medicine.
+                                        </div>
                                     </div>
                                 )}
                             </div>
-
-                            {/* Quick Vendor Dues Summary */}
-                            {vendorsWithDues.length > 0 && (
-                                <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
-                                    <h3 className="text-sm font-medium text-amber-800 mb-3">Vendor Dues Summary</h3>
-                                    <div className="space-y-2">
-                                        {vendorsWithDues.slice(0, 3).map((vendor) => (
-                                            <div key={vendor.id} className="flex justify-between text-sm">
-                                                <span className="text-amber-700">{vendor.name}</span>
-                                                <span className="font-semibold text-red-600">
-                                                    {formatCurrency(vendor.current_balance)}
-                                                </span>
-                                            </div>
-                                        ))}
-                                        {vendorsWithDues.length > 3 && (
-                                            <div className="text-xs text-amber-600 pt-2 border-t border-amber-200">
-                                                +{vendorsWithDues.length - 3} more vendors
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={() => window.open(route('medicine-corner.vendor-dues'), '_blank')}
-                                        className="w-full mt-3 px-3 py-2 bg-amber-600 text-white rounded-lg text-sm hover:bg-amber-700 transition-colors"
-                                    >
-                                        Manage Vendor Payments
-                                    </button>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>

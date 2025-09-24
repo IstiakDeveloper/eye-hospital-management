@@ -257,13 +257,20 @@ Route::prefix('medicine-corner')->middleware(['auth', 'super-admin'])->name('med
     Route::get('/reports', [MedicineCornerController::class, 'reports'])->name('reports');
     Route::get('/alerts', [MedicineCornerController::class, 'alerts'])->name('alerts');
 
+    // Stock Edit Routes (Fixed paths - remove duplicate prefix)
+    Route::get('/stock/{id}/edit', [MedicineCornerController::class, 'editStock'])->name('edit-stock');
+    Route::put('/stock/{id}', [MedicineCornerController::class, 'updateStock'])->name('update-stock');
+    Route::get('/stock/{id}/edit-data', [MedicineCornerController::class, 'getStockForEdit'])->name('stock.edit-data');
+
     // Medicine & Stock Management
     Route::post('/store-medicine', [MedicineCornerController::class, 'storeMedicine'])->name('store-medicine');
     Route::post('/add-stock', [MedicineCornerController::class, 'addStock'])->name('add-stock');
     Route::post('/adjust-stock', [MedicineCornerController::class, 'adjustStock'])->name('adjust-stock');
     Route::put('/medicines/{medicine}', [MedicineCornerController::class, 'updateMedicine'])->name('update-medicine');
     Route::put('/medicines/{medicine}/stock-alert', [MedicineCornerController::class, 'updateStockAlert'])->name('update-stock-alert');
-    Route::get('/medicines/{medicine}/details', [MedicineCornerController::class, 'getMedicineDetails'])->name('medicine-details');
+
+    // Fixed route for medicine details
+    Route::get('/medicines/{id}/details', [MedicineCornerController::class, 'getMedicineDetails'])->name('medicine-details');
 
     // Sales Management
     Route::get('/sales', [MedicineCornerController::class, 'sales'])->name('sales');
@@ -275,7 +282,7 @@ Route::prefix('medicine-corner')->middleware(['auth', 'super-admin'])->name('med
     Route::post('/sales/bulk-action', [MedicineCornerController::class, 'bulkAction'])->name('sales-bulk-action');
     Route::get('/sales-analytics', [MedicineCornerController::class, 'salesAnalytics'])->name('sales-analytics');
 
-    // NEW: Vendor Due Management
+    // Vendor Due Management
     Route::get('/vendor-dues', [MedicineCornerController::class, 'vendorDues'])->name('vendor-dues');
     Route::post('/vendor-payment', [MedicineCornerController::class, 'makeVendorPayment'])->name('vendor-payment');
     Route::get('/vendor-purchase-history', [MedicineCornerController::class, 'getVendorPurchaseHistory'])->name('vendor-purchase-history');
@@ -346,6 +353,10 @@ Route::prefix('optics-seller')->middleware(['auth'])->group(function () {
     Route::get('/pos', [OpticsSellerDashboardController::class, 'pos'])->name('optics-seller.pos');
     Route::post('/pos/sale', [OpticsSellerDashboardController::class, 'processSale'])->name('optics-seller.process-sale');
 
+    Route::get('/search-customer', [OpticsSellerDashboardController::class, 'searchCustomer'])->name('search-customer');
+    Route::get('/customer/{id}/details', [OpticsSellerDashboardController::class, 'getCustomerDetails'])->name('customer-details');
+
+
     // Sales Management
     Route::get('/sales', [OpticsSellerDashboardController::class, 'salesHistory'])->name('optics-seller.sales');
     Route::get('/sales/{transaction}', [OpticsSellerDashboardController::class, 'saleDetails'])->name('optics-seller.sale-details');
@@ -356,6 +367,7 @@ Route::prefix('optics-seller')->middleware(['auth'])->group(function () {
     // API endpoints
     Route::get('/api/search-items', [OpticsSellerDashboardController::class, 'searchItems'])->name('optics-seller.search-items');
 });
+
 
 // Default redirect for Optics Seller
 Route::get('/optics-seller', function () {
@@ -616,11 +628,15 @@ Route::middleware(['auth', 'super-admin'])->prefix('optics')->name('optics.')->g
     Route::post('/frames', [OpticsCornerController::class, 'storeFrame'])->name('frames.store');
     Route::get('/frames/{frame}/edit', [OpticsCornerController::class, 'editFrame'])->name('frames.edit');
     Route::put('/frames/{frame}', [OpticsCornerController::class, 'updateFrame'])->name('frames.update');
+    Route::patch('/frames/{frame}/toggle-status', [OpticsCornerController::class, 'toggleStatus'])->name('frames.toggle-status');
 
     // Stock Management
     Route::get('/stock', [OpticsCornerController::class, 'stockManagement'])->name('stock');
     Route::get('/stock/add', [OpticsCornerController::class, 'addStock'])->name('stock.add');
     Route::post('/stock', [OpticsCornerController::class, 'storeStock'])->name('stock.store');
+    Route::get('/stock/{movement}/edit', [OpticsCornerController::class, 'editStock'])->name('stock.edit');
+    Route::put('/stock/{movement}', [OpticsCornerController::class, 'updateStock'])->name('stock.update');
+    Route::delete('/stock/{movement}', [OpticsCornerController::class, 'deleteStock'])->name('stock.delete');
 
     // Sales Management
     Route::get('/sales', [OpticsCornerController::class, 'sales'])->name('sales');

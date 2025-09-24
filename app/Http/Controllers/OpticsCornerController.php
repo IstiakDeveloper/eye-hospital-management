@@ -44,21 +44,49 @@ class OpticsCornerController extends Controller
 
     public function frames()
     {
-        $frames = Glasses::active()
+        $frames = Glasses::query()
             ->when(
                 request('search'),
                 fn($q, $search) =>
                 $q->where('brand', 'like', "%{$search}%")
                     ->orWhere('model', 'like', "%{$search}%")
                     ->orWhere('sku', 'like', "%{$search}%")
+                    ->orWhere('color', 'like', "%{$search}%")
+                    ->orWhere('size', 'like', "%{$search}%")
+                    ->orWhere('material', 'like', "%{$search}%")
             )
-            ->when(request('type'), fn($q, $type) => $q->byType($type))
-            ->when(request('gender'), fn($q, $gender) => $q->byGender($gender))
+            ->when(request('type'), fn($q, $type) => $q->where('type', $type))
+            ->when(request('frame_type'), fn($q, $frameType) => $q->where('frame_type', $frameType))
+            ->when(request('material'), fn($q, $material) => $q->where('material', $material))
+            ->when(request('gender'), fn($q, $gender) => $q->where('gender', $gender))
+            ->when(request('color'), fn($q, $color) => $q->where('color', 'like', "%{$color}%"))
+            ->when(request('status') === 'active', fn($q) => $q->where('is_active', true))
+            ->when(request('status') === 'inactive', fn($q) => $q->where('is_active', false))
             ->when(request('low_stock'), fn($q) => $q->lowStock())
+            ->when(request('in_stock'), fn($q) => $q->inStock())
+            ->when(request('out_of_stock'), fn($q) => $q->where('stock_quantity', 0))
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
-        return Inertia::render('OpticsCorner/Frames/Index', compact('frames'));
+        $filterOptions = [
+            'types' => Glasses::distinct()->pluck('type')->filter()->sort()->values(),
+            'frame_types' => Glasses::distinct()->pluck('frame_type')->filter()->sort()->values(),
+            'materials' => Glasses::distinct()->pluck('material')->filter()->sort()->values(),
+            'genders' => Glasses::distinct()->pluck('gender')->filter()->sort()->values(),
+            'colors' => Glasses::distinct()->pluck('color')->filter()->sort()->values(),
+        ];
+
+        return Inertia::render('OpticsCorner/Frames/Index', compact('frames', 'filterOptions'));
+    }
+
+    public function toggleStatus(Glasses $frame)
+    {
+        $frame->update(['is_active' => !$frame->is_active]);
+
+        $statusText = $frame->is_active ? 'activated' : 'deactivated';
+
+        return back()->with('success', "Frame {$statusText} successfully!");
     }
 
     public function createFrame()
@@ -156,7 +184,6 @@ class OpticsCornerController extends Controller
         return redirect()->route('optics.frames')->with('success', 'Frame updated successfully!');
     }
 
-    // =============== STOCK MANAGEMENT ===============
     public function stockManagement()
     {
         $movements = StockMovement::with(['user'])
@@ -252,6 +279,168 @@ class OpticsCornerController extends Controller
         });
 
         return redirect()->route('optics.stock')->with('success', 'Stock added successfully!');
+    }
+    public function editStock($id)
+    {
+        $movement = StockMovement::with(['user'])->findOrFail($id);
+
+        // Only allow editing purchase movements
+        if ($movement->movement_type !== 'purchase') {
+            return redirect()->route('optics.stock')->with('error', 'Only purchase movements can be edited!');
+        }
+
+        // Get all available items based on movement type
+        $frames = collect();
+        $lensTypes = collect();
+        $completeGlasses = collect();
+
+        if ($movement->item_type === 'glasses') {
+            $frames = Glasses::active()
+                ->get(['id', 'brand', 'model', 'sku', 'stock_quantity'])
+                ->map(function ($frame) {
+                    $frame->full_name = $frame->full_name;
+                    return $frame;
+                });
+        } elseif ($movement->item_type === 'lens_types') {
+            $lensTypes = LensType::active()
+                ->get(['id', 'name', 'stock_quantity'])
+                ->map(function ($lens) {
+                    $lens->full_name = $lens->name;
+                    return $lens;
+                });
+        } elseif ($movement->item_type === 'complete_glasses') {
+            $completeGlasses = CompleteGlasses::active()
+                ->with('frame', 'lensType')
+                ->get(['id', 'frame_id', 'lens_type_id', 'stock_quantity'])
+                ->map(function ($glass) {
+                    $glass->full_name = $glass->full_name;
+                    return $glass;
+                });
+        }
+
+        return Inertia::render('OpticsCorner/Stock/Edit', compact('movement', 'frames', 'lensTypes', 'completeGlasses'));
+    }
+    
+    public function updateStock(Request $request, $id)
+    {
+        $movement = StockMovement::findOrFail($id);
+
+        // Only allow editing purchase movements
+        if ($movement->movement_type !== 'purchase') {
+            return redirect()->route('optics.stock')->with('error', 'Only purchase movements can be edited!');
+        }
+
+        $validated = $request->validate([
+            'item_type' => 'required|in:glasses,lens_types,complete_glasses',
+            'item_id' => 'required|integer',
+            'quantity' => 'required|integer|min:1',
+            'unit_price' => 'required|numeric|min:0',
+            'notes' => 'nullable|string',
+        ]);
+
+        DB::transaction(function () use ($validated, $movement) {
+            $model = match ($validated['item_type']) {
+                'glasses' => Glasses::class,
+                'lens_types' => LensType::class,
+                'complete_glasses' => CompleteGlasses::class,
+            };
+
+            $item = $model::findOrFail($validated['item_id']);
+
+            // If item changed, revert previous item's stock
+            if ($movement->item_type !== $validated['item_type'] || $movement->item_id != $validated['item_id']) {
+                $oldModel = match ($movement->item_type) {
+                    'glasses' => Glasses::class,
+                    'lens_types' => LensType::class,
+                    'complete_glasses' => CompleteGlasses::class,
+                };
+
+                $oldItem = $oldModel::findOrFail($movement->item_id);
+                $oldItem->update(['stock_quantity' => $oldItem->stock_quantity - $movement->quantity]);
+
+                // Update new item stock
+                $previousStock = $item->stock_quantity;
+                $newStock = $previousStock + $validated['quantity'];
+            } else {
+                // Same item, adjust stock based on quantity difference
+                $quantityDifference = $validated['quantity'] - $movement->quantity;
+                $previousStock = $item->stock_quantity - $quantityDifference;
+                $newStock = $item->stock_quantity;
+            }
+
+            // Update item stock
+            $item->update(['stock_quantity' => $newStock]);
+
+            $totalAmount = $validated['unit_price'] * $validated['quantity'];
+            $oldTotalAmount = $movement->total_amount;
+
+            // Update movement record
+            $movement->update([
+                'item_type' => $validated['item_type'],
+                'item_id' => $validated['item_id'],
+                'quantity' => $validated['quantity'],
+                'previous_stock' => $previousStock,
+                'new_stock' => $newStock,
+                'unit_price' => $validated['unit_price'],
+                'total_amount' => $totalAmount,
+                'notes' => $validated['notes'],
+            ]);
+
+            // Adjust account balance (difference between old and new amount)
+            $amountDifference = $totalAmount - $oldTotalAmount;
+
+            if ($amountDifference > 0) {
+                // Additional expense
+                OpticsAccount::addExpense(
+                    $amountDifference,
+                    ucfirst(str_replace('_', ' ', $validated['item_type'])) . ' Purchase Adjustment',
+                    "Stock adjustment: Additional expense for movement #{$movement->id}"
+                );
+            } elseif ($amountDifference < 0) {
+                // Refund (add income)
+                OpticsAccount::addIncome(
+                    abs($amountDifference),
+                    ucfirst(str_replace('_', ' ', $validated['item_type'])) . ' Purchase Adjustment',
+                    "Stock adjustment: Refund for movement #{$movement->id}"
+                );
+            }
+        });
+
+        return redirect()->route('optics.stock')->with('success', 'Stock movement updated successfully!');
+    }
+    public function deleteStock($id)
+    {
+        $movement = StockMovement::findOrFail($id);
+
+        // Only allow deleting purchase movements
+        if ($movement->movement_type !== 'purchase') {
+            return redirect()->route('optics.stock')->with('error', 'Only purchase movements can be deleted!');
+        }
+
+        DB::transaction(function () use ($movement) {
+            $model = match ($movement->item_type) {
+                'glasses' => Glasses::class,
+                'lens_types' => LensType::class,
+                'complete_glasses' => CompleteGlasses::class,
+            };
+
+            $item = $model::findOrFail($movement->item_id);
+
+            // Revert stock quantity
+            $item->update(['stock_quantity' => $item->stock_quantity - $movement->quantity]);
+
+            // Add refund to account
+            OpticsAccount::addIncome(
+                $movement->total_amount,
+                ucfirst(str_replace('_', ' ', $movement->item_type)) . ' Purchase Refund',
+                "Stock movement deleted: Movement #{$movement->id} refund"
+            );
+
+            // Delete the movement
+            $movement->delete();
+        });
+
+        return redirect()->route('optics.stock')->with('success', 'Stock movement deleted successfully!');
     }
 
     // =============== SALES MANAGEMENT ===============

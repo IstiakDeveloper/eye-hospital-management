@@ -145,7 +145,74 @@ class OpticsSellerDashboardController extends Controller
     }
 
     /**
-     * POS System - Point of Sale for Optics
+     * Search Customer by phone or name for POS
+     */
+    public function searchCustomer(Request $request)
+    {
+        $query = $request->get('q', '');
+
+        if (strlen($query) < 2) {
+            return response()->json([]);
+        }
+
+        // Search patients by phone or name
+        $customers = Patient::where(function ($q) use ($query) {
+            $q->where('phone', 'LIKE', "%{$query}%")
+                ->orWhere('name', 'LIKE', "%{$query}%")
+                ->orWhere('patient_id', 'LIKE', "%{$query}%");
+        })
+            ->limit(10)
+            ->get(['id', 'patient_id', 'name', 'phone', 'email', 'address', 'gender'])
+            ->map(function ($patient) {
+                return [
+                    'id' => $patient->id,
+                    'patient_id' => $patient->patient_id,
+                    'name' => $patient->name,
+                    'phone' => $patient->phone,
+                    'email' => $patient->email,
+                    'address' => $patient->address,
+                    'gender' => $patient->gender,
+                    'display_name' => $patient->name . ' (' . $patient->phone . ')',
+                    'total_visits' => $patient->total_visits ?? 0,
+                ];
+            });
+
+        return response()->json($customers);
+    }
+
+    /**
+     * Get Customer Details for POS
+     */
+    public function getCustomerDetails($id)
+    {
+        try {
+            $patient = Patient::findOrFail($id);
+
+            return response()->json([
+                'success' => true,
+                'customer' => [
+                    'id' => $patient->id,
+                    'patient_id' => $patient->patient_id,
+                    'name' => $patient->name,
+                    'phone' => $patient->phone,
+                    'email' => $patient->email,
+                    'address' => $patient->address,
+                    'gender' => $patient->gender,
+                    'age' => $patient->age,
+                    'total_visits' => $patient->total_visits,
+                    'last_visit_date' => $patient->last_visit_date?->format('d M Y'),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Customer not found'
+            ], 404);
+        }
+    }
+
+    /**
+     * Updated POS System with recent customers
      */
     public function pos()
     {
@@ -169,8 +236,33 @@ class OpticsSellerDashboardController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Recent customers (if you have patient table)
-        $recentCustomers = collect(); // Empty for now, can add Patient model later
+        // Recent customers (last 10 patients who made purchases)
+        $recentCustomers = Patient::whereHas('visits', function ($query) {
+            $query->whereDate('created_at', '>=', now()->subDays(30));
+        })
+            ->with(['visits' => function ($query) {
+                $query->latest()->limit(1);
+            }])
+            ->orderByDesc(function ($query) {
+                $query->select('created_at')
+                    ->from('patient_visits')
+                    ->whereColumn('patient_visits.patient_id', 'patients.id')
+                    ->orderBy('created_at', 'desc')
+                    ->limit(1);
+            })
+            ->limit(10)
+            ->get(['id', 'patient_id', 'name', 'phone', 'email'])
+            ->map(function ($patient) {
+                return [
+                    'id' => $patient->id,
+                    'patient_id' => $patient->patient_id,
+                    'name' => $patient->name,
+                    'phone' => $patient->phone,
+                    'email' => $patient->email,
+                    'display_name' => $patient->name . ' (' . $patient->phone . ')',
+                    'last_visit' => optional($patient->visits->first())->created_at?->format('d M Y'),
+                ];
+            });
 
         // Quick stats for POS
         $todaySalesCount = OpticsTransaction::income()
@@ -196,24 +288,48 @@ class OpticsSellerDashboardController extends Controller
     }
 
     /**
-     * Process Optics Sale Transaction (using existing system)
+     * Updated Process Sale with customer information
      */
     public function processSale(Request $request)
     {
         $validated = $request->validate([
+            'customer_id' => 'nullable|exists:patients,id',
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'nullable|string|max:20',
+            'customer_email' => 'nullable|email|max:255',
             'items' => 'required|array|min:1',
             'items.*.type' => 'required|in:frame,lens,complete_glasses',
             'items.*.id' => 'required|integer',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric|min:0',
-            'discount' => 'nullable|numeric|min:0', // This will be the calculated discount amount
+            'discount' => 'nullable|numeric|min:0',
             'notes' => 'nullable|string',
         ]);
 
         DB::beginTransaction();
         try {
+            // Create or update patient if phone provided
+            $patient = null;
+            if ($validated['customer_phone'] && $validated['customer_name'] !== 'Walk-in Customer') {
+                if ($validated['customer_id']) {
+                    // Use existing patient
+                    $patient = Patient::find($validated['customer_id']);
+                } else {
+                    // Check if patient exists by phone
+                    $patient = Patient::where('phone', $validated['customer_phone'])->first();
+
+                    if (!$patient) {
+                        // Create new patient
+                        $patient = Patient::create([
+                            'name' => $validated['customer_name'],
+                            'phone' => $validated['customer_phone'],
+                            'email' => $validated['customer_email'] ?? null,
+                            'registered_by' => auth()->id(),
+                        ]);
+                    }
+                }
+            }
+
             $totalAmount = 0;
             $saleDetails = [];
 
@@ -251,7 +367,9 @@ class OpticsSellerDashboardController extends Controller
                     'new_stock' => $newStock,
                     'unit_price' => $item['price'],
                     'total_amount' => $itemTotal,
-                    'notes' => "POS Sale to {$validated['customer_name']} - " . ($product->name ?? $product->full_name) . " x{$item['quantity']}",
+                    'notes' => "POS Sale to {$validated['customer_name']}" .
+                        ($validated['customer_phone'] ? " ({$validated['customer_phone']})" : '') .
+                        " - " . ($product->name ?? $product->full_name) . " x{$item['quantity']}",
                     'user_id' => auth()->id(),
                 ]);
 
@@ -265,6 +383,9 @@ class OpticsSellerDashboardController extends Controller
             $description = "POS Sale to {$validated['customer_name']}";
             if ($validated['customer_phone']) {
                 $description .= " ({$validated['customer_phone']})";
+            }
+            if ($patient) {
+                $description .= " [Patient ID: {$patient->patient_id}]";
             }
             $description .= " - " . implode(', ', $saleDetails);
             if ($validated['notes']) {
@@ -280,14 +401,33 @@ class OpticsSellerDashboardController extends Controller
                 $description
             );
 
+            // Create patient visit record if patient exists
+            if ($patient) {
+                $patient->createNewVisit([
+                    'visit_type' => 'purchase',
+                    'chief_complaint' => 'Optics purchase - ' . implode(', ', $saleDetails),
+                    'total_amount' => $finalAmount,
+                    'total_paid' => $finalAmount,
+                    'total_due' => 0,
+                    'overall_status' => 'completed',
+                    'payment_status' => 'paid',
+                ]);
+            }
+
             DB::commit();
 
-            return redirect()->back()->with('success', "Sale completed successfully! Transaction: {$transaction->transaction_no} | Amount: ৳{$finalAmount}");
+            $responseMessage = "Sale completed successfully! Transaction: {$transaction->transaction_no} | Amount: ৳{$finalAmount}";
+            if ($patient) {
+                $responseMessage .= " | Patient: {$patient->name} (ID: {$patient->patient_id})";
+            }
+
+            return redirect()->back()->with('success', $responseMessage);
         } catch (\Exception $e) {
             DB::rollback();
             return redirect()->back()->with('error', 'Sale failed: ' . $e->getMessage());
         }
     }
+
 
     /**
      * Sales History (from OpticsTransaction)

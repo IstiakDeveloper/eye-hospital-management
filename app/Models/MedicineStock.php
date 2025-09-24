@@ -13,6 +13,7 @@ class MedicineStock extends Model
 
     protected $fillable = [
         'medicine_id',
+        'vendor_id',           // শুধু এটা add করুন
         'batch_number',
         'expiry_date',
         'quantity',
@@ -24,7 +25,6 @@ class MedicineStock extends Model
         'is_active',
         'added_by',
     ];
-
     protected $casts = [
         'expiry_date' => 'date',
         'purchase_date' => 'date',
@@ -32,6 +32,7 @@ class MedicineStock extends Model
         'available_quantity' => 'integer',
         'buy_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
+        'due_amount' => 'decimal:2',   // এটা add করুন
         'is_active' => 'boolean',
     ];
 
@@ -135,9 +136,18 @@ class MedicineStock extends Model
         return $this->belongsTo(MedicinePurchaseOrder::class, 'purchase_order_id');
     }
 
-    public function vendorTransaction(): BelongsTo
+
+    public function stockTransactions()
     {
-        return $this->belongsTo(MedicineVendorTransaction::class, 'vendor_transaction_id');
+        return $this->hasMany(StockTransaction::class, 'medicine_stock_id');
     }
 
+    /**
+     * Get the vendor transaction for this stock
+     */
+    public function vendorTransaction()
+    {
+        return $this->hasOne(MedicineVendorTransaction::class, 'reference_id')
+            ->where('reference_type', 'medicine_purchase');
+    }
 }

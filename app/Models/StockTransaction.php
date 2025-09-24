@@ -63,4 +63,5 @@ class StockTransaction extends Model
     {
         return $query->where('type', 'adjustment');
     }
+
 }
