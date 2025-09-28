@@ -220,6 +220,12 @@ Route::middleware(['auth'])->prefix('receptionist')->name('receptionist.')->grou
 Route::prefix('visits')->name('visits.')->group(function () {
     Route::get('/', [PatientVisitController::class, 'index'])->name('index');
     Route::post('/', [PatientVisitController::class, 'store'])->name('store');
+    Route::post('/', [PatientVisitController::class, 'store'])->name('store');
+
+    Route::get('/{visit}/edit', [PatientVisitController::class, 'edit'])->name('edit');
+    Route::put('/{visit}', [PatientVisitController::class, 'update'])->name('update');
+    Route::delete('/{visit}', [PatientVisitController::class, 'destroy'])->name('destroy');
+
     Route::get('/{visit}', [PatientVisitController::class, 'show'])->name('show');
     Route::get('/{visit}/receipt', [PatientVisitController::class, 'receipt'])->name('receipt');
     Route::patch('/{visit}/status', [PatientVisitController::class, 'updateStatus'])->name('update-status');
@@ -554,15 +560,28 @@ Route::middleware(['auth', 'super-admin'])->group(function () {
         Route::post('/fund-in', [HospitalAccountController::class, 'fundIn'])->name('fund-in');
         Route::post('/fund-out', [HospitalAccountController::class, 'fundOut'])->name('fund-out');
         Route::post('/expense', [HospitalAccountController::class, 'addExpense'])->name('expense');
+        Route::post('/other-income', [HospitalAccountController::class, 'addOtherIncome'])->name('other-income');
+
+        // Transaction Routes
         Route::get('/transactions', [HospitalAccountController::class, 'transactions'])->name('transactions');
+        Route::get('/transactions/{transaction}/edit', [HospitalAccountController::class, 'editTransaction'])->name('transactions.edit');
+        Route::put('/transactions/{transaction}', [HospitalAccountController::class, 'updateTransaction'])->name('transactions.update');
+        Route::delete('/transactions/{transaction}', [HospitalAccountController::class, 'deleteTransaction'])->name('transactions.delete');
+
+        // Fund Transaction Routes
         Route::get('/fund-history', [HospitalAccountController::class, 'fundHistory'])->name('fund-history');
+        Route::get('/fund-transactions/{fundTransaction}/edit', [HospitalAccountController::class, 'editFundTransaction'])->name('fund-transactions.edit');
+        Route::put('/fund-transactions/{fundTransaction}', [HospitalAccountController::class, 'updateFundTransaction'])->name('fund-transactions.update');
+        Route::delete('/fund-transactions/{fundTransaction}', [HospitalAccountController::class, 'deleteFundTransaction'])->name('fund-transactions.delete');
+
+        // Category Routes
         Route::get('/categories', [HospitalAccountController::class, 'categories'])->name('categories');
         Route::post('/categories', [HospitalAccountController::class, 'storeCategory'])->name('categories.store');
         Route::put('/categories/{category}', [HospitalAccountController::class, 'updateCategory'])->name('categories.update');
+
+        // Report Routes
         Route::get('/monthly-report', [HospitalAccountController::class, 'monthlyReport'])->name('monthly-report');
         Route::get('/balance-sheet', [HospitalAccountController::class, 'balanceSheet'])->name('balance-sheet');
-        Route::post('/other-income', [HospitalAccountController::class, 'addOtherIncome'])->name('other-income');
-        Route::delete('/fund-transactions/{fundTransaction}', [HospitalAccountController::class, 'deleteFundTransaction'])->name('fund-transactions.delete');
     });
 
     Route::prefix('medicine-account')->name('medicine-account.')->group(function () {
@@ -629,6 +648,7 @@ Route::middleware(['auth', 'super-admin'])->prefix('optics')->name('optics.')->g
     Route::get('/frames/{frame}/edit', [OpticsCornerController::class, 'editFrame'])->name('frames.edit');
     Route::put('/frames/{frame}', [OpticsCornerController::class, 'updateFrame'])->name('frames.update');
     Route::patch('/frames/{frame}/toggle-status', [OpticsCornerController::class, 'toggleStatus'])->name('frames.toggle-status');
+    Route::delete('/frames/{frame}', [OpticsCornerController::class, 'deleteFrame'])->name('frames.delete'); // New delete route
 
     // Stock Management
     Route::get('/stock', [OpticsCornerController::class, 'stockManagement'])->name('stock');

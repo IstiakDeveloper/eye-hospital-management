@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Glasses;
 use App\Models\LensType;
 use App\Models\CompleteGlasses;
+use App\Models\MainAccount;
 use App\Models\StockMovement;
 use App\Models\OpticsAccount;
 use App\Models\OpticsTransaction;
@@ -40,7 +41,6 @@ class OpticsCornerController extends Controller
 
         return Inertia::render('OpticsCorner/Dashboard', compact('stats', 'lowStockItems', 'recentTransactions'));
     }
-
 
     public function frames()
     {
@@ -78,6 +78,52 @@ class OpticsCornerController extends Controller
         ];
 
         return Inertia::render('OpticsCorner/Frames/Index', compact('frames', 'filterOptions'));
+    }
+
+    public function deleteFrame(Glasses $frame)
+    {
+        // Check if frame has any sales history
+        $hasSales = StockMovement::where('item_type', 'glasses')
+            ->where('item_id', $frame->id)
+            ->where('movement_type', 'sale')
+            ->exists();
+
+        if ($hasSales) {
+            return back()->with('error', 'Cannot delete frame that has sales history!');
+        }
+
+        // Calculate refund amount outside transaction for use in return message
+        $currentStock = $frame->stock_quantity;
+        $totalRefundAmount = $currentStock * $frame->purchase_price;
+
+        DB::transaction(function () use ($frame, $totalRefundAmount, $currentStock) {
+            // Get all purchase movements for audit trail
+            $purchaseMovements = StockMovement::where('item_type', 'glasses')
+                ->where('item_id', $frame->id)
+                ->where('movement_type', 'purchase')
+                ->get();
+
+            // Delete all stock movements for this frame
+            StockMovement::where('item_type', 'glasses')
+                ->where('item_id', $frame->id)
+                ->delete();
+
+            // Process financial refund if there's any stock available
+            if ($totalRefundAmount > 0) {
+                // Use OpticsAccount adjustment method for proper accounting
+                OpticsAccount::adjustAmount(
+                    $totalRefundAmount,
+                    'income',
+                    'Frame Deletion Refund',
+                    "Refund for deleted frame: {$frame->full_name} - {$currentStock} pcs at ৳{$frame->purchase_price} each"
+                );
+            }
+
+            // Delete the frame
+            $frame->delete();
+        });
+
+        return redirect()->route('optics.frames')->with('success', "Frame deleted successfully! Refund of ৳{$totalRefundAmount} has been processed for {$currentStock} pieces.");
     }
 
     public function toggleStatus(Glasses $frame)
@@ -348,8 +394,14 @@ class OpticsCornerController extends Controller
 
             $item = $model::findOrFail($validated['item_id']);
 
-            // If item changed, revert previous item's stock
+            // Calculate old and new amounts
+            $oldTotalAmount = $movement->total_amount;
+            $newTotalAmount = $validated['unit_price'] * $validated['quantity'];
+            $amountDifference = $newTotalAmount - $oldTotalAmount;
+
+            // Handle stock adjustments
             if ($movement->item_type !== $validated['item_type'] || $movement->item_id != $validated['item_id']) {
+                // Different item - revert old item stock
                 $oldModel = match ($movement->item_type) {
                     'glasses' => Glasses::class,
                     'lens_types' => LensType::class,
@@ -359,48 +411,44 @@ class OpticsCornerController extends Controller
                 $oldItem = $oldModel::findOrFail($movement->item_id);
                 $oldItem->update(['stock_quantity' => $oldItem->stock_quantity - $movement->quantity]);
 
-                // Update new item stock
+                // Add to new item stock
                 $previousStock = $item->stock_quantity;
                 $newStock = $previousStock + $validated['quantity'];
+                $item->update(['stock_quantity' => $newStock]);
             } else {
-                // Same item, adjust stock based on quantity difference
+                // Same item - adjust stock based on quantity difference
                 $quantityDifference = $validated['quantity'] - $movement->quantity;
                 $previousStock = $item->stock_quantity - $quantityDifference;
                 $newStock = $item->stock_quantity;
+                $item->update(['stock_quantity' => $newStock]);
             }
-
-            // Update item stock
-            $item->update(['stock_quantity' => $newStock]);
-
-            $totalAmount = $validated['unit_price'] * $validated['quantity'];
-            $oldTotalAmount = $movement->total_amount;
 
             // Update movement record
             $movement->update([
                 'item_type' => $validated['item_type'],
                 'item_id' => $validated['item_id'],
                 'quantity' => $validated['quantity'],
-                'previous_stock' => $previousStock,
-                'new_stock' => $newStock,
+                'previous_stock' => $previousStock ?? $item->stock_quantity - $validated['quantity'],
+                'new_stock' => $newStock ?? $item->stock_quantity,
                 'unit_price' => $validated['unit_price'],
-                'total_amount' => $totalAmount,
+                'total_amount' => $newTotalAmount,
                 'notes' => $validated['notes'],
             ]);
 
-            // Adjust account balance (difference between old and new amount)
-            $amountDifference = $totalAmount - $oldTotalAmount;
-
+            // Handle financial adjustments using OpticsAccount adjustment method
             if ($amountDifference > 0) {
-                // Additional expense
-                OpticsAccount::addExpense(
+                // Additional expense needed
+                OpticsAccount::adjustAmount(
                     $amountDifference,
+                    'expense',
                     ucfirst(str_replace('_', ' ', $validated['item_type'])) . ' Purchase Adjustment',
                     "Stock adjustment: Additional expense for movement #{$movement->id}"
                 );
             } elseif ($amountDifference < 0) {
-                // Refund (add income)
-                OpticsAccount::addIncome(
+                // Refund available
+                OpticsAccount::adjustAmount(
                     abs($amountDifference),
+                    'income',
                     ucfirst(str_replace('_', ' ', $validated['item_type'])) . ' Purchase Adjustment',
                     "Stock adjustment: Refund for movement #{$movement->id}"
                 );
@@ -409,7 +457,7 @@ class OpticsCornerController extends Controller
 
         return redirect()->route('optics.stock')->with('success', 'Stock movement updated successfully!');
     }
-    
+
     public function deleteStock($id)
     {
         $movement = StockMovement::findOrFail($id);
@@ -431,9 +479,10 @@ class OpticsCornerController extends Controller
             // Revert stock quantity
             $item->update(['stock_quantity' => $item->stock_quantity - $movement->quantity]);
 
-            // Add refund to account
-            OpticsAccount::addIncome(
+            // Process financial refund using OpticsAccount adjustment method
+            OpticsAccount::adjustAmount(
                 $movement->total_amount,
+                'income',
                 ucfirst(str_replace('_', ' ', $movement->item_type)) . ' Purchase Refund',
                 "Stock movement deleted: Movement #{$movement->id} refund"
             );

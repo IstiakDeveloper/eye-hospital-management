@@ -78,7 +78,7 @@ class HospitalAccountController extends Controller
         return back()->with('success', 'Fund withdrawn successfully!');
     }
 
-    // Add Expense - UPDATED
+    // Add Expense
     public function addExpense(Request $request)
     {
         $request->validate([
@@ -123,6 +123,226 @@ class HospitalAccountController extends Controller
         return back()->with('success', 'Expense added successfully!');
     }
 
+    // Edit Transaction
+    public function editTransaction(HospitalTransaction $transaction)
+    {
+        $transaction->load(['expenseCategory', 'createdBy']);
+        $expenseCategories = HospitalExpenseCategory::where('is_active', true)->get();
+
+        return Inertia::render('HospitalAccount/EditTransaction', compact('transaction', 'expenseCategories'));
+    }
+
+    // Update Transaction
+    public function updateTransaction(Request $request, HospitalTransaction $transaction)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'category' => 'required|string|max:255',
+            'expense_category_id' => 'nullable|exists:hospital_expense_categories,id',
+            'description' => 'required|string|max:500',
+            'date' => 'required|date',
+        ]);
+
+        DB::transaction(function () use ($request, $transaction) {
+            $oldAmount = $transaction->amount;
+            $newAmount = $request->amount;
+            $amountDifference = $newAmount - $oldAmount;
+
+            // Update hospital account balance
+            $account = HospitalAccount::firstOrCreate([]);
+
+            if ($transaction->type === 'expense') {
+                // For expense: if new amount is higher, decrease balance more
+                // if new amount is lower, increase balance
+                $account->decrement('balance', $amountDifference);
+
+                // Check if balance is sufficient for expense increase
+                if ($amountDifference > 0 && $account->balance < 0) {
+                    throw new \Exception('Insufficient balance for this expense amount!');
+                }
+            } else {
+                // For income: if new amount is higher, increase balance more
+                // if new amount is lower, decrease balance
+                $account->increment('balance', $amountDifference);
+            }
+
+            // Update main account voucher
+            $mainAccountVoucher = MainAccountVoucher::where('source_voucher_no', $transaction->transaction_no)
+                ->where('source_account', 'hospital')
+                ->where('source_reference_id', $transaction->id)
+                ->first();
+
+            if ($mainAccountVoucher) {
+                $mainAccount = MainAccount::firstOrCreate([]);
+
+                if ($transaction->type === 'expense') {
+                    // For expense (debit voucher): decrease main account balance by difference
+                    $mainAccount->decrement('balance', $amountDifference);
+                } else {
+                    // For income (credit voucher): increase main account balance by difference
+                    $mainAccount->increment('balance', $amountDifference);
+                }
+
+                // Update voucher
+                $mainAccountVoucher->update([
+                    'amount' => $newAmount,
+                    'date' => $request->date,
+                    'narration' => $transaction->type === 'expense'
+                        ? "Hospital Expense - {$request->category}: {$request->description}"
+                        : "Hospital Income - {$request->category}: {$request->description}"
+                ]);
+            }
+
+            // Handle category update
+            $categoryName = $request->category;
+            $categoryId = $request->expense_category_id;
+
+            if ($categoryId && empty($categoryName)) {
+                $category = HospitalExpenseCategory::find($categoryId);
+                $categoryName = $category ? $category->name : $request->category;
+            }
+
+            if (!$categoryId && $categoryName) {
+                $category = HospitalExpenseCategory::firstOrCreate(
+                    ['name' => $categoryName],
+                    ['is_active' => true]
+                );
+                $categoryId = $category->id;
+            }
+
+            // Update transaction
+            $transaction->update([
+                'amount' => $newAmount,
+                'category' => $categoryName,
+                'expense_category_id' => $categoryId,
+                'description' => $request->description,
+                'transaction_date' => $request->date,
+            ]);
+        });
+
+        return back()->with('success', 'Transaction updated successfully!');
+    }
+
+    // Delete Transaction
+    public function deleteTransaction(HospitalTransaction $transaction)
+    {
+        DB::transaction(function () use ($transaction) {
+            // Reverse hospital account balance
+            $account = HospitalAccount::firstOrCreate([]);
+
+            if ($transaction->type === 'expense') {
+                // Reverse expense - increase balance
+                $account->increment('balance', $transaction->amount);
+            } else {
+                // Reverse income - decrease balance
+                $account->decrement('balance', $transaction->amount);
+            }
+
+            // Find and reverse main account voucher
+            $mainAccountVoucher = MainAccountVoucher::where('source_voucher_no', $transaction->transaction_no)
+                ->where('source_account', 'hospital')
+                ->where('source_reference_id', $transaction->id)
+                ->first();
+
+            if ($mainAccountVoucher) {
+                $mainAccount = MainAccount::firstOrCreate([]);
+
+                if ($transaction->type === 'expense') {
+                    // Reverse expense (was debit) - increase main account balance
+                    $mainAccount->increment('balance', $transaction->amount);
+                } else {
+                    // Reverse income (was credit) - decrease main account balance
+                    $mainAccount->decrement('balance', $transaction->amount);
+                }
+
+                $mainAccountVoucher->delete();
+            }
+
+            // Delete the transaction
+            $transaction->delete();
+        });
+
+        return back()->with('success', 'Transaction deleted successfully!');
+    }
+
+    // Edit Fund Transaction
+    public function editFundTransaction(HospitalFundTransaction $fundTransaction)
+    {
+        $fundTransaction->load('addedBy');
+
+        return Inertia::render('HospitalAccount/EditFundTransaction', compact('fundTransaction'));
+    }
+
+    // Update Fund Transaction
+    public function updateFundTransaction(Request $request, HospitalFundTransaction $fundTransaction)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'purpose' => 'required|string|max:255',
+            'description' => 'required|string|max:500',
+            'date' => 'required|date',
+        ]);
+
+        DB::transaction(function () use ($request, $fundTransaction) {
+            $oldAmount = $fundTransaction->amount;
+            $newAmount = $request->amount;
+            $amountDifference = $newAmount - $oldAmount;
+
+            // Update hospital account balance
+            $account = HospitalAccount::firstOrCreate([]);
+
+            if ($fundTransaction->type === 'fund_out') {
+                // For fund_out: if new amount is higher, decrease balance more
+                $account->decrement('balance', $amountDifference);
+
+                // Check if balance is sufficient
+                if ($amountDifference > 0 && $account->balance < 0) {
+                    throw new \Exception('Insufficient balance for this fund out amount!');
+                }
+            } else {
+                // For fund_in: if new amount is higher, increase balance more
+                $account->increment('balance', $amountDifference);
+            }
+
+            // Update main account voucher
+            $mainAccountVoucher = MainAccountVoucher::where('source_voucher_no', $fundTransaction->voucher_no)
+                ->where('source_account', 'hospital')
+                ->where('source_reference_id', $fundTransaction->id)
+                ->first();
+
+            if ($mainAccountVoucher) {
+                $mainAccount = MainAccount::firstOrCreate([]);
+
+                if ($fundTransaction->type === 'fund_out') {
+                    // For fund_out (debit voucher): decrease main account balance by difference
+                    $mainAccount->decrement('balance', $amountDifference);
+                } else {
+                    // For fund_in (credit voucher): increase main account balance by difference
+                    $mainAccount->increment('balance', $amountDifference);
+                }
+
+                // Update voucher
+                $mainAccountVoucher->update([
+                    'amount' => $newAmount,
+                    'date' => $request->date,
+                    'narration' => $fundTransaction->type === 'fund_out'
+                        ? "Hospital Fund Out - {$request->purpose}: {$request->description}"
+                        : "Hospital Fund In - {$request->purpose}: {$request->description}"
+                ]);
+            }
+
+            // Update fund transaction
+            $fundTransaction->update([
+                'amount' => $newAmount,
+                'purpose' => $request->purpose,
+                'description' => $request->description,
+                'date' => $request->date,
+            ]);
+        });
+
+        return back()->with('success', 'Fund transaction updated successfully!');
+    }
+
     public function transactions(Request $request)
     {
         $query = HospitalTransaction::with(['expenseCategory', 'createdBy']);
@@ -146,11 +366,10 @@ class HospitalAccountController extends Controller
         }
 
         $transactions = $query->latest('transaction_date')->paginate(20);
-        $transactions->appends(request()->query()); // Preserve query parameters in pagination links
+        $transactions->appends(request()->query());
 
         $categories = HospitalExpenseCategory::where('is_active', true)->get();
 
-        // Pass current filters to the view
         $filters = [
             'type' => $request->type,
             'date_from' => $request->date_from,
@@ -194,10 +413,8 @@ class HospitalAccountController extends Controller
         if ($request->type) {
             if ($request->type === 'fund_in') {
                 $fundInQuery->where('type', 'fund_in');
-                // Don't apply type filter to fundOutQuery if filtering by fund_in
             } elseif ($request->type === 'fund_out') {
                 $fundOutQuery->where('type', 'fund_out');
-                // Don't apply type filter to fundInQuery if filtering by fund_out
             } else {
                 $fundInQuery->where('type', 'fund_in');
                 $fundOutQuery->where('type', 'fund_out');
@@ -341,40 +558,41 @@ class HospitalAccountController extends Controller
 
     public function deleteFundTransaction(HospitalFundTransaction $fundTransaction)
     {
-        // Reverse the fund transaction
-        $account = HospitalAccount::firstOrCreate([]);
-
-        if ($fundTransaction->type === 'fund_in') {
-            // Reverse fund in - decrease balance
-            $account->decrement('balance', $fundTransaction->amount);
-        } else {
-            // Reverse fund out - increase balance
-            $account->increment('balance', $fundTransaction->amount);
-        }
-
-        // Find and delete the related main account voucher
-        $mainAccountVoucher = MainAccountVoucher::where('source_voucher_no', $fundTransaction->voucher_no)
-            ->where('source_account', 'hospital')
-            ->where('source_reference_id', $fundTransaction->id)
-            ->first();
-
-        if ($mainAccountVoucher) {
-            // Reverse main account balance
-            $mainAccount = MainAccount::firstOrCreate([]);
+        DB::transaction(function () use ($fundTransaction) {
+            // Reverse the fund transaction
+            $account = HospitalAccount::firstOrCreate([]);
 
             if ($fundTransaction->type === 'fund_in') {
-                $mainAccount->decrement('balance', $fundTransaction->amount);
+                // Reverse fund in - decrease balance
+                $account->decrement('balance', $fundTransaction->amount);
             } else {
-                $mainAccount->increment('balance', $fundTransaction->amount);
+                // Reverse fund out - increase balance
+                $account->increment('balance', $fundTransaction->amount);
             }
 
-            $mainAccountVoucher->delete();
-        }
+            // Find and delete the related main account voucher
+            $mainAccountVoucher = MainAccountVoucher::where('source_voucher_no', $fundTransaction->voucher_no)
+                ->where('source_account', 'hospital')
+                ->where('source_reference_id', $fundTransaction->id)
+                ->first();
 
-        // Delete the fund transaction
-        $fundTransaction->delete();
+            if ($mainAccountVoucher) {
+                // Reverse main account balance
+                $mainAccount = MainAccount::firstOrCreate([]);
+
+                if ($fundTransaction->type === 'fund_in') {
+                    $mainAccount->decrement('balance', $fundTransaction->amount);
+                } else {
+                    $mainAccount->increment('balance', $fundTransaction->amount);
+                }
+
+                $mainAccountVoucher->delete();
+            }
+
+            // Delete the fund transaction
+            $fundTransaction->delete();
+        });
 
         return back()->with('success', 'Fund transaction deleted successfully!');
     }
-
 }

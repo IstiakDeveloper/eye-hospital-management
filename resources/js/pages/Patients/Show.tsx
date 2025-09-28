@@ -23,7 +23,8 @@ import {
     Receipt,
     ChevronDown,
     ChevronRight,
-    Building2
+    Building2,
+    Trash2
 } from 'lucide-react';
 
 interface User {
@@ -183,6 +184,24 @@ export default function Show({
 
     const handleReceiptPrint = (visitId: number) => {
         window.open(route('visits.receipt', visitId), '_blank');
+    };
+
+    // Visit edit and delete handlers
+    const handleVisitEdit = (visitId: number) => {
+        router.get(route('visits.edit', visitId));
+    };
+
+    const handleVisitDelete = (visitId: number, visitNumber: string) => {
+        if (confirm(`Are you sure you want to delete Visit ${visitNumber}? This will reverse all transactions and cannot be undone.`)) {
+            router.delete(route('visits.destroy', visitId), {
+                onSuccess: () => {
+                    // Page will refresh automatically
+                },
+                onError: (errors) => {
+                    console.error('Delete failed:', errors);
+                }
+            });
+        }
     };
 
     const formatDate = (dateString: string) => {
@@ -604,7 +623,32 @@ export default function Show({
                                                         </span>
                                                     </div>
 
+                                                    {/* Edit and Delete buttons */}
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleVisitEdit(visit.id);
+                                                            }}
+                                                            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                                                            title="Edit Visit"
+                                                        >
+                                                            <Edit className="h-3 w-3" />
+                                                            Edit
+                                                        </button>
 
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleVisitDelete(visit.id, visit.visit_id);
+                                                            }}
+                                                            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                                                            title="Delete Visit"
+                                                        >
+                                                            <Trash2 className="h-3 w-3" />
+                                                            Delete
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -752,10 +796,6 @@ export default function Show({
                                                                                     <p className="text-xs text-gray-500">{payment.payment_method.name}</p>
                                                                                 )}
                                                                                 <div className="flex gap-1 mt-1">
-                                                                                    {/* <button className="inline-flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded">
-                                                                                        <Receipt className="h-3 w-3" />
-                                                                                        View
-                                                                                    </button> */}
                                                                                     <button
                                                                                         onClick={() => handleVisitReceiptPrint(visit.id)}
                                                                                         className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded"
@@ -763,7 +803,6 @@ export default function Show({
                                                                                         <Printer className="h-3 w-3" />
                                                                                         Print
                                                                                     </button>
-
                                                                                 </div>
                                                                             </div>
                                                                         ))}

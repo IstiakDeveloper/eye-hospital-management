@@ -10,7 +10,10 @@ import {
     Filter,
     X,
     ToggleLeft,
-    ToggleRight
+    ToggleRight,
+    Trash2,
+    XCircle,
+    CheckCircle
 } from 'lucide-react';
 
 interface Frame {
@@ -89,6 +92,100 @@ const Select = ({ label, error, children, className = '', ...props }: any) => (
     </div>
 );
 
+// Delete Confirmation Modal Component
+const DeleteConfirmationModal = ({ frame, isOpen, onClose, onConfirm }: any) => {
+    if (!isOpen || !frame) return null;
+
+    const refundAmount = frame.stock_quantity * frame.purchase_price;
+
+    return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+                <div className="p-6">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                            <div className="bg-red-100 p-2 rounded-full">
+                                <AlertTriangle className="w-6 h-6 text-red-600" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900">Delete Frame</h3>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {/* Frame Info */}
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                        <h4 className="font-medium text-gray-900 mb-2">{frame.full_name}</h4>
+                        <div className="text-sm text-gray-600 space-y-1">
+                            <p><span className="font-medium">SKU:</span> {frame.sku}</p>
+                            <p><span className="font-medium">Type:</span> {frame.type.replace('_', ' ')}</p>
+                            <p><span className="font-medium">Material:</span> {frame.material}</p>
+                            <p><span className="font-medium">Current Stock:</span> {frame.stock_quantity} pieces</p>
+                            <p><span className="font-medium">Purchase Price:</span> ৳{frame.purchase_price.toLocaleString()}</p>
+                        </div>
+                    </div>
+
+                    {/* Warning */}
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                        <div className="flex items-start space-x-3">
+                            <XCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm">
+                                <p className="font-medium text-red-800 mb-1">This action cannot be undone!</p>
+                                <ul className="text-red-700 space-y-1">
+                                    <li>• Frame will be permanently deleted</li>
+                                    <li>• All stock movement history will be removed</li>
+                                    <li>• Frame cannot be recovered after deletion</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Refund Info */}
+                    {frame.stock_quantity > 0 && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                            <div className="flex items-start space-x-3">
+                                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                                <div className="text-sm">
+                                    <p className="font-medium text-green-800 mb-1">Stock Refund</p>
+                                    <p className="text-green-700">
+                                        ৳{refundAmount.toLocaleString()} will be refunded to your account
+                                        <br />
+                                        ({frame.stock_quantity} pieces × ৳{frame.purchase_price.toLocaleString()})
+                                    </p>
+                                    <p className="text-green-600 text-xs mt-1">
+                                        This amount will be added to both Optics Account and Main Account
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex space-x-3">
+                        <button
+                            onClick={onClose}
+                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                        >
+                            Delete Frame
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export default function FramesIndex({ frames, filterOptions }: { frames: any, filterOptions: FilterOptions }) {
     const [search, setSearch] = useState(new URLSearchParams(window.location.search).get('search') || '');
     const [filters, setFilters] = useState({
@@ -104,6 +201,8 @@ export default function FramesIndex({ frames, filterOptions }: { frames: any, fi
     });
 
     const [showFilters, setShowFilters] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [frameToDelete, setFrameToDelete] = useState<Frame | null>(null);
 
     // Auto search on typing (debounced)
     useEffect(() => {
@@ -157,6 +256,30 @@ export default function FramesIndex({ frames, filterOptions }: { frames: any, fi
                 // Refresh the page to show updated status
             }
         });
+    };
+
+    const openDeleteModal = (frame: Frame) => {
+        setFrameToDelete(frame);
+        setDeleteModalOpen(true);
+    };
+
+    const closeDeleteModal = () => {
+        setDeleteModalOpen(false);
+        setFrameToDelete(null);
+    };
+
+    const confirmDelete = () => {
+        if (frameToDelete) {
+            router.delete(`/optics/frames/${frameToDelete.id}`, {
+                onSuccess: () => {
+                    closeDeleteModal();
+                },
+                onError: (errors) => {
+                    console.error('Delete failed:', errors);
+                    alert('Failed to delete frame. Please try again.');
+                }
+            });
+        }
     };
 
     const hasActiveFilters = search || Object.values(filters).some(v => v !== '' && v !== false);
@@ -477,25 +600,36 @@ export default function FramesIndex({ frames, filterOptions }: { frames: any, fi
                                                 </Link>
                                             </div>
 
-                                            <button
-                                                onClick={() => toggleFrameStatus(frame.id, frame.is_active)}
-                                                className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${frame.is_active
-                                                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                            <div className="flex space-x-2">
+                                                <button
+                                                    onClick={() => toggleFrameStatus(frame.id, frame.is_active)}
+                                                    className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${frame.is_active
+                                                        ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                                                         : 'bg-green-100 text-green-700 hover:bg-green-200'
-                                                    }`}
-                                            >
-                                                {frame.is_active ? (
-                                                    <>
-                                                        <ToggleLeft className="w-4 h-4" />
-                                                        <span>Deactivate</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <ToggleRight className="w-4 h-4" />
-                                                        <span>Activate</span>
-                                                    </>
-                                                )}
-                                            </button>
+                                                        }`}
+                                                >
+                                                    {frame.is_active ? (
+                                                        <>
+                                                            <ToggleLeft className="w-4 h-4" />
+                                                            <span>Deactivate</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <ToggleRight className="w-4 h-4" />
+                                                            <span>Activate</span>
+                                                        </>
+                                                    )}
+                                                </button>
+
+                                                <button
+                                                    onClick={() => openDeleteModal(frame)}
+                                                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors bg-red-600 text-white hover:bg-red-700"
+                                                    title="Delete Frame"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    <span>Delete</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -555,6 +689,14 @@ export default function FramesIndex({ frames, filterOptions }: { frames: any, fi
                         </div>
                     </div>
                 )}
+
+                {/* Delete Confirmation Modal */}
+                <DeleteConfirmationModal
+                    frame={frameToDelete}
+                    isOpen={deleteModalOpen}
+                    onClose={closeDeleteModal}
+                    onConfirm={confirmDelete}
+                />
             </div>
         </AdminLayout>
     );

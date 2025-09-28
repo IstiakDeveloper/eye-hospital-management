@@ -193,4 +193,123 @@ class OpticsAccount extends Model
             'balance' => self::getBalance()
         ];
     }
+
+
+    public static function updateTransaction(int $transactionId, float $newAmount, string $newCategory, string $newDescription): void
+    {
+        $transaction = OpticsTransaction::findOrFail($transactionId);
+        $oldAmount = $transaction->amount;
+        $amountDifference = $newAmount - $oldAmount;
+
+        $account = self::firstOrCreate([]);
+
+        // Update OpticsAccount balance
+        if ($amountDifference > 0) {
+            if ($transaction->type === 'income') {
+                $account->increment('balance', $amountDifference);
+            } else {
+                $account->decrement('balance', $amountDifference);
+            }
+        } elseif ($amountDifference < 0) {
+            if ($transaction->type === 'income') {
+                $account->decrement('balance', abs($amountDifference));
+            } else {
+                $account->increment('balance', abs($amountDifference));
+            }
+        }
+
+        // Update transaction record
+        $transaction->update([
+            'amount' => $newAmount,
+            'category' => $newCategory,
+            'description' => $newDescription,
+        ]);
+
+        // Find and update MainAccount voucher
+        $voucher = MainAccountVoucher::where('source_account', 'optics')
+            ->where('source_reference_id', $transactionId)
+            ->first();
+
+        if ($voucher && $amountDifference != 0) {
+            $mainAccount = MainAccount::firstOrCreate([]);
+
+            if ($amountDifference > 0) {
+                if ($transaction->type === 'income') {
+                    $mainAccount->increment('balance', $amountDifference);
+                } else {
+                    $mainAccount->decrement('balance', $amountDifference);
+                }
+            } else {
+                if ($transaction->type === 'income') {
+                    $mainAccount->decrement('balance', abs($amountDifference));
+                } else {
+                    $mainAccount->increment('balance', abs($amountDifference));
+                }
+            }
+
+            $voucher->update([
+                'amount' => $newAmount,
+                'narration' => "Optics " . ucfirst($transaction->type) . " - {$newCategory}: {$newDescription}",
+            ]);
+        }
+    }
+
+    public static function deleteTransaction(int $transactionId): void
+    {
+        $transaction = OpticsTransaction::findOrFail($transactionId);
+        $account = self::firstOrCreate([]);
+
+        // Reverse OpticsAccount balance
+        if ($transaction->type === 'income') {
+            $account->decrement('balance', $transaction->amount);
+        } else {
+            $account->increment('balance', $transaction->amount);
+        }
+
+        // Find and delete MainAccount voucher
+        $voucher = MainAccountVoucher::where('source_account', 'optics')
+            ->where('source_reference_id', $transactionId)
+            ->first();
+
+        if ($voucher) {
+            $mainAccount = MainAccount::firstOrCreate([]);
+
+            // Reverse MainAccount balance
+            if ($transaction->type === 'income') {
+                $mainAccount->decrement('balance', $transaction->amount);
+            } else {
+                $mainAccount->increment('balance', $transaction->amount);
+            }
+
+            $voucher->delete();
+        }
+
+        // Delete transaction
+        $transaction->delete();
+    }
+
+    public static function adjustAmount(float $amount, string $type, string $category, string $description): void
+    {
+        $account = self::firstOrCreate([]);
+
+        if ($type === 'income') {
+            $account->increment('balance', $amount);
+
+            MainAccount::createCreditVoucher(
+                $amount,
+                "Optics Adjustment - {$category}: {$description}",
+                'optics',
+                'income'
+            );
+        } else {
+            $account->decrement('balance', $amount);
+
+            MainAccount::createDebitVoucher(
+                $amount,
+                "Optics Adjustment - {$category}: {$description}",
+                'optics',
+                'expense'
+            );
+        }
+    }
 }

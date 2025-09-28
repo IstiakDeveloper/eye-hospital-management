@@ -5,7 +5,10 @@ import { formatDate } from '@/lib/utils';
 import {
     Filter,
     Search,
-    RefreshCw
+    RefreshCw,
+    Edit,
+    Trash2,
+    Eye
 } from 'lucide-react';
 
 interface Transaction {
@@ -51,6 +54,8 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories, f
         date_to: filters.date_to || '',
         category: filters.category || ''
     });
+
+    const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
 
     // Auto filter function with debouncing
     const applyFilters = (newFilters: any) => {
@@ -105,6 +110,32 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories, f
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0) || 0;
 
     const netAmount = totalIncome - totalExpense;
+
+    // Handle edit transaction
+    const handleEdit = (transactionId: number) => {
+        router.get(`/hospital-account/transactions/${transactionId}/edit`);
+    };
+
+    // Handle delete transaction
+    const handleDelete = (transactionId: number) => {
+        if (deleteConfirm === transactionId) {
+            router.delete(`/hospital-account/transactions/${transactionId}`, {
+                onSuccess: () => {
+                    setDeleteConfirm(null);
+                },
+                onError: () => {
+                    setDeleteConfirm(null);
+                }
+            });
+        } else {
+            setDeleteConfirm(transactionId);
+        }
+    };
+
+    // Cancel delete confirmation
+    const cancelDelete = () => {
+        setDeleteConfirm(null);
+    };
 
     return (
         <HospitalAccountLayout title="Transactions">
@@ -212,6 +243,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories, f
                                     <th className="px-3 py-2 text-right font-medium text-gray-700">Amount</th>
                                     <th className="px-3 py-2 text-left font-medium text-gray-700">Date</th>
                                     <th className="px-3 py-2 text-left font-medium text-gray-700">Description</th>
+                                    <th className="px-3 py-2 text-center font-medium text-gray-700">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -219,20 +251,18 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories, f
                                     <tr key={transaction.id} className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}>
                                         <td className="px-3 py-2 font-mono text-blue-600">{transaction.transaction_no}</td>
                                         <td className="px-3 py-2">
-                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                                transaction.type === 'income'
+                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${transaction.type === 'income'
                                                     ? 'bg-green-100 text-green-700'
                                                     : 'bg-red-100 text-red-700'
-                                            }`}>
+                                                }`}>
                                                 {transaction.type}
                                             </span>
                                         </td>
                                         <td className="px-3 py-2 text-gray-700">
                                             {transaction.category || 'Uncategorized'}
                                         </td>
-                                        <td className={`px-3 py-2 text-right font-mono font-medium ${
-                                            transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                                        }`}>
+                                        <td className={`px-3 py-2 text-right font-mono font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                                            }`}>
                                             {transaction.type === 'income' ? '+' : '-'}৳{Number(transaction.amount).toLocaleString()}
                                         </td>
                                         <td className="px-3 py-2 text-gray-600">
@@ -240,6 +270,46 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories, f
                                         </td>
                                         <td className="px-3 py-2 text-gray-700 max-w-xs truncate" title={transaction.description}>
                                             {transaction.description || 'No description'}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            <div className="flex items-center justify-center gap-1">
+                                                {/* Edit Button */}
+                                                <button
+                                                    onClick={() => handleEdit(transaction.id)}
+                                                    className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                    title="Edit Transaction"
+                                                >
+                                                    <Edit className="w-3 h-3" />
+                                                </button>
+
+                                                {/* Delete Button */}
+                                                {deleteConfirm === transaction.id ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={() => handleDelete(transaction.id)}
+                                                            className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                                                            title="Confirm Delete"
+                                                        >
+                                                            Yes
+                                                        </button>
+                                                        <button
+                                                            onClick={cancelDelete}
+                                                            className="px-2 py-1 bg-gray-400 text-white text-xs rounded hover:bg-gray-500"
+                                                            title="Cancel Delete"
+                                                        >
+                                                            No
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleDelete(transaction.id)}
+                                                        className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                        title="Delete Transaction"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -288,11 +358,10 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories, f
                                     <button
                                         key={pageNum}
                                         onClick={() => handlePagination(pageNum)}
-                                        className={`px-2 py-1 text-xs border rounded ${
-                                            pageNum === transactions.current_page
+                                        className={`px-2 py-1 text-xs border rounded ${pageNum === transactions.current_page
                                                 ? 'bg-blue-500 text-white border-blue-500'
                                                 : 'hover:bg-gray-100'
-                                        }`}
+                                            }`}
                                     >
                                         {pageNum}
                                     </button>
