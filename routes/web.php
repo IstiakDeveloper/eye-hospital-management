@@ -192,11 +192,20 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['super-admin'])->group(function () {
         // Users
         Route::resource('users', UserController::class);
-        // Doctors
-        Route::put('/doctors/{doctor}/availability', [DoctorController::class, 'updateAvailability'])->name('doctors.availability');
+
+        // Doctors - Custom routes before resource
+        Route::prefix('doctors')->name('doctors.')->group(function () {
+            Route::put('/{doctor}/availability', [DoctorController::class, 'updateAvailability'])->name('availability');
+            Route::put('/{doctor}/toggle-status', [DoctorController::class, 'toggleStatus'])->name('toggle');
+        });
         Route::resource('doctors', DoctorController::class);
-        // Medicines
-        Route::put('/medicines/{medicine}/toggle-status', [MedicineController::class, 'toggleStatus'])->name('medicines.toggle');
+
+        // Medicines - Custom routes before resource
+        Route::prefix('medicines')->name('medicines.')->group(function () {
+            Route::put('/{medicine}/toggle-status', [MedicineController::class, 'toggleStatus'])->name('toggle');
+            Route::post('/bulk-action', [MedicineController::class, 'bulkAction'])->name('bulk-action');
+            Route::get('/export', [MedicineController::class, 'export'])->name('export');
+        });
         Route::resource('medicines', MedicineController::class);
     });
 

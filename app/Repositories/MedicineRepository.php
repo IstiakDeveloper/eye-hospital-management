@@ -47,14 +47,67 @@ class MedicineRepository
     }
 
     /**
-     * Get all medicines with pagination.
+     * Get all medicines with pagination and filters.
      *
+     * @param  array  $filters
      * @param  int  $perPage
      * @return LengthAwarePaginator
      */
-    public function getAllPaginated(int $perPage = 10): LengthAwarePaginator
+    public function getAllPaginated(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        return $this->medicine->orderBy('name')->paginate($perPage);
+        $query = $this->medicine->query();
+
+        // Search filter - searches across multiple fields
+        if (!empty($filters['search'])) {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('generic_name', 'like', "%{$search}%")
+                    ->orWhere('manufacturer', 'like', "%{$search}%")
+                    ->orWhere('type', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // Type filter
+        if (!empty($filters['type']) && $filters['type'] !== 'all') {
+            $query->where('type', $filters['type']);
+        }
+
+        // Status filter
+        if (!empty($filters['status']) && $filters['status'] !== 'all') {
+            $isActive = $filters['status'] === 'active';
+            $query->where('is_active', $isActive);
+        }
+
+        // Manufacturer filter
+        if (!empty($filters['manufacturer']) && $filters['manufacturer'] !== 'all') {
+            $query->where('manufacturer', $filters['manufacturer']);
+        }
+
+        // Sorting
+        $sortBy = $filters['sort_by'] ?? 'name';
+        $sortOrder = $filters['sort_order'] ?? 'asc';
+
+        // Handle different sort fields
+        switch ($sortBy) {
+            case 'status':
+                $query->orderBy('is_active', $sortOrder);
+                break;
+            case 'created_at':
+                $query->orderBy('created_at', $sortOrder);
+                break;
+            default:
+                $query->orderBy($sortBy, $sortOrder);
+                break;
+        }
+
+        // Add secondary sort by name for consistent ordering
+        if ($sortBy !== 'name') {
+            $query->orderBy('name', 'asc');
+        }
+
+        return $query->paginate($perPage)->withQueryString();
     }
 
     /**

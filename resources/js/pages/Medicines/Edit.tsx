@@ -178,7 +178,7 @@ export default function MedicineEdit({ medicine, types }: MedicineEditProps) {
                 Cancel
               </Button>
 
-              <Button
+              {/* <Button
                 type="button"
                 variant="destructive"
                 icon={<Trash2 className="h-4 w-4" />}
@@ -189,7 +189,7 @@ export default function MedicineEdit({ medicine, types }: MedicineEditProps) {
                 }}
               >
                 Delete
-              </Button>
+              </Button> */}
             </div>
 
             <Button
