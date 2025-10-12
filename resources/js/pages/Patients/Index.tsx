@@ -11,7 +11,9 @@ import {
     Edit,
     MapPin,
     Calendar,
-    X
+    X,
+    DollarSign,
+    Stethoscope
 } from 'lucide-react';
 
 interface User {
@@ -31,6 +33,10 @@ interface Patient {
     gender?: string;
     registered_by?: User;
     created_at: string;
+    total_paid?: number;
+    last_doctor?: string;
+    all_doctors?: string[];
+    total_visits?: number;
 }
 
 interface PaginationLink {
@@ -73,33 +79,17 @@ export default function Index({ patients, filters }: Props) {
     const [endDate, setEndDate] = useState(filters.end_date || '');
     const [datePreset, setDatePreset] = useState(filters.date_preset || '');
 
-    // Date utility functions to ensure 4-digit year format
     const ensureValidDateInput = (dateString: string): string => {
         if (!dateString) return '';
-
-        // Handle various date formats and ensure 4-digit year
         let cleanDate = dateString.replace(/[^\d-]/g, '');
-
-        // If year appears to be 6 digits, extract the last 4
         const parts = cleanDate.split('-');
         if (parts.length === 3 && parts[0].length > 4) {
             parts[0] = parts[0].slice(-4);
             cleanDate = parts.join('-');
         }
-
         return cleanDate;
     };
 
-    const formatDateForInput = (date: string | Date): string => {
-        if (!date) return '';
-        const d = new Date(date);
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    // Check if any date filter is active
     const isDateFilterActive = filters.date_filter_type && (
         filters.specific_date ||
         filters.start_date ||
@@ -107,11 +97,9 @@ export default function Index({ patients, filters }: Props) {
         filters.date_preset
     );
 
-    // Realtime search with debounce
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             const currentPath = window.location.pathname;
-
             router.get(currentPath, {
                 search: searchTerm,
                 gender: genderFilter,
@@ -126,13 +114,8 @@ export default function Index({ patients, filters }: Props) {
                 replace: true,
             });
         }, 500);
-
         return () => clearTimeout(timeoutId);
     }, [searchTerm, genderFilter, dateFilterType, dateField, specificDate, startDate, endDate, datePreset]);
-
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-    };
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-GB', {
@@ -140,6 +123,15 @@ export default function Index({ patients, filters }: Props) {
             month: '2-digit',
             year: 'numeric'
         });
+    };
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-BD', {
+            style: 'currency',
+            currency: 'BDT',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(amount);
     };
 
     const calculateAge = (dateOfBirth?: string) => {
@@ -177,19 +169,15 @@ export default function Index({ patients, filters }: Props) {
 
     const getDateFilterLabel = () => {
         if (!isDateFilterActive) return '';
-
         const fieldLabel = dateField === 'created_at' ? 'Registration' : 'Birth Date';
-
         if (filters.date_filter_type === 'specific' && filters.specific_date) {
             return `${fieldLabel}: ${formatDate(filters.specific_date)}`;
         }
-
         if (filters.date_filter_type === 'range') {
             const start = filters.start_date ? formatDate(filters.start_date) : 'Start';
             const end = filters.end_date ? formatDate(filters.end_date) : 'End';
             return `${fieldLabel}: ${start} - ${end}`;
         }
-
         if (filters.date_filter_type === 'preset' && filters.date_preset) {
             const presetLabels = {
                 'today': 'Today',
@@ -205,11 +193,9 @@ export default function Index({ patients, filters }: Props) {
             };
             return `${fieldLabel}: ${presetLabels[filters.date_preset] || filters.date_preset}`;
         }
-
         return '';
     };
 
-    // Handle pagination click
     const handlePaginationClick = (url: string) => {
         const urlObj = new URL(url);
         if (searchTerm) urlObj.searchParams.set('search', searchTerm);
@@ -232,7 +218,6 @@ export default function Index({ patients, filters }: Props) {
             <Head title="Patients" />
 
             <div className="p-6">
-                {/* Compact Header */}
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <h1 className="text-lg font-semibold text-gray-900">Patients</h1>
@@ -247,9 +232,8 @@ export default function Index({ patients, filters }: Props) {
                     </Link>
                 </div>
 
-                {/* Compact Search Bar */}
                 <div className="flex items-center gap-3 mb-4">
-                    <form onSubmit={handleSearch} className="flex-1 flex items-center gap-2">
+                    <form onSubmit={(e) => e.preventDefault()} className="flex-1 flex items-center gap-2">
                         <div className="flex-1 relative">
                             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
                             <input
@@ -271,7 +255,6 @@ export default function Index({ patients, filters }: Props) {
                             <option value="other">Other</option>
                         </select>
 
-                        {/* Date Filter Toggle Button */}
                         <button
                             type="button"
                             onClick={() => setShowDateFilter(!showDateFilter)}
@@ -295,47 +278,40 @@ export default function Index({ patients, filters }: Props) {
                     </form>
                 </div>
 
-                {/* Active Date Filter Display */}
                 {isDateFilterActive && (
                     <div className="mb-3 flex items-center gap-2">
                         <span className="text-xs text-gray-500">Active filter:</span>
                         <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
                             <Calendar className="h-3 w-3" />
                             {getDateFilterLabel()}
-                            <button
-                                onClick={clearDateFilter}
-                                className="ml-1 hover:text-blue-900"
-                            >
+                            <button onClick={clearDateFilter} className="ml-1 hover:text-blue-900">
                                 <X className="h-3 w-3" />
                             </button>
                         </div>
                     </div>
                 )}
 
-                {/* Date Filter Panel */}
                 {showDateFilter && (
                     <div className="mb-4 p-3 bg-gray-50 rounded border border-gray-200">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                            {/* Date Field Selection */}
                             <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-1">Filter by</label>
                                 <select
                                     value={dateField}
                                     onChange={(e) => setDateField(e.target.value)}
-                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                                 >
                                     <option value="created_at">Registration Date</option>
                                     <option value="date_of_birth">Birth Date</option>
                                 </select>
                             </div>
 
-                            {/* Filter Type */}
                             <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
                                 <select
                                     value={dateFilterType}
                                     onChange={(e) => setDateFilterType(e.target.value)}
-                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                                 >
                                     <option value="preset">Quick Select</option>
                                     <option value="specific">Specific Date</option>
@@ -343,7 +319,6 @@ export default function Index({ patients, filters }: Props) {
                                 </select>
                             </div>
 
-                            {/* Filter Options */}
                             <div className="md:col-span-2">
                                 {dateFilterType === 'preset' && (
                                     <div>
@@ -351,7 +326,7 @@ export default function Index({ patients, filters }: Props) {
                                         <select
                                             value={datePreset}
                                             onChange={(e) => setDatePreset(e.target.value)}
-                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                                         >
                                             <option value="">Select period...</option>
                                             <option value="today">Today</option>
@@ -377,7 +352,7 @@ export default function Index({ patients, filters }: Props) {
                                             onChange={(e) => setSpecificDate(ensureValidDateInput(e.target.value))}
                                             max="9999-12-31"
                                             min="1900-01-01"
-                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 date-input-fixed"
+                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                                         />
                                     </div>
                                 )}
@@ -392,7 +367,7 @@ export default function Index({ patients, filters }: Props) {
                                                 onChange={(e) => setStartDate(ensureValidDateInput(e.target.value))}
                                                 max="9999-12-31"
                                                 min="1900-01-01"
-                                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 date-input-fixed"
+                                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                                             />
                                         </div>
                                         <div>
@@ -403,7 +378,7 @@ export default function Index({ patients, filters }: Props) {
                                                 onChange={(e) => setEndDate(ensureValidDateInput(e.target.value))}
                                                 max="9999-12-31"
                                                 min="1900-01-01"
-                                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 date-input-fixed"
+                                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                                             />
                                         </div>
                                     </div>
@@ -413,7 +388,6 @@ export default function Index({ patients, filters }: Props) {
                     </div>
                 )}
 
-                {/* Compact Stats */}
                 <div className="grid grid-cols-3 gap-3 mb-4">
                     <div className="bg-blue-50 rounded p-2">
                         <div className="flex items-center gap-2">
@@ -444,7 +418,6 @@ export default function Index({ patients, filters }: Props) {
                     </div>
                 </div>
 
-                {/* Compact Table */}
                 <div className="bg-white rounded border border-gray-200 overflow-hidden">
                     <table className="min-w-full">
                         <thead className="bg-gray-50">
@@ -452,6 +425,7 @@ export default function Index({ patients, filters }: Props) {
                                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
                                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
                                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
+                                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Doctor & Payment</th>
                                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Registered</th>
                                 <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
@@ -482,7 +456,7 @@ export default function Index({ patients, filters }: Props) {
                                                 <p className="text-xs text-gray-500">NID: {patient.nid_card}</p>
                                             )}
                                             {patient.email && (
-                                                <p className="text-xs text-gray-500">{patient.email}</p>
+                                                <p className="text-xs text-gray-500 truncate max-w-32">{patient.email}</p>
                                             )}
                                         </div>
                                     </td>
@@ -504,9 +478,44 @@ export default function Index({ patients, filters }: Props) {
                                             </div>
                                             {patient.address && (
                                                 <div className="flex items-center gap-1 text-xs text-gray-500">
-                                                    <MapPin className="h-2.5 w-2.5" />
+                                                    <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
                                                     <span className="truncate max-w-24">{patient.address}</span>
                                                 </div>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-3 py-2">
+                                        <div className="space-y-1">
+                                            {patient.last_doctor ? (
+                                                <div className="flex items-center gap-1 text-xs text-gray-700">
+                                                    <Stethoscope className="h-2.5 w-2.5 text-blue-600 flex-shrink-0" />
+                                                    <span className="truncate max-w-28" title={patient.last_doctor}>
+                                                         {patient.last_doctor}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-1 text-xs text-gray-400">
+                                                    <Stethoscope className="h-2.5 w-2.5" />
+                                                    <span>No doctor yet</span>
+                                                </div>
+                                            )}
+
+                                            {patient.total_paid !== undefined && patient.total_paid > 0 ? (
+                                                <div className="flex items-center gap-1 text-xs text-green-700 font-medium">
+                                                    <DollarSign className="h-2.5 w-2.5 flex-shrink-0" />
+                                                    <span>{formatCurrency(patient.total_paid)}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-1 text-xs text-gray-400">
+                                                    <DollarSign className="h-2.5 w-2.5" />
+                                                    <span>৳0</span>
+                                                </div>
+                                            )}
+
+                                            {patient.total_visits !== undefined && patient.total_visits > 0 && (
+                                                <p className="text-xs text-gray-500">
+                                                    {patient.total_visits} visit{patient.total_visits !== 1 ? 's' : ''}
+                                                </p>
                                             )}
                                         </div>
                                     </td>
@@ -559,7 +568,6 @@ export default function Index({ patients, filters }: Props) {
                     )}
                 </div>
 
-                {/* Fixed Pagination */}
                 {patients.total > patients.per_page && (
                     <div className="flex items-center justify-between mt-3">
                         <div className="text-xs text-gray-700">

@@ -5,6 +5,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Glasses extends Model
@@ -58,7 +59,7 @@ class Glasses extends Model
     public function stockMovements(): HasMany
     {
         return $this->hasMany(StockMovement::class, 'item_id')
-                    ->where('item_type', 'glasses');
+            ->where('item_type', 'glasses');
     }
 
     public function getFullNameAttribute(): string
@@ -116,4 +117,15 @@ class Glasses extends Model
     {
         return $query->where('gender', $gender);
     }
+
+    public function defaultVendor(): BelongsTo
+    {
+        return $this->belongsTo(OpticsVendor::class, 'default_vendor_id');
+    }
+
+    public function purchases(): HasMany
+    {
+        return $this->hasMany(GlassesPurchase::class, 'glasses_id');
+    }
+
 }

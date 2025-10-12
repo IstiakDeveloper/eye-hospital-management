@@ -7,6 +7,7 @@ use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\DoctorDashboardController;
 use App\Http\Controllers\HospitalAccount\HospitalAccountController;
 use App\Http\Controllers\MainAccountController;
+use App\Http\Controllers\MedicalTestController;
 use App\Http\Controllers\MedicineAccount\MedicineAccountController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\MedicineCornerController;
@@ -657,7 +658,7 @@ Route::middleware(['auth', 'super-admin'])->prefix('optics')->name('optics.')->g
     Route::get('/frames/{frame}/edit', [OpticsCornerController::class, 'editFrame'])->name('frames.edit');
     Route::put('/frames/{frame}', [OpticsCornerController::class, 'updateFrame'])->name('frames.update');
     Route::patch('/frames/{frame}/toggle-status', [OpticsCornerController::class, 'toggleStatus'])->name('frames.toggle-status');
-    Route::delete('/frames/{frame}', [OpticsCornerController::class, 'deleteFrame'])->name('frames.delete'); // New delete route
+    Route::delete('/frames/{frame}', [OpticsCornerController::class, 'deleteFrame'])->name('frames.delete');
 
     // Stock Management
     Route::get('/stock', [OpticsCornerController::class, 'stockManagement'])->name('stock');
@@ -683,7 +684,60 @@ Route::middleware(['auth', 'super-admin'])->prefix('optics')->name('optics.')->g
 
     // Reports
     Route::get('/reports', [OpticsCornerController::class, 'reports'])->name('reports');
+
+    Route::get('/vendors', [OpticsCornerController::class, 'vendors'])->name('vendors');
+    Route::get('/vendors/create', [OpticsCornerController::class, 'createVendor'])->name('vendors.create');
+    Route::post('/vendors', [OpticsCornerController::class, 'storeVendor'])->name('vendors.store');
+    Route::get('/vendors/{vendor}/edit', [OpticsCornerController::class, 'editVendor'])->name('vendors.edit');
+    Route::put('/vendors/{vendor}', [OpticsCornerController::class, 'updateVendor'])->name('vendors.update');
+    Route::get('/vendors/{vendor}/transactions', [OpticsCornerController::class, 'vendorTransactions'])->name('vendors.transactions');
+    Route::post('/vendors/{vendor}/payment', [OpticsCornerController::class, 'makeVendorPayment'])->name('vendors.payment');
+
+    // ✅ Purchases Management (NEW)
+    Route::get('/purchases', [OpticsCornerController::class, 'purchases'])->name('purchases');
+    Route::get('/purchases/create', [OpticsCornerController::class, 'createPurchase'])->name('purchases.create');
+    Route::post('/purchases', [OpticsCornerController::class, 'storePurchase'])->name('purchases.store');
+    Route::post('/purchases/{purchase}/pay', [OpticsCornerController::class, 'payPurchaseDue'])->name('purchases.pay');
 });
+
+
+Route::prefix('medical-tests')->name('medical-tests.')->middleware(['auth'])->group(function () {
+
+    // ==================== Test Master Management (Super Admin Only) ====================
+    Route::middleware(['super-admin'])->group(function () {
+        Route::get('/tests', [MedicalTestController::class, 'testIndex'])->name('tests.index');
+        Route::post('/tests', [MedicalTestController::class, 'storeTest'])->name('tests.store');
+        Route::put('/tests/{test}', [MedicalTestController::class, 'updateTest'])->name('tests.update');
+        Route::delete('/tests/{test}', [MedicalTestController::class, 'destroyTest'])->name('tests.destroy');
+    });
+
+    // ==================== Patient Test Booking ====================
+    Route::get('/', [MedicalTestController::class, 'index'])->name('index');
+    Route::get('/create', [MedicalTestController::class, 'create'])->name('create');
+    Route::post('/', [MedicalTestController::class, 'store'])->name('store');
+    Route::get('/search-patients', [MedicalTestController::class, 'searchPatients'])->name('search-patients');
+
+    // ==================== Test Group Details ====================
+    Route::get('/{testGroup}', [MedicalTestController::class, 'show'])->name('show');
+    Route::get('/{testGroup}/receipt', [MedicalTestController::class, 'receipt'])->name('receipt');
+    Route::get('/{testGroup}/print', [MedicalTestController::class, 'printReceipt'])->name('print-receipt');
+
+    // ==================== Payment Management ====================
+    Route::get('/{testGroup}/payment', [MedicalTestController::class, 'paymentPage'])->name('payment-page');
+    Route::post('/{testGroup}/add-payment', [MedicalTestController::class, 'addPayment'])->name('add-payment');
+
+    // ==================== Test Result Management ====================
+    Route::put('/test/{test}/result', [MedicalTestController::class, 'updateResult'])->name('update-result');
+
+    // ==================== Cancel ====================
+    Route::delete('/{testGroup}/cancel', [MedicalTestController::class, 'cancel'])->name('cancel');
+
+    // ==================== Reports ====================
+    Route::get('/reports/daily', [MedicalTestController::class, 'dailyReport'])->name('reports.daily');
+    Route::get('/reports/monthly', [MedicalTestController::class, 'monthlyReport'])->name('reports.monthly');
+    Route::get('/reports/test-wise', [MedicalTestController::class, 'testWiseReport'])->name('reports.test-wise');
+});
+
 
 require __DIR__ . '/settings.php';
 require __DIR__ . '/auth.php';

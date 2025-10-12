@@ -74,6 +74,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     const [medicineCornerOpen, setMedicineCornerOpen] = useState(false);
     const [accountSectionOpen, setAccountSectionOpen] = useState(false);
     const [opticsCornerOpen, setOpticsCornerOpen] = useState(false);
+    const [medicalTestsOpen, setMedicalTestsOpen] = useState(false);
 
     const userRole = auth.user.role.name;
 
@@ -136,6 +137,11 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 window.location.pathname.includes('/optics-seller');
         }
 
+        if (currentPattern === 'medical-tests.*') {
+            return currentRouteName?.includes('medical-tests') ||
+                window.location.pathname.includes('/medical-tests');
+        }
+
         // For account sections
         if (currentPattern === 'account.*') {
             return currentRouteName?.includes('main-account') ||
@@ -186,6 +192,22 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
         return medicineCornerPaths.some(path => window.location.pathname === path) ||
             medicineVendorPaths.some(path => window.location.pathname.startsWith(path)) ||
             currentRouteName?.startsWith('medicine-vendors.');
+    };
+
+    const isMedicalTestsActive = () => {
+        return currentRouteName?.includes('medical-tests') ||
+            window.location.pathname.includes('/medical-tests');
+    };
+
+    const isMedicalTestsChildActive = () => {
+        const medicalTestPaths = [
+            '/medical-tests/tests',
+            '/medical-tests',
+            '/medical-tests/reports/daily',
+            '/medical-tests/reports/monthly',
+            '/medical-tests/reports/test-wise'
+        ];
+        return medicalTestPaths.some(path => window.location.pathname.startsWith(path));
     };
 
     // Check if account section is active
@@ -433,6 +455,51 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             ]
         },
 
+        {
+            name: 'Medical Tests',
+            href: '#',
+            icon: Activity,
+            current: 'medical-tests.*',
+            roles: ['Super Admin', 'Receptionist'],
+            children: [
+                {
+                    name: 'Test Management',
+                    href: route('medical-tests.tests.index'),
+                    icon: Settings,
+                    current: 'medical-tests.tests.*',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Book Tests',
+                    href: route('medical-tests.index'),
+                    icon: CalendarDays,
+                    current: 'medical-tests.index',
+                    roles: ['Super Admin', 'Receptionist']
+                },
+                {
+                    name: 'Daily Reports',
+                    href: route('medical-tests.reports.daily'),
+                    icon: FileBarChart,
+                    current: 'medical-tests.reports.daily',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Monthly Reports',
+                    href: route('medical-tests.reports.monthly'),
+                    icon: BarChart3,
+                    current: 'medical-tests.reports.monthly',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Test-wise Reports',
+                    href: route('medical-tests.reports.test-wise'),
+                    icon: Activity,
+                    current: 'medical-tests.reports.test-wise',
+                    roles: ['Super Admin']
+                }
+            ]
+        },
+
         // Account Section with dropdown (Super Admin only)
 
         {
@@ -628,6 +695,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 const isMedicineCorner = item.name === 'Medicine Corner';
                                 const isOpticsCorner = item.name === 'OpticsCorner';
                                 const isAccountSection = item.name === 'Account Management';
+                                const isMedicalTests = item.name === 'Medical Tests';
 
                                 // Medicine Corner with dropdown
                                 if (isMedicineCorner) {
@@ -737,6 +805,62 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                                 }`}
                                                         >
                                                             <ChildIcon className={`flex-shrink-0 h-4 w-4 mr-2 ${isChildActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-500'
+                                                                }`} />
+                                                            <span>{childItem.name}</span>
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                if (isMedicalTests) {
+                                    const medicalTestsActive = isMedicalTestsActive();
+                                    const anyChildActive = isMedicalTestsChildActive();
+                                    const shouldShowAsActive = medicalTestsActive || anyChildActive;
+
+                                    return (
+                                        <div key={item.name}>
+                                            <button
+                                                onClick={() => setMedicalTestsOpen(!medicalTestsOpen)}
+                                                className={`group flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${shouldShowAsActive
+                                                    ? 'bg-teal-50 text-teal-700 border-r-2 border-teal-700'
+                                                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                    }`}
+                                            >
+                                                <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${shouldShowAsActive ? 'text-teal-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                    }`} />
+                                                <span className="flex-1 text-left">{item.name}</span>
+                                                <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${medicalTestsOpen || anyChildActive ? 'rotate-90' : ''
+                                                    } ${shouldShowAsActive ? 'text-teal-700' : 'text-gray-400'}`} />
+                                            </button>
+
+                                            {/* Medical Tests Dropdown Items */}
+                                            <div className={`mt-1 space-y-1 transition-all duration-200 overflow-hidden ${medicalTestsOpen || anyChildActive ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                                }`}>
+                                                {item.children?.map((childItem) => {
+                                                    // Filter children based on role
+                                                    if (!hasRole(childItem.roles)) {
+                                                        return null;
+                                                    }
+
+                                                    const ChildIcon = childItem.icon;
+                                                    const isChildActive = currentRouteName === childItem.current ||
+                                                        currentRouteName?.startsWith(childItem.current.replace('.*', '')) ||
+                                                        window.location.pathname === childItem.href ||
+                                                        window.location.pathname.startsWith(childItem.href);
+
+                                                    return (
+                                                        <Link
+                                                            key={childItem.name}
+                                                            href={childItem.href}
+                                                            className={`group flex items-center pl-11 pr-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isChildActive
+                                                                ? 'bg-teal-100 text-teal-800 border-r-2 border-teal-600'
+                                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                }`}
+                                                        >
+                                                            <ChildIcon className={`flex-shrink-0 h-4 w-4 mr-2 ${isChildActive ? 'text-teal-600' : 'text-gray-400 group-hover:text-gray-500'
                                                                 }`} />
                                                             <span>{childItem.name}</span>
                                                         </Link>
@@ -863,13 +987,22 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 <div className="border-t border-gray-200 p-4 bg-gray-50">
                     <div className="space-y-2">
                         {userRole === 'Receptionist' && (
-                            <Link
-                                href={route('patients.create')}
-                                className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-sm"
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Patient
-                            </Link>
+                            <>
+                                <Link
+                                    href={route('patients.create')}
+                                    className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-sm"
+                                >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add Patient
+                                </Link>
+                                <Link
+                                    href={route('medical-tests.create')}
+                                    className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white text-sm font-medium rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all duration-200 shadow-sm"
+                                >
+                                    <Activity className="h-4 w-4 mr-2" />
+                                    Book Test
+                                </Link>
+                            </>
                         )}
                         {userRole === 'Doctor' && (
                             <Link

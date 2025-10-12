@@ -1,0 +1,1469 @@
+Amar sob migration gulo dekhao
+   public function up(): void
+    {
+        Schema::create('roles', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->timestamps();
+        });
+    }
+
+Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+            $table->string('phone')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->foreignId('role_id')->constrained('roles')->onDelete('cascade');
+            $table->rememberToken();
+            $table->timestamps();
+        });
+
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('sessions', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->foreignId('user_id')->nullable()->index();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->longText('payload');
+            $table->integer('last_activity')->index();
+        });
+
+Schema::create('doctors', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->string('specialization')->nullable();
+            $table->string('qualification')->nullable();
+            $table->text('bio')->nullable();
+            $table->decimal('consultation_fee', 10, 2)->default(0);
+            $table->boolean('is_available')->default(true);
+            $table->timestamps();
+        });
+
+Schema::create('patients', function (Blueprint $table) {
+            $table->id();
+            $table->string('patient_id')->unique();
+            $table->string('name');
+            $table->string('phone')->unique(); // Make phone unique
+            $table->string('nid_card')->unique()->nullable(); // Add NID card
+            $table->string('email')->nullable();
+            $table->text('address')->nullable();
+            $table->date('date_of_birth')->nullable();
+            $table->string('gender')->nullable();
+            $table->text('medical_history')->nullable();
+            $table->foreignId('registered_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('qr_code')->unique()->nullable();
+            $table->string('qr_code_image_path')->nullable();
+
+            $table->timestamps();
+
+            // Index for searching
+            $table->index(['phone', 'nid_card']);
+            $table->index('created_at');
+        });
+
+Schema::create('patient_visits', function (Blueprint $table) {
+            $table->id();
+            $table->string('visit_id')->unique(); // PV-20250714-0001
+            $table->foreignId('patient_id')->constrained('patients')->cascadeOnDelete();
+            $table->foreignId('selected_doctor_id')->nullable()->constrained('doctors')->nullOnDelete();
+
+            // Visit financial details
+            $table->decimal('registration_fee', 10, 2)->default(100.00);
+            $table->decimal('doctor_fee', 10, 2)->default(0);
+            $table->decimal('total_amount', 10, 2)->default(0);
+            $table->enum('discount_type', ['percentage', 'amount'])->nullable();
+            $table->decimal('discount_value', 10, 2)->default(0);
+            $table->decimal('discount_amount', 10, 2)->default(0);
+            $table->decimal('final_amount', 10, 2)->default(0);
+            $table->decimal('total_paid', 10, 2)->default(0);
+            $table->decimal('total_due', 10, 2)->default(0);
+
+            // Visit status tracking
+            $table->enum('payment_status', ['pending', 'partial', 'paid'])->default('pending');
+            $table->enum('vision_test_status', ['pending', 'in_progress', 'completed'])->default('pending');
+            $table->enum('prescription_status', ['pending', 'completed'])->default('pending');
+            $table->enum('overall_status', ['payment', 'vision_test', 'prescription', 'completed'])->default('payment');
+
+            // Visit timestamps
+            $table->timestamp('payment_completed_at')->nullable();
+            $table->timestamp('vision_test_completed_at')->nullable();
+            $table->timestamp('prescription_completed_at')->nullable();
+
+            // Visit notes
+            $table->text('visit_notes')->nullable();
+            $table->text('chief_complaint')->nullable(); // Main problem
+
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamps();
+
+            // Indexes
+            $table->index(['patient_id', 'overall_status']);
+            $table->index(['payment_status', 'vision_test_status']);
+            $table->index('created_at');
+        });
+
+Schema::create('vision_tests', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
+            $table->foreignId('visit_id')->nullable()->constrained('patient_visits')->onDelete('cascade');
+
+            // Patient complains/symptoms
+            $table->text('complains')->nullable();
+
+            // Physical examination for both eyes
+            $table->text('right_eye_diagnosis')->nullable();
+            $table->text('left_eye_diagnosis')->nullable();
+            $table->text('right_eye_lids')->nullable();
+            $table->text('left_eye_lids')->nullable();
+            $table->text('right_eye_conjunctiva')->nullable();
+            $table->text('left_eye_conjunctiva')->nullable();
+            $table->text('right_eye_cornea')->nullable();
+            $table->text('left_eye_cornea')->nullable();
+            $table->text('right_eye_anterior_chamber')->nullable();
+            $table->text('left_eye_anterior_chamber')->nullable();
+            $table->text('right_eye_iris')->nullable();
+            $table->text('left_eye_iris')->nullable();
+            $table->text('right_eye_pupil')->nullable();
+            $table->text('left_eye_pupil')->nullable();
+            $table->text('right_eye_lens')->nullable();
+            $table->text('left_eye_lens')->nullable();
+            $table->text('right_eye_ocular_movements')->nullable();
+            $table->text('left_eye_ocular_movements')->nullable();
+
+            // Vision testing
+            $table->string('right_eye_vision_without_glass')->nullable();
+            $table->string('left_eye_vision_without_glass')->nullable();
+            $table->string('right_eye_vision_with_glass')->nullable();
+            $table->string('left_eye_vision_with_glass')->nullable();
+
+            // IOP (Intraocular Pressure)
+            $table->string('right_eye_iop')->nullable();
+            $table->string('left_eye_iop')->nullable();
+
+            // Ducts examination
+            $table->text('right_eye_ducts')->nullable();
+            $table->text('left_eye_ducts')->nullable();
+
+            // Blood pressure and sugar tests
+            $table->string('blood_pressure')->nullable();
+            $table->string('urine_sugar')->nullable();
+            $table->string('blood_sugar')->nullable();
+
+            // Fundus examination
+            $table->text('right_eye_fundus')->nullable();
+            $table->text('left_eye_fundus')->nullable();
+
+            // Detailed history
+            $table->text('detailed_history')->nullable();
+
+            // Medical conditions checkboxes
+            $table->boolean('is_one_eyed')->default(false);
+            $table->boolean('is_diabetic')->default(false);
+            $table->boolean('is_cardiac')->default(false);
+            $table->boolean('is_asthmatic')->default(false);
+            $table->boolean('is_hypertensive')->default(false);
+            $table->boolean('is_thyroid')->default(false);
+            $table->text('other_conditions')->nullable();
+
+            // Drugs used
+            $table->text('drugs_used')->nullable();
+
+            // Test metadata
+            $table->foreignId('performed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->dateTime('test_date');
+            $table->timestamps();
+
+            // Indexes
+            $table->index(['patient_id', 'test_date']);
+            $table->index('visit_id');
+        });
+
+Schema::create('appointments', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
+            $table->foreignId('doctor_id')->constrained('doctors')->onDelete('cascade');
+            $table->date('appointment_date');
+            $table->string('appointment_time');
+            $table->string('serial_number'); // Auto-generated
+            $table->enum('status', ['pending', 'completed', 'cancelled'])->default('pending');
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamps();
+        });
+
+Schema::create('medicines', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('generic_name')->nullable();
+            $table->string('type'); // Tablet/Syrup/Drops/etc
+            $table->string('manufacturer')->nullable();
+            $table->text('description')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+Schema::create('prescriptions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
+            $table->foreignId('doctor_id')->constrained('doctors')->onDelete('cascade');
+            $table->foreignId('appointment_id')->nullable()->constrained('appointments')->nullOnDelete();
+            $table->text('diagnosis')->nullable();
+            $table->text('advice')->nullable();
+            $table->text('notes')->nullable();
+            $table->date('followup_date')->nullable();
+            $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
+            $table->timestamps();
+        });
+
+Schema::create('prescription_medicines', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('prescription_id')->constrained('prescriptions')->onDelete('cascade');
+            $table->foreignId('medicine_id')->constrained('medicines')->onDelete('cascade');
+            $table->string('dosage'); // Morning-Afternoon-Evening-Night
+            $table->string('duration')->nullable(); // Days/Weeks/Months
+            $table->string('instructions')->nullable(); // After/Before meal, etc
+            $table->timestamps();
+        });
+
+        Schema::table('prescriptions', function (Blueprint $table) {
+            $table->timestamp('followup_completed_at')->nullable()->after('followup_date');
+        });
+
+Schema::create('payment_methods', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+Schema::create('patient_invoices', function (Blueprint $table) {
+            $table->id();
+            $table->string('invoice_number')->unique(); // Auto-generated
+            $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
+            $table->foreignId('appointment_id')->nullable()->constrained('appointments')->nullOnDelete();
+            $table->decimal('subtotal', 10, 2)->default(0);
+            $table->decimal('tax_amount', 10, 2)->default(0);
+            $table->decimal('discount_amount', 10, 2)->default(0);
+            $table->decimal('total_amount', 10, 2);
+            $table->decimal('paid_amount', 10, 2)->default(0);
+            $table->decimal('due_amount', 10, 2)->default(0);
+            $table->enum('status', ['pending', 'partially_paid', 'paid', 'overdue'])->default('pending');
+            $table->date('issue_date');
+            $table->date('due_date')->nullable();
+            $table->text('notes')->nullable();
+            $table->foreignId('created_by')->constrained('users');
+            $table->timestamps();
+        });
+
+Schema::create('patient_payments', function (Blueprint $table) {
+            $table->id();
+            $table->string('payment_number')->unique(); // Auto-generated
+            $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
+            $table->foreignId('invoice_id')->nullable()->constrained('patient_invoices')->nullOnDelete();
+            $table->decimal('amount', 10, 2);
+            $table->foreignId('payment_method_id')->constrained('payment_methods');
+            $table->date('payment_date');
+            $table->text('notes')->nullable();
+            $table->string('receipt_number')->nullable();
+            $table->foreignId('received_by')->constrained('users');
+            $table->timestamps();
+        });
+
+Schema::create('audit_logs', function (Blueprint $table) {
+            $table->id();
+            $table->string('table_name');
+            $table->string('action'); // 'create', 'update', 'delete'
+            $table->unsignedBigInteger('record_id');
+            $table->json('old_values')->nullable();
+            $table->json('new_values')->nullable();
+            $table->foreignId('user_id')->constrained('users');
+            $table->timestamp('created_at');
+
+            $table->index(['table_name', 'record_id']);
+        });
+
+Schema::table('patient_invoices', function (Blueprint $table) {
+            $table->string('invoice_type')
+                ->default('general')
+                ->after('invoice_number')
+                ->comment('registration, consultation, vision_test, medicine, procedure');
+
+            $table->index('invoice_type');
+        });
+
+Schema::table('patient_payments', function (Blueprint $table) {
+            if (!Schema::hasColumn('patient_payments', 'visit_id')) {
+                $table->foreignId('visit_id')->nullable()->constrained('patient_visits')->nullOnDelete()->after('patient_id');
+            }
+        });
+
+        // Add visit_id to patient_invoices table
+        Schema::table('patient_invoices', function (Blueprint $table) {
+            if (!Schema::hasColumn('patient_invoices', 'visit_id')) {
+                $table->foreignId('visit_id')->nullable()->constrained('patient_visits')->nullOnDelete()->after('patient_id');
+            }
+        });
+
+        // Add visit_id to vision_tests table
+        Schema::table('vision_tests', function (Blueprint $table) {
+            if (!Schema::hasColumn('vision_tests', 'visit_id')) {
+                $table->foreignId('visit_id')->nullable()->constrained('patient_visits')->nullOnDelete()->after('patient_id');
+            }
+        });
+
+        // Add visit_id to appointments table
+        Schema::table('appointments', function (Blueprint $table) {
+            if (!Schema::hasColumn('appointments', 'visit_id')) {
+                $table->foreignId('visit_id')->nullable()->constrained('patient_visits')->nullOnDelete()->after('patient_id');
+            }
+        });
+
+        Schema::table('patient_payments', function (Blueprint $table) {
+            if (!Schema::hasColumn('patient_payments', 'visit_id')) {
+                $table->foreignId('visit_id')->nullable()->constrained('patient_visits')->nullOnDelete()->after('patient_id');
+            }
+        });
+
+Schema::table('patients', function (Blueprint $table) {
+            $table->decimal('total_paid', 10, 2)->default(0)->after('medical_history');
+            $table->decimal('total_due', 10, 2)->default(0)->after('total_paid');
+        });
+
+ Schema::table('prescriptions', function (Blueprint $table) {
+            $table->foreignId('visit_id')->nullable()->after('patient_id')->constrained('patient_visits')->nullOnDelete();
+            $table->index('visit_id');
+        });
+
+ Schema::create('glasses', function (Blueprint $table) {
+            $table->id();
+            $table->string('sku')->unique(); // Product code for inventory tracking
+            $table->string('brand'); // Ray-Ban, Oakley, etc.
+            $table->string('model'); // Frame model name
+            $table->enum('type', ['frame', 'sunglasses', 'reading_glasses', 'progressive', 'bifocal']);
+            $table->enum('frame_type', ['full_rim', 'half_rim', 'rimless']);
+            $table->enum('material', ['plastic', 'metal', 'titanium', 'acetate', 'wood']);
+            $table->string('color')->nullable();
+            $table->enum('gender', ['men', 'women', 'unisex', 'kids']);
+            $table->string('size')->nullable(); // Small, Medium, Large or specific measurements
+            $table->decimal('lens_width', 5, 2)->nullable(); // in mm
+            $table->decimal('bridge_width', 5, 2)->nullable(); // in mm
+            $table->decimal('temple_length', 5, 2)->nullable(); // in mm
+            $table->string('shape')->nullable(); // Round, Square, Oval, etc.
+            $table->decimal('purchase_price', 10, 2)->default(0); // Cost price
+            $table->decimal('selling_price', 10, 2)->default(0); // Selling price
+            $table->integer('stock_quantity')->default(0);
+            $table->integer('minimum_stock_level')->default(5); // Low stock alert
+            $table->text('description')->nullable();
+            $table->string('image_path')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+ Schema::create('medicine_stocks', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('medicine_id')->constrained()->onDelete('cascade');
+            $table->string('batch_number'); // Remove unique constraint
+            $table->date('expiry_date');
+            $table->integer('quantity'); // Original purchased quantity
+            $table->integer('available_quantity'); // Current available quantity
+            $table->decimal('buy_price', 10, 2);
+            $table->decimal('sale_price', 10, 2);
+            $table->decimal('profit_per_unit', 10, 2)->storedAs('sale_price - buy_price');
+            $table->date('purchase_date'); // Add this field
+            $table->text('notes')->nullable(); // Add this field
+            $table->boolean('is_active')->default(true);
+            $table->foreignId('added_by')->constrained('users'); // Add this field
+            $table->timestamps();
+
+            $table->index(['medicine_id', 'expiry_date']);
+            $table->index(['batch_number', 'medicine_id']); // Allow same batch for different medicines
+        });
+
+Schema::create('stock_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('medicine_stock_id')->constrained()->onDelete('cascade');
+            $table->enum('type', ['purchase', 'sale', 'adjustment', 'expired', 'damaged', 'return']);
+            $table->integer('quantity');
+            $table->decimal('unit_price', 10, 2);
+            $table->decimal('total_amount', 10, 2);
+            $table->string('reference_type')->nullable(); // prescription, direct_sale, stock_adjustment
+            $table->unsignedBigInteger('reference_id')->nullable();
+            $table->text('reason')->nullable(); // Add this field - was missing
+            $table->foreignId('created_by')->constrained('users');
+            $table->timestamps();
+
+            $table->index(['medicine_stock_id', 'type', 'created_at']);
+        });
+
+Schema::create('medicine_sales', function (Blueprint $table) {
+            $table->id();
+            $table->string('invoice_number')->unique();
+            $table->foreignId('patient_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('prescription_id')->nullable()->constrained()->onDelete('set null');
+            $table->date('sale_date');
+            $table->decimal('subtotal', 10, 2);
+            $table->decimal('discount', 10, 2)->default(0);
+            $table->decimal('tax', 10, 2)->default(0);
+            $table->decimal('total_amount', 10, 2);
+            $table->decimal('paid_amount', 10, 2)->default(0);
+            $table->decimal('due_amount', 10, 2)->storedAs('total_amount - paid_amount');
+            $table->decimal('total_profit', 10, 2)->default(0);
+            $table->enum('payment_status', ['pending', 'partial', 'paid'])->default('pending');
+            $table->foreignId('sold_by')->constrained('users');
+            $table->timestamps();
+
+            $table->index(['sale_date', 'payment_status']);
+        });
+
+Schema::create('medicine_sale_items', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('medicine_sale_id')->constrained()->onDelete('cascade');
+            $table->foreignId('medicine_stock_id')->constrained()->onDelete('restrict');
+            $table->integer('quantity');
+            $table->decimal('unit_price', 10, 2);
+            $table->decimal('total_price', 10, 2)->storedAs('quantity * unit_price');
+            $table->decimal('buy_price', 10, 2); // Store buy price at time of sale
+            $table->decimal('profit', 10, 2)->storedAs('(unit_price - buy_price) * quantity');
+            $table->timestamps();
+        });
+
+ Schema::create('stock_alerts', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('medicine_id')->constrained()->onDelete('cascade');
+            $table->integer('minimum_stock')->default(10);
+            $table->integer('reorder_level')->default(20);
+            $table->boolean('low_stock_alert')->default(true);
+            $table->boolean('expiry_alert')->default(true);
+            $table->integer('expiry_alert_days')->default(30); // Alert X days before expiry
+            $table->timestamps();
+
+            $table->unique('medicine_id');
+        });
+
+ Schema::table('medicines', function (Blueprint $table) {
+            $table->integer('total_stock')->default(0)->after('is_active');
+            $table->decimal('average_buy_price', 10, 2)->default(0)->after('total_stock');
+            $table->decimal('standard_sale_price', 10, 2)->default(0)->after('average_buy_price');
+            $table->boolean('track_stock')->default(true)->after('standard_sale_price');
+            $table->string('unit', 20)->default('piece')->after('track_stock'); // piece, bottle, box, etc
+        });
+
+    public function up(): void
+    {
+        Schema::create('hospital_account', function (Blueprint $table) {
+            $table->id();
+            $table->decimal('balance', 15, 2)->default(0);
+            $table->timestamps();
+        });
+
+        Schema::create('hospital_fund_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->string('voucher_no')->unique();
+            $table->enum('type', ['fund_in', 'fund_out']);
+            $table->decimal('amount', 15, 2);
+            $table->string('purpose');
+            $table->text('description');
+            $table->date('date');
+            $table->foreignId('added_by')->constrained('users');
+            $table->timestamps();
+        });
+
+        Schema::create('hospital_expense_categories', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+        Schema::create('hospital_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->string('transaction_no');
+            $table->enum('type', ['income', 'expense']);
+            $table->decimal('amount', 15, 2);
+            $table->string('category');
+            $table->foreignId('expense_category_id')->nullable()->constrained('hospital_expense_categories');
+            $table->string('reference_type')->nullable();
+            $table->unsignedBigInteger('reference_id')->nullable();
+            $table->text('description');
+            $table->date('transaction_date');
+            $table->foreignId('created_by')->constrained('users');
+            $table->timestamps();
+        });
+    }
+
+    public function up(): void
+    {
+        Schema::create('medicine_account', function (Blueprint $table) {
+            $table->id();
+            $table->decimal('balance', 15, 2)->default(0);
+            $table->timestamps();
+        });
+
+        Schema::create('medicine_fund_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->string('voucher_no')->unique();
+            $table->enum('type', ['fund_in', 'fund_out']);
+            $table->decimal('amount', 15, 2);
+            $table->string('purpose');
+            $table->text('description');
+            $table->date('date');
+            $table->foreignId('added_by')->constrained('users');
+            $table->timestamps();
+        });
+
+        Schema::create('medicine_expense_categories', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+        Schema::create('medicine_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->string('transaction_no')->unique();
+            $table->enum('type', ['income', 'expense']);
+            $table->decimal('amount', 15, 2);
+            $table->string('category');
+            $table->foreignId('expense_category_id')->nullable()->constrained('medicine_expense_categories');
+            $table->string('reference_type')->nullable();
+            $table->unsignedBigInteger('reference_id')->nullable();
+            $table->text('description');
+            $table->date('transaction_date');
+            $table->foreignId('created_by')->constrained('users');
+            $table->timestamps();
+        });
+    }
+
+    public function up(): void
+    {
+        Schema::create('optics_account', function (Blueprint $table) {
+            $table->id();
+            $table->decimal('balance', 15, 2)->default(0);
+            $table->timestamps();
+        });
+
+        Schema::create('optics_fund_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->string('voucher_no')->unique();
+            $table->enum('type', ['fund_in', 'fund_out']);
+            $table->decimal('amount', 15, 2);
+            $table->string('purpose');
+            $table->text('description');
+            $table->date('date');
+            $table->foreignId('added_by')->constrained('users');
+            $table->timestamps();
+        });
+
+        Schema::create('optics_expense_categories', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+        Schema::create('optics_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->string('transaction_no')->unique();
+            $table->enum('type', ['income', 'expense']);
+            $table->decimal('amount', 15, 2);
+            $table->string('category');
+            $table->foreignId('expense_category_id')->nullable()->constrained('optics_expense_categories');
+            $table->string('reference_type')->nullable();
+            $table->unsignedBigInteger('reference_id')->nullable();
+            $table->text('description');
+            $table->date('transaction_date');
+            $table->foreignId('created_by')->constrained('users');
+            $table->timestamps();
+        });
+    }
+
+ public function up(): void
+    {
+        Schema::table('patient_payments', function (Blueprint $table) {
+            $table->foreignId('hospital_transaction_id')->nullable()->constrained('hospital_transactions')->after('received_by');
+        });
+
+        Schema::table('medicine_sales', function (Blueprint $table) {
+            $table->foreignId('medicine_transaction_id')->nullable()->constrained('medicine_transactions')->after('sold_by');
+        });
+
+        Schema::table('medicine_stocks', function (Blueprint $table) {
+            $table->foreignId('medicine_transaction_id')->nullable()->constrained('medicine_transactions')->after('added_by');
+        });
+
+        // For glasses sales (when implemented)
+        if (Schema::hasTable('prescription_glasses')) {
+            Schema::table('prescription_glasses', function (Blueprint $table) {
+                $table->foreignId('optics_transaction_id')->nullable()->constrained('optics_transactions')->after('expected_delivery');
+            });
+        }
+    }
+
+
+ Schema::create('medicine_vendors', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('company_name')->nullable();
+            $table->string('contact_person')->nullable();
+            $table->string('phone');
+            $table->string('email')->nullable();
+            $table->text('address')->nullable();
+            $table->string('trade_license')->nullable();
+            $table->decimal('opening_balance', 15, 2)->default(0); // Opening due
+            $table->decimal('current_balance', 15, 2)->default(0); // Current due (+ = we owe them, - = they owe us)
+            $table->enum('balance_type', ['due', 'advance'])->default('due'); // due = we owe, advance = they owe
+            $table->decimal('credit_limit', 15, 2)->default(0);
+            $table->integer('payment_terms_days')->default(30); // Payment terms in days
+            $table->boolean('is_active')->default(true);
+            $table->text('notes')->nullable();
+            $table->timestamps();
+
+            // Shorter index names
+            $table->index(['name', 'phone'], 'vendors_name_phone_idx');
+            $table->index('current_balance', 'vendors_balance_idx');
+        });
+
+public function up(): void
+    {
+        Schema::table('patients', function (Blueprint $table) {
+            $table->dropUnique(['phone']);
+        });
+    }
+
+    public function up(): void
+    {
+        Schema::create('main_accounts', function (Blueprint $table) {
+            $table->id();
+            $table->decimal('balance', 20, 2)->default(0);
+            $table->timestamps();
+        });
+
+        Schema::create('main_account_vouchers', function (Blueprint $table) {
+            $table->id(); // This will be your SL No
+            $table->string('voucher_no')->unique(); // Auto generated like 01, 02, etc
+            $table->enum('voucher_type', ['Debit', 'Credit']);
+            $table->date('date');
+            $table->text('narration'); // Description of the transaction
+            $table->decimal('amount', 15, 2);
+            $table->string('source_account'); // hospital, medicine, optics
+            $table->string('source_transaction_type'); // income, expense, fund_in, fund_out
+            $table->string('source_voucher_no')->nullable(); // Original voucher number from source
+            $table->unsignedBigInteger('source_reference_id')->nullable(); // Reference to original transaction
+            $table->foreignId('created_by')->constrained('users');
+            $table->timestamps();
+
+            // Index for better performance
+            $table->index(['date', 'voucher_type']);
+            $table->index('source_account');
+        });
+    }
+
+
+
+er pore ami create korlam
+        Schema::create('medical_tests', function (Blueprint $table) {
+            $table->id();
+            $table->string('name'); // Test name (Blood Test, X-Ray)
+            $table->string('code')->unique(); // Test code (BT001, XR001)
+            $table->text('description')->nullable();
+            $table->decimal('price', 10, 2); // Test price
+            $table->string('category')->nullable(); // Laboratory, Radiology, Cardiology
+            $table->integer('duration_minutes')->default(30); // Average test duration
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+
+            $table->index(['is_active', 'category']);
+        });
+
+Schema::create('patient_medical_tests', function (Blueprint $table) {
+            $table->id();
+            $table->string('test_number')->unique(); // MT-20250108-0001
+            $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
+            $table->foreignId('visit_id')->nullable()->constrained('patient_visits')->nullOnDelete();
+            $table->foreignId('medical_test_id')->constrained('medical_tests')->onDelete('restrict');
+
+            // Pricing
+            $table->decimal('original_price', 10, 2); // Store original price
+            $table->decimal('discount_amount', 10, 2)->default(0);
+            $table->decimal('final_price', 10, 2); // After discount
+
+            // Payment
+            $table->decimal('paid_amount', 10, 2)->default(0);
+            $table->decimal('due_amount', 10, 2)->default(0);
+            $table->enum('payment_status', ['pending', 'partial', 'paid'])->default('pending');
+
+            // Test Status
+            $table->enum('test_status', ['pending', 'in_progress', 'completed', 'cancelled'])->default('pending');
+            $table->date('test_date');
+            $table->timestamp('completed_at')->nullable();
+
+            // Results
+            $table->text('result')->nullable(); // Test results
+            $table->text('notes')->nullable(); // Doctor's notes
+            $table->string('report_file')->nullable(); // PDF/Image file path
+
+            // References
+            $table->foreignId('ordered_by')->nullable()->constrained('users')->nullOnDelete(); // Doctor who ordered
+            $table->foreignId('performed_by')->nullable()->constrained('users')->nullOnDelete(); // Technician
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete(); // ✅ nullable() added
+            $table->foreignId('hospital_transaction_id')->nullable()->constrained('hospital_transactions')->nullOnDelete();
+
+            $table->timestamps();
+
+            $table->index(['patient_id', 'test_date']);
+            $table->index(['test_status', 'payment_status']);
+        });
+
+        Schema::create('patient_medical_test_payments', function (Blueprint $table) {
+            $table->id();
+            $table->string('payment_number')->unique(); // MTP-20250108-0001
+            $table->foreignId('patient_medical_test_id')->nullable()->constrained('patient_medical_tests')->onDelete('cascade'); // ✅ nullable() added
+            $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
+            $table->decimal('amount', 10, 2);
+            $table->foreignId('payment_method_id')->constrained('payment_methods');
+            $table->date('payment_date');
+            $table->text('notes')->nullable();
+            $table->foreignId('received_by')->constrained('users');
+            $table->timestamps();
+
+            $table->index('payment_date');
+        });
+
+ Schema::create('patient_test_groups', function (Blueprint $table) {
+            $table->id();
+            $table->string('group_number')->unique(); // MTG-20250108-0001
+            $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
+            $table->foreignId('visit_id')->nullable()->constrained('patient_visits')->nullOnDelete();
+
+            // Pricing
+            $table->decimal('total_original_price', 10, 2)->default(0);
+            $table->decimal('total_discount', 10, 2)->default(0);
+            $table->decimal('final_amount', 10, 2);
+            $table->decimal('paid_amount', 10, 2)->default(0);
+            $table->decimal('due_amount', 10, 2)->default(0);
+            $table->enum('payment_status', ['pending', 'partial', 'paid'])->default('pending');
+
+            // Test dates
+            $table->date('test_date');
+            $table->timestamp('completed_at')->nullable();
+
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('hospital_transaction_id')->nullable()->constrained('hospital_transactions')->nullOnDelete();
+
+            $table->timestamps();
+
+            $table->index(['patient_id', 'test_date']);
+            $table->index('payment_status');
+        });
+
+        // Modify patient_medical_tests to link with group
+        Schema::table('patient_medical_tests', function (Blueprint $table) {
+            $table->foreignId('test_group_id')->nullable()->after('visit_id')->constrained('patient_test_groups')->onDelete('cascade');
+            $table->index('test_group_id');
+        });
+
+        // Modify payments to link with group
+        Schema::table('patient_medical_test_payments', function (Blueprint $table) {
+            $table->foreignId('test_group_id')->nullable()->after('patient_medical_test_id')->constrained('patient_test_groups')->onDelete('cascade');
+            $table->index('test_group_id');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('patient_medical_test_payments', function (Blueprint $table) {
+            $table->dropForeign(['test_group_id']);
+            $table->dropColumn('test_group_id');
+        });
+
+        Schema::table('patient_medical_tests', function (Blueprint $table) {
+            $table->dropForeign(['test_group_id']);
+            $table->dropColumn('test_group_id');
+        });
+
+        Schema::dropIfExists('patient_test_groups');
+    }
+
+
+
+egula migration amar optics er jonno jeta kora ace sekhane vendor onujayi kora nai mane due nite parcina ami due o optics nibo.
+er khetre ki ki korte hobe kore dew
+
+Ami accounts er model gulo dekhai
+Normally optics account er transaction and amount update hoi tobe abar main account er amount sathe voucher o create hoi model gulo dekhle bujhte parbe. amar ki korte hobe ekhon kore dew.
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class OpticsAccount extends Model
+{
+    protected $table = 'optics_account';
+    protected $fillable = ['balance'];
+    protected $casts = ['balance' => 'decimal:2'];
+
+    // Relationships
+    public function fundTransactions(): HasMany
+    {
+        return $this->hasMany(OpticsFundTransaction::class, 'id', 'id');
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(OpticsTransaction::class, 'id', 'id');
+    }
+
+    // Helper Methods
+    public static function getBalance(): float
+    {
+        return self::first()?->balance ?? 0;
+    }
+
+    public static function addFund(float $amount, string $purpose, string $description, ?string $date = null): void
+    {
+        $account = self::firstOrCreate([]);
+        $account->increment('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
+
+        $fundTransaction = OpticsFundTransaction::create([
+            'voucher_no' => self::generateVoucherNo('OFI'),
+            'type' => 'fund_in',
+            'amount' => $amount,
+            'purpose' => $purpose,
+            'description' => $description,
+            'date' => $transactionDate,
+            'added_by' => auth()->id(),
+        ]);
+
+        // Create Main Account Credit Voucher (Money coming in - RECEIPT)
+        MainAccount::createCreditVoucher(
+            amount: $amount,
+            narration: "Optics Fund In - {$purpose}: {$description}",
+            sourceAccount: 'optics',
+            sourceTransactionType: 'fund_in',
+            sourceVoucherNo: $fundTransaction->voucher_no,
+            sourceReferenceId: $fundTransaction->id,
+            date: $transactionDate
+        );
+    }
+
+    public static function withdrawFund(float $amount, string $purpose, string $description, ?string $date = null): void
+    {
+        $account = self::firstOrCreate([]);
+        $account->decrement('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
+
+        $fundTransaction = OpticsFundTransaction::create([
+            'voucher_no' => self::generateVoucherNo('OFO'),
+            'type' => 'fund_out',
+            'amount' => $amount,
+            'purpose' => $purpose,
+            'description' => $description,
+            'date' => $transactionDate,
+            'added_by' => auth()->id(),
+        ]);
+
+        // Create Main Account Debit Voucher (Money going out - PAYMENT)
+        MainAccount::createDebitVoucher(
+            amount: $amount,
+            narration: "Optics Fund Out - {$purpose}: {$description}",
+            sourceAccount: 'optics',
+            sourceTransactionType: 'fund_out',
+            sourceVoucherNo: $fundTransaction->voucher_no,
+            sourceReferenceId: $fundTransaction->id,
+            date: $transactionDate
+        );
+    }
+
+    public static function addIncome(float $amount, string $category, string $description, ?string $referenceType = null, ?int $referenceId = null, ?string $date = null): OpticsTransaction
+    {
+        $account = self::firstOrCreate([]);
+        $account->increment('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
+
+        $transaction = OpticsTransaction::create([
+            'transaction_no' => self::generateVoucherNo('OI'),
+            'type' => 'income',
+            'amount' => $amount,
+            'category' => $category,
+            'reference_type' => $referenceType,
+            'reference_id' => $referenceId,
+            'description' => $description,
+            'transaction_date' => $transactionDate,
+            'created_by' => auth()->id(),
+        ]);
+
+        // Check if voucher already exists for this date for optics income
+        $existingVoucher = MainAccountVoucher::where('source_account', 'optics')
+            ->where('source_transaction_type', 'income')
+            ->where('date', $transactionDate)
+            ->first();
+
+        if ($existingVoucher) {
+            // Update existing voucher
+            $mainAccount = MainAccount::firstOrCreate([]);
+            $mainAccount->increment('balance', $amount);
+
+            $existingVoucher->increment('amount', $amount);
+            $existingVoucher->update([
+                'narration' => $existingVoucher->narration . " + Optics Income - {$category}: {$description}",
+            ]);
+        } else {
+            // Create new Main Account Credit Voucher (Money coming in - RECEIPT)
+            MainAccount::createCreditVoucher(
+                amount: $amount,
+                narration: "Optics Income - {$category}: {$description}",
+                sourceAccount: 'optics',
+                sourceTransactionType: 'income',
+                sourceVoucherNo: $transaction->transaction_no,
+                sourceReferenceId: $transaction->id,
+                date: $transactionDate
+            );
+        }
+
+        return $transaction;
+    }
+
+    public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null, ?string $date = null): OpticsTransaction
+    {
+        $account = self::firstOrCreate([]);
+        $account->decrement('balance', $amount);
+
+        $transactionDate = $date ?? now()->toDateString();
+
+        $transaction = OpticsTransaction::create([
+            'transaction_no' => self::generateVoucherNo('OE'),
+            'type' => 'expense',
+            'amount' => $amount,
+            'category' => $category,
+            'expense_category_id' => $categoryId,
+            'description' => $description,
+            'transaction_date' => $transactionDate,
+            'created_by' => auth()->id(),
+        ]);
+
+        // Create Main Account Debit Voucher (Money going out - PAYMENT)
+        MainAccount::createDebitVoucher(
+            amount: $amount,
+            narration: "Optics Expense - {$category}: {$description}",
+            sourceAccount: 'optics',
+            sourceTransactionType: 'expense',
+            sourceVoucherNo: $transaction->transaction_no,
+            sourceReferenceId: $transaction->id,
+            date: $transactionDate
+        );
+
+        return $transaction;
+    }
+
+    private static function generateVoucherNo(string $prefix): string
+    {
+        return $prefix . '-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+    }
+
+    // Report Methods
+    public static function monthlyReport(int $year, int $month): array
+    {
+        $income = OpticsTransaction::where('type', 'income')
+            ->whereYear('transaction_date', $year)
+            ->whereMonth('transaction_date', $month)
+            ->sum('amount');
+
+        $expense = OpticsTransaction::where('type', 'expense')
+            ->whereYear('transaction_date', $year)
+            ->whereMonth('transaction_date', $month)
+            ->sum('amount');
+
+        return [
+            'income' => $income,
+            'expense' => $expense,
+            'profit' => $income - $expense,
+            'balance' => self::getBalance()
+        ];
+    }
+
+
+    public static function updateTransaction(int $transactionId, float $newAmount, string $newCategory, string $newDescription): void
+    {
+        $transaction = OpticsTransaction::findOrFail($transactionId);
+        $oldAmount = $transaction->amount;
+        $amountDifference = $newAmount - $oldAmount;
+
+        $account = self::firstOrCreate([]);
+
+        // Update OpticsAccount balance
+        if ($amountDifference > 0) {
+            if ($transaction->type === 'income') {
+                $account->increment('balance', $amountDifference);
+            } else {
+                $account->decrement('balance', $amountDifference);
+            }
+        } elseif ($amountDifference < 0) {
+            if ($transaction->type === 'income') {
+                $account->decrement('balance', abs($amountDifference));
+            } else {
+                $account->increment('balance', abs($amountDifference));
+            }
+        }
+
+        // Update transaction record
+        $transaction->update([
+            'amount' => $newAmount,
+            'category' => $newCategory,
+            'description' => $newDescription,
+        ]);
+
+        // Find and update MainAccount voucher
+        $voucher = MainAccountVoucher::where('source_account', 'optics')
+            ->where('source_reference_id', $transactionId)
+            ->first();
+
+        if ($voucher && $amountDifference != 0) {
+            $mainAccount = MainAccount::firstOrCreate([]);
+
+            if ($amountDifference > 0) {
+                if ($transaction->type === 'income') {
+                    $mainAccount->increment('balance', $amountDifference);
+                } else {
+                    $mainAccount->decrement('balance', $amountDifference);
+                }
+            } else {
+                if ($transaction->type === 'income') {
+                    $mainAccount->decrement('balance', abs($amountDifference));
+                } else {
+                    $mainAccount->increment('balance', abs($amountDifference));
+                }
+            }
+
+            $voucher->update([
+                'amount' => $newAmount,
+                'narration' => "Optics " . ucfirst($transaction->type) . " - {$newCategory}: {$newDescription}",
+            ]);
+        }
+    }
+
+    public static function deleteTransaction(int $transactionId): void
+    {
+        $transaction = OpticsTransaction::findOrFail($transactionId);
+        $account = self::firstOrCreate([]);
+
+        // Reverse OpticsAccount balance
+        if ($transaction->type === 'income') {
+            $account->decrement('balance', $transaction->amount);
+        } else {
+            $account->increment('balance', $transaction->amount);
+        }
+
+        // Find and delete MainAccount voucher
+        $voucher = MainAccountVoucher::where('source_account', 'optics')
+            ->where('source_reference_id', $transactionId)
+            ->first();
+
+        if ($voucher) {
+            $mainAccount = MainAccount::firstOrCreate([]);
+
+            // Reverse MainAccount balance
+            if ($transaction->type === 'income') {
+                $mainAccount->decrement('balance', $transaction->amount);
+            } else {
+                $mainAccount->increment('balance', $transaction->amount);
+            }
+
+            $voucher->delete();
+        }
+
+        // Delete transaction
+        $transaction->delete();
+    }
+
+    public static function adjustAmount(float $amount, string $type, string $category, string $description): void
+    {
+        $account = self::firstOrCreate([]);
+
+        if ($type === 'income') {
+            $account->increment('balance', $amount);
+
+            MainAccount::createCreditVoucher(
+                $amount,
+                "Optics Adjustment - {$category}: {$description}",
+                'optics',
+                'income'
+            );
+        } else {
+            $account->decrement('balance', $amount);
+
+            MainAccount::createDebitVoucher(
+                $amount,
+                "Optics Adjustment - {$category}: {$description}",
+                'optics',
+                'expense'
+            );
+        }
+    }
+}
+
+
+<?php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class OpticsTransaction extends Model
+{
+    protected $fillable = [
+        'transaction_no', 'type', 'amount', 'category', 'expense_category_id',
+        'reference_type', 'reference_id', 'description', 'transaction_date', 'created_by'
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'transaction_date' => 'date'
+    ];
+
+    public function expenseCategory(): BelongsTo
+    {
+        return $this->belongsTo(OpticsExpenseCategory::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    // Scopes
+    public function scopeIncome($query)
+    {
+        return $query->where('type', 'income');
+    }
+
+    public function scopeExpense($query)
+    {
+        return $query->where('type', 'expense');
+    }
+
+    public function scopeByCategory($query, string $category)
+    {
+        return $query->where('category', $category);
+    }
+
+    public function scopeThisMonth($query)
+    {
+        return $query->whereMonth('transaction_date', now()->month)
+                    ->whereYear('transaction_date', now()->year);
+    }
+}
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class MainAccount extends Model
+{
+    protected $fillable = ['balance'];
+    protected $casts = ['balance' => 'decimal:2'];
+
+    // Relationships
+    public function vouchers(): HasMany
+    {
+        return $this->hasMany(MainAccountVoucher::class, 'id', 'id');
+    }
+
+    /**
+     * Create a debit voucher entry (Money going out from main account - PAYMENT)
+     * This happens when sub-accounts have expenses or fund_out
+     */
+    public static function createDebitVoucher(
+        float $amount,
+        string $narration,
+        string $sourceAccount,
+        string $sourceTransactionType,
+        ?string $sourceVoucherNo = null,
+        ?int $sourceReferenceId = null,
+        ?string $date = null
+    ): MainAccountVoucher {
+        $account = self::firstOrCreate([]);
+        $account->decrement('balance', $amount); // টাকা কমবে
+
+        return MainAccountVoucher::create([
+            'voucher_no' => self::generateVoucherNo(),
+            'voucher_type' => 'Debit',
+            'date' => $date ?? now()->toDateString(),
+            'narration' => $narration,
+            'amount' => $amount,
+            'source_account' => $sourceAccount,
+            'source_transaction_type' => $sourceTransactionType,
+            'source_voucher_no' => $sourceVoucherNo,
+            'source_reference_id' => $sourceReferenceId,
+            'created_by' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Create a credit voucher entry (Money coming into main account - RECEIPT)
+     * This happens when sub-accounts receive income or fund_in
+     */
+    public static function createCreditVoucher(
+        float $amount,
+        string $narration,
+        string $sourceAccount,
+        string $sourceTransactionType,
+        ?string $sourceVoucherNo = null,
+        ?int $sourceReferenceId = null,
+        ?string $date = null
+    ): MainAccountVoucher {
+        $account = self::firstOrCreate([]);
+        $account->increment('balance', $amount); // টাকা বাড়বে
+
+        return MainAccountVoucher::create([
+            'voucher_no' => self::generateVoucherNo(),
+            'voucher_type' => 'Credit',
+            'date' => $date ?? now()->toDateString(),
+            'narration' => $narration,
+            'amount' => $amount,
+            'source_account' => $sourceAccount,
+            'source_transaction_type' => $sourceTransactionType,
+            'source_voucher_no' => $sourceVoucherNo,
+            'source_reference_id' => $sourceReferenceId,
+            'created_by' => auth()->id(),
+        ]);
+    }
+
+    /**
+     * Generate auto-incremented voucher number
+     */
+    private static function generateVoucherNo(): string
+    {
+        $lastVoucher = MainAccountVoucher::orderBy('id', 'desc')->first();
+        $nextNumber = $lastVoucher ? ((int) $lastVoucher->voucher_no) + 1 : 1;
+
+        return str_pad($nextNumber, 2, '0', STR_PAD_LEFT);
+    }
+
+    // Report Methods
+    public static function getVouchersByDateRange($startDate, $endDate)
+    {
+        return MainAccountVoucher::whereBetween('date', [$startDate, $endDate])
+            ->orderBy('date', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+    }
+
+    public static function getBalance()
+    {
+        $totalCredit = MainAccountVoucher::where('voucher_type', 'Credit')->sum('amount'); // আসা
+        $totalDebit = MainAccountVoucher::where('voucher_type', 'Debit')->sum('amount');   // যাওয়া
+
+        return $totalCredit - $totalDebit; // আসা - যাওয়া
+    }
+
+    public static function getAccountSummary()
+    {
+        $totalDebit = MainAccountVoucher::where('voucher_type', 'Debit')->sum('amount');   // যাওয়া
+        $totalCredit = MainAccountVoucher::where('voucher_type', 'Credit')->sum('amount'); // আসা
+
+        return [
+            'total_debit' => (float) $totalDebit,
+            'total_credit' => (float) $totalCredit,
+            'net_balance' => (float) ($totalCredit - $totalDebit) // আসা - যাওয়া
+        ];
+    }
+
+    public static function getMonthlyReport($year, $month)
+    {
+        $totalDebit = MainAccountVoucher::whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->where('voucher_type', 'Debit')
+            ->sum('amount');
+
+        $totalCredit = MainAccountVoucher::whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->where('voucher_type', 'Credit')
+            ->sum('amount');
+
+        return [
+            'debit_total' => (float) $totalDebit,
+            'credit_total' => (float) $totalCredit,
+            'net_change' => (float) ($totalCredit - $totalDebit) // আসা - যাওয়া
+        ];
+    }
+
+    public static function getSourceAccountSummary(): array
+    {
+        return MainAccountVoucher::selectRaw('
+        source_account,
+        source_transaction_type,
+        SUM(CASE WHEN voucher_type = "Debit" THEN amount ELSE 0 END) as debit_total,
+        SUM(CASE WHEN voucher_type = "Credit" THEN amount ELSE 0 END) as credit_total,
+        COUNT(*) as transaction_count
+    ')
+            ->groupBy('source_account', 'source_transaction_type')
+            ->get()
+            ->groupBy('source_account')
+            ->toArray();
+    }
+}
+
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class MainAccountVoucher extends Model
+{
+    protected $fillable = [
+        'voucher_no',
+        'voucher_type',
+        'date',
+        'narration',
+        'amount',
+        'source_account',
+        'source_transaction_type',
+        'source_voucher_no',
+        'source_reference_id',
+        'created_by'
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'date' => 'date'
+    ];
+
+    // Relationships
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    // Accessors
+    public function getSlNoAttribute(): int
+    {
+        return $this->id;
+    }
+
+    public function getFormattedAmountAttribute(): string
+    {
+        return number_format($this->amount, 2);
+    }
+
+    public function getSourceAccountNameAttribute(): string
+    {
+        return match ($this->source_account) {
+            'hospital' => 'Hospital Account',
+            'medicine' => 'Medicine Account',
+            'optics' => 'Optics Account',
+            default => ucfirst($this->source_account)
+        };
+    }
+
+    public function getTransactionTypeNameAttribute(): string
+    {
+        return match ($this->source_transaction_type) {
+            'income' => 'Income',
+            'expense' => 'Expense',
+            'fund_in' => 'Fund In',
+            'fund_out' => 'Fund Out',
+            default => ucfirst(str_replace('_', ' ', $this->source_transaction_type))
+        };
+    }
+
+    // Scopes
+    public function scopeDebit($query)
+    {
+        return $query->where('voucher_type', 'Debit');
+    }
+
+    public function scopeCredit($query)
+    {
+        return $query->where('voucher_type', 'Credit');
+    }
+
+    public function scopeBySourceAccount($query, string $account)
+    {
+        return $query->where('source_account', $account);
+    }
+
+    public function scopeByTransactionType($query, string $type)
+    {
+        return $query->where('source_transaction_type', $type);
+    }
+
+    public function scopeToday($query)
+    {
+        return $query->whereDate('date', today());
+    }
+
+    public function scopeThisMonth($query)
+    {
+        return $query->whereMonth('date', now()->month)
+            ->whereYear('date', now()->year);
+    }
+
+    public function scopeThisYear($query)
+    {
+        return $query->whereYear('date', now()->year);
+    }
+
+    public function scopeDateRange($query, $startDate, $endDate)
+    {
+        return $query->whereBetween('date', [$startDate, $endDate]);
+    }
+
+    // Static methods for reporting
+    public static function getRunningBalance($voucherId): float
+    {
+        $vouchers = self::where('id', '<=', $voucherId)
+            ->orderBy('id')
+            ->get();
+
+        $balance = 0;
+        foreach ($vouchers as $voucher) {
+            if ($voucher->voucher_type === 'Credit') { // আসা (+)
+                $balance += $voucher->amount;
+            } else { // Debit - যাওয়া (-)
+                $balance -= $voucher->amount;
+            }
+        }
+
+        return $balance;
+    }
+
+    public static function getDailyTotals($date)
+    {
+        $debitTotal = self::where('date', $date)
+            ->where('voucher_type', 'Debit')
+            ->sum('amount'); // যাওয়া
+
+        $creditTotal = self::where('date', $date)
+            ->where('voucher_type', 'Credit')
+            ->sum('amount'); // আসা
+
+        return [
+            'debit_total' => (float) $debitTotal,
+            'credit_total' => (float) $creditTotal,
+            'net_change' => (float) ($creditTotal - $debitTotal), // আসা - যাওয়া
+            'voucher_count' => self::where('date', $date)->count()
+        ];
+    }
+}
+

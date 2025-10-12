@@ -28,9 +28,6 @@ class PatientController extends Controller
 
         // If user is a doctor, only show their associated patients
         if ($user->role->name == 'Doctor' && $user->doctor) {
-            // Get patients through visits where this doctor was selected
-            // or through prescriptions created by this doctor
-            // or through appointments with this doctor
             $query->where(function ($q) use ($user) {
                 $q->whereHas('visits', function ($visitQuery) use ($user) {
                     $visitQuery->where('selected_doctor_id', $user->doctor->id);
@@ -43,8 +40,6 @@ class PatientController extends Controller
                     });
             });
         }
-        // For admin, receptionist, refractionist - show all patients
-        // No additional filtering needed
 
         // Search functionality
         if ($request->filled('search')) {
@@ -67,7 +62,7 @@ class PatientController extends Controller
         // Date filtering functionality
         if ($request->filled('date_filter_type')) {
             $dateFilterType = $request->get('date_filter_type');
-            $dateField = $request->get('date_field', 'created_at'); // Default to registration date
+            $dateField = $request->get('date_field', 'created_at');
 
             switch ($dateFilterType) {
                 case 'specific':
@@ -139,10 +134,39 @@ class PatientController extends Controller
             }
         }
 
-        // Sort by created_at descending by default
-        $patients = $query->orderBy('created_at', 'desc')
+        // Get patients with visits and calculate totals
+        $patients = $query->with(['visits' => function ($q) {
+            $q->with(['selectedDoctor', 'payments']);
+        }])
+            ->orderBy('created_at', 'desc')
             ->paginate(15)
             ->withQueryString();
+
+        // Add calculated fields to each patient
+        $patients->getCollection()->transform(function ($patient) {
+            // Calculate total paid
+            $totalPaid = $patient->visits->sum('total_paid');
+
+            // Get most recent doctor (from latest visit)
+            $latestVisit = $patient->visits->sortByDesc('created_at')->first();
+            $lastDoctor = $latestVisit && $latestVisit->selectedDoctor
+                ? $latestVisit->selectedDoctor->name
+                : null;
+
+            // Get all unique doctors this patient has visited
+            $allDoctors = $patient->visits
+                ->filter(fn($v) => $v->selectedDoctor)
+                ->pluck('selectedDoctor.name')
+                ->unique()
+                ->values();
+
+            $patient->total_paid = $totalPaid;
+            $patient->last_doctor = $lastDoctor;
+            $patient->all_doctors = $allDoctors;
+            $patient->total_visits = $patient->visits->count();
+
+            return $patient;
+        });
 
         return Inertia::render('Patients/Index', [
             'patients' => $patients,
@@ -156,8 +180,8 @@ class PatientController extends Controller
                 'end_date',
                 'date_preset'
             ]),
-            'userRole' => $user->role, // Pass user role to frontend
-            'isDoctorView' => $user->role === 'doctor', // Helper flag
+            'userRole' => $user->role,
+            'isDoctorView' => $user->role->name === 'Doctor',
         ]);
     }
 

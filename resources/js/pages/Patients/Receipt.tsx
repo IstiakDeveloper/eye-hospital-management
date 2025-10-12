@@ -29,6 +29,10 @@ interface Doctor {
     name: string;
     specialization?: string;
     consultation_fee: number;
+    user: {
+        id: number;
+        name: string;
+    };
 }
 
 interface Visit {
@@ -36,6 +40,7 @@ interface Visit {
     visit_id: string;
     patient_id: number;
     selected_doctor_id?: number;
+    selectedDoctor?: Doctor;
     registration_fee: number;
     doctor_fee: number;
     total_amount: number;
@@ -367,6 +372,7 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
         return methods[methodId] || 'Cash';
     };
 
+
     return (
         <div className="min-h-screen bg-white">
             <Head title="Patient Registration Receipt" />
@@ -652,7 +658,7 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
                                     {visit.selected_doctor && (
                                         <div className="col-span-3">
                                             <span className="text-gray-600 block text-xs font-medium">Consulting Doctor</span>
-                                            <span className="font-bold">Dr. {visit.selected_doctor.name}</span>
+                                            <span className="font-bold">{visit.selected_doctor?.user.name}</span>
                                             <span className="text-xs text-gray-600 block">
                                                 {visit.selected_doctor.specialization || 'Ophthalmologist'}
                                             </span>

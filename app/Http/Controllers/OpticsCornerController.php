@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Glasses;
 use App\Models\LensType;
 use App\Models\CompleteGlasses;
+use App\Models\GlassesPurchase;
 use App\Models\MainAccount;
 use App\Models\StockMovement;
 use App\Models\OpticsAccount;
 use App\Models\OpticsTransaction;
 use App\Models\OpticsExpenseCategory;
+use App\Models\OpticsVendor;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +19,6 @@ use Illuminate\Support\Str;
 
 class OpticsCornerController extends Controller
 {
-    // Dashboard - Overview
     public function index()
     {
         $stats = [
@@ -29,7 +30,12 @@ class OpticsCornerController extends Controller
             'account_balance' => OpticsAccount::getBalance(),
             'today_sales' => OpticsTransaction::income()->whereDate('transaction_date', today())->sum('amount'),
             'today_expenses' => OpticsTransaction::expense()->whereDate('transaction_date', today())->sum('amount'),
-            'month_profit' => OpticsAccount::monthlyReport(now()->year, now()->month)
+            'month_profit' => OpticsAccount::monthlyReport(now()->year, now()->month),
+
+            // Vendor stats - ✅ এটা যোগ করা হয়েছে
+            'total_vendors' => OpticsVendor::active()->count(),
+            'total_vendor_due' => OpticsVendor::where('balance_type', 'due')->sum('current_balance'),
+            'pending_purchases' => GlassesPurchase::where('payment_status', '!=', 'paid')->count(),
         ];
 
         $lowStockItems = collect()
@@ -137,12 +143,14 @@ class OpticsCornerController extends Controller
 
     public function createFrame()
     {
-        return Inertia::render('OpticsCorner/Frames/Create');
+        // ✅ Vendors list পাঠানো হচ্ছে
+        $vendors = OpticsVendor::active()->get(['id', 'name', 'company_name']);
+
+        return Inertia::render('OpticsCorner/Frames/Create', compact('vendors'));
     }
 
     public function storeFrame(Request $request)
     {
-
         $validated = $request->validate([
             'brand' => 'required|string|max:255',
             'model' => 'required|string|max:255',
@@ -161,6 +169,10 @@ class OpticsCornerController extends Controller
             'stock_quantity' => 'required|integer|min:0',
             'minimum_stock_level' => 'required|integer|min:1',
             'description' => 'nullable|string',
+
+            // ✅ Vendor fields যোগ করা হয়েছে
+            'default_vendor_id' => 'nullable|exists:optics_vendors,id',
+            'paid_amount' => 'nullable|numeric|min:0',
         ]);
 
         DB::transaction(function () use ($validated) {
@@ -172,6 +184,8 @@ class OpticsCornerController extends Controller
             // Record stock movement for initial purchase
             if ($validated['stock_quantity'] > 0) {
                 $totalCost = $validated['purchase_price'] * $validated['stock_quantity'];
+                $paidAmount = $validated['paid_amount'] ?? 0;
+                $dueAmount = $totalCost - $paidAmount;
 
                 StockMovement::create([
                     'item_type' => 'glasses',
@@ -186,12 +200,51 @@ class OpticsCornerController extends Controller
                     'user_id' => auth()->id(),
                 ]);
 
-                // Add expense to account
-                OpticsAccount::addExpense(
-                    $totalCost,
-                    'Frame Purchase',
-                    "Initial stock for {$frame->full_name} - {$validated['stock_quantity']} pcs"
-                );
+                // ✅ Vendor থাকলে purchase record তৈরি করা হবে
+                if (!empty($validated['default_vendor_id'])) {
+                    $purchase = GlassesPurchase::create([
+                        'purchase_no' => 'GP-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                        'vendor_id' => $validated['default_vendor_id'],
+                        'glasses_id' => $frame->id,
+                        'quantity' => $validated['stock_quantity'],
+                        'unit_cost' => $validated['purchase_price'],
+                        'total_cost' => $totalCost,
+                        'paid_amount' => $paidAmount,
+                        'due_amount' => $dueAmount,
+                        'payment_status' => $dueAmount > 0 ? ($paidAmount > 0 ? 'partial' : 'pending') : 'paid',
+                        'purchase_date' => now()->toDateString(),
+                        'notes' => 'Initial stock purchase',
+                        'added_by' => auth()->id(),
+                    ]);
+
+                    // Add to vendor's due if not fully paid
+                    if ($dueAmount > 0) {
+                        $vendor = OpticsVendor::findOrFail($validated['default_vendor_id']);
+                        $vendor->addPurchase(
+                            $dueAmount,
+                            "Initial stock - {$frame->full_name} ({$validated['stock_quantity']} pcs)",
+                            $purchase->id
+                        );
+                    }
+
+                    // Only paid amount goes to expense
+                    if ($paidAmount > 0) {
+                        $transaction = OpticsAccount::addExpense(
+                            $paidAmount,
+                            'Frame Purchase',
+                            "Initial stock for {$frame->full_name} - {$validated['stock_quantity']} pcs (Paid)"
+                        );
+
+                        $purchase->update(['optics_transaction_id' => $transaction->id]);
+                    }
+                } else {
+                    // ✅ Vendor না থাকলে সরাসরি expense (cash purchase)
+                    OpticsAccount::addExpense(
+                        $totalCost,
+                        'Frame Purchase',
+                        "Initial stock for {$frame->full_name} - {$validated['stock_quantity']} pcs (Cash)"
+                    );
+                }
             }
         });
 
@@ -232,43 +285,152 @@ class OpticsCornerController extends Controller
 
     public function stockManagement()
     {
+        // Get stock movements with related data
         $movements = StockMovement::with(['user'])
-            ->when(request('type'), fn($q, $type) => $q->byType($type))
-            ->when(request('item_type'), fn($q, $itemType) => $q->byItemType($itemType))
+            ->when(request('type'), fn($q, $type) => $q->where('movement_type', $type))
+            ->when(request('item_type'), fn($q, $itemType) => $q->where('item_type', $itemType))
+            ->when(request('date_from'), fn($q, $date) => $q->whereDate('created_at', '>=', $date))
+            ->when(request('date_to'), fn($q, $date) => $q->whereDate('created_at', '<=', $date))
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->through(function ($movement) {
+                // Get item details based on item_type
+                $itemDetails = $this->getItemDetails($movement->item_type, $movement->item_id);
 
-        return Inertia::render('OpticsCorner/Stock/Index', compact('movements'));
+                return [
+                    'id' => $movement->id,
+                    'item_type' => $movement->item_type,
+                    'item_id' => $movement->item_id,
+                    'movement_type' => $movement->movement_type,
+                    'quantity' => $movement->quantity,
+                    'previous_stock' => $movement->previous_stock,
+                    'new_stock' => $movement->new_stock,
+                    'unit_price' => abs($movement->unit_price),
+                    'total_amount' => abs($movement->total_amount),
+                    'notes' => $movement->notes,
+                    'created_at' => $movement->created_at->format('Y-m-d H:i:s'),
+                    'user' => [
+                        'name' => $movement->user->name ?? 'System'
+                    ],
+                    // Item details
+                    'item_brand' => $itemDetails['brand'] ?? 'N/A',
+                    'item_model' => $itemDetails['model'] ?? 'N/A',
+                    'item_sku' => $itemDetails['sku'] ?? 'N/A',
+                    'item_name' => $itemDetails['name'] ?? 'Unknown Item',
+                ];
+            });
+
+        // Calculate statistics
+        $stats = $this->calculateStockStats();
+
+        return Inertia::render('OpticsCorner/Stock/Index', [
+            'movements' => $movements,
+            'stats' => $stats,
+            'filters' => request()->only(['type', 'item_type', 'date_from', 'date_to'])
+        ]);
+    }
+
+    private function getItemDetails($itemType, $itemId)
+    {
+        switch ($itemType) {
+            case 'glasses':
+                $item = \App\Models\Glasses::find($itemId);
+                return [
+                    'brand' => $item->brand ?? 'N/A',
+                    'model' => $item->model ?? 'N/A',
+                    'sku' => $item->sku ?? 'N/A',
+                    'name' => ($item->brand ?? '') . ' ' . ($item->model ?? ''),
+                ];
+
+            case 'lens_types':
+                $item = \App\Models\LensType::find($itemId);
+                return [
+                    'brand' => $item->type ?? 'N/A',
+                    'model' => $item->name ?? 'N/A',
+                    'sku' => 'LENS-' . $itemId,
+                    'name' => $item->name ?? 'Unknown Lens',
+                ];
+
+            case 'complete_glasses':
+                $item = \App\Models\CompleteGlasses::with('frame')->find($itemId);
+                return [
+                    'brand' => $item->frame->brand ?? 'N/A',
+                    'model' => $item->frame->model ?? 'N/A',
+                    'sku' => $item->sku ?? 'N/A',
+                    'name' => 'Complete: ' . ($item->frame->brand ?? '') . ' ' . ($item->frame->model ?? ''),
+                ];
+
+            default:
+                return [
+                    'brand' => 'N/A',
+                    'model' => 'N/A',
+                    'sku' => 'N/A',
+                    'name' => 'Unknown Item',
+                ];
+        }
+    }
+
+    private function calculateStockStats()
+    {
+        $today = today();
+
+        return [
+            'total_movements' => StockMovement::count(),
+            'today_purchases' => StockMovement::where('movement_type', 'purchase')
+                ->whereDate('created_at', $today)
+                ->sum('quantity'),
+            'today_sales' => abs(StockMovement::where('movement_type', 'sale')
+                ->whereDate('created_at', $today)
+                ->sum('quantity')),
+            'today_adjustments' => StockMovement::where('movement_type', 'adjustment')
+                ->whereDate('created_at', $today)
+                ->count(),
+            'today_value' => StockMovement::whereDate('created_at', $today)
+                ->get()
+                ->sum(fn($m) => abs($m->total_amount)),
+
+            // This week
+            'week_purchases' => StockMovement::where('movement_type', 'purchase')
+                ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+                ->sum('quantity'),
+            'week_sales' => abs(StockMovement::where('movement_type', 'sale')
+                ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+                ->sum('quantity')),
+            'week_value' => StockMovement::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+                ->get()
+                ->sum(fn($m) => abs($m->total_amount)),
+        ];
     }
 
     public function addStock()
     {
         // Get frames with full_name attribute
         $frames = Glasses::active()
-            ->get(['id', 'brand', 'model', 'sku', 'stock_quantity'])
+            ->get(['id', 'brand', 'model', 'sku', 'stock_quantity', 'default_vendor_id'])
             ->map(function ($frame) {
-                $frame->full_name = $frame->full_name; // This will use the accessor
+                $frame->full_name = $frame->full_name;
                 return $frame;
             });
 
-        // Get lens types with proper fields
         $lensTypes = LensType::active()
             ->get(['id', 'name', 'stock_quantity'])
             ->map(function ($lens) {
-                $lens->full_name = $lens->name; // Use name as full_name for consistency
+                $lens->full_name = $lens->name;
                 return $lens;
             });
 
-        // Get complete glasses with relationships
         $completeGlasses = CompleteGlasses::active()
             ->with('frame', 'lensType')
             ->get(['id', 'frame_id', 'lens_type_id', 'stock_quantity'])
             ->map(function ($glass) {
-                $glass->full_name = $glass->full_name; // This will use the accessor
+                $glass->full_name = $glass->full_name;
                 return $glass;
             });
 
-        return Inertia::render('OpticsCorner/Stock/AddStock', compact('frames', 'lensTypes', 'completeGlasses'));
+        // ✅ Vendors list পাঠানো হচ্ছে
+        $vendors = OpticsVendor::active()->get(['id', 'name', 'company_name']);
+
+        return Inertia::render('OpticsCorner/Stock/AddStock', compact('frames', 'lensTypes', 'completeGlasses', 'vendors'));
     }
 
     public function storeStock(Request $request)
@@ -279,6 +441,10 @@ class OpticsCornerController extends Controller
             'quantity' => 'required|integer|min:1',
             'unit_price' => 'required|numeric|min:0',
             'notes' => 'nullable|string',
+
+            // ✅ Vendor fields যোগ করা হয়েছে
+            'vendor_id' => 'nullable|exists:optics_vendors,id',
+            'paid_amount' => 'nullable|numeric|min:0',
         ]);
 
         DB::transaction(function () use ($validated) {
@@ -310,22 +476,66 @@ class OpticsCornerController extends Controller
                 'user_id' => auth()->id(),
             ]);
 
-            // Add expense to account
             $itemName = match ($validated['item_type']) {
                 'glasses' => $item->full_name,
                 'lens_types' => $item->name,
                 'complete_glasses' => $item->full_name,
             };
 
-            OpticsAccount::addExpense(
-                $totalAmount,
-                ucfirst(str_replace('_', ' ', $validated['item_type'])) . ' Purchase',
-                "Stock purchase: {$itemName} - {$validated['quantity']} pcs"
-            );
+            // ✅ Vendor check করা হচ্ছে
+            if (!empty($validated['vendor_id']) && $validated['item_type'] === 'glasses') {
+                $paidAmount = $validated['paid_amount'] ?? 0;
+                $dueAmount = $totalAmount - $paidAmount;
+
+                // Create purchase record
+                $purchase = GlassesPurchase::create([
+                    'purchase_no' => 'GP-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                    'vendor_id' => $validated['vendor_id'],
+                    'glasses_id' => $validated['item_id'],
+                    'quantity' => $validated['quantity'],
+                    'unit_cost' => $validated['unit_price'],
+                    'total_cost' => $totalAmount,
+                    'paid_amount' => $paidAmount,
+                    'due_amount' => $dueAmount,
+                    'payment_status' => $dueAmount > 0 ? ($paidAmount > 0 ? 'partial' : 'pending') : 'paid',
+                    'purchase_date' => now()->toDateString(),
+                    'notes' => $validated['notes'],
+                    'added_by' => auth()->id(),
+                ]);
+
+                // Add to vendor's due
+                if ($dueAmount > 0) {
+                    $vendor = OpticsVendor::findOrFail($validated['vendor_id']);
+                    $vendor->addPurchase(
+                        $dueAmount,
+                        "Stock purchase - {$itemName} ({$validated['quantity']} pcs)",
+                        $purchase->id
+                    );
+                }
+
+                // Only paid amount goes to expense
+                if ($paidAmount > 0) {
+                    $transaction = OpticsAccount::addExpense(
+                        $paidAmount,
+                        'Glasses Purchase',
+                        "Stock purchase: {$itemName} - {$validated['quantity']} pcs (Paid)"
+                    );
+
+                    $purchase->update(['optics_transaction_id' => $transaction->id]);
+                }
+            } else {
+                // ✅ Vendor না থাকলে সরাসরি expense (cash purchase)
+                OpticsAccount::addExpense(
+                    $totalAmount,
+                    ucfirst(str_replace('_', ' ', $validated['item_type'])) . ' Purchase',
+                    "Stock purchase: {$itemName} - {$validated['quantity']} pcs (Cash)"
+                );
+            }
         });
 
         return redirect()->route('optics.stock')->with('success', 'Stock added successfully!');
     }
+
 
     public function editStock($id)
     {
@@ -690,5 +900,279 @@ class OpticsCornerController extends Controller
         LensType::create($validated);
 
         return back()->with('success', 'Lens type added successfully!');
+    }
+
+
+    public function vendors()
+    {
+        $vendors = OpticsVendor::query()
+            ->when(
+                request('search'),
+                fn($q, $search) =>
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('company_name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+            )
+            ->when(request('status') === 'active', fn($q) => $q->where('is_active', true))
+            ->when(request('status') === 'inactive', fn($q) => $q->where('is_active', false))
+            ->when(request('with_due'), fn($q) => $q->withDue())
+            ->when(request('with_advance'), fn($q) => $q->withAdvance())
+            ->withCount('purchases')
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        $stats = [
+            'total_vendors' => OpticsVendor::count(),
+            'active_vendors' => OpticsVendor::active()->count(),
+            'total_due' => OpticsVendor::where('balance_type', 'due')->sum('current_balance'),
+            'total_advance' => OpticsVendor::where('balance_type', 'advance')->sum('current_balance'),
+        ];
+
+        return Inertia::render('OpticsCorner/Vendors/Index', compact('vendors', 'stats'));
+    }
+
+    public function createVendor()
+    {
+        return Inertia::render('OpticsCorner/Vendors/Create');
+    }
+
+    public function storeVendor(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'company_name' => 'nullable|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
+            'phone' => 'required|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'address' => 'nullable|string',
+            'trade_license' => 'nullable|string|max:255',
+            'opening_balance' => 'nullable|numeric|min:0',
+            'balance_type' => 'required|in:due,advance',
+            'credit_limit' => 'nullable|numeric|min:0',
+            'payment_terms_days' => 'nullable|integer|min:0',
+            'notes' => 'nullable|string',
+        ]);
+
+        $validated['current_balance'] = $validated['opening_balance'] ?? 0;
+
+        OpticsVendor::create($validated);
+
+        return redirect()->route('optics.vendors')->with('success', 'Vendor added successfully!');
+    }
+
+    public function editVendor(OpticsVendor $vendor)
+    {
+        return Inertia::render('OpticsCorner/Vendors/Edit', compact('vendor'));
+    }
+
+    public function updateVendor(Request $request, OpticsVendor $vendor)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'company_name' => 'nullable|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
+            'phone' => 'required|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'address' => 'nullable|string',
+            'trade_license' => 'nullable|string|max:255',
+            'credit_limit' => 'nullable|numeric|min:0',
+            'payment_terms_days' => 'nullable|integer|min:0',
+            'notes' => 'nullable|string',
+            'is_active' => 'boolean',
+        ]);
+
+        $vendor->update($validated);
+
+        return redirect()->route('optics.vendors')->with('success', 'Vendor updated successfully!');
+    }
+
+    public function vendorTransactions(OpticsVendor $vendor)
+    {
+        $transactions = $vendor->transactions()
+            ->with('createdBy', 'paymentMethod')
+            ->latest()
+            ->paginate(20);
+
+        $purchases = $vendor->purchases()
+            ->with('glasses', 'addedBy')
+            ->latest()
+            ->paginate(10);
+
+        return Inertia::render('OpticsCorner/Vendors/Transactions', compact('vendor', 'transactions', 'purchases'));
+    }
+
+    public function makeVendorPayment(Request $request, OpticsVendor $vendor)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'payment_method_id' => 'required|exists:payment_methods,id',
+            'description' => 'required|string',
+            'payment_date' => 'nullable|date',
+        ]);
+
+        // Check if payment exceeds due
+        if ($vendor->balance_type === 'due' && $validated['amount'] > $vendor->current_balance) {
+            return back()->with('error', 'Payment amount cannot exceed due amount!');
+        }
+
+        $vendor->addPayment(
+            $validated['amount'],
+            $validated['description'],
+            $validated['payment_method_id'],
+            $validated['payment_date'] ?? null
+        );
+
+        return back()->with('success', 'Payment recorded successfully!');
+    }
+
+    // =============== GLASSES PURCHASE FROM VENDOR ===============
+
+    public function createPurchase()
+    {
+        $vendors = OpticsVendor::active()->get(['id', 'name', 'company_name', 'current_balance', 'balance_type']);
+        $frames = Glasses::active()->get(['id', 'brand', 'model', 'sku', 'purchase_price', 'stock_quantity']);
+
+        return Inertia::render('OpticsCorner/Purchases/Create', compact('vendors', 'frames'));
+    }
+
+    public function storePurchase(Request $request)
+    {
+        $validated = $request->validate([
+            'vendor_id' => 'required|exists:optics_vendors,id',
+            'glasses_id' => 'required|exists:glasses,id',
+            'quantity' => 'required|integer|min:1',
+            'unit_cost' => 'required|numeric|min:0',
+            'paid_amount' => 'nullable|numeric|min:0',
+            'purchase_date' => 'nullable|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        DB::transaction(function () use ($validated) {
+            $totalCost = $validated['unit_cost'] * $validated['quantity'];
+            $paidAmount = $validated['paid_amount'] ?? 0;
+            $dueAmount = $totalCost - $paidAmount;
+
+            $purchaseDate = $validated['purchase_date'] ?? now()->toDateString();
+
+            // Create purchase record
+            $purchase = GlassesPurchase::create([
+                'purchase_no' => 'GP-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                'vendor_id' => $validated['vendor_id'],
+                'glasses_id' => $validated['glasses_id'],
+                'quantity' => $validated['quantity'],
+                'unit_cost' => $validated['unit_cost'],
+                'total_cost' => $totalCost,
+                'paid_amount' => $paidAmount,
+                'due_amount' => $dueAmount,
+                'payment_status' => $dueAmount > 0 ? ($paidAmount > 0 ? 'partial' : 'pending') : 'paid',
+                'purchase_date' => $purchaseDate,
+                'notes' => $validated['notes'],
+                'added_by' => auth()->id(),
+            ]);
+
+            // Update glasses stock
+            $glasses = Glasses::findOrFail($validated['glasses_id']);
+            $previousStock = $glasses->stock_quantity;
+            $newStock = $previousStock + $validated['quantity'];
+            $glasses->update(['stock_quantity' => $newStock]);
+
+            // Create stock movement
+            StockMovement::create([
+                'item_type' => 'glasses',
+                'item_id' => $validated['glasses_id'],
+                'movement_type' => 'purchase',
+                'quantity' => $validated['quantity'],
+                'previous_stock' => $previousStock,
+                'new_stock' => $newStock,
+                'unit_price' => $validated['unit_cost'],
+                'total_amount' => $totalCost,
+                'notes' => "Purchase from vendor (#{$purchase->purchase_no})",
+                'user_id' => auth()->id(),
+            ]);
+
+            // Add to vendor's due if not fully paid
+            if ($dueAmount > 0) {
+                $vendor = OpticsVendor::findOrFail($validated['vendor_id']);
+                $vendor->addPurchase(
+                    $dueAmount,
+                    "Glasses purchase - {$glasses->full_name} ({$validated['quantity']} pcs)",
+                    $purchase->id
+                );
+            }
+
+            // Handle paid amount
+            if ($paidAmount > 0) {
+                // Create optics expense transaction
+                $transaction = OpticsAccount::addExpense(
+                    $paidAmount,
+                    'Glasses Purchase',
+                    "Purchase from vendor - {$glasses->full_name} ({$validated['quantity']} pcs)",
+                    null,
+                    $purchaseDate
+                );
+
+                $purchase->update(['optics_transaction_id' => $transaction->id]);
+            }
+        });
+
+        return redirect()->route('optics.purchases')->with('success', 'Purchase recorded successfully!');
+    }
+
+    public function purchases()
+    {
+        $purchases = GlassesPurchase::with('vendor', 'glasses', 'addedBy')
+            ->when(request('vendor_id'), fn($q, $vendorId) => $q->where('vendor_id', $vendorId))
+            ->when(request('payment_status'), fn($q, $status) => $q->where('payment_status', $status))
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        $vendors = OpticsVendor::active()->get(['id', 'name', 'company_name']);
+
+        // ✅ Payment methods যোগ করুন
+        $paymentMethods = \App\Models\PaymentMethod::where('is_active', true)->get(['id', 'name']);
+
+        return Inertia::render('OpticsCorner/Purchases/Index', compact('purchases', 'vendors', 'paymentMethods'));
+    }
+
+    public function payPurchaseDue(Request $request, GlassesPurchase $purchase)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'payment_method_id' => 'required|exists:payment_methods,id',
+            'payment_date' => 'nullable|date',
+        ]);
+
+        if ($validated['amount'] > $purchase->due_amount) {
+            return back()->with('error', 'Payment amount cannot exceed due amount!');
+        }
+
+        DB::transaction(function () use ($validated, $purchase) {
+            $paymentDate = $validated['payment_date'] ?? now()->toDateString();
+
+            // Update purchase payment status
+            $purchase->paid_amount += $validated['amount'];
+            $purchase->due_amount -= $validated['amount'];
+
+            if ($purchase->due_amount <= 0) {
+                $purchase->payment_status = 'paid';
+            } elseif ($purchase->paid_amount > 0) {
+                $purchase->payment_status = 'partial';
+            }
+
+            $purchase->save();
+
+            // Add payment to vendor account
+            $vendor = $purchase->vendor;
+            $vendor->addPayment(
+                $validated['amount'],
+                "Payment for purchase #{$purchase->purchase_no}",
+                $validated['payment_method_id'],
+                $paymentDate
+            );
+        });
+
+        return back()->with('success', 'Payment recorded successfully!');
     }
 }

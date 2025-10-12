@@ -132,17 +132,7 @@ class PatientVisitController extends Controller
             }
         ]);
 
-        // Get the latest payment for this visit
         $latestPayment = $visit->payments->first();
-
-        // Debug data (remove dd() to actually render the page)
-        // Uncomment below line only for debugging
-        // dd([
-        //     'patient' => $visit->patient,
-        //     'visit' => $visit,
-        //     'payment' => $latestPayment,
-        //     'csrfToken' => csrf_token(),
-        // ]);
 
         return Inertia::render('Visits/Receipt', [
             'patient' => $visit->patient,
