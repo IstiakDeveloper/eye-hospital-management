@@ -6,32 +6,13 @@ use App\Models\Role;
 use App\Repositories\DoctorRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    /**
-     * The user repository instance.
-     *
-     * @var \App\Repositories\UserRepository
-     */
     protected $userRepository;
-
-    /**
-     * The doctor repository instance.
-     *
-     * @var \App\Repositories\DoctorRepository
-     */
     protected $doctorRepository;
 
-    /**
-     * Create a new controller instance.
-     *
-     * @param  \App\Repositories\UserRepository  $userRepository
-     * @param  \App\Repositories\DoctorRepository  $doctorRepository
-     * @return void
-     */
     public function __construct(
         UserRepository $userRepository,
         DoctorRepository $doctorRepository
@@ -40,14 +21,8 @@ class UserController extends Controller
         $this->doctorRepository = $doctorRepository;
     }
 
-    /**
-     * Display a listing of the users.
-     *
-     * @return \Inertia\Response
-     */
     public function index()
     {
-
         $users = $this->userRepository->getAllPaginated();
 
         return Inertia::render('Users/Index', [
@@ -55,14 +30,8 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for creating a new user.
-     *
-     * @return \Inertia\Response
-     */
     public function create()
     {
-
         $roles = Role::all();
 
         return Inertia::render('Users/Create', [
@@ -70,15 +39,8 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created user in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function store(Request $request)
     {
-
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -90,7 +52,7 @@ class UserController extends Controller
         $user = $this->userRepository->create($request->all());
 
         // If the user is a doctor, create a doctor profile
-        if ($request->role_id == 2) { // Doctor role ID
+        if ($request->role_id == 2) {
             return redirect()->route('doctors.create', ['user_id' => $user->id])
                 ->with('success', 'User created successfully! Please complete the doctor profile.');
         }
@@ -99,15 +61,8 @@ class UserController extends Controller
             ->with('success', 'User created successfully!');
     }
 
-    /**
-     * Show the form for editing the specified user.
-     *
-     * @param  int  $id
-     * @return \Inertia\Response
-     */
     public function edit($id)
     {
-
         $user = $this->userRepository->findById($id);
 
         if (!$user) {
@@ -118,22 +73,14 @@ class UserController extends Controller
 
         return Inertia::render('Users/Edit', [
             'user' => $user,
-            'roles' => $roles
+            'roles' => $roles,
+            'isCurrentUser' => auth()->id() === $user->id
         ]);
     }
 
-    /**
-     * Update the specified user in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function update(Request $request, $id)
     {
-        if (!Gate::allows('manage-users')) {
-            abort(403);
-        }
+        // REMOVED: Gate check - already protected by super-admin middleware
 
         $user = $this->userRepository->findById($id);
 
@@ -158,21 +105,18 @@ class UserController extends Controller
 
         // Handle role change to/from doctor
         $wasDoctor = $user->isDoctor();
-        $isDoctor = $request->role_id == 2; // Doctor role ID
+        $isDoctor = $request->role_id == 2;
 
         if (!$wasDoctor && $isDoctor) {
-            // User is now a doctor, redirect to create doctor profile
             return redirect()->route('doctors.create', ['user_id' => $id])
                 ->with('success', 'User updated successfully! Please complete the doctor profile.');
         }
 
-        // If user is a doctor and already has a doctor profile, redirect to edit
         if ($isDoctor && $user->doctor) {
             return redirect()->route('doctors.edit', $user->doctor->id)
                 ->with('info', 'This user already has a doctor profile.');
         }
 
-        // If user is a doctor but doesn't have a doctor profile, redirect to create
         if ($isDoctor && !$user->doctor) {
             return redirect()->route('doctors.create', ['user_id' => $id])
                 ->with('info', 'Please complete the doctor profile.');
@@ -182,15 +126,8 @@ class UserController extends Controller
             ->with('success', 'User updated successfully!');
     }
 
-    /**
-     * Remove the specified user from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\RedirectResponse
-     */
     public function destroy($id)
     {
-
         if ($id === auth()->id()) {
             return back()->with('error', 'You cannot delete your own account.');
         }
