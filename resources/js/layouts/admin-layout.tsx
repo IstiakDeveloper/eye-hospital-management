@@ -35,7 +35,9 @@ import {
     Building2,
     Glasses,
     ShoppingBag,
-    LucideWaypoints
+    LucideWaypoints,
+    Truck,
+    Receipt
 } from 'lucide-react';
 import FlashMessages from '@/components/FlashMessage';
 
@@ -243,11 +245,19 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             '/optics',
             '/optics/frames',
             '/optics/stock',
+            '/optics/purchases',
+            '/optics/vendors',
             '/optics/sales',
             '/optics/lens-types',
+            '/optics/account',
             '/optics/reports'
         ];
-        return opticsCornerPaths.some(path => window.location.pathname.startsWith(path));
+        return opticsCornerPaths.some(path => {
+            if (path === '/optics') {
+                return window.location.pathname === '/optics' || window.location.pathname === '/optics/';
+            }
+            return window.location.pathname.startsWith(path);
+        });
     };
 
     // Navigation items with role-based access
@@ -404,7 +414,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
         },
 
         {
-            name: 'OpticsCorner',
+            name: 'Optics Corner',
             href: '#',
             icon: Glasses,
             current: 'optics.*',
@@ -412,46 +422,67 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             children: [
                 {
                     name: 'Dashboard',
-                    href: '/optics',
+                    href: route('optics.dashboard'),
                     icon: Home,
                     current: 'optics.dashboard',
                     roles: ['Super Admin']
                 },
                 {
                     name: 'Frames Management',
-                    href: '/optics/frames',
+                    href: route('optics.frames'),
                     icon: Glasses,
-                    current: 'optics.frames.*',
+                    current: 'optics.frames',
                     roles: ['Super Admin']
                 },
                 {
                     name: 'Stock Management',
-                    href: '/optics/stock',
+                    href: route('optics.stock'),
                     icon: Package,
-                    current: 'optics.stock.*',
+                    current: 'optics.stock',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Purchase Entry',
+                    href: route('optics.purchases'),
+                    icon: ShoppingCart,
+                    current: 'optics.purchases',
+                    roles: ['Super Admin']
+                },
+                {
+                    name: 'Vendors Management',
+                    href: route('optics.vendors'),
+                    icon: Truck,
+                    current: 'optics.vendors',
                     roles: ['Super Admin']
                 },
                 {
                     name: 'Sales Management',
-                    href: '/optics/sales',
+                    href: route('optics.sales'),
                     icon: ShoppingBag,
-                    current: 'optics.sales.*',
+                    current: 'optics.sales',
                     roles: ['Super Admin']
                 },
                 {
                     name: 'Lens Types',
-                    href: '/optics/lens-types',
+                    href: route('optics.lens-types'),
                     icon: Eye,
-                    current: 'optics.lens-types.*',
+                    current: 'optics.lens-types',
                     roles: ['Super Admin']
                 },
-                {
-                    name: 'Reports & Analytics',
-                    href: '/optics/reports',
-                    icon: BarChart3,
-                    current: 'optics.reports.*',
-                    roles: ['Super Admin']
-                }
+                // {
+                //     name: 'Account',
+                //     href: route('optics.account'),
+                //     icon: DollarSign,
+                //     current: 'optics.account',
+                //     roles: ['Super Admin']
+                // },
+                // {
+                //     name: 'Reports & Analytics',
+                //     href: route('optics.reports'),
+                //     icon: BarChart3,
+                //     current: 'optics.reports',
+                //     roles: ['Super Admin']
+                // }
             ]
         },
 
@@ -499,8 +530,6 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 }
             ]
         },
-
-        // Account Section with dropdown (Super Admin only)
 
         {
             name: 'Account Management',
@@ -693,7 +722,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 const Icon = item.icon;
                                 const isActive = isRouteActive(item.current);
                                 const isMedicineCorner = item.name === 'Medicine Corner';
-                                const isOpticsCorner = item.name === 'OpticsCorner';
+                                const isOpticsCorner = item.name === 'Optics Corner';
                                 const isAccountSection = item.name === 'Account Management';
                                 const isMedicalTests = item.name === 'Medical Tests';
 
@@ -789,11 +818,41 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                             </button>
 
                                             {/* OpticsCorner Dropdown Items */}
-                                            <div className={`mt-1 space-y-1 transition-all duration-200 overflow-hidden ${opticsCornerOpen || anyChildActive ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                            <div className={`mt-1 space-y-1 transition-all duration-200 overflow-hidden ${opticsCornerOpen || anyChildActive ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
                                                 }`}>
                                                 {item.children?.map((childItem) => {
                                                     const ChildIcon = childItem.icon;
-                                                    const isChildActive = window.location.pathname.startsWith(childItem.href);
+                                                    let isChildActive = false;
+
+                                                    if (childItem.current === 'optics.dashboard') {
+                                                        isChildActive = currentRouteName === 'optics.dashboard' ||
+                                                            window.location.pathname === '/optics' ||
+                                                            window.location.pathname === '/optics/';
+                                                    } else if (childItem.current === 'optics.frames') {
+                                                        isChildActive = currentRouteName?.startsWith('optics.frames') ||
+                                                            window.location.pathname.startsWith('/optics/frames');
+                                                    } else if (childItem.current === 'optics.stock') {
+                                                        isChildActive = currentRouteName?.startsWith('optics.stock') ||
+                                                            window.location.pathname.startsWith('/optics/stock');
+                                                    } else if (childItem.current === 'optics.purchases') {
+                                                        isChildActive = currentRouteName?.startsWith('optics.purchases') ||
+                                                            window.location.pathname.startsWith('/optics/purchases');
+                                                    } else if (childItem.current === 'optics.vendors') {
+                                                        isChildActive = currentRouteName?.startsWith('optics.vendors') ||
+                                                            window.location.pathname.startsWith('/optics/vendors');
+                                                    } else if (childItem.current === 'optics.sales') {
+                                                        isChildActive = currentRouteName?.startsWith('optics.sales') ||
+                                                            window.location.pathname.startsWith('/optics/sales');
+                                                    } else if (childItem.current === 'optics.lens-types') {
+                                                        isChildActive = currentRouteName === 'optics.lens-types' ||
+                                                            window.location.pathname === '/optics/lens-types';
+                                                    } else if (childItem.current === 'optics.account') {
+                                                        isChildActive = currentRouteName === 'optics.account' ||
+                                                            window.location.pathname === '/optics/account';
+                                                    } else if (childItem.current === 'optics.reports') {
+                                                        isChildActive = currentRouteName === 'optics.reports' ||
+                                                            window.location.pathname === '/optics/reports';
+                                                    }
 
                                                     return (
                                                         <Link
@@ -814,6 +873,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                         </div>
                                     );
                                 }
+
 
                                 if (isMedicalTests) {
                                     const medicalTestsActive = isMedicalTestsActive();

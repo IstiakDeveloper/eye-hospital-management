@@ -50,7 +50,7 @@ class OpticsCornerController extends Controller
 
     public function frames()
     {
-        $frames = Glasses::query()
+        $query = Glasses::query()
             ->when(
                 request('search'),
                 fn($q, $search) =>
@@ -71,9 +71,14 @@ class OpticsCornerController extends Controller
             ->when(request('low_stock'), fn($q) => $q->lowStock())
             ->when(request('in_stock'), fn($q) => $q->inStock())
             ->when(request('out_of_stock'), fn($q) => $q->where('stock_quantity', 0))
-            ->latest()
-            ->paginate(20)
-            ->withQueryString();
+            ->latest();
+
+        // Check if requesting all frames for print
+        if (request('all') === 'true') {
+            $frames = $query->get();
+        } else {
+            $frames = $query->paginate(20)->withQueryString();
+        }
 
         $filterOptions = [
             'types' => Glasses::distinct()->pluck('type')->filter()->sort()->values(),
@@ -707,11 +712,38 @@ class OpticsCornerController extends Controller
     // =============== SALES MANAGEMENT ===============
     public function sales()
     {
-        $sales = OpticsTransaction::income()
+        $query = OpticsTransaction::income()
             ->byCategory('Sales')
             ->with('createdBy')
-            ->latest()
-            ->paginate(20);
+            ->latest();
+
+        // Search functionality
+        if (request('search')) {
+            $search = request('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('transaction_no', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhereHas('createdBy', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // Date range filter
+        if (request('from_date')) {
+            $query->whereDate('transaction_date', '>=', request('from_date'));
+        }
+
+        if (request('to_date')) {
+            $query->whereDate('transaction_date', '<=', request('to_date'));
+        }
+
+        // Check if requesting all records for print/export
+        if (request('all') === 'true') {
+            $sales = $query->get();
+        } else {
+            $sales = $query->paginate(20)->withQueryString();
+        }
 
         return Inertia::render('OpticsCorner/Sales/Index', compact('sales'));
     }

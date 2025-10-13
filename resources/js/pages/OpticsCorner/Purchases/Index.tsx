@@ -209,12 +209,12 @@ export default function PurchasesIndex() {
                         <h1 className="text-2xl font-bold text-gray-900">Glasses Purchases</h1>
                         <p className="text-gray-600">Manage vendor purchases and payments</p>
                     </div>
-                    <Link href={route('optics.purchases.create')}>
+                    {/* <Link href={route('optics.purchases.create')}>
                         <Button>
                             <Plus className="w-4 h-4" />
                             <span>New Purchase</span>
                         </Button>
-                    </Link>
+                    </Link> */}
                 </div>
 
                 {/* Stats Cards */}
