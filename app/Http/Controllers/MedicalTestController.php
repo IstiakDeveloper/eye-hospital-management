@@ -427,8 +427,8 @@ class MedicalTestController extends Controller
      */
     public function index(Request $request)
     {
-        $query = PatientTestGroup::with(['patient', 'visit', 'tests.medicalTest', 'createdBy'])
-            ->orderBy('created_at', 'desc');
+    $query = PatientTestGroup::with(['patient', 'visit', 'tests.medicalTest', 'createdBy'])
+        ->orderBy('created_at', 'desc');
 
         // Filters
         if ($request->filled('search')) {
@@ -455,17 +455,17 @@ class MedicalTestController extends Controller
             $query->whereDate('test_date', '<=', $request->date_to);
         }
 
-        // Calculate stats based on current filters (clone query before pagination)
-        $statsQuery = clone $query;
+    // Always calculate stats for today only
+    $statsQuery = PatientTestGroup::whereDate('test_date', now()->toDateString());
 
-        $stats = [
-            'today_total' => (float) $statsQuery->sum('final_amount'),
-            'today_paid' => (float) $statsQuery->sum('paid_amount'),
-            'today_due' => (float) $statsQuery->sum('due_amount'),
-            'pending_count' => (int) $statsQuery->where('payment_status', '!=', 'paid')->count()
-        ];
+    $stats = [
+        'today_total' => (float) $statsQuery->sum('final_amount'),
+        'today_paid' => (float) $statsQuery->sum('paid_amount'),
+        'today_due' => (float) $statsQuery->sum('due_amount'),
+        'pending_count' => (int) $statsQuery->where('payment_status', '!=', 'paid')->count()
+    ];
 
-        $testGroups = $query->paginate(20)->withQueryString();
+        $testGroups = $query->paginate(10)->withQueryString();
 
         return Inertia::render('MedicalTests/Index', [
             'testGroups' => $testGroups,
