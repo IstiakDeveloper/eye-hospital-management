@@ -401,19 +401,6 @@ class OpticsSellerDashboardController extends Controller
                 $description
             );
 
-            // Create patient visit record if patient exists
-            if ($patient) {
-                $patient->createNewVisit([
-                    'visit_type' => 'purchase',
-                    'chief_complaint' => 'Optics purchase - ' . implode(', ', $saleDetails),
-                    'total_amount' => $finalAmount,
-                    'total_paid' => $finalAmount,
-                    'total_due' => 0,
-                    'overall_status' => 'completed',
-                    'payment_status' => 'paid',
-                ]);
-            }
-
             DB::commit();
 
             $responseMessage = "Sale completed successfully! Transaction: {$transaction->transaction_no} | Amount: ৳{$finalAmount}";
