@@ -55,6 +55,8 @@ interface CompletedSale {
   sale_date: string;
   subtotal: number;
   discount: number;
+  discount_type?: 'amount' | 'percent';
+  discount_percent?: number;
   tax: number;
   total_amount: number;
   paid_amount: number;
@@ -92,11 +94,13 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [showInvoice, setShowInvoice] = useState(false);
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
+  const [printWithoutDiscount, setPrintWithoutDiscount] = useState(false);
 
   const { data, setData, post, processing, errors, reset } = useForm({
     items: [],
     patient_id: '',
     discount: 0,
+    discount_type: 'amount',
     tax: 0,
     paid_amount: 0,
     customer_name: '',
@@ -199,7 +203,17 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-  const totalAmount = subtotal - (data.discount || 0) + (data.tax || 0);
+
+  // Calculate discount amount based on type
+  const discountValue = ((): number => {
+    const raw = Number(data.discount || 0);
+    if (data.discount_type === 'percent') {
+      return (subtotal * (raw / 100));
+    }
+    return raw;
+  })();
+
+  const totalAmount = subtotal - discountValue + (Number(data.tax || 0));
 
   // Auto-set paid amount to total amount
   useEffect(() => {
@@ -225,12 +239,14 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
       invoice_number: `SL-${Date.now()}`,
       sale_date: new Date().toISOString(),
       subtotal: subtotal,
-      discount: data.discount,
-      tax: data.tax,
+      discount: discountValue,
+      discount_type: data.discount_type as 'amount' | 'percent',
+      discount_percent: data.discount_type === 'percent' ? Number(data.discount) : undefined,
+      tax: Number(data.tax || 0),
       total_amount: totalAmount,
-      paid_amount: data.paid_amount,
-      due_amount: Math.max(0, totalAmount - data.paid_amount),
-      payment_status: data.paid_amount >= totalAmount ? 'paid' : 'partial',
+      paid_amount: Number(data.paid_amount || 0),
+      due_amount: Math.max(0, totalAmount - Number(data.paid_amount || 0)),
+      payment_status: Number(data.paid_amount || 0) >= totalAmount ? 'paid' : 'partial',
       patient: selectedPatient ? {
         name: selectedPatient.name,
         phone: selectedPatient.phone,
@@ -263,6 +279,7 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
       items: cartItems,
       patient_id: data.patient_id || null,
       discount: data.discount,
+      discount_type: data.discount_type,
       tax: data.tax,
       paid_amount: data.paid_amount,
       customer_name: data.customer_name || 'Walk-in Customer',
@@ -305,10 +322,15 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
     const closeInvoice = () => {
       setShowInvoice(false);
       setCompletedSale(null);
+      setPrintWithoutDiscount(false);
     };
 
+    // Calculate total with or without discount
+    const discountToShow = printWithoutDiscount ? 0 : completedSale.discount;
+    const totalToShow = completedSale.subtotal - discountToShow + completedSale.tax;
+
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto">
           <div className="p-6">
             {/* Print Styles */}
@@ -361,7 +383,17 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
             {/* Print/Close Buttons */}
             <div className="no-print mb-4 flex justify-between items-center border-b pb-4">
               <h2 className="text-lg font-semibold">Invoice Preview</h2>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={printWithoutDiscount}
+                    onChange={(e) => setPrintWithoutDiscount(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  Print without discount
+                </label>
+
                 <button
                   onClick={handlePrint}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -608,15 +640,17 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
                       <span>{formatCurrency(completedSale.subtotal)}</span>
                     </div>
 
-                    {completedSale.discount > 0 && (
+                    {discountToShow > 0 && (
                       <div style={{
                         display: 'flex',
                         justifyContent: 'space-between',
                         fontSize: '12px',
                         marginBottom: '4px'
                       }}>
-                        <span>Discount:</span>
-                        <span>-{formatCurrency(completedSale.discount)}</span>
+                        <span>
+                          Discount{completedSale.discount_type === 'percent' && completedSale.discount_percent ? ` (${completedSale.discount_percent}%)` : ''}:
+                        </span>
+                        <span>-{formatCurrency(discountToShow)}</span>
                       </div>
                     )}
 
@@ -644,66 +678,10 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
                         fontWeight: 'bold'
                       }}>
                         <span>Total Amount:</span>
-                        <span>{formatCurrency(completedSale.total_amount)}</span>
+                        <span>{formatCurrency(totalToShow)}</span>
                       </div>
-                    </div>
-
-                    <div style={{
-                      marginTop: '8px',
-                      paddingTop: '8px',
-                      borderTop: '1px solid #ccc'
-                    }}>
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        fontSize: '12px',
-                        marginBottom: '4px'
-                      }}>
-                        <span>Paid Amount:</span>
-                        <span>{formatCurrency(completedSale.paid_amount)}</span>
-                      </div>
-
-                      {completedSale.due_amount > 0 && (
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          color: 'red'
-                        }}>
-                          <span>Due Amount:</span>
-                          <span>{formatCurrency(completedSale.due_amount)}</span>
-                        </div>
-                      )}
-
-                      {completedSale.paid_amount > completedSale.total_amount && (
-                        <div style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          color: 'green'
-                        }}>
-                          <span>Change:</span>
-                          <span>{formatCurrency(completedSale.paid_amount - completedSale.total_amount)}</span>
-                        </div>
-                      )}
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Payment Status */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '12px' }}>
-                  <span style={{ fontWeight: 'bold' }}>Payment Status: </span>
-                  <span style={{
-                    fontWeight: 'bold',
-                    color: completedSale.payment_status === 'paid' ? 'green' :
-                      completedSale.payment_status === 'partial' ? 'orange' : 'red'
-                  }}>
-                    {completedSale.payment_status.toUpperCase()}
-                  </span>
                 </div>
               </div>
 
@@ -725,26 +703,6 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
                   </p>
                 </div>
               </div>
-
-              {/* Due Amount Warning */}
-              {completedSale.due_amount > 0 && (
-                <div style={{
-                  marginTop: '16px',
-                  padding: '12px',
-                  backgroundColor: '#ffebee',
-                  border: '1px solid #f44336',
-                  borderRadius: '4px'
-                }}>
-                  <p style={{
-                    fontSize: '12px',
-                    color: '#d32f2f',
-                    fontWeight: 'bold',
-                    margin: '0'
-                  }}>
-                    ⚠️ Due Amount: {formatCurrency(completedSale.due_amount)} - Please clear the due amount.
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -758,15 +716,18 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
 
       <div className="h-screen flex flex-col bg-gray-50">
         {/* Compact Header */}
-        <div className="bg-white border-b px-4 py-2 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 border-b px-4 py-3 flex items-center justify-between shadow-md">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold text-gray-900">POS System</h1>
-            <div className="text-sm text-gray-600">
-              Today: {todaySalesCount} • Last: {lastInvoiceNumber}
+            <h1 className="text-xl font-bold text-white">POS System</h1>
+            <div className="text-sm text-blue-100">
+              Today's Sales: {todaySalesCount} | Last Invoice: {lastInvoiceNumber}
             </div>
           </div>
-          <div className="text-lg font-bold text-green-600">
-            {formatCurrency(totalAmount)}
+          <div className="bg-white px-4 py-2 rounded-lg shadow">
+            <div className="text-xs text-gray-600 uppercase">Total</div>
+            <div className="text-xl font-bold text-green-600">
+              {formatCurrency(totalAmount)}
+            </div>
           </div>
         </div>
 
@@ -798,39 +759,34 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
                   return (
                     <div
                       key={medicine.id}
-                      className={`p-3 border rounded-lg transition-all cursor-pointer ${
+                      className={`p-3 border-2 rounded-xl transition-all cursor-pointer shadow-sm ${
                         hasStock
-                          ? 'border-gray-200 hover:border-blue-300 hover:bg-blue-50 bg-white'
+                          ? 'border-gray-200 hover:border-blue-400 hover:bg-blue-50 bg-white hover:shadow-md'
                           : 'border-gray-100 bg-gray-50 opacity-60'
-                      }`}
+                      } ${cartItem ? 'ring-2 ring-blue-500 ring-opacity-50' : ''}`}
                       onClick={() => hasStock && addToCart(medicine)}
                     >
                       <div className="text-center">
                         <div className="mb-2">
-                          <Package className={`w-6 h-6 mx-auto ${hasStock ? 'text-blue-600' : 'text-gray-400'}`} />
+                          <Package className={`w-7 h-7 mx-auto ${hasStock ? 'text-blue-600' : 'text-gray-400'}`} />
                         </div>
-                        <h3 className="font-medium text-xs text-gray-900 mb-1 line-clamp-2">
+                        <h3 className="font-semibold text-xs text-gray-900 mb-1 line-clamp-2 min-h-[2rem]">
                           {medicine.name}
                         </h3>
                         {medicine.generic_name && (
-                          <p className="text-xs text-gray-500 mb-1 line-clamp-1">
+                          <p className="text-xs text-gray-500 mb-2 line-clamp-1">
                             {medicine.generic_name}
                           </p>
                         )}
-                        <div className="text-xs text-gray-600 mb-2">
-                          Stock: {availableStock?.available_quantity || 0}
+                        <div className={`text-xs font-medium mb-2 ${hasStock ? 'text-gray-600' : 'text-red-500'}`}>
+                          {hasStock ? `Stock: ${availableStock?.available_quantity}` : 'Out of Stock'}
                         </div>
-                        <div className="text-sm font-semibold text-green-600">
+                        <div className="text-base font-bold text-green-600 mb-1">
                           {formatCurrency(availableStock?.sale_price || 0)}
                         </div>
                         {cartItem && (
-                          <div className="text-xs text-blue-600 font-medium mt-1">
-                            Cart: {cartItem.quantity}
-                          </div>
-                        )}
-                        {!hasStock && (
-                          <div className="text-xs text-red-500 font-medium mt-1">
-                            Out of Stock
+                          <div className="mt-2 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-bold">
+                            In Cart: {cartItem.quantity}
                           </div>
                         )}
                       </div>
@@ -842,22 +798,23 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
           </div>
 
           {/* Right Panel - Cart & Checkout */}
-          <div className="w-80 flex flex-col bg-white">
+          <div className="w-96 flex flex-col bg-white shadow-lg">
             {/* Patient Search */}
-            <div className="p-3 border-b">
+            <div className="p-4 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+              <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Customer</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Phone number..."
+                  placeholder="Search by phone or name..."
                   value={phoneSearch}
                   onChange={(e) => setPhoneSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-10 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 {selectedPatient && (
                   <button
                     onClick={clearPatient}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-600 text-xl font-bold"
                   >
                     ×
                   </button>
@@ -882,11 +839,11 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
 
               {/* Selected Patient */}
               {selectedPatient && (
-                <div className="mt-2 p-2 bg-blue-50 rounded-lg">
+                <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
                   <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-blue-600" />
-                    <div>
-                      <div className="font-medium text-sm">{selectedPatient.name}</div>
+                    <User className="w-5 h-5 text-blue-600" />
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-gray-900">{selectedPatient.name}</div>
                       <div className="text-xs text-gray-600">{selectedPatient.phone}</div>
                     </div>
                   </div>
@@ -896,67 +853,68 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
 
             {/* Cart */}
             <div className="flex-1 flex flex-col">
-              <div className="px-3 py-2 border-b bg-gray-50">
+              <div className="px-4 py-3 border-b bg-gradient-to-r from-gray-50 to-gray-100">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-sm">Cart ({cart.length})</span>
-                  <ShoppingCart className="w-4 h-4 text-gray-600" />
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="w-5 h-5 text-blue-600" />
+                    <span className="font-semibold text-sm text-gray-900">Cart Items</span>
+                  </div>
+                  <span className="bg-blue-600 text-white px-2.5 py-0.5 rounded-full text-xs font-semibold">{cart.length}</span>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-3">
+              <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
                 {cart.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <ShoppingCart className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                    <p className="text-sm">No items in cart</p>
+                  <div className="text-center py-12 text-gray-500">
+                    <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-sm font-medium">No items in cart</p>
+                    <p className="text-xs text-gray-400 mt-1">Add products to get started</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {cart.map((item) => {
                       const availableStock = item.medicine.stocks.find(s => s.id === item.medicine_stock_id);
 
                       return (
-                        <div key={item.medicine_stock_id} className="p-2 bg-gray-50 rounded-lg">
+                        <div key={item.medicine_stock_id} className="p-3 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-xs text-gray-900 truncate">
+                              <p className="font-semibold text-sm text-gray-900 truncate">
                                 {item.medicine.name}
                               </p>
-                              <p className="text-xs text-gray-600">
-                                Available: {availableStock?.available_quantity}
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                Stock: {availableStock?.available_quantity} • @{formatCurrency(item.unit_price)}
                               </p>
                             </div>
                             <button
                               onClick={() => removeFromCart(item.medicine_stock_id)}
-                              className="p-1 rounded text-red-600 hover:bg-red-100"
+                              className="p-1.5 rounded-full text-red-600 hover:bg-red-100 transition-colors"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
 
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                               <button
                                 onClick={() => updateQuantity(item.medicine_stock_id, item.quantity - 1)}
-                                className="p-1 rounded bg-gray-200 hover:bg-gray-300"
+                                className="p-1.5 rounded bg-white hover:bg-gray-200 shadow-sm"
                               >
-                                <Minus className="w-3 h-3" />
+                                <Minus className="w-3.5 h-3.5" />
                               </button>
-                              <span className="w-6 text-center text-xs font-medium">
+                              <span className="w-8 text-center text-sm font-bold">
                                 {item.quantity}
                               </span>
                               <button
                                 onClick={() => updateQuantity(item.medicine_stock_id, item.quantity + 1)}
                                 disabled={item.quantity >= (availableStock?.available_quantity || 0)}
-                                className="p-1 rounded bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100"
+                                className="p-1.5 rounded bg-white hover:bg-gray-200 shadow-sm disabled:bg-gray-100 disabled:opacity-50"
                               >
-                                <Plus className="w-3 h-3" />
+                                <Plus className="w-3.5 h-3.5" />
                               </button>
                             </div>
                             <div className="text-right">
-                              <div className="text-xs text-gray-600">
-                                @{formatCurrency(item.unit_price)}
-                              </div>
-                              <div className="text-sm font-medium text-green-600">
+                              <div className="text-lg font-bold text-green-600">
                                 {formatCurrency(item.quantity * item.unit_price)}
                               </div>
                             </div>
@@ -971,62 +929,83 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
 
             {/* Checkout */}
             {cart.length > 0 && (
-              <form onSubmit={handleSubmit} className="border-t p-3 bg-gray-50">
+              <form onSubmit={handleSubmit} className="border-t-2 p-4 bg-white flex-shrink-0">
                 {/* Quick Calculations */}
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <input
-                    type="number"
-                    placeholder="Discount"
-                    value={data.discount || ''}
-                    onChange={(e) => setData('discount', parseFloat(e.target.value) || 0)}
-                    className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Tax"
-                    value={data.tax || ''}
-                    onChange={(e) => setData('tax', parseFloat(e.target.value) || 0)}
-                    className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                  />
+                <div className="space-y-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Discount</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="col-span-2">
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={data.discount === 0 ? '' : data.discount}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setData('discount', v === '' ? 0 : parseFloat(v));
+                          }}
+                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <select
+                          value={data.discount_type}
+                          onChange={(e) => setData('discount_type', e.target.value)}
+                          className="w-full px-2 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-semibold"
+                        >
+                          <option value="amount">৳</option>
+                          <option value="percent">%</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+
                 </div>
 
                 {/* Total Display */}
-                <div className="space-y-1 mb-3 text-sm">
-                  <div className="flex justify-between">
+                <div className="space-y-2 mb-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                  <div className="flex justify-between text-sm text-gray-700">
                     <span>Subtotal:</span>
-                    <span>{formatCurrency(subtotal)}</span>
+                    <span className="font-semibold">{formatCurrency(subtotal)}</span>
                   </div>
-                  {data.discount > 0 && (
-                    <div className="flex justify-between text-red-600">
-                      <span>Discount:</span>
-                      <span>-{formatCurrency(data.discount)}</span>
+                  {discountValue > 0 && (
+                    <div className="flex justify-between text-sm text-red-600">
+                      <span>
+                        Discount{data.discount_type === 'percent' ? ` (${data.discount}%)` : ''}:
+                      </span>
+                      <span className="font-semibold">-{formatCurrency(discountValue)}</span>
                     </div>
                   )}
                   {data.tax > 0 && (
-                    <div className="flex justify-between">
+                    <div className="flex justify-between text-sm text-gray-700">
                       <span>Tax:</span>
-                      <span>+{formatCurrency(data.tax)}</span>
+                      <span className="font-semibold">+{formatCurrency(Number(data.tax || 0))}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-bold text-lg border-t pt-1">
+                  <div className="flex justify-between font-bold text-lg border-t-2 border-gray-300 pt-2 mt-2 text-gray-900">
                     <span>Total:</span>
-                    <span>{formatCurrency(totalAmount)}</span>
+                    <span className="text-green-600">{formatCurrency(totalAmount)}</span>
                   </div>
                 </div>
 
                 {/* Paid Amount */}
                 <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Paid Amount</label>
                   <input
                     type="number"
-                    placeholder="Paid Amount"
-                    value={data.paid_amount || ''}
-                    onChange={(e) => setData('paid_amount', parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
+                    placeholder={`${Math.round(totalAmount)}`}
+                    value={data.paid_amount === 0 ? '' : data.paid_amount}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setData('paid_amount', v === '' ? 0 : parseFloat(v));
+                    }}
+                    className="w-full px-3 py-2 text-base font-semibold border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
-                  {data.paid_amount > totalAmount && (
-                    <p className="text-sm mt-1 text-amber-600">
-                      Change: {formatCurrency(data.paid_amount - totalAmount)}
+                  {Number(data.paid_amount || 0) > totalAmount && (
+                    <p className="text-xs mt-1 text-green-600 font-medium">
+                      Change: {formatCurrency(Number(data.paid_amount || 0) - totalAmount)}
                     </p>
                   )}
                 </div>
@@ -1035,9 +1014,9 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
                 <button
                   type="submit"
                   disabled={processing || cart.length === 0}
-                  className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-400 text-white py-3 rounded-lg font-bold text-base transition-all shadow-lg hover:shadow-xl disabled:shadow-none flex items-center justify-center gap-2"
                 >
-                  <Calculator className="w-4 h-4" />
+                  <Calculator className="w-5 h-5" />
                   Complete Sale
                 </button>
               </form>
