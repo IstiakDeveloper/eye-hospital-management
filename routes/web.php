@@ -369,13 +369,15 @@ Route::prefix('optics-seller')->middleware(['auth'])->group(function () {
     Route::get('/pos', [OpticsSellerDashboardController::class, 'pos'])->name('optics-seller.pos');
     Route::post('/pos/sale', [OpticsSellerDashboardController::class, 'processSale'])->name('optics-seller.process-sale');
 
+    // Customer Search
     Route::get('/search-customer', [OpticsSellerDashboardController::class, 'searchCustomer'])->name('search-customer');
-    Route::get('/customer/{id}/details', [OpticsSellerDashboardController::class, 'getCustomerDetails'])->name('customer-details');
-
+    Route::get('/customer/{patient}/details', [OpticsSellerDashboardController::class, 'getCustomerDetails'])->name('customer-details');
 
     // Sales Management
     Route::get('/sales', [OpticsSellerDashboardController::class, 'salesHistory'])->name('optics-seller.sales');
-    Route::get('/sales/{transaction}', [OpticsSellerDashboardController::class, 'saleDetails'])->name('optics-seller.sale-details');
+    Route::get('/sales/{sale}', [OpticsSellerDashboardController::class, 'saleDetails'])->name('optics-seller.sale-details');
+    Route::post('/sales/{sale}/update-status', [OpticsSellerDashboardController::class, 'updateStatus'])->name('optics-seller.update-status');
+    Route::post('/sales/{sale}/payment', [OpticsSellerDashboardController::class, 'updatePayment'])->name('optics-seller.add-payment');
 
     // Reports
     Route::get('/my-report', [OpticsSellerDashboardController::class, 'myReport'])->name('optics-seller.report');
@@ -400,7 +402,6 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
             'current_qr_path' => $patient->qr_code_image_path
         ]);
 
-        // Validate request
         $request->validate([
             'qr_data_url' => 'required|string',
         ]);

@@ -14,15 +14,28 @@ import {
   Glasses
 } from 'lucide-react';
 
+interface Sale {
+  id: number;
+  invoice_number: string;
+  patient_name: string;
+  patient_phone: string;
+  total_amount: number;
+  due_amount: number;
+  status: 'pending' | 'ready' | 'delivered';
+  created_at: string;
+}
+
 interface DashboardProps {
   todaySales: number;
-  todayProfit: number;
+  todayDue: number;
   todaySalesCount: number;
   monthSales: number;
-  monthProfit: number;
+  monthDue: number;
   accountBalance: number;
   salesGrowth: number;
-  recentSales: any[];
+  pendingCount: number;
+  pendingReadyCount: number;
+  recentSales: Sale[];
   lowStockFrames: any[];
   lowStockCompleteGlasses: any[];
   lowStockLenses: any[];
@@ -31,12 +44,14 @@ interface DashboardProps {
 
 export default function Dashboard({
   todaySales,
-  todayProfit,
+  todayDue,
   todaySalesCount,
   monthSales,
-  monthProfit,
+  monthDue,
   accountBalance,
   salesGrowth,
+  pendingCount,
+  pendingReadyCount,
   recentSales,
   lowStockFrames,
   lowStockCompleteGlasses,
@@ -110,14 +125,14 @@ export default function Dashboard({
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Today's Profit</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">
-                  {formatCurrency(todayProfit)}
+                <p className="text-sm font-medium text-gray-600">Today's Due</p>
+                <p className="text-2xl font-bold text-orange-600 mt-1">
+                  {formatCurrency(todayDue)}
                 </p>
                 <p className="text-sm text-gray-500 mt-2">{todaySalesCount} transactions</p>
               </div>
-              <div className="bg-green-100 p-3 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-green-600" />
+              <div className="bg-orange-100 p-3 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-orange-600" />
               </div>
             </div>
           </div>
@@ -129,8 +144,8 @@ export default function Dashboard({
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {formatCurrency(monthSales)}
                 </p>
-                <p className="text-sm text-green-600 mt-2">
-                  Profit: {formatCurrency(monthProfit)}
+                <p className="text-sm text-orange-600 mt-2">
+                  Due: {formatCurrency(monthDue)}
                 </p>
               </div>
               <div className="bg-purple-100 p-3 rounded-lg">
@@ -142,14 +157,16 @@ export default function Dashboard({
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Account Balance</p>
-                <p className="text-2xl font-bold text-amber-600 mt-1">
-                  {formatCurrency(accountBalance)}
+                <p className="text-sm font-medium text-gray-600">Pending Orders</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">
+                  {pendingCount + pendingReadyCount}
                 </p>
-
+                <p className="text-sm text-gray-500 mt-2">
+                  {pendingCount} Pending • {pendingReadyCount} Ready
+                </p>
               </div>
-              <div className="bg-amber-100 p-3 rounded-lg">
-                <Glasses className="w-6 h-6 text-amber-600" />
+              <div className="bg-blue-100 p-3 rounded-lg">
+                <Package className="w-6 h-6 text-blue-600" />
               </div>
             </div>
           </div>
@@ -165,27 +182,35 @@ export default function Dashboard({
             <div className="p-6">
               <div className="space-y-4">
                 {recentSales.slice(0, 5).map((sale) => (
-                  <div key={sale.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <Link
+                    key={sale.id}
+                    href={`/optics-seller/sales/${sale.id}`}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
                         <div className="bg-blue-100 p-2 rounded-lg">
                           <ShoppingCart className="w-4 h-4 text-blue-600" />
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{sale.transaction_no}</p>
+                          <p className="font-medium text-gray-900">{sale.invoice_number}</p>
                           <p className="text-sm text-gray-600">
-                            {sale.description.split(' - ')[1]?.split(' (')[0] || 'Customer'} • {formatDate(sale.created_at)}
+                            {sale.patient_name} • {sale.patient_phone} • {formatDate(sale.created_at)}
                           </p>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">{formatCurrency(sale.amount)}</p>
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        completed
+                      <p className="font-semibold text-gray-900">{formatCurrency(sale.total_amount)}</p>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        sale.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                        sale.status === 'ready' ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {sale.status}
                       </span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>

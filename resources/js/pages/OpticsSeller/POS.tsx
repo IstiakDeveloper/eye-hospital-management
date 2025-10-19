@@ -116,8 +116,12 @@ export default function POS({
         customer_phone: '',
         customer_email: '',
         items: [],
+        glass_fitting_price: 0,
         discount_type: 'amount',
         discount_value: 0,
+        advance_payment: 0,
+        payment_method: 'cash' as 'cash' | 'card' | 'bkash' | 'nagad' | 'rocket',
+        transaction_id: '',
         notes: '',
     });
 
@@ -282,13 +286,15 @@ export default function POS({
     };
 
     const subtotal = cart.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    const fittingCharge = data.glass_fitting_price || 0;
 
     // Calculate discount amount
     const discountAmount = data.discount_type === 'percentage'
-        ? (subtotal * (data.discount_value || 0)) / 100
+        ? ((subtotal + fittingCharge) * (data.discount_value || 0)) / 100
         : (data.discount_value || 0);
 
-    const totalAmount = subtotal - discountAmount;
+    const totalAmount = subtotal + fittingCharge - discountAmount;
+    const dueAmount = totalAmount - (data.advance_payment || 0);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -311,7 +317,11 @@ export default function POS({
             customer_phone: data.customer_phone,
             customer_email: data.customer_email,
             items: cartItems,
+            glass_fitting_price: data.glass_fitting_price || 0,
             discount: discountAmount,
+            advance_payment: data.advance_payment || 0,
+            payment_method: data.payment_method,
+            transaction_id: data.transaction_id,
             notes: data.notes,
         }, {
             onSuccess: () => {
@@ -678,6 +688,23 @@ export default function POS({
                         {cart.length > 0 && (
                             <div className="border-t bg-gray-50 flex-shrink-0">
                                 <form onSubmit={handleSubmit} className="p-3">
+                                    {/* Fitting Charge */}
+                                    <div className="mb-3">
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                                            <Glasses className="w-3 h-3 inline mr-1" />
+                                            Glass Fitting Charge
+                                        </label>
+                                        <input
+                                            type="number"
+                                            placeholder="৳0"
+                                            value={data.glass_fitting_price || ''}
+                                            onChange={(e) => setData('glass_fitting_price', parseFloat(e.target.value) || 0)}
+                                            min="0"
+                                            step="1"
+                                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                                        />
+                                    </div>
+
                                     {/* Discount - Compact */}
                                     <div className="mb-3">
                                         <label className="block text-xs font-medium text-gray-700 mb-1">Discount</label>
@@ -712,7 +739,7 @@ export default function POS({
                                                 placeholder={data.discount_type === 'percentage' ? '%' : '৳'}
                                                 value={data.discount_value || ''}
                                                 onChange={(e) => setData('discount_value', parseFloat(e.target.value) || 0)}
-                                                max={data.discount_type === 'percentage' ? 100 : subtotal}
+                                                max={data.discount_type === 'percentage' ? 100 : (subtotal + fittingCharge)}
                                                 min="0"
                                                 step={data.discount_type === 'percentage' ? 0.1 : 1}
                                                 className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
@@ -730,6 +757,49 @@ export default function POS({
                                         )}
                                     </div>
 
+                                    {/* Payment Section */}
+                                    <div className="mb-3 border-t pt-3">
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Advance Payment</label>
+                                        <input
+                                            type="number"
+                                            placeholder="৳0"
+                                            value={data.advance_payment || ''}
+                                            onChange={(e) => setData('advance_payment', parseFloat(e.target.value) || 0)}
+                                            min="0"
+                                            max={totalAmount}
+                                            step="1"
+                                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 mb-2"
+                                        />
+
+                                        <label className="block text-xs font-medium text-gray-700 mb-1">Payment Method</label>
+                                        <div className="grid grid-cols-5 gap-1">
+                                            {['cash', 'card', 'bkash', 'nagad', 'rocket'].map((method) => (
+                                                <button
+                                                    key={method}
+                                                    type="button"
+                                                    onClick={() => setData('payment_method', method as any)}
+                                                    className={`px-1 py-1 text-xs rounded border transition-colors ${
+                                                        data.payment_method === method
+                                                            ? 'border-blue-600 bg-blue-50 text-blue-700 font-medium'
+                                                            : 'border-gray-200 hover:border-gray-300'
+                                                    }`}
+                                                >
+                                                    {method.charAt(0).toUpperCase() + method.slice(1)}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {data.payment_method !== 'cash' && (
+                                            <input
+                                                type="text"
+                                                placeholder="Transaction ID (optional)"
+                                                value={data.transaction_id}
+                                                onChange={(e) => setData('transaction_id', e.target.value)}
+                                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 mt-2"
+                                            />
+                                        )}
+                                    </div>
+
                                     {/* Notes - Compact */}
                                     <div className="mb-3">
                                         <textarea
@@ -742,21 +812,39 @@ export default function POS({
                                     </div>
 
                                     {/* Total Display - Compact */}
-                                    <div className="space-y-1 mb-3 text-sm">
+                                    <div className="space-y-1 mb-3 text-sm bg-gray-100 p-2 rounded">
                                         <div className="flex justify-between">
-                                            <span>Subtotal:</span>
+                                            <span>Items Subtotal:</span>
                                             <span>{formatCurrency(subtotal)}</span>
                                         </div>
+                                        {fittingCharge > 0 && (
+                                            <div className="flex justify-between text-blue-600">
+                                                <span>Fitting Charge:</span>
+                                                <span>+{formatCurrency(fittingCharge)}</span>
+                                            </div>
+                                        )}
                                         {discountAmount > 0 && (
                                             <div className="flex justify-between text-red-600">
                                                 <span>Discount:</span>
                                                 <span>-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
-                                        <div className="flex justify-between font-bold text-lg border-t pt-1">
+                                        <div className="flex justify-between font-bold text-base border-t border-gray-300 pt-1 mt-1">
                                             <span>Total:</span>
                                             <span className="text-green-600">{formatCurrency(totalAmount)}</span>
                                         </div>
+                                        {data.advance_payment > 0 && (
+                                            <>
+                                                <div className="flex justify-between text-green-700">
+                                                    <span>Advance:</span>
+                                                    <span>-{formatCurrency(data.advance_payment)}</span>
+                                                </div>
+                                                <div className="flex justify-between font-bold text-base text-orange-600 border-t border-gray-300 pt-1">
+                                                    <span>Due:</span>
+                                                    <span>{formatCurrency(dueAmount)}</span>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
 
                                     {/* Complete Sale Button - Always Visible */}
