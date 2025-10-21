@@ -45,8 +45,24 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => function () {
+                $user = Auth::user();
+
+                if (!$user) {
+                    return ['user' => null];
+                }
+
                 return [
-                    'user' => Auth::user() ? Auth::user()->load('role') : null,
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $user->role ? [
+                            'id' => $user->role->id,
+                            'name' => $user->role->name,
+                        ] : null,
+                        // Share user permissions with frontend
+                        'permissions' => $this->getUserPermissions($user),
+                    ],
                 ];
             },
             'ziggy' => fn(): array => [
@@ -63,5 +79,57 @@ class HandleInertiaRequests extends Middleware
                 'info' => $request->session()->get('info'),
             ],
         ];
+    }
+
+    /**
+     * Get all permissions for the user
+     *
+     * @param \App\Models\User $user
+     * @return array<string>
+     */
+    private function getUserPermissions($user): array
+    {
+        // Super Admin has all permissions (indicated by wildcard)
+        if ($user->role && $user->role->name === 'Super Admin') {
+            return ['*']; // Frontend will check for this wildcard
+        }
+
+        if (!$user->role) {
+            return [];
+        }
+
+        // Get role permissions
+        $rolePermissions = $user->role->permissions()
+            ->pluck('name')
+            ->toArray();
+
+        // Get user-specific granted permissions
+        $userGrantedPermissions = $user->userPermissions()
+            ->where('granted', true)
+            ->with('permission')
+            ->get()
+            ->pluck('permission.name')
+            ->toArray();
+
+        // Get user-specific revoked permissions
+        $userRevokedPermissions = $user->userPermissions()
+            ->where('granted', false)
+            ->with('permission')
+            ->get()
+            ->pluck('permission.name')
+            ->toArray();
+
+        // Check for wildcard permission in user permissions
+        if (in_array('*', $userGrantedPermissions)) {
+            return ['*'];
+        }
+
+        // Merge role and user granted permissions
+        $allPermissions = array_unique(array_merge($rolePermissions, $userGrantedPermissions));
+
+        // Remove revoked permissions
+        $finalPermissions = array_values(array_diff($allPermissions, $userRevokedPermissions));
+
+        return $finalPermissions;
     }
 }

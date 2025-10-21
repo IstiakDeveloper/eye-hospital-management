@@ -14,6 +14,92 @@ use Inertia\Inertia;
 class PatientVisitController extends Controller
 {
     /**
+     * Display a listing of patient visits with filters
+     */
+    public function index(Request $request)
+    {
+        $query = PatientVisit::with([
+            'patient',
+            'selectedDoctor.user',
+            'payments.paymentMethod',
+            'createdBy'
+        ]);
+
+        // Filter by patient name or ID
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('patient', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('patient_id', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        // Filter by payment status
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+
+        // Filter by overall status
+        if ($request->filled('overall_status')) {
+            $query->where('overall_status', $request->overall_status);
+        }
+
+        // Filter by vision test status
+        if ($request->filled('vision_test_status')) {
+            $query->where('vision_test_status', $request->vision_test_status);
+        }
+
+        // Filter by prescription status
+        if ($request->filled('prescription_status')) {
+            $query->where('prescription_status', $request->prescription_status);
+        }
+
+        // Filter by doctor
+        if ($request->filled('doctor_id')) {
+            $query->where('selected_doctor_id', $request->doctor_id);
+        }
+
+        // Filter by date range
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // Sort by latest first
+        $query->orderBy('created_at', 'desc');
+
+        // Paginate results
+        $visits = $query->paginate(15)->withQueryString();
+
+        // Get doctors for filter dropdown
+        $doctors = Doctor::with('user')->get()->map(function ($doctor) {
+            return [
+                'id' => $doctor->id,
+                'name' => $doctor->user->name ?? 'Unknown Doctor',
+            ];
+        });
+
+        return Inertia::render('Visits/Index', [
+            'visits' => $visits,
+            'doctors' => $doctors,
+            'filters' => $request->only([
+                'search',
+                'payment_status',
+                'overall_status',
+                'vision_test_status',
+                'prescription_status',
+                'doctor_id',
+                'date_from',
+                'date_to'
+            ]),
+        ]);
+    }
+
+    /**
      * Store a new visit for existing patient
      */
     public function store(Request $request)

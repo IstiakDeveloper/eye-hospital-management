@@ -356,22 +356,47 @@ class DashboardController extends Controller
 
     private function getPeriodReports($startDate, $endDate, $previousStartDate, $previousEndDate)
     {
-        // Hospital transactions in current period
-        $hospitalIncome = DB::table('hospital_transactions')
+        // OPD Income (Patient Visit Payments) - Current Period
+        // Includes both 'OPD' and 'patient_payment' categories
+        $opdIncome = DB::table('hospital_transactions')
             ->where('type', 'income')
+            ->whereIn('category', ['OPD', 'patient_payment'])
             ->whereBetween('transaction_date', [$startDate, $endDate])
             ->sum('amount');
 
+        // Medical Test Income - Current Period
+        $medicalTestIncome = DB::table('hospital_transactions')
+            ->where('type', 'income')
+            ->where('category', 'Medical Test')
+            ->whereBetween('transaction_date', [$startDate, $endDate])
+            ->sum('amount');
+
+        // Total Hospital Income
+        $hospitalIncome = $opdIncome + $medicalTestIncome;
+
+        // Hospital Expense
         $hospitalExpense = DB::table('hospital_transactions')
             ->where('type', 'expense')
             ->whereBetween('transaction_date', [$startDate, $endDate])
             ->sum('amount');
 
-        // Previous period for comparison
-        $previousHospitalIncome = DB::table('hospital_transactions')
+        // Previous period for comparison - OPD
+        // Includes both 'OPD' and 'patient_payment' categories
+        $previousOpdIncome = DB::table('hospital_transactions')
             ->where('type', 'income')
+            ->whereIn('category', ['OPD', 'patient_payment'])
             ->whereBetween('transaction_date', [$previousStartDate, $previousEndDate])
             ->sum('amount');
+
+        // Previous period for comparison - Medical Test
+        $previousMedicalTestIncome = DB::table('hospital_transactions')
+            ->where('type', 'income')
+            ->where('category', 'Medical Test')
+            ->whereBetween('transaction_date', [$previousStartDate, $previousEndDate])
+            ->sum('amount');
+
+        // Previous Total Hospital Income
+        $previousHospitalIncome = $previousOpdIncome + $previousMedicalTestIncome;
 
         // Medicine transactions
         $medicineIncome = DB::table('medicine_transactions')
@@ -398,10 +423,14 @@ class DashboardController extends Controller
         return [
             'hospital' => [
                 'income' => $hospitalIncome,
+                'opdIncome' => $opdIncome,
+                'medicalTestIncome' => $medicalTestIncome,
                 'expense' => $hospitalExpense,
                 'profit' => $hospitalIncome - $hospitalExpense,
                 'balance' => HospitalAccount::getBalance(),
                 'incomeGrowth' => $this->calculateGrowth($hospitalIncome, $previousHospitalIncome),
+                'opdIncomeGrowth' => $this->calculateGrowth($opdIncome, $previousOpdIncome),
+                'medicalTestIncomeGrowth' => $this->calculateGrowth($medicalTestIncome, $previousMedicalTestIncome),
             ],
             'medicine' => [
                 'income' => $medicineIncome,

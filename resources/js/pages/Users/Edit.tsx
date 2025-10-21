@@ -34,9 +34,13 @@ interface UserEditProps {
   user: UserData;
   roles: Role[];
   isCurrentUser: boolean;
+  can: {
+    delete: boolean;
+    manage_permissions: boolean;
+  };
 }
 
-export default function UserEdit({ user, roles, isCurrentUser }: UserEditProps) {
+export default function UserEdit({ user, roles, isCurrentUser, can }: UserEditProps) {
   const { data, setData, put, processing, errors } = useForm({
     name: user.name,
     email: user.email,
@@ -89,7 +93,6 @@ export default function UserEdit({ user, roles, isCurrentUser }: UserEditProps) 
                   value={data.name}
                   onChange={(e) => setData('name', e.target.value)}
                   error={errors.name}
-                  icon={<User className="h-4 w-4 text-gray-400" />}
                 />
               </div>
 
@@ -104,7 +107,6 @@ export default function UserEdit({ user, roles, isCurrentUser }: UserEditProps) 
                   value={data.email}
                   onChange={(e) => setData('email', e.target.value)}
                   error={errors.email}
-                  icon={<Mail className="h-4 w-4 text-gray-400" />}
                 />
               </div>
 
@@ -119,7 +121,6 @@ export default function UserEdit({ user, roles, isCurrentUser }: UserEditProps) 
                   value={data.phone}
                   onChange={(e) => setData('phone', e.target.value)}
                   error={errors.phone}
-                  icon={<Phone className="h-4 w-4 text-gray-400" />}
                 />
               </div>
 
@@ -160,7 +161,6 @@ export default function UserEdit({ user, roles, isCurrentUser }: UserEditProps) 
                   value={data.password}
                   onChange={(e) => setData('password', e.target.value)}
                   error={errors.password}
-                  icon={<Key className="h-4 w-4 text-gray-400" />}
                 />
               </div>
 
@@ -175,7 +175,6 @@ export default function UserEdit({ user, roles, isCurrentUser }: UserEditProps) 
                   value={data.password_confirmation}
                   onChange={(e) => setData('password_confirmation', e.target.value)}
                   error={errors.password_confirmation}
-                  icon={<Key className="h-4 w-4 text-gray-400" />}
                 />
               </div>
 
@@ -222,19 +221,21 @@ export default function UserEdit({ user, roles, isCurrentUser }: UserEditProps) 
               <Button
                 type="button"
                 variant="outline"
-                icon={<X className="h-4 w-4" />}
-                href={route('users.index')}
+                asChild
               >
-                Cancel
+                <a href={route('users.index')}>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </a>
               </Button>
 
-              {!isCurrentUser && (
+              {can.delete && !isCurrentUser && (
                 <Button
                   type="button"
                   variant="destructive"
-                  icon={<Trash2 className="h-4 w-4" />}
                   onClick={deleteUser}
                 >
+                  <Trash2 className="h-4 w-4 mr-2" />
                   Delete User
                 </Button>
               )}
@@ -243,9 +244,9 @@ export default function UserEdit({ user, roles, isCurrentUser }: UserEditProps) 
             <Button
               type="submit"
               disabled={processing}
-              icon={<Save className="h-4 w-4" />}
               isLoading={processing}
             >
+              <Save className="h-4 w-4 mr-2" />
               Update User
             </Button>
           </CardFooter>

@@ -42,6 +42,7 @@ import {
 import FlashMessages from '@/components/FlashMessage';
 
 interface PageProps {
+    [key: string]: any;
     auth: {
         user: {
             name: string;
@@ -49,6 +50,7 @@ interface PageProps {
             role: {
                 name: string;
             };
+            permissions?: string[];
         };
     };
 }
@@ -79,6 +81,35 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     const [medicalTestsOpen, setMedicalTestsOpen] = useState(false);
 
     const userRole = auth.user.role.name;
+    const userPermissions = auth.user.permissions || [];
+
+    // Debug: Log permissions to console
+    React.useEffect(() => {
+        console.log('🔐 User Permissions Debug:', {
+            role: userRole,
+            totalPermissions: userPermissions.length,
+            permissions: userPermissions,
+            hasWildcard: userPermissions.includes('*')
+        });
+    }, [userRole, userPermissions]);
+
+    // Permission check helper
+    const hasPermission = (permission: string): boolean => {
+        // Super Admin has all permissions (indicated by wildcard)
+        if (userPermissions.includes('*')) return true;
+        const result = userPermissions.includes(permission);
+        // Debug specific permission checks
+        if (!result && typeof window !== 'undefined') {
+            console.log(`❌ Permission denied: ${permission}`);
+        }
+        return result;
+    };
+
+    // Check any permission
+    const hasAnyPermission = (permissions: string[]): boolean => {
+        if (userPermissions.includes('*')) return true;
+        return permissions.some(permission => userPermissions.includes(permission));
+    };
 
     // Role checking helper - Fixed to show only specific role permissions
     const hasRole = (allowedRoles: string[]) => {
@@ -90,21 +121,45 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
         return userRole === 'Super Admin';
     };
 
-    // Dashboard route helper based on role
+    // Dashboard route helper based on permissions (not role)
     const getDashboardRoute = () => {
-        const dashboardRoutes: { [key: string]: string } = {
-            'Receptionist': 'receptionist.dashboard',
-            'Doctor': 'doctor.dashboard',
-            'Refractionist': 'refractionist.dashboard',
-            'Medicine Seller': 'medicine-seller.dashboard',
-            'Optics Seller': 'optics-seller.dashboard',
-            'Super Admin': 'dashboard'
-        };
+        // Permission-based dashboard routing
+        // Priority order: Check Admin first, then specific roles
 
-        return dashboardRoutes[userRole] || 'dashboard';
-    };
+        // 1. Check for Super Admin permission FIRST (wildcard or explicit admin dashboard permission)
+        // Super Admin should ALWAYS go to Admin Dashboard
+        if (hasPermission('admin.dashboard') || userPermissions.includes('*')) {
+            return 'dashboard';
+        }
 
-    // Get current route name
+        // 2. Check for Doctor permissions
+        if (hasPermission('dashboard.doctor')) {
+            return 'doctor.dashboard';
+        }
+
+        // 3. Check for Receptionist permissions
+        if (hasPermission('dashboard.receptionist')) {
+            return 'receptionist.dashboard';
+        }
+
+        // 4. Check for Refractionist permissions
+        if (hasPermission('dashboard.refractionist')) {
+            return 'refractionist.dashboard';
+        }
+
+        // 5. Check for Medicine Seller permissions
+        if (hasPermission('dashboard.medicine-seller')) {
+            return 'medicine-seller.dashboard';
+        }
+
+        // 6. Check for Optics Seller permissions
+        if (hasPermission('dashboard.optics-seller')) {
+            return 'optics-seller.dashboard';
+        }
+
+        // 7. Fallback to default dashboard
+        return 'dashboard';
+    };    // Get current route name
     const currentRouteName = route().current();
 
     // Active route detection helper
@@ -117,6 +172,25 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 currentRouteName === 'refractionist.dashboard' ||
                 currentRouteName === 'medicine-seller.dashboard' ||
                 currentRouteName === 'optics-seller.dashboard';
+        }
+
+        // For patients.index - EXACT match only
+        if (currentPattern === 'patients.index') {
+            return currentRouteName === 'patients.index' ||
+                currentRouteName === 'patients.show' ||
+                currentRouteName === 'patients.edit' ||
+                currentRouteName === 'patients.create';
+        }
+
+        // For visits.* - EXACT match for visit routes
+        if (currentPattern === 'visits.*') {
+            return currentRouteName?.startsWith('visits.') ||
+                window.location.pathname.startsWith('/visits');
+        }
+
+        // For patients.pending-visits - EXACT match only
+        if (currentPattern === 'patients.pending-visits') {
+            return currentRouteName === 'patients.pending-visits';
         }
 
         // For medicine corner routes (Super Admin)
@@ -260,7 +334,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
         });
     };
 
-    // Navigation items with role-based access
+    // Navigation items with permission-based access
     const navigationItems: NavItem[] = [
         {
             name: 'Dashboard',
@@ -269,338 +343,340 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             current: 'dashboard',
             roles: ['Super Admin', 'Doctor', 'Receptionist', 'Refractionist', 'Medicine Seller', 'Optics Seller']
         },
-        {
+        // Patients - Check permission
+        ...(hasPermission('patients.view') ? [{
             name: 'Patients',
             href: route('patients.index'),
             icon: Users,
-            current: 'patients.*',
+            current: 'patients.index',
             roles: ['Super Admin', 'Doctor', 'Receptionist']
-        },
-        {
+        }] : []),
+        // Visits - Check permission
+        ...(hasPermission('visits.view') ? [{
+            name: 'Patient Visits',
+            href: route('visits.index'),
+            icon: Receipt,
+            current: 'visits.*',
+            roles: ['Super Admin', 'Receptionist']
+        }] : []),
+        ...(hasPermission('visits.view') ? [{
             name: 'Pending Visits',
             href: route('patients.pending-visits'),
             icon: LucideWaypoints,
-            current: 'patients.*',
+            current: 'patients.pending-visits',
             roles: ['Super Admin', 'Receptionist']
-        },
+        }] : []),
 
-        // POS System for Medicine Seller
-        {
+        // Medicine Seller - Permission-based
+        ...(hasPermission('medicine-seller.pos') ? [{
             name: 'POS System',
             href: route('medicine-seller.pos'),
             icon: CreditCard,
             current: 'medicine-seller.pos',
             roles: ['Medicine Seller']
-        },
-        // Sales Management for Medicine Seller
-        {
+        }] : []),
+        ...(hasPermission('medicine-seller.sales') ? [{
             name: 'Sales History',
             href: route('medicine-seller.sales'),
             icon: History,
             current: 'medicine-seller.sales',
             roles: ['Medicine Seller']
-        },
-        // My Reports for Medicine Seller
-        {
+        }] : []),
+        ...(hasPermission('medicine-seller.reports') ? [{
             name: 'My Reports',
             href: route('medicine-seller.report'),
             icon: FileBarChart,
             current: 'medicine-seller.report',
             roles: ['Medicine Seller']
-        },
-        // POS System for Optics Seller
-        {
+        }] : []),
+        // Optics Seller - Permission-based
+        ...(hasPermission('optics-seller.pos') ? [{
             name: 'Optics POS',
             href: route('optics-seller.pos'),
             icon: Glasses,
             current: 'optics-seller.pos',
             roles: ['Optics Seller']
-        },
-        // Sales Management for Optics Seller
-        {
+        }] : []),
+        ...(hasPermission('optics-seller.sales') ? [{
             name: 'Optics Sales',
             href: route('optics-seller.sales'),
             icon: ShoppingBag,
             current: 'optics-seller.sales',
             roles: ['Optics Seller']
-        },
-        // My Reports for Optics Seller
-        {
+        }] : []),
+        ...(hasPermission('optics-seller.reports') ? [{
             name: 'Optics Reports',
             href: route('optics-seller.report'),
             icon: BarChart3,
             current: 'optics-seller.report',
             roles: ['Optics Seller']
-        },
-        // Medicine Corner with dropdown (Super Admin only)
-        {
+        }] : []),
+        // Medicine Corner - Permission-based dropdown
+        ...(hasPermission('medicine-corner.view') ? [{
             name: 'Medicine Corner',
             href: '#',
             icon: Pill,
             current: 'medicine.*',
             roles: ['Super Admin'],
             children: [
-                {
+                ...(hasPermission('medicine-corner.stock') ? [{
                     name: 'Stock Management',
                     href: '/medicine-corner/stock',
                     icon: Package,
                     current: 'medicine-corner.stock',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('medicine-corner.view') ? [{
                     name: 'Medicine List',
                     href: '/medicine-corner/medicines',
                     icon: Pill,
                     current: 'medicine-corner.medicines',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('medicine-corner.purchase') ? [{
                     name: 'Purchase Entry',
                     href: '/medicine-corner/purchase',
                     icon: ShoppingCart,
                     current: 'medicine-corner.purchase',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('medicine-corner.sales') ? [{
                     name: 'Sales Management',
                     href: '/medicine-corner/sales',
                     icon: ShoppingBag,
                     current: 'medicine-corner.sales',
                     roles: ['Super Admin']
-                },
-                {
-                    name: 'Vendor Management',
-                    href: route('medicine-vendors.index'),
-                    icon: Building2,
-                    current: 'medicine-vendors.index',
-                    roles: ['Super Admin']
-                },
-                {
-                    name: 'Vendor Dues',
-                    href: route('medicine-vendors.due-report'),
-                    icon: AlertTriangle,
-                    current: 'medicine-vendors.due-report',
-                    roles: ['Super Admin']
-                },
-                {
-                    name: 'Payment History',
-                    href: route('medicine-vendors.payment-history'),
-                    icon: History,
-                    current: 'medicine-vendors.payment-history',
-                    roles: ['Super Admin']
-                },
-                {
-                    name: 'Vendor Analytics',
-                    href: route('medicine-vendors.analytics'),
-                    icon: BarChart3,
-                    current: 'medicine-vendors.analytics',
-                    roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('medicine-corner.vendors') ? [
+                    {
+                        name: 'Vendor Management',
+                        href: route('medicine-vendors.index'),
+                        icon: Building2,
+                        current: 'medicine-vendors.index',
+                        roles: ['Super Admin']
+                    },
+                    {
+                        name: 'Vendor Dues',
+                        href: route('medicine-vendors.due-report'),
+                        icon: AlertTriangle,
+                        current: 'medicine-vendors.due-report',
+                        roles: ['Super Admin']
+                    },
+                    {
+                        name: 'Payment History',
+                        href: route('medicine-vendors.payment-history'),
+                        icon: History,
+                        current: 'medicine-vendors.payment-history',
+                        roles: ['Super Admin']
+                    },
+                    {
+                        name: 'Vendor Analytics',
+                        href: route('medicine-vendors.analytics'),
+                        icon: BarChart3,
+                        current: 'medicine-vendors.analytics',
+                        roles: ['Super Admin']
+                    }
+                ] : []),
+                ...(hasPermission('medicine-corner.reports') ? [{
                     name: 'Reports',
                     href: '/medicine-corner/reports',
                     icon: FileBarChart,
                     current: 'medicine-corner.reports',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('medicine-corner.stock') ? [{
                     name: 'Alerts',
                     href: '/medicine-corner/alerts',
                     icon: AlertTriangle,
                     current: 'medicine-corner.alerts',
                     roles: ['Super Admin']
-                }
-            ]
-        },
+                }] : [])
+            ].filter(child => child)
+        }] : []),
 
-        {
+        ...(hasPermission('optics.view') ? [{
             name: 'Optics Corner',
             href: '#',
             icon: Glasses,
             current: 'optics.*',
             roles: ['Super Admin'],
             children: [
-                {
+                ...(hasPermission('optics.view') ? [{
                     name: 'Dashboard',
                     href: route('optics.dashboard'),
                     icon: Home,
                     current: 'optics.dashboard',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('optics.frames') ? [{
                     name: 'Frames Management',
                     href: route('optics.frames'),
                     icon: Glasses,
                     current: 'optics.frames',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('optics.stock') ? [{
                     name: 'Stock Management',
                     href: route('optics.stock'),
                     icon: Package,
                     current: 'optics.stock',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('optics.purchases') ? [{
                     name: 'Purchase Entry',
                     href: route('optics.purchases'),
                     icon: ShoppingCart,
                     current: 'optics.purchases',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('optics.vendors') ? [{
                     name: 'Vendors Management',
                     href: route('optics.vendors'),
                     icon: Truck,
                     current: 'optics.vendors',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('optics.sales') ? [{
                     name: 'Sales Management',
                     href: route('optics.sales'),
                     icon: ShoppingBag,
                     current: 'optics.sales',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('optics.lens-types') ? [{
                     name: 'Lens Types',
                     href: route('optics.lens-types'),
                     icon: Eye,
                     current: 'optics.lens-types',
                     roles: ['Super Admin']
-                },
-                // {
-                //     name: 'Account',
-                //     href: route('optics.account'),
-                //     icon: DollarSign,
-                //     current: 'optics.account',
-                //     roles: ['Super Admin']
-                // },
-                // {
-                //     name: 'Reports & Analytics',
-                //     href: route('optics.reports'),
-                //     icon: BarChart3,
-                //     current: 'optics.reports',
-                //     roles: ['Super Admin']
-                // }
-            ]
-        },
+                }] : [])
+            ].filter(child => child)
+        }] : []),
 
-        {
+        ...(hasAnyPermission(['medical-tests.view', 'medical-tests.create']) ? [{
             name: 'Medical Tests',
             href: '#',
             icon: Activity,
             current: 'medical-tests.*',
             roles: ['Super Admin', 'Receptionist'],
             children: [
-                {
+                ...(hasPermission('medical-tests.manage-tests') ? [{
                     name: 'Test Management',
                     href: route('medical-tests.tests.index'),
                     icon: Settings,
                     current: 'medical-tests.tests.*',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('medical-tests.create') ? [{
                     name: 'Book Tests',
                     href: route('medical-tests.index'),
                     icon: CalendarDays,
                     current: 'medical-tests.index',
                     roles: ['Super Admin', 'Receptionist']
-                },
-                {
-                    name: 'Daily Reports',
-                    href: route('medical-tests.reports.daily'),
-                    icon: FileBarChart,
-                    current: 'medical-tests.reports.daily',
-                    roles: ['Super Admin']
-                },
-                {
-                    name: 'Monthly Reports',
-                    href: route('medical-tests.reports.monthly'),
-                    icon: BarChart3,
-                    current: 'medical-tests.reports.monthly',
-                    roles: ['Super Admin']
-                },
-                {
-                    name: 'Test-wise Reports',
-                    href: route('medical-tests.reports.test-wise'),
-                    icon: Activity,
-                    current: 'medical-tests.reports.test-wise',
-                    roles: ['Super Admin']
-                }
-            ]
-        },
+                }] : []),
+                ...(hasPermission('medical-tests.reports') ? [
+                    {
+                        name: 'Daily Reports',
+                        href: route('medical-tests.reports.daily'),
+                        icon: FileBarChart,
+                        current: 'medical-tests.reports.daily',
+                        roles: ['Super Admin']
+                    },
+                    {
+                        name: 'Monthly Reports',
+                        href: route('medical-tests.reports.monthly'),
+                        icon: BarChart3,
+                        current: 'medical-tests.reports.monthly',
+                        roles: ['Super Admin']
+                    },
+                    {
+                        name: 'Test-wise Reports',
+                        href: route('medical-tests.reports.test-wise'),
+                        icon: Activity,
+                        current: 'medical-tests.reports.test-wise',
+                        roles: ['Super Admin']
+                    }
+                ] : [])
+            ].filter(child => child)
+        }] : []),
 
-        {
+        ...(hasAnyPermission(['main-account.view', 'hospital-account.view', 'medicine-account.view', 'optics-account.view']) ? [{
             name: 'Account Management',
             href: '#',
             icon: Calculator,
             current: 'account.*',
             roles: ['Super Admin'],
             children: [
-                {
+                ...(hasPermission('main-account.view') ? [{
                     name: 'Main Account',
                     href: route('main-account.index'),
                     icon: DollarSign,
                     current: 'main-account.*',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('hospital-account.view') ? [{
                     name: 'Hospital Account',
                     href: '/hospital-account',
                     icon: Building2,
                     current: 'hospital-account.*',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('medicine-account.view') ? [{
                     name: 'Medicine Account',
                     href: '/medicine-account',
                     icon: Pill,
                     current: 'medicine-account.*',
                     roles: ['Super Admin']
-                },
-                {
+                }] : []),
+                ...(hasPermission('optics-account.view') ? [{
                     name: 'Optics Account',
                     href: '/optics-account',
                     icon: Glasses,
                     current: 'optics-account.*',
                     roles: ['Super Admin']
-                }
-            ]
-        }
-    ];
+                }] : [])
+            ].filter(child => child)
+        }] : [])
+    ].filter(item => item);
 
-    // Admin only navigation
+    // Admin navigation with permission check
     const adminNavigation: NavItem[] = [
-        {
+        ...(hasPermission('roles.view') ? [{
+            name: 'Roles & Permissions',
+            href: route('roles.index'),
+            icon: Shield,
+            current: 'roles.*',
+            roles: ['Super Admin']
+        }] : []),
+        ...(hasPermission('doctors.view') ? [{
             name: 'Doctors',
             href: route('doctors.index'),
             icon: Stethoscope,
             current: 'doctors.*',
             roles: ['Super Admin']
-        },
-        {
+        }] : []),
+        ...(hasPermission('users.view') ? [{
             name: 'Users',
             href: route('users.index'),
             icon: UserPlus,
             current: 'users.*',
             roles: ['Super Admin']
-        },
-        {
+        }] : []),
+        ...(hasPermission('medicines.view') ? [{
             name: 'Medicines',
             href: route('medicines.index'),
             icon: Pill,
             current: 'medicines.*',
             roles: ['Super Admin']
-        },
-        {
+        }] : []),
+        ...(hasPermission('reports.view') ? [{
             name: 'Reports',
             href: route('reports.index'),
             icon: Proportions,
             current: 'reports.*',
             roles: ['Super Admin']
-        }
-    ];
+        }] : [])
+    ].filter(item => item);
 
     const toggleSidebar = () => {
         setSidebarOpen(!sidebarOpen);
@@ -709,15 +785,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                         </p>
                         <nav className="space-y-1">
                             {navigationItems.map((item) => {
-                                // For Super Admin, check if they should see this item
-                                if (userRole === 'Super Admin' && !item.roles.includes('Super Admin')) {
-                                    return null;
-                                }
-
-                                // For other roles, use hasRole
-                                if (userRole !== 'Super Admin' && !hasRole(item.roles)) {
-                                    return null;
-                                }
+                                // Skip items without permission - REMOVED role check
+                                // Navigation is now purely permission-based
 
                                 const Icon = item.icon;
                                 const isActive = isRouteActive(item.current);
@@ -900,10 +969,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                             <div className={`mt-1 space-y-1 transition-all duration-200 overflow-hidden ${medicalTestsOpen || anyChildActive ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                                                 }`}>
                                                 {item.children?.map((childItem) => {
-                                                    // Filter children based on role
-                                                    if (!hasRole(childItem.roles)) {
-                                                        return null;
-                                                    }
+                                                    // No role filtering here - permission check already done at parent level
 
                                                     const ChildIcon = childItem.icon;
                                                     const isChildActive = currentRouteName === childItem.current ||
@@ -961,12 +1027,12 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
 
                                                     // Special handling for main-account routes
                                                     if (childItem.current === 'main-account.*') {
-                                                        isChildActive = currentRouteName?.startsWith('main-account') ||
-                                                            window.location.pathname.startsWith('/main-account');
+                                                        isChildActive = !!(currentRouteName?.startsWith('main-account') ||
+                                                            window.location.pathname.startsWith('/main-account'));
                                                     } else {
                                                         // For other account routes
-                                                        isChildActive = window.location.pathname.startsWith(childItem.href) ||
-                                                            currentRouteName?.startsWith(childItem.current.replace('.*', ''));
+                                                        isChildActive = !!(childItem.href && window.location.pathname.startsWith(childItem.href)) ||
+                                                            !!(currentRouteName?.startsWith(childItem.current.replace('.*', '')));
                                                     }
 
                                                     return (
@@ -1046,25 +1112,32 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 {/* Quick Actions */}
                 <div className="border-t border-gray-200 p-4 bg-gray-50">
                     <div className="space-y-2">
+                        {/* Receptionist Quick Actions */}
                         {userRole === 'Receptionist' && (
                             <>
-                                <Link
-                                    href={route('patients.create')}
-                                    className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-sm"
-                                >
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Add Patient
-                                </Link>
-                                <Link
-                                    href={route('medical-tests.create')}
-                                    className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white text-sm font-medium rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all duration-200 shadow-sm"
-                                >
-                                    <Activity className="h-4 w-4 mr-2" />
-                                    Book Test
-                                </Link>
+                                {hasPermission('patients.create') && (
+                                    <Link
+                                        href={route('patients.create')}
+                                        className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-sm"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Patient
+                                    </Link>
+                                )}
+                                {hasPermission('medical-tests.create') && (
+                                    <Link
+                                        href={route('medical-tests.create')}
+                                        className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-teal-600 to-teal-700 text-white text-sm font-medium rounded-lg hover:from-teal-700 hover:to-teal-800 transition-all duration-200 shadow-sm"
+                                    >
+                                        <Activity className="h-4 w-4 mr-2" />
+                                        Book Test
+                                    </Link>
+                                )}
                             </>
                         )}
-                        {userRole === 'Doctor' && (
+
+                        {/* Doctor Quick Actions */}
+                        {userRole === 'Doctor' && hasPermission('prescriptions.create') && (
                             <Link
                                 href={route('patients.index')}
                                 className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-sm"
@@ -1073,7 +1146,9 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 New Prescription
                             </Link>
                         )}
-                        {userRole === 'Refractionist' && (
+
+                        {/* Refractionist Quick Actions */}
+                        {userRole === 'Refractionist' && hasPermission('vision-tests.create') && (
                             <Link
                                 href={route('patients.index')}
                                 className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-orange-600 to-orange-700 text-white text-sm font-medium rounded-lg hover:from-orange-700 hover:to-orange-800 transition-all duration-200 shadow-sm"
@@ -1082,7 +1157,9 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 Vision Test
                             </Link>
                         )}
-                        {userRole === 'Medicine Seller' && (
+
+                        {/* Medicine Seller Quick Actions */}
+                        {userRole === 'Medicine Seller' && hasPermission('medicine-seller.pos') && (
                             <Link
                                 href={route('medicine-seller.pos')}
                                 className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm font-medium rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all duration-200 shadow-sm"
@@ -1091,7 +1168,9 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 Quick Sale
                             </Link>
                         )}
-                        {userRole === 'Optics Seller' && (
+
+                        {/* Optics Seller Quick Actions */}
+                        {userRole === 'Optics Seller' && hasPermission('optics-seller.pos') && (
                             <Link
                                 href={route('optics-seller.pos')}
                                 className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-sm"
@@ -1100,32 +1179,29 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 Optics Sale
                             </Link>
                         )}
+
+                        {/* Super Admin Quick Actions - Limited to most important */}
                         {userRole === 'Super Admin' && (
-                            <div className="space-y-2">
-                                <Link
-                                    href="/medicine-corner/purchase"
-                                    className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm font-medium rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all duration-200 shadow-sm"
-                                >
-                                    <ShoppingCart className="h-4 w-4 mr-2" />
-                                    Medicine Purchase
-                                </Link>
-
-                                <Link
-                                    href={route('medicine-vendors.index')}
-                                    className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-sm"
-                                >
-                                    <Building2 className="h-4 w-4 mr-2" />
-                                    Manage Vendors
-                                </Link>
-
-                                <Link
-                                    href="/optics/frames/create"
-                                    className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-sm"
-                                >
-                                    <Glasses className="h-4 w-4 mr-2" />
-                                    Add Frame
-                                </Link>
-                            </div>
+                            <>
+                                {hasPermission('patients.create') && (
+                                    <Link
+                                        href={route('patients.create')}
+                                        className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-medium rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-sm"
+                                    >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Add Patient
+                                    </Link>
+                                )}
+                                {hasPermission('users.create') && (
+                                    <Link
+                                        href={route('users.create')}
+                                        className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-sm font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-sm"
+                                    >
+                                        <UserPlus className="h-4 w-4 mr-2" />
+                                        Add User
+                                    </Link>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>

@@ -73,12 +73,24 @@ interface UsersIndexProps {
         total: number;
     };
     roles: Role[];
+    filters?: {
+        search?: string;
+        role_id?: string;
+        is_active?: string;
+    };
+    can: {
+        create: boolean;
+        edit: boolean;
+        delete: boolean;
+        view: boolean;
+        manage_permissions: boolean;
+    };
 }
 
-export default function UsersIndex({ users, roles }: UsersIndexProps) {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [roleFilter, setRoleFilter] = useState('all');
-    const [statusFilter, setStatusFilter] = useState('all');
+export default function UsersIndex({ users, roles, filters, can }: UsersIndexProps) {
+    const [searchTerm, setSearchTerm] = useState(filters?.search || '');
+    const [roleFilter, setRoleFilter] = useState(filters?.role_id || 'all');
+    const [statusFilter, setStatusFilter] = useState(filters?.is_active || 'all');
     const { auth } = usePage().props as any;
 
     const handleSearch = (e: React.FormEvent) => {
@@ -108,16 +120,15 @@ export default function UsersIndex({ users, roles }: UsersIndexProps) {
         }, { preserveState: true });
     };
 
-    const toggleUserStatus = (id: number, currentStatus: boolean) => {
-        router.put(route('users.update', id), {
-            is_active: !currentStatus,
-            _method: 'PUT'
-        }, {
-            onSuccess: () => {
-                // Status will be updated automatically
-            },
-            preserveState: true
-        });
+    const toggleUserStatus = (userId: number) => {
+        if (confirm('Are you sure you want to change this user status?')) {
+            router.patch(route('users.toggle-status', userId), {}, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Status will be updated automatically
+                }
+            });
+        }
     };
 
     const deleteUser = (id: number) => {
@@ -184,13 +195,15 @@ export default function UsersIndex({ users, roles }: UsersIndexProps) {
                             Manage system users, roles, and permissions
                         </p>
                     </div>
-                    <Button
-                        href={route('users.create')}
-                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                    >
-                        <UserPlus className="h-4 w-4 mr-2" />
-                        Add New User
-                    </Button>
+                    {can.create && (
+                        <Button
+                            href={route('users.create')}
+                            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                        >
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Add New User
+                        </Button>
+                    )}
                 </div>
 
                 {/* Stats Cards */}
@@ -401,41 +414,49 @@ export default function UsersIndex({ users, roles }: UsersIndexProps) {
                                                         <DropdownMenuContent align="end" className="w-48">
                                                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                                             <DropdownMenuSeparator />
-                                                            <DropdownMenuItem asChild>
-                                                                <Link href={route('users.show', user.id)} className="flex items-center">
-                                                                    <Eye className="h-4 w-4 mr-2" />
-                                                                    View Details
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem asChild>
-                                                                <Link href={route('users.edit', user.id)} className="flex items-center">
-                                                                    <Edit className="h-4 w-4 mr-2" />
-                                                                    Edit User
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuSeparator />
-                                                            <DropdownMenuItem
-                                                                onClick={() => toggleUserStatus(user.id, user.is_active)}
-                                                                className={`flex items-center ${user.is_active ? 'text-red-600' : 'text-green-600'}`}
-                                                            >
-                                                                {user.is_active ? (
-                                                                    <>
-                                                                        <XIcon className="h-4 w-4 mr-2" />
-                                                                        Disable User
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <Check className="h-4 w-4 mr-2" />
-                                                                        Enable User
-                                                                    </>
-                                                                )}
-                                                            </DropdownMenuItem>
-                                                            {auth.user.id !== user.id && (
+                                                            {can.view && (
+                                                                <DropdownMenuItem asChild>
+                                                                    <Link href={route('users.show', user.id)} className="flex items-center cursor-pointer">
+                                                                        <Eye className="h-4 w-4 mr-2" />
+                                                                        View Details
+                                                                    </Link>
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {can.edit && (
+                                                                <DropdownMenuItem asChild>
+                                                                    <Link href={route('users.edit', user.id)} className="flex items-center cursor-pointer">
+                                                                        <Edit className="h-4 w-4 mr-2" />
+                                                                        Edit User
+                                                                    </Link>
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                            {can.edit && (
+                                                                <>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => toggleUserStatus(user.id)}
+                                                                        className={`flex items-center cursor-pointer ${user.is_active ? 'text-red-600' : 'text-green-600'}`}
+                                                                    >
+                                                                        {user.is_active ? (
+                                                                            <>
+                                                                                <XIcon className="h-4 w-4 mr-2" />
+                                                                                Deactivate User
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Check className="h-4 w-4 mr-2" />
+                                                                                Activate User
+                                                                            </>
+                                                                        )}
+                                                                    </DropdownMenuItem>
+                                                                </>
+                                                            )}
+                                                            {can.delete && auth.user.id !== user.id && (
                                                                 <>
                                                                     <DropdownMenuSeparator />
                                                                     <DropdownMenuItem
                                                                         onClick={() => deleteUser(user.id)}
-                                                                        className="text-red-600 flex items-center"
+                                                                        className="text-red-600 flex items-center cursor-pointer"
                                                                     >
                                                                         <Trash2 className="h-4 w-4 mr-2" />
                                                                         Delete User
@@ -456,13 +477,15 @@ export default function UsersIndex({ users, roles }: UsersIndexProps) {
                                     <p className="text-sm text-gray-500 mb-4">
                                         No users match your current search criteria. Try adjusting your filters or search terms.
                                     </p>
-                                    <Button
-                                        href={route('users.create')}
-                                        className="bg-blue-600 hover:bg-blue-700"
-                                    >
-                                        <UserPlus className="h-4 w-4 mr-2" />
-                                        Add First User
-                                    </Button>
+                                    {can.create && (
+                                        <Button
+                                            href={route('users.create')}
+                                            className="bg-blue-600 hover:bg-blue-700"
+                                        >
+                                            <UserPlus className="h-4 w-4 mr-2" />
+                                            Add First User
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </div>

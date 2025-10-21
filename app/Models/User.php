@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -160,5 +161,129 @@ class User extends Authenticatable
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);
+    }
+
+    /**
+     * Get the permissions assigned directly to this user.
+     */
+    public function permissions(): BelongsToMany
+    {
+        return $this->belongsToMany(Permission::class, 'user_permission')
+            ->withPivot('granted')
+            ->withTimestamps();
+    }
+
+    /**
+     * Alias for permissions() - for backward compatibility
+     */
+    public function userPermissions(): BelongsToMany
+    {
+        return $this->permissions();
+    }
+
+    /**
+     * Check if user has a specific permission.
+     * Checks both role permissions and direct user permissions.
+     */
+    public function hasPermission(string $permission): bool
+    {
+        // Check direct user permission (override)
+        $userPermission = $this->permissions()
+            ->where('name', $permission)
+            ->first();
+
+        if ($userPermission) {
+            return $userPermission->pivot->granted;
+        }
+
+        // Check role permission
+        return $this->role && $this->role->hasPermission($permission);
+    }
+
+    /**
+     * Check if user has any of the given permissions.
+     */
+    public function hasAnyPermission(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if ($this->hasPermission($permission)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Check if user has all of the given permissions.
+     */
+    public function hasAllPermissions(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if (!$this->hasPermission($permission)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Grant a permission directly to this user.
+     */
+    public function givePermissionTo(string|Permission $permission): void
+    {
+        if (is_string($permission)) {
+            $permission = Permission::where('name', $permission)->firstOrFail();
+        }
+
+        $this->permissions()->syncWithoutDetaching([
+            $permission->id => ['granted' => true]
+        ]);
+    }
+
+    /**
+     * Revoke a permission directly from this user.
+     */
+    public function revokePermissionTo(string|Permission $permission): void
+    {
+        if (is_string($permission)) {
+            $permission = Permission::where('name', $permission)->firstOrFail();
+        }
+
+        $this->permissions()->syncWithoutDetaching([
+            $permission->id => ['granted' => false]
+        ]);
+    }
+
+    /**
+     * Get all permissions for the user (role + user-specific).
+     */
+    public function getAllPermissions(): array
+    {
+        // Check for wildcard permission
+        $wildcardPerm = $this->permissions()
+            ->where('name', '*')
+            ->wherePivot('granted', true)
+            ->first();
+
+        if ($wildcardPerm) {
+            return ['*'];
+        }
+
+        // Get role permissions
+        $rolePermissions = [];
+        if ($this->role) {
+            $rolePermissions = $this->role->permissions()
+                ->pluck('name')
+                ->toArray();
+        }
+
+        // Get user-specific granted permissions
+        $userPermissions = $this->permissions()
+            ->wherePivot('granted', true)
+            ->pluck('name')
+            ->toArray();
+
+        // Merge and deduplicate
+        return array_values(array_unique(array_merge($rolePermissions, $userPermissions)));
     }
 }

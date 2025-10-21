@@ -75,7 +75,17 @@ interface DashboardProps {
         recentPayments: Array<any>;
     };
     periodReports: {
-        hospital: { income: number | string; expense: number | string; profit: number | string; balance: number | string; incomeGrowth?: number };
+        hospital: {
+            income: number | string;
+            opdIncome: number | string;
+            medicalTestIncome: number | string;
+            expense: number | string;
+            profit: number | string;
+            balance: number | string;
+            incomeGrowth?: number;
+            opdIncomeGrowth?: number;
+            medicalTestIncomeGrowth?: number;
+        };
         medicine: { income: number | string; expense: number | string; profit: number | string; balance: number | string };
         optics: { income: number | string; expense: number | string; profit: number | string; balance: number | string };
     };
@@ -432,13 +442,44 @@ export default function AdminDashboard({
                                 )}
                             </h3>
                             <div className="space-y-3">
-                                <div className="flex justify-between">
-                                    <span className="text-gray-600">Income</span>
-                                    <span className="font-medium text-green-600">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600">Total Income</span>
+                                    <span className="font-semibold text-green-600">
                                         +{formatCurrency(periodReports.hospital.income)}
                                     </span>
                                 </div>
-                                <div className="flex justify-between">
+
+                                {/* OPD Income */}
+                                <div className="flex justify-between items-center pl-4 border-l-2 border-blue-200">
+                                    <div className="flex flex-col">
+                                        <span className="text-sm text-gray-500">OPD Income</span>
+                                        {periodReports.hospital.opdIncomeGrowth !== undefined && (
+                                            <span className={`text-xs ${periodReports.hospital.opdIncomeGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {periodReports.hospital.opdIncomeGrowth >= 0 ? '↑' : '↓'} {Math.abs(periodReports.hospital.opdIncomeGrowth)}%
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className="font-medium text-green-600 text-sm">
+                                        +{formatCurrency(periodReports.hospital.opdIncome)}
+                                    </span>
+                                </div>
+
+                                {/* Medical Test Income */}
+                                <div className="flex justify-between items-center pl-4 border-l-2 border-purple-200">
+                                    <div className="flex flex-col">
+                                        <span className="text-sm text-gray-500">Medical Test</span>
+                                        {periodReports.hospital.medicalTestIncomeGrowth !== undefined && (
+                                            <span className={`text-xs ${periodReports.hospital.medicalTestIncomeGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {periodReports.hospital.medicalTestIncomeGrowth >= 0 ? '↑' : '↓'} {Math.abs(periodReports.hospital.medicalTestIncomeGrowth)}%
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span className="font-medium text-green-600 text-sm">
+                                        +{formatCurrency(periodReports.hospital.medicalTestIncome)}
+                                    </span>
+                                </div>
+
+                                <div className="flex justify-between pt-2 border-t">
                                     <span className="text-gray-600">Expense</span>
                                     <span className="font-medium text-red-600">
                                         -{formatCurrency(periodReports.hospital.expense)}
