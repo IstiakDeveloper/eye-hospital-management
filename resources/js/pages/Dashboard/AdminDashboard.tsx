@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
-import AuthenticatedLayout from '@/layouts/admin-layout';
+import AdminLayout from '@/layouts/admin-layout';
 import {
     Wallet,
     Users,
@@ -23,7 +23,8 @@ import {
     FileText,
     CreditCard,
     Filter,
-    CalendarDays
+    CalendarDays,
+    Scissors
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -32,6 +33,7 @@ interface DashboardProps {
         hospital: { balance: number | string; currency: string; lastUpdated: string };
         medicine: { balance: number | string; currency: string; lastUpdated: string };
         optics: { balance: number | string; currency: string; lastUpdated: string };
+        operation: { balance: number | string; currency: string; lastUpdated: string };
         total: number | string;
     };
     hospitalOverview: {
@@ -88,6 +90,7 @@ interface DashboardProps {
         };
         medicine: { income: number | string; expense: number | string; profit: number | string; balance: number | string };
         optics: { income: number | string; expense: number | string; profit: number | string; balance: number | string };
+        operation: { income: number | string; expense: number | string; profit: number | string; balance: number | string };
     };
     dateRange: {
         start: string;
@@ -127,7 +130,7 @@ const StatCard = ({
     trend?: { value: number; isPositive: boolean } | null;
     subtitle?: string | null;
 }) => {
-    const colorClasses = {
+    const colorClasses: Record<string, string> = {
         blue: 'bg-blue-50 text-blue-600 border-blue-200',
         green: 'bg-green-50 text-green-600 border-green-200',
         yellow: 'bg-yellow-50 text-yellow-600 border-yellow-200',
@@ -142,7 +145,7 @@ const StatCard = ({
                 <div className="flex-1">
                     <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
                     <div className="flex items-center gap-2">
-                        <p className="text-2xl font-bold text-gray-900">{value}</p>
+                        <p className="text-xl font-bold text-gray-900">{value}</p>
                         {trend && (
                             <span className={`flex items-center text-xs px-2 py-1 rounded-full ${trend.isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                 }`}>
@@ -355,36 +358,26 @@ export default function AdminDashboard({
     const getTotalIncome = () => {
         return parseAmount(periodReports.hospital.income) +
             parseAmount(periodReports.medicine.income) +
-            parseAmount(periodReports.optics.income);
+            parseAmount(periodReports.optics.income) +
+            parseAmount(periodReports.operation.income);
     };
 
     const getTotalExpense = () => {
         return parseAmount(periodReports.hospital.expense) +
             parseAmount(periodReports.medicine.expense) +
-            parseAmount(periodReports.optics.expense);
+            parseAmount(periodReports.optics.expense) +
+            parseAmount(periodReports.operation.expense);
     };
 
     const getTotalProfit = () => {
         return parseAmount(periodReports.hospital.profit) +
             parseAmount(periodReports.medicine.profit) +
-            parseAmount(periodReports.optics.profit);
+            parseAmount(periodReports.optics.profit) +
+            parseAmount(periodReports.operation.profit);
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <div className="flex justify-between items-center">
-                    <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                        Super Admin Dashboard
-                    </h2>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Clock className="w-4 h-4" />
-                        Last updated: {new Date().toLocaleString()}
-                    </div>
-                </div>
-            }
-        >
+        <AdminLayout title="Super Admin Dashboard">
             <Head title="Super Admin Dashboard" />
 
             <div className="py-6">
@@ -397,7 +390,7 @@ export default function AdminDashboard({
                     />
 
                     {/* Account Balances Section */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                         <StatCard
                             title="Hospital Account"
                             value={formatCurrency(accountBalances.hospital.balance)}
@@ -420,16 +413,23 @@ export default function AdminDashboard({
                             subtitle="Optical shop funds"
                         />
                         <StatCard
+                            title="Operation Account"
+                            value={formatCurrency(accountBalances.operation.balance)}
+                            icon={Activity}
+                            color="purple"
+                            subtitle="Surgery funds"
+                        />
+                        <StatCard
                             title="Total Balance"
                             value={formatCurrency(accountBalances.total)}
                             icon={Wallet}
-                            color="purple"
+                            color="indigo"
                             subtitle="Combined balance"
                         />
                     </div>
 
                     {/* Period Reports */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div className="bg-white rounded-lg border shadow-sm p-6">
                             <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                                 <Eye className="w-5 h-5 text-blue-600" />
@@ -543,6 +543,33 @@ export default function AdminDashboard({
                                     <span className="font-semibold text-gray-900">Profit</span>
                                     <span className={`font-bold ${parseAmount(periodReports.optics.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                         {formatCurrency(periodReports.optics.profit)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-lg border shadow-sm p-6">
+                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                <Activity className="w-5 h-5 text-purple-600" />
+                                Operation - Selected Period
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Income</span>
+                                    <span className="font-medium text-green-600">
+                                        +{formatCurrency(periodReports.operation.income)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Expense</span>
+                                    <span className="font-medium text-red-600">
+                                        -{formatCurrency(periodReports.operation.expense)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between border-t pt-2">
+                                    <span className="font-semibold text-gray-900">Profit</span>
+                                    <span className={`font-bold ${parseAmount(periodReports.operation.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {formatCurrency(periodReports.operation.profit)}
                                     </span>
                                 </div>
                             </div>
@@ -922,43 +949,46 @@ export default function AdminDashboard({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             <div className="text-center">
-                                <div className="text-2xl font-bold text-blue-600 mb-2">
+                                <div className="text-xl font-bold text-blue-600 mb-2">
                                     {formatCurrency(getTotalIncome())}
                                 </div>
                                 <div className="text-sm text-gray-600">Total Income</div>
                                 <div className="text-xs text-gray-500 mt-1">
                                     H: {formatCurrency(periodReports.hospital.income)} |
                                     M: {formatCurrency(periodReports.medicine.income)} |
-                                    O: {formatCurrency(periodReports.optics.income)}
+                                    O: {formatCurrency(periodReports.optics.income)} |
+                                    Op: {formatCurrency(periodReports.operation.income)}
                                 </div>
                             </div>
 
                             <div className="text-center">
-                                <div className="text-2xl font-bold text-red-600 mb-2">
+                                <div className="text-xl font-bold text-red-600 mb-2">
                                     {formatCurrency(getTotalExpense())}
                                 </div>
                                 <div className="text-sm text-gray-600">Total Expense</div>
                                 <div className="text-xs text-gray-500 mt-1">
                                     H: {formatCurrency(periodReports.hospital.expense)} |
                                     M: {formatCurrency(periodReports.medicine.expense)} |
-                                    O: {formatCurrency(periodReports.optics.expense)}
+                                    O: {formatCurrency(periodReports.optics.expense)} |
+                                    Op: {formatCurrency(periodReports.operation.expense)}
                                 </div>
                             </div>
 
                             <div className="text-center">
-                                <div className={`text-2xl font-bold mb-2 ${getTotalProfit() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                <div className={`text-xl font-bold mb-2 ${getTotalProfit() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     {formatCurrency(getTotalProfit())}
                                 </div>
                                 <div className="text-sm text-gray-600">Total Profit</div>
                                 <div className="text-xs text-gray-500 mt-1">
                                     H: {formatCurrency(periodReports.hospital.profit)} |
                                     M: {formatCurrency(periodReports.medicine.profit)} |
-                                    O: {formatCurrency(periodReports.optics.profit)}
+                                    O: {formatCurrency(periodReports.optics.profit)} |
+                                    Op: {formatCurrency(periodReports.operation.profit)}
                                 </div>
                             </div>
 
                             <div className="text-center">
-                                <div className="text-2xl font-bold text-purple-600 mb-2">
+                                <div className="text-xl font-bold text-purple-600 mb-2">
                                     {(hospitalOverview.patients.total || 0) + (hospitalOverview.visits.total || 0) + (hospitalOverview.prescriptions.total || 0)}
                                 </div>
                                 <div className="text-sm text-gray-600">Total Activities</div>
@@ -978,31 +1008,46 @@ export default function AdminDashboard({
                             Quick Actions
                         </h3>
 
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <button className="flex items-center justify-center gap-2 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 text-blue-700 transition-colors">
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <button
+                                onClick={() => router.visit('/patients')}
+                                className="flex items-center justify-center gap-2 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 text-blue-700 transition-colors">
                                 <Users className="w-5 h-5" />
-                                <span className="text-sm font-medium">View Patients</span>
+                                <span className="text-sm font-medium">Patients</span>
                             </button>
 
-                            <button className="flex items-center justify-center gap-2 p-4 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 text-green-700 transition-colors">
+                            <button
+                                onClick={() => router.visit('/medicine-account')}
+                                className="flex items-center justify-center gap-2 p-4 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 text-green-700 transition-colors">
                                 <Pill className="w-5 h-5" />
-                                <span className="text-sm font-medium">Medicine Stock</span>
+                                <span className="text-sm font-medium">Medicine</span>
                             </button>
 
-                            <button className="flex items-center justify-center gap-2 p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg border border-yellow-200 text-yellow-700 transition-colors">
+                            <button
+                                onClick={() => router.visit('/optics-account')}
+                                className="flex items-center justify-center gap-2 p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg border border-yellow-200 text-yellow-700 transition-colors">
                                 <Glasses className="w-5 h-5" />
-                                <span className="text-sm font-medium">Optics Stock</span>
+                                <span className="text-sm font-medium">Optics</span>
                             </button>
 
-                            <button className="flex items-center justify-center gap-2 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 text-purple-700 transition-colors">
-                                <FileText className="w-5 h-5" />
-                                <span className="text-sm font-medium">Reports</span>
+                            <button
+                                onClick={() => router.visit('/operation-account')}
+                                className="flex items-center justify-center gap-2 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 text-purple-700 transition-colors">
+                                <Scissors className="w-5 h-5" />
+                                <span className="text-sm font-medium">Operations</span>
+                            </button>
+
+                            <button
+                                onClick={() => router.visit('/main-account')}
+                                className="flex items-center justify-center gap-2 p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 text-indigo-700 transition-colors">
+                                <Wallet className="w-5 h-5" />
+                                <span className="text-sm font-medium">Main Account</span>
                             </button>
                         </div>
                     </div>
 
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </AdminLayout>
     );
 }

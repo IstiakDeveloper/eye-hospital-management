@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
 import {
     ArrowLeft,
@@ -10,7 +10,8 @@ import {
     Package,
     Printer,
     Eye,
-    X
+    X,
+    CreditCard
 } from 'lucide-react';
 
 interface SaleItem {
@@ -60,6 +61,12 @@ interface SaleDetailsProps {
 
 export default function SaleDetails({ sale }: SaleDetailsProps) {
     const [showPrintView, setShowPrintView] = useState(false);
+    const [printWithoutDiscount, setPrintWithoutDiscount] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+    const { data, setData, put, processing, errors, reset } = useForm({
+        paid_amount: 0, // Start with 0, will be set to due amount when modal opens
+    });
 
     const formatCurrency = (amount: number) => {
         const formatted = new Intl.NumberFormat('en-US', {
@@ -86,7 +93,176 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
         }
     };
 
-    // Printable Invoice Component
+    const handlePaymentSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        put(route('medicine-seller.update-payment', sale.id), {
+            onSuccess: () => {
+                setShowPaymentModal(false);
+                reset();
+            },
+        });
+    };
+
+    // Payment Modal Component
+    const PaymentModal = () => {
+        if (!showPaymentModal) return null;
+
+        const remainingDue = sale.due_amount || (sale.total_amount - sale.paid_amount);
+        const maxPayment = sale.total_amount;
+        const currentPaidAmount = Number(data.paid_amount) || 0;
+        const collectingAmount = Math.max(0, currentPaidAmount - sale.paid_amount);
+        const remainingAfterPayment = Math.max(0, sale.total_amount - currentPaidAmount);
+
+        return (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+                    <div className="p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-semibold text-gray-900">Collect Payment</h2>
+                            <button
+                                onClick={() => {
+                                    setShowPaymentModal(false);
+                                    setData('paid_amount', sale.paid_amount);
+                                }}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handlePaymentSubmit}>
+                            {/* Invoice Info */}
+                            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Invoice:</span>
+                                        <span className="font-medium text-gray-900">{sale.invoice_number}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Total Amount:</span>
+                                        <span className="font-medium text-gray-900">{formatCurrency(sale.total_amount)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Already Paid:</span>
+                                        <span className="font-medium text-green-600">{formatCurrency(sale.paid_amount)}</span>
+                                    </div>
+                                    <div className="flex justify-between pt-2 border-t border-gray-200">
+                                        <span className="text-gray-900 font-semibold">Due Amount:</span>
+                                        <span className="font-bold text-red-600">{formatCurrency(remainingDue)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Payment Input */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    New Paid Amount <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">৳</span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min={sale.paid_amount}
+                                        max={maxPayment}
+                                        value={currentPaidAmount || ''}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            if (value === '') {
+                                                setData('paid_amount', sale.paid_amount);
+                                            } else {
+                                                const numValue = parseFloat(value);
+                                                if (!isNaN(numValue)) {
+                                                    setData('paid_amount', numValue);
+                                                }
+                                            }
+                                        }}
+                                        className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                                        placeholder={`Enter amount (min: ${formatCurrency(sale.paid_amount)})`}
+                                        required
+                                    />
+                                </div>
+                                {errors.paid_amount && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.paid_amount}</p>
+                                )}
+                                <div className="mt-2 p-2 bg-blue-50 rounded text-xs space-y-1">
+                                    <div className="flex justify-between">
+                                        <span className="text-blue-700">Collecting Now:</span>
+                                        <span className="font-semibold text-blue-900">{formatCurrency(collectingAmount)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-blue-700">Will Remain Due:</span>
+                                        <span className="font-semibold text-blue-900">{formatCurrency(remainingAfterPayment)}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Quick Amount Buttons */}
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Quick Select:</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setData('paid_amount', Math.round((sale.paid_amount + remainingDue / 2) * 100) / 100)}
+                                        className="px-3 py-2 text-xs font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        Half Due
+                                        <div className="text-[10px] text-gray-500 mt-0.5">
+                                            +{formatCurrency(remainingDue / 2)}
+                                        </div>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setData('paid_amount', sale.total_amount)}
+                                        className="px-3 py-2 text-xs font-medium border border-green-300 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"
+                                    >
+                                        Full Payment
+                                        <div className="text-[10px] text-green-600 mt-0.5">
+                                            +{formatCurrency(remainingDue)}
+                                        </div>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setData('paid_amount', sale.paid_amount)}
+                                        className="px-3 py-2 text-xs font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        Reset
+                                        <div className="text-[10px] text-gray-500 mt-0.5">
+                                            No change
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowPaymentModal(false);
+                                        setData('paid_amount', sale.paid_amount);
+                                    }}
+                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                    disabled={processing}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={processing || currentPaidAmount <= sale.paid_amount || currentPaidAmount > sale.total_amount}
+                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    <CreditCard className="w-4 h-4" />
+                                    {processing ? 'Processing...' : 'Collect Payment'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        );
+    };    // Printable Invoice Component
     const PrintableInvoice = () => {
         const companyInfo = {
             name: "Eye Hospital Pharmacy",
@@ -100,8 +276,15 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
             window.print();
         };
 
+        // Calculate discount to show based on checkbox
+        const discountToShow = printWithoutDiscount ? 0 : (Number(sale.discount) || 0);
+        // If hiding discount, recalculate total without discount
+        const totalToShow = printWithoutDiscount
+            ? (Number(sale.subtotal) || 0) + (Number(sale.tax) || 0)
+            : (Number(sale.total_amount) || 0);
+
         return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto">
                     <div className="p-6">
                         {/* Print Styles */}
@@ -156,7 +339,17 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                         {/* Print/Close Buttons - Hidden in print */}
                         <div className="no-print mb-4 flex justify-between items-center border-b pb-4">
                             <h2 className="text-lg font-semibold">Invoice Preview</h2>
-                            <div className="flex gap-2">
+                            <div className="flex items-center gap-3">
+                                <label className="flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={printWithoutDiscount}
+                                        onChange={(e) => setPrintWithoutDiscount(e.target.checked)}
+                                        className="w-4 h-4"
+                                    />
+                                    Print without discount
+                                </label>
+
                                 <button
                                     onClick={handlePrint}
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -403,7 +596,7 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                             <span>{formatCurrency(sale.subtotal)}</span>
                                         </div>
 
-                                        {sale.discount > 0 && (
+                                        {discountToShow > 0 && (
                                             <div style={{
                                                 display: 'flex',
                                                 justifyContent: 'space-between',
@@ -411,7 +604,7 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                                 marginBottom: '4px'
                                             }}>
                                                 <span>Discount:</span>
-                                                <span>-{formatCurrency(sale.discount)}</span>
+                                                <span>-{formatCurrency(discountToShow)}</span>
                                             </div>
                                         )}
 
@@ -439,50 +632,8 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                                 fontWeight: 'bold'
                                             }}>
                                                 <span>Total Amount:</span>
-                                                <span>{formatCurrency(sale.total_amount)}</span>
+                                                <span>{formatCurrency(totalToShow)}</span>
                                             </div>
-                                        </div>
-
-                                        <div style={{
-                                            marginTop: '8px',
-                                            paddingTop: '8px',
-                                            borderTop: '1px solid #ccc'
-                                        }}>
-                                            <div style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                fontSize: '12px',
-                                                marginBottom: '4px'
-                                            }}>
-                                                <span>Paid Amount:</span>
-                                                <span>{formatCurrency(sale.paid_amount)}</span>
-                                            </div>
-
-                                            {sale.due_amount > 0 && (
-                                                <div style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    fontSize: '12px',
-                                                    fontWeight: 'bold',
-                                                    color: 'red'
-                                                }}>
-                                                    <span>Due Amount:</span>
-                                                    <span>{formatCurrency(sale.due_amount)}</span>
-                                                </div>
-                                            )}
-
-                                            {sale.paid_amount > sale.total_amount && (
-                                                <div style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    fontSize: '12px',
-                                                    fontWeight: 'bold',
-                                                    color: 'green'
-                                                }}>
-                                                    <span>Change:</span>
-                                                    <span>{formatCurrency(sale.paid_amount - sale.total_amount)}</span>
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -520,26 +671,6 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                     </p>
                                 </div>
                             </div>
-
-                            {/* Due Amount Warning */}
-                            {sale.due_amount > 0 && (
-                                <div style={{
-                                    marginTop: '16px',
-                                    padding: '12px',
-                                    backgroundColor: '#ffebee',
-                                    border: '1px solid #f44336',
-                                    borderRadius: '4px'
-                                }}>
-                                    <p style={{
-                                        fontSize: '12px',
-                                        color: '#d32f2f',
-                                        fontWeight: 'bold',
-                                        margin: '0'
-                                    }}>
-                                        ⚠️ Due Amount: {formatCurrency(sale.due_amount)} - Please clear the due amount.
-                                    </p>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -570,6 +701,18 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(sale.payment_status)}`}>
                             {sale.payment_status}
                         </span>
+
+                        {/* Collect Payment Button - Show only if there's due amount */}
+                        {sale.due_amount > 0 && (
+                            <button
+                                onClick={() => setShowPaymentModal(true)}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                            >
+                                <CreditCard className="w-4 h-4" />
+                                Collect Payment
+                            </button>
+                        )}
+
                         <button
                             onClick={() => setShowPrintView(true)}
                             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -760,6 +903,34 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                             </div>
                         </div>
 
+                        {/* Due Amount Alert - Show if there's due */}
+                        {sale.due_amount > 0 && (
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="flex-shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                                            <DollarSign className="w-5 h-5 text-red-600" />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-sm font-semibold text-red-900 mb-1">
+                                            Payment Pending
+                                        </h3>
+                                        <p className="text-sm text-red-700 mb-3">
+                                            Due amount: <span className="font-bold">{formatCurrency(sale.due_amount)}</span>
+                                        </p>
+                                        <button
+                                            onClick={() => setShowPaymentModal(true)}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+                                        >
+                                            <CreditCard className="w-4 h-4" />
+                                            Collect Payment Now
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Quick Stats */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                             <h2 className="text-lg font-semibold text-gray-900 mb-4">Sale Metrics</h2>
@@ -796,6 +967,9 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Payment Modal */}
+            {showPaymentModal && <PaymentModal />}
 
             {/* Print Modal */}
             {showPrintView && <PrintableInvoice />}

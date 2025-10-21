@@ -578,9 +578,9 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                             />
                         </div>
                         <div className="hospital-info">
-                            <h1 className="text-2xl font-bold">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+                            <h1 className="text-2xl font-bold">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
                             <p>সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।</p>
-                            <p>মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gmail.com</p>
+                            <p>মোবাইল: ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০; ইমেইল: niehpc@gmail.com</p>
                         </div>
                     </div>
                 </div>

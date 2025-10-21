@@ -209,7 +209,7 @@ export default function MedicalTestReceipt({ testGroup }: Props) {
                             <p className="text-[10px] text-blue-600 font-semibold uppercase">Test Receipt</p>
                             <div className="text-[10px] text-gray-700">
                                 <span className="font-semibold">ঠিকানা:</span> সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ। |
-                                <span className="font-semibold ml-1">যোগাযোগ:</span> ০১৩০৭-৮৮৫৫৬৬ | ০১৩৩৪৯২৫৯১০ | niehpc@gmail.com
+                                <span className="font-semibold ml-1">যোগাযোগ:</span> ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০ | niehpc@gmail.com
                             </div>
                         </div>
                     </div>

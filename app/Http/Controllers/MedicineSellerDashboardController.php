@@ -510,4 +510,108 @@ class MedicineSellerDashboardController extends Controller
             'dateTo' => $dateTo,
         ]);
     }
+
+    /**
+     * Export Sales History
+     */
+    public function exportSalesHistory(Request $request)
+    {
+        $query = MedicineSale::with(['patient', 'items.medicineStock.medicine', 'soldBy'])
+            ->where('sold_by', auth()->id());
+
+        // Apply same filters
+        if ($request->filled('date_from')) {
+            $query->whereDate('sale_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('sale_date', '<=', $request->date_to);
+        }
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+        if ($request->filled('search')) {
+            $query->where('invoice_number', 'LIKE', '%' . $request->search . '%');
+        }
+
+        $sales = $query->orderBy('created_at', 'desc')->get();
+        $exportType = $request->get('export', 'pdf');
+
+        if ($exportType === 'excel') {
+            return $this->exportToExcel($sales, $request);
+        } elseif ($exportType === 'print') {
+            return $this->exportToPrint($sales, $request);
+        } else {
+            return $this->exportToPDF($sales, $request);
+        }
+    }
+
+    private function exportToPDF($sales, $request)
+    {
+        $html = view('exports.medicine-sales-pdf', [
+            'sales' => $sales,
+            'dateFrom' => $request->date_from,
+            'dateTo' => $request->date_to,
+            'totalSales' => $sales->sum('total_amount'),
+            'totalProfit' => $sales->sum('total_profit')
+        ])->render();
+
+        return response($html)->header('Content-Type', 'text/html');
+    }
+
+    private function exportToExcel($sales, $request)
+    {
+        $filename = 'medicine-sales-history-' . date('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function() use ($sales) {
+            $file = fopen('php://output', 'w');
+
+            // CSV Headers
+            fputcsv($file, [
+                'Invoice Number',
+                'Patient Name',
+                'Date',
+                'Items',
+                'Total Amount',
+                'Paid Amount',
+                'Due Amount',
+                'Profit',
+                'Payment Status'
+            ]);
+
+            // CSV Data
+            foreach ($sales as $sale) {
+                fputcsv($file, [
+                    $sale->invoice_number,
+                    $sale->patient->name ?? 'Walk-in Customer',
+                    $sale->sale_date,
+                    $sale->items->count() . ' items',
+                    number_format($sale->total_amount, 2),
+                    number_format($sale->paid_amount, 2),
+                    number_format($sale->due_amount, 2),
+                    number_format($sale->total_profit, 2),
+                    ucfirst($sale->payment_status)
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    private function exportToPrint($sales, $request)
+    {
+        return view('exports.medicine-sales-print', [
+            'sales' => $sales,
+            'dateFrom' => $request->date_from,
+            'dateTo' => $request->date_to,
+            'totalSales' => $sales->sum('total_amount'),
+            'totalProfit' => $sales->sum('total_profit')
+        ]);
+    }
 }

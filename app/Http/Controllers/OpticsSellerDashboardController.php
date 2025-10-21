@@ -507,7 +507,7 @@ class OpticsSellerDashboardController extends Controller
             $query->where('status', $request->status);
         }
 
-        $sales = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
+        $sales = $query->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
 
         // Get totals from the current query (before pagination)
         $totalQuery = clone $query;
@@ -521,6 +521,117 @@ class OpticsSellerDashboardController extends Controller
             'totalDue' => $totalDue,
             'salesCount' => $salesCount,
             'filters' => $request->only(['date_from', 'date_to', 'search', 'status']),
+        ]);
+    }
+
+    /**
+     * Export Sales History
+     */
+    public function exportSalesHistory(Request $request)
+    {
+        $query = OpticsSale::with(['patient', 'seller', 'items', 'payments']);
+
+        // Apply same filters
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('invoice_number', 'LIKE', '%' . $request->search . '%')
+                    ->orWhereHas('patient', function($q) use ($request) {
+                        $q->where('name', 'LIKE', '%' . $request->search . '%')
+                          ->orWhere('phone', 'LIKE', '%' . $request->search . '%');
+                    });
+            });
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $sales = $query->orderBy('created_at', 'desc')->get();
+        $exportType = $request->get('export', 'pdf');
+
+        if ($exportType === 'excel') {
+            return $this->exportToExcel($sales, $request);
+        } elseif ($exportType === 'print') {
+            return $this->exportToPrint($sales, $request);
+        } else {
+            return $this->exportToPDF($sales, $request);
+        }
+    }
+
+    private function exportToPDF($sales, $request)
+    {
+        $html = view('exports.optics-sales-pdf', [
+            'sales' => $sales,
+            'dateFrom' => $request->date_from,
+            'dateTo' => $request->date_to,
+            'totalSales' => $sales->sum('total_amount'),
+            'totalDue' => $sales->sum('due_amount')
+        ])->render();
+
+        return response($html)->header('Content-Type', 'text/html');
+    }
+
+    private function exportToExcel($sales, $request)
+    {
+        $filename = 'sales-history-' . date('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function() use ($sales) {
+            $file = fopen('php://output', 'w');
+
+            // CSV Headers
+            fputcsv($file, [
+                'Invoice Number',
+                'Patient Name',
+                'Patient Phone',
+                'Date',
+                'Items',
+                'Total Amount',
+                'Advance Payment',
+                'Due Amount',
+                'Status',
+                'Seller'
+            ]);
+
+            // CSV Data
+            foreach ($sales as $sale) {
+                fputcsv($file, [
+                    $sale->invoice_number,
+                    $sale->patient->name ?? 'N/A',
+                    $sale->patient->phone ?? 'N/A',
+                    $sale->created_at->format('d M Y h:i A'),
+                    $sale->items->count() . ' items',
+                    number_format($sale->total_amount, 2),
+                    number_format($sale->advance_payment, 2),
+                    number_format($sale->due_amount, 2),
+                    ucfirst($sale->status),
+                    $sale->seller->name ?? 'N/A'
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    private function exportToPrint($sales, $request)
+    {
+        return view('exports.optics-sales-print', [
+            'sales' => $sales,
+            'dateFrom' => $request->date_from,
+            'dateTo' => $request->date_to,
+            'totalSales' => $sales->sum('total_amount'),
+            'totalDue' => $sales->sum('due_amount')
         ]);
     }
 

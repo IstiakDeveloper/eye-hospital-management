@@ -37,7 +37,9 @@ import {
     ShoppingBag,
     LucideWaypoints,
     Truck,
-    Receipt
+    Receipt,
+    Scissors,
+    Clock
 } from 'lucide-react';
 import FlashMessages from '@/components/FlashMessage';
 
@@ -79,6 +81,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     const [accountSectionOpen, setAccountSectionOpen] = useState(false);
     const [opticsCornerOpen, setOpticsCornerOpen] = useState(false);
     const [medicalTestsOpen, setMedicalTestsOpen] = useState(false);
+    const [operationsOpen, setOperationsOpen] = useState(false);
 
     const userRole = auth.user.role.name;
     const userPermissions = auth.user.permissions || [];
@@ -218,16 +221,26 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 window.location.pathname.includes('/medical-tests');
         }
 
+        // For operations and operation bookings
+        if (currentPattern === 'operations.*') {
+            return currentRouteName?.includes('operations') ||
+                currentRouteName?.includes('operation-bookings') ||
+                window.location.pathname.includes('/operations') ||
+                window.location.pathname.includes('/operation-bookings');
+        }
+
         // For account sections
         if (currentPattern === 'account.*') {
             return currentRouteName?.includes('main-account') ||
                 currentRouteName?.includes('hospital-account') ||
                 currentRouteName?.includes('medicine-account') ||
                 currentRouteName?.includes('optics-account') ||
+                currentRouteName?.includes('operation-account') ||
                 window.location.pathname.includes('/main-account') ||
                 window.location.pathname.includes('/hospital-account') ||
                 window.location.pathname.includes('/medicine-account') ||
-                window.location.pathname.includes('/optics-account');
+                window.location.pathname.includes('/optics-account') ||
+                window.location.pathname.includes('/operation-account');
         }
 
         if (currentPattern === 'optics.*') {
@@ -286,16 +299,35 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
         return medicalTestPaths.some(path => window.location.pathname.startsWith(path));
     };
 
+    // Check if operations section is active
+    const isOperationsActive = () => {
+        return currentRouteName?.includes('operations') ||
+            currentRouteName?.includes('operation-bookings') ||
+            window.location.pathname.includes('/operations') ||
+            window.location.pathname.includes('/operation-bookings');
+    };
+
+    // Check if any operations child is active
+    const isOperationsChildActive = () => {
+        const operationPaths = [
+            '/operations',
+            '/operation-bookings'
+        ];
+        return operationPaths.some(path => window.location.pathname.startsWith(path));
+    };
+
     // Check if account section is active
     const isAccountSectionActive = () => {
         return currentRouteName?.includes('main-account') ||
             currentRouteName?.includes('hospital-account') ||
             currentRouteName?.includes('medicine-account') ||
             currentRouteName?.includes('optics-account') ||
+            currentRouteName?.includes('operation-account') ||
             window.location.pathname.includes('/main-account') ||
             window.location.pathname.includes('/hospital-account') ||
             window.location.pathname.includes('/medicine-account') ||
-            window.location.pathname.includes('/optics-account');
+            window.location.pathname.includes('/optics-account') ||
+            window.location.pathname.includes('/operation-account');
     };
 
     // Check if any account section child is active
@@ -304,7 +336,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             '/main-account',
             '/hospital-account',
             '/medicine-account',
-            '/optics-account'
+            '/optics-account',
+            '/operation-account'
         ];
         return accountPaths.some(path => window.location.pathname.startsWith(path));
     };
@@ -600,7 +633,40 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             ].filter(child => child)
         }] : []),
 
-        ...(hasAnyPermission(['main-account.view', 'hospital-account.view', 'medicine-account.view', 'optics-account.view']) ? [{
+        ...(hasAnyPermission(['operations.view', 'operation-bookings.view']) ? [{
+            name: 'Operations',
+            href: '#',
+            icon: Scissors,
+            current: 'operations.*',
+            roles: ['Super Admin', 'Receptionist'],
+            children: [
+                ...(hasPermission('operations.view') ? [{
+                    name: 'Operation Types',
+                    href: route('operations.index'),
+                    icon: Scissors,
+                    current: 'operations.index',
+                    roles: ['Super Admin']
+                }] : []),
+                ...(hasPermission('operation-bookings.view') ? [
+                    {
+                        name: 'All Bookings',
+                        href: route('operation-bookings.index'),
+                        icon: Calendar,
+                        current: 'operation-bookings.index',
+                        roles: ['Super Admin', 'Receptionist']
+                    },
+                    {
+                        name: "Today's Operations",
+                        href: route('operation-bookings.today'),
+                        icon: Clock,
+                        current: 'operation-bookings.today',
+                        roles: ['Super Admin', 'Receptionist']
+                    }
+                ] : [])
+            ].filter(child => child)
+        }] : []),
+
+        ...(hasAnyPermission(['main-account.view', 'hospital-account.view', 'medicine-account.view', 'optics-account.view', 'operation-account.view']) ? [{
             name: 'Account Management',
             href: '#',
             icon: Calculator,
@@ -633,6 +699,13 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                     href: '/optics-account',
                     icon: Glasses,
                     current: 'optics-account.*',
+                    roles: ['Super Admin']
+                }] : []),
+                ...(hasPermission('operations.view') ? [{
+                    name: 'Operation Account',
+                    href: route('operation-account.dashboard'),
+                    icon: Scissors,
+                    current: 'operation-account.*',
                     roles: ['Super Admin']
                 }] : [])
             ].filter(child => child)
@@ -784,7 +857,13 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                             Main Menu
                         </p>
                         <nav className="space-y-1">
-                            {navigationItems.map((item) => {
+                            {navigationItems
+                                .filter(item => {
+                                    // Filter out items that don't match the current user's role
+                                    // This ensures only relevant menu items are shown
+                                    return item.roles.includes(userRole);
+                                })
+                                .map((item) => {
                                 // Skip items without permission - REMOVED role check
                                 // Navigation is now purely permission-based
 
@@ -794,6 +873,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 const isOpticsCorner = item.name === 'Optics Corner';
                                 const isAccountSection = item.name === 'Account Management';
                                 const isMedicalTests = item.name === 'Medical Tests';
+                                const isOperations = item.name === 'Operations';
 
                                 // Medicine Corner with dropdown
                                 if (isMedicineCorner) {
@@ -997,6 +1077,72 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                     );
                                 }
 
+                                // Operations Section with dropdown
+                                if (isOperations) {
+                                    const operationsActive = isOperationsActive();
+                                    const anyChildActive = isOperationsChildActive();
+                                    const shouldShowAsActive = operationsActive || anyChildActive;
+
+                                    return (
+                                        <div key={item.name}>
+                                            <button
+                                                onClick={() => setOperationsOpen(!operationsOpen)}
+                                                className={`group flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${shouldShowAsActive
+                                                    ? 'bg-purple-50 text-purple-700 border-r-2 border-purple-700'
+                                                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                    }`}
+                                            >
+                                                <Icon className={`flex-shrink-0 h-5 w-5 mr-3 ${shouldShowAsActive ? 'text-purple-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                    }`} />
+                                                <span className="flex-1 text-left">{item.name}</span>
+                                                <ChevronRight className={`h-4 w-4 transition-transform duration-200 ${operationsOpen || anyChildActive ? 'rotate-90' : ''
+                                                    } ${shouldShowAsActive ? 'text-purple-700' : 'text-gray-400'}`} />
+                                            </button>
+
+                                            {/* Operations Dropdown Items */}
+                                            <div className={`mt-1 space-y-1 transition-all duration-200 overflow-hidden ${operationsOpen || anyChildActive ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                                                }`}>
+                                                {item.children?.map((childItem) => {
+                                                    const ChildIcon = childItem.icon;
+                                                    let isChildActive = false;
+
+                                                    if (childItem.current === 'operations.index') {
+                                                        isChildActive = !!(currentRouteName === 'operations.index' ||
+                                                            currentRouteName?.startsWith('operations.') ||
+                                                            (window.location.pathname === '/operations' && !window.location.pathname.includes('operation-bookings')));
+                                                    } else if (childItem.current === 'operation-bookings.today') {
+                                                        // Check Today's Operations FIRST (more specific)
+                                                        isChildActive = !!(currentRouteName === 'operation-bookings.today' ||
+                                                            window.location.pathname === '/operation-bookings/today');
+                                                    } else if (childItem.current === 'operation-bookings.index') {
+                                                        // Check All Bookings (excluding today)
+                                                        isChildActive = !!(
+                                                            (currentRouteName === 'operation-bookings.index' ||
+                                                            (currentRouteName?.startsWith('operation-bookings.') && currentRouteName !== 'operation-bookings.today')) &&
+                                                            window.location.pathname !== '/operation-bookings/today'
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <Link
+                                                            key={childItem.name}
+                                                            href={childItem.href}
+                                                            className={`group flex items-center pl-11 pr-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isChildActive
+                                                                ? 'bg-purple-100 text-purple-800 border-r-2 border-purple-600'
+                                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                }`}
+                                                        >
+                                                            <ChildIcon className={`flex-shrink-0 h-4 w-4 mr-2 ${isChildActive ? 'text-purple-600' : 'text-gray-400 group-hover:text-gray-500'
+                                                                }`} />
+                                                            <span>{childItem.name}</span>
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
                                 // Account Section with dropdown
                                 if (isAccountSection) {
                                     const accountSectionActive = isAccountSectionActive();
@@ -1078,8 +1224,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                         </nav>
                     </div>
 
-                    {/* Admin Section */}
-                    {userRole === 'Super Admin' && (
+                    {/* Admin Section - Only for Super Admin */}
+                    {userRole === 'Super Admin' && adminNavigation.length > 0 && (
                         <div className="px-4 mt-8">
                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                                 Administration
@@ -1131,6 +1277,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                     >
                                         <Activity className="h-4 w-4 mr-2" />
                                         Book Test
+                                    </Link>
+                                )}
+                                {hasPermission('operation-bookings.create') && (
+                                    <Link
+                                        href={route('operation-bookings.create')}
+                                        className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-sm font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-sm"
+                                    >
+                                        <Scissors className="h-4 w-4 mr-2" />
+                                        Book Operation
                                     </Link>
                                 )}
                             </>
@@ -1192,10 +1347,19 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                         Add Patient
                                     </Link>
                                 )}
+                                {hasPermission('operation-bookings.create') && (
+                                    <Link
+                                        href={route('operation-bookings.create')}
+                                        className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-sm font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-sm"
+                                    >
+                                        <Scissors className="h-4 w-4 mr-2" />
+                                        Book Operation
+                                    </Link>
+                                )}
                                 {hasPermission('users.create') && (
                                     <Link
                                         href={route('users.create')}
-                                        className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-sm font-medium rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-sm"
+                                        className="flex items-center justify-center w-full px-3 py-2 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-medium rounded-lg hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 shadow-sm"
                                     >
                                         <UserPlus className="h-4 w-4 mr-2" />
                                         Add User

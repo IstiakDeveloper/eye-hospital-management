@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\HospitalAccount;
 use App\Models\MedicineAccount;
 use App\Models\OpticsAccount;
+use App\Models\OperationAccount;
 use App\Models\Patient;
 use App\Models\PatientVisit;
 use App\Models\Doctor;
@@ -142,7 +143,12 @@ class DashboardController extends Controller
                 'currency' => 'BDT',
                 'lastUpdated' => OpticsAccount::first()?->updated_at,
             ],
-            'total' => HospitalAccount::getBalance() + MedicineAccount::getBalance() + OpticsAccount::getBalance(),
+            'operation' => [
+                'balance' => OperationAccount::getBalance(),
+                'currency' => 'BDT',
+                'lastUpdated' => OperationAccount::first()?->updated_at,
+            ],
+            'total' => HospitalAccount::getBalance() + MedicineAccount::getBalance() + OpticsAccount::getBalance() + OperationAccount::getBalance(),
         ];
     }
 
@@ -420,6 +426,17 @@ class DashboardController extends Controller
             ->whereBetween('transaction_date', [$startDate, $endDate])
             ->sum('amount');
 
+        // Operation transactions
+        $operationIncome = DB::table('operation_transactions')
+            ->where('type', 'income')
+            ->whereBetween('transaction_date', [$startDate, $endDate])
+            ->sum('amount');
+
+        $operationExpense = DB::table('operation_transactions')
+            ->where('type', 'expense')
+            ->whereBetween('transaction_date', [$startDate, $endDate])
+            ->sum('amount');
+
         return [
             'hospital' => [
                 'income' => $hospitalIncome,
@@ -443,6 +460,12 @@ class DashboardController extends Controller
                 'expense' => $opticsExpense,
                 'profit' => $opticsIncome - $opticsExpense,
                 'balance' => OpticsAccount::getBalance(),
+            ],
+            'operation' => [
+                'income' => $operationIncome,
+                'expense' => $operationExpense,
+                'profit' => $operationIncome - $operationExpense,
+                'balance' => OperationAccount::getBalance(),
             ],
         ];
     }
@@ -478,6 +501,7 @@ class DashboardController extends Controller
         $hospitalData = [];
         $medicineData = [];
         $opticsData = [];
+        $operationData = [];
 
         for ($i = 11; $i >= 0; $i--) {
             $date = Carbon::now()->subMonths($i);
@@ -486,10 +510,12 @@ class DashboardController extends Controller
             $hospitalReport = HospitalAccount::monthlyReport($date->year, $date->month);
             $medicineReport = MedicineAccount::monthlyReport($date->year, $date->month);
             $opticsReport = OpticsAccount::monthlyReport($date->year, $date->month);
+            $operationReport = OperationAccount::monthlyReport($date->year, $date->month);
 
             $hospitalData[] = $hospitalReport['profit'];
             $medicineData[] = $medicineReport['profit'];
             $opticsData[] = $opticsReport['profit'];
+            $operationData[] = $operationReport['profit'];
         }
 
         return [
@@ -514,6 +540,13 @@ class DashboardController extends Controller
                     'data' => $opticsData,
                     'backgroundColor' => 'rgba(245, 158, 11, 0.1)',
                     'borderColor' => 'rgb(245, 158, 11)',
+                    'tension' => 0.4,
+                ],
+                [
+                    'label' => 'Operation',
+                    'data' => $operationData,
+                    'backgroundColor' => 'rgba(147, 51, 234, 0.1)',
+                    'borderColor' => 'rgb(147, 51, 234)',
                     'tension' => 0.4,
                 ],
             ],

@@ -17,7 +17,9 @@ import {
     TrendingUp,
     TrendingDown,
     Minus,
-    ChevronDown
+    ChevronDown,
+    Download,
+    Printer
 } from 'lucide-react';
 
 interface Medicine {
@@ -27,9 +29,11 @@ interface Medicine {
     type: string;
     manufacturer: string;
     standard_sale_price: number;
+    actual_sale_price?: number;
     total_stock: number;
     unit: string;
     is_active: boolean;
+    has_stock?: boolean;
     stocks_count: number;
     stock_alert?: {
         minimum_stock: number;
@@ -141,15 +145,15 @@ export default function Medicines({ medicines, filterOptions, stats, filters }: 
     };
 
     const getStockStatus = (medicine: Medicine) => {
-        if (!medicine.stock_alert) return 'normal';
-        if (medicine.total_stock <= 0) return 'out';
+        if (!medicine.has_stock || medicine.total_stock <= 0) return 'out';
+        if (!medicine.stock_alert) return medicine.total_stock > 0 ? 'normal' : 'out';
         if (medicine.total_stock <= medicine.stock_alert.minimum_stock) return 'low';
         if (medicine.total_stock <= medicine.stock_alert.reorder_level) return 'reorder';
         return 'normal';
     };
 
     const getStockStatusConfig = (status: string) => {
-        const configs = {
+        const configs: Record<string, { color: string; text: string; icon: any }> = {
             out: { color: 'bg-red-100 text-red-800 border-red-200', text: 'Out of Stock', icon: X },
             low: { color: 'bg-red-100 text-red-800 border-red-200', text: 'Low Stock', icon: TrendingDown },
             reorder: { color: 'bg-amber-100 text-amber-800 border-amber-200', text: 'Reorder Level', icon: Minus },
@@ -181,6 +185,50 @@ export default function Medicines({ medicines, filterOptions, stats, filters }: 
         v !== '' && v !== null && v !== undefined && v !== true && v !== 'name' && v !== 'asc'
     );
 
+    const handleExport = (format: 'excel' | 'print') => {
+        const params: Record<string, any> = {
+            export: format
+        };
+
+        // Add search if present
+        if (search) {
+            params.search = search;
+        }
+
+        // Add filters, but handle active filter specially
+        Object.entries(localFilters).forEach(([key, value]) => {
+            // Skip empty values
+            if (value === '' || value === null || value === undefined) {
+                return;
+            }
+
+            // For active filter, only add if it's explicitly false (we want inactive too)
+            // Don't add if it's true (default behavior)
+            if (key === 'active' && value === true) {
+                return;
+            }
+
+            // Skip default sort values
+            if ((key === 'sort_by' && value === 'name') || (key === 'sort_order' && value === 'asc')) {
+                return;
+            }
+
+            params[key] = value;
+        });
+
+        // Create URL with query parameters
+        const queryString = new URLSearchParams(params).toString();
+        const url = `/medicine-corner/medicines?${queryString}`;
+
+        if (format === 'print') {
+            // Open in new window for printing
+            window.open(url, '_blank');
+        } else {
+            // Download Excel file
+            window.location.href = url;
+        }
+    };
+
     return (
         <AdminLayout>
             <Head title="Medicine Management" />
@@ -194,13 +242,31 @@ export default function Medicines({ medicines, filterOptions, stats, filters }: 
                             Manage your medicine catalog and inventory ({medicines.total} total medicines)
                         </p>
                     </div>
-                    <button
-                        onClick={() => setShowMedicineModal(true)}
-                        className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                    >
-                        <Plus className="w-4 h-4" />
-                        Add Medicine
-                    </button>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => handleExport('print')}
+                            className="inline-flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                            title="Print Report"
+                        >
+                            <Printer className="w-4 h-4" />
+                            Print
+                        </button>
+                        <button
+                            onClick={() => handleExport('excel')}
+                            className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                            title="Download Excel"
+                        >
+                            <Download className="w-4 h-4" />
+                            Excel
+                        </button>
+                        <button
+                            onClick={() => setShowMedicineModal(true)}
+                            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                        >
+                            <Plus className="w-4 h-4" />
+                            Add Medicine
+                        </button>
+                    </div>
                 </div>
 
                 {/* Stats Cards */}
@@ -460,7 +526,7 @@ export default function Medicines({ medicines, filterOptions, stats, filters }: 
                                         <div className="flex justify-between items-center">
                                             <span className="text-sm text-gray-600">Sale Price:</span>
                                             <span className="text-sm font-semibold text-green-600">
-                                                {formatCurrency(medicine.standard_sale_price)}
+                                                {formatCurrency(medicine.actual_sale_price ?? medicine.standard_sale_price)}
                                             </span>
                                         </div>
 
@@ -629,7 +695,7 @@ export default function Medicines({ medicines, filterOptions, stats, filters }: 
                                             </div>
                                             <div>
                                                 <span className="text-sm text-gray-600">Sale Price:</span>
-                                                <p className="font-semibold text-green-600">{formatCurrency(selectedMedicine.standard_sale_price)}</p>
+                                                <p className="font-semibold text-green-600">{formatCurrency(selectedMedicine.actual_sale_price ?? selectedMedicine.standard_sale_price)}</p>
                                             </div>
                                             <div>
                                                 <span className="text-sm text-gray-600">Status:</span>

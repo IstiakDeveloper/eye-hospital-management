@@ -15,6 +15,7 @@ use App\Models\StockTransaction;
 use App\Models\StockAlert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Carbon\Carbon;
@@ -74,8 +75,20 @@ class MedicineCornerController extends Controller
      */
     public function medicines(Request $request)
     {
-        $query = Medicine::with(['stockAlert'])
-            ->withCount('stocks');
+        // Handle Export Requests
+        if ($request->has('export')) {
+            return $this->exportMedicines($request);
+        }
+
+        $query = Medicine::with([
+            'stockAlert',
+            'stocks' => function ($q) {
+                $q->where('available_quantity', '>', 0)
+                  ->where('expiry_date', '>', now())
+                  ->orderBy('sale_price', 'asc')
+                  ->limit(1);
+            }
+        ])->withCount('stocks');
 
         // Search functionality
         if ($search = $request->get('search')) {
@@ -146,6 +159,21 @@ class MedicineCornerController extends Controller
 
         $medicines = $query->paginate(20)->withQueryString();
 
+        // Transform medicine data to include actual sale price from stock
+        $medicines->getCollection()->transform(function ($medicine) {
+            $actualSalePrice = $medicine->standard_sale_price;
+
+            // Get the lowest sale price from available stock
+            if ($medicine->stocks->isNotEmpty()) {
+                $actualSalePrice = $medicine->stocks->first()->sale_price;
+            }
+
+            $medicine->actual_sale_price = $actualSalePrice;
+            $medicine->has_stock = $medicine->total_stock > 0;
+
+            return $medicine;
+        });
+
         // Get filter options
         $filterOptions = [
             'types' => Medicine::distinct()->pluck('type')->filter()->sort()->values(),
@@ -171,6 +199,171 @@ class MedicineCornerController extends Controller
             'stats' => $stats,
             'filters' => $request->only(['search', 'type', 'manufacturer', 'stock_status', 'active', 'sort_by', 'sort_order']),
         ]);
+    }
+
+    /**
+     * Export Medicines based on filters
+     */
+    private function exportMedicines(Request $request)
+    {
+        $query = Medicine::with([
+            'stockAlert',
+            'stocks' => function ($q) {
+                $q->where('available_quantity', '>', 0)
+                  ->where('expiry_date', '>', now());
+            }
+        ]);
+
+        // Apply same filters as index
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('generic_name', 'like', "%{$search}%")
+                    ->orWhere('manufacturer', 'like', "%{$search}%")
+                    ->orWhere('type', 'like', "%{$search}%");
+            });
+        }
+
+        if ($type = $request->get('type')) {
+            $query->where('type', $type);
+        }
+
+        if ($manufacturer = $request->get('manufacturer')) {
+            $query->where('manufacturer', 'like', "%{$manufacturer}%");
+        }
+
+        if ($stockStatus = $request->get('stock_status')) {
+            switch ($stockStatus) {
+                case 'in_stock':
+                    $query->where('total_stock', '>', 0);
+                    break;
+                case 'low_stock':
+                    $query->whereHas('stockAlert', function ($q) {
+                        $q->whereRaw('medicines.total_stock <= stock_alerts.minimum_stock')
+                            ->where('medicines.total_stock', '>', 0);
+                    });
+                    break;
+                case 'out_of_stock':
+                    $query->where('total_stock', '<=', 0);
+                    break;
+                case 'reorder_level':
+                    $query->whereHas('stockAlert', function ($q) {
+                        $q->whereRaw('medicines.total_stock <= stock_alerts.reorder_level')
+                            ->whereRaw('medicines.total_stock > stock_alerts.minimum_stock');
+                    });
+                    break;
+            }
+        }
+
+        // Only apply active filter if explicitly set
+        if ($request->has('active') && $request->get('active') !== null && $request->get('active') !== '') {
+            $query->where('is_active', $request->boolean('active'));
+        }
+
+        // Get all medicines - no pagination for export
+        $medicines = $query->orderBy('name')->get();
+
+        // Log for debugging (remove in production)
+        Log::info('Export Medicines', [
+            'count' => $medicines->count(),
+            'filters' => $request->only(['search', 'type', 'manufacturer', 'stock_status', 'active']),
+            'export_format' => $request->get('export')
+        ]);
+
+        $exportFormat = $request->get('export'); // 'excel' or 'print'
+
+        if ($exportFormat === 'excel') {
+            return $this->exportToExcel($medicines);
+        } else {
+            return $this->exportToPrint($medicines);
+        }
+    }
+
+    /**
+     * Export to Excel format (CSV)
+     */
+    private function exportToExcel($medicines)
+    {
+        $filename = 'medicines_stock_report_' . now()->format('Y-m-d_H-i-s') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
+            'Expires' => '0',
+        ];
+
+        $callback = function() use ($medicines) {
+            $file = fopen('php://output', 'w');
+
+            // Add BOM for Excel UTF-8 support
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            // Headers
+            fputcsv($file, [
+                'Medicine Name',
+                'Generic Name',
+                'Type',
+                'Manufacturer',
+                'Unit',
+                'Total Stock',
+                'Standard Sale Price',
+                'Average Buy Price',
+                'Stock Value',
+                'Status',
+                'Minimum Stock',
+                'Reorder Level',
+                'Stock Status'
+            ]);
+
+            // Data rows
+            foreach ($medicines as $medicine) {
+                $stockValue = $medicine->total_stock * ($medicine->average_buy_price ?? 0);
+
+                $stockStatus = 'Normal';
+                if ($medicine->total_stock <= 0) {
+                    $stockStatus = 'Out of Stock';
+                } elseif ($medicine->stockAlert && $medicine->total_stock <= $medicine->stockAlert->minimum_stock) {
+                    $stockStatus = 'Low Stock';
+                } elseif ($medicine->stockAlert && $medicine->total_stock <= $medicine->stockAlert->reorder_level) {
+                    $stockStatus = 'Reorder Level';
+                }
+
+                fputcsv($file, [
+                    $medicine->name ?? '',
+                    $medicine->generic_name ?? 'N/A',
+                    $medicine->type ?? '',
+                    $medicine->manufacturer ?? 'N/A',
+                    $medicine->unit ?? 'piece',
+                    $medicine->total_stock ?? 0,
+                    number_format($medicine->standard_sale_price ?? 0, 2),
+                    number_format($medicine->average_buy_price ?? 0, 2),
+                    number_format($stockValue, 2),
+                    $medicine->is_active ? 'Active' : 'Inactive',
+                    $medicine->stockAlert ? $medicine->stockAlert->minimum_stock : 'N/A',
+                    $medicine->stockAlert ? $medicine->stockAlert->reorder_level : 'N/A',
+                    $stockStatus
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Export to Print format (HTML)
+     */
+    private function exportToPrint($medicines)
+    {
+        $html = view('reports.medicines-print', [
+            'medicines' => $medicines,
+            'generatedAt' => now()->format('d M Y, h:i A'),
+        ])->render();
+
+        return response($html)->header('Content-Type', 'text/html');
     }
 
     /**

@@ -143,6 +143,23 @@ class PermissionSeeder extends Seeder
             ['name' => 'medical-tests.payment', 'display_name' => 'Manage Test Payments', 'category' => 'medical-tests', 'description' => 'Can manage test payments'],
             ['name' => 'medical-tests.reports', 'display_name' => 'View Medical Test Reports', 'category' => 'medical-tests', 'description' => 'Can view medical test reports'],
 
+            // Operation Permissions (Operation Types Management)
+            ['name' => 'operations.view', 'display_name' => 'View Operations', 'category' => 'operations', 'description' => 'Can view operation types'],
+            ['name' => 'operations.create', 'display_name' => 'Create Operation', 'category' => 'operations', 'description' => 'Can create operation types'],
+            ['name' => 'operations.edit', 'display_name' => 'Edit Operation', 'category' => 'operations', 'description' => 'Can edit operation types'],
+            ['name' => 'operations.delete', 'display_name' => 'Delete Operation', 'category' => 'operations', 'description' => 'Can delete operation types'],
+
+            // Operation Booking Permissions
+            ['name' => 'operation-bookings.view', 'display_name' => 'View Operation Bookings', 'category' => 'operation-bookings', 'description' => 'Can view operation bookings'],
+            ['name' => 'operation-bookings.create', 'display_name' => 'Create Operation Booking', 'category' => 'operation-bookings', 'description' => 'Can create operation bookings'],
+            ['name' => 'operation-bookings.edit', 'display_name' => 'Edit Operation Booking', 'category' => 'operation-bookings', 'description' => 'Can edit operation bookings'],
+            ['name' => 'operation-bookings.delete', 'display_name' => 'Delete Operation Booking', 'category' => 'operation-bookings', 'description' => 'Can delete operation bookings'],
+            ['name' => 'operation-bookings.payment', 'display_name' => 'Manage Operation Payments', 'category' => 'operation-bookings', 'description' => 'Can manage operation payments'],
+            ['name' => 'operation-bookings.confirm', 'display_name' => 'Confirm Operation Booking', 'category' => 'operation-bookings', 'description' => 'Can confirm operation bookings'],
+            ['name' => 'operation-bookings.complete', 'display_name' => 'Complete Operation', 'category' => 'operation-bookings', 'description' => 'Can mark operations as completed'],
+            ['name' => 'operation-bookings.cancel', 'display_name' => 'Cancel Operation Booking', 'category' => 'operation-bookings', 'description' => 'Can cancel operation bookings'],
+            ['name' => 'operation-bookings.reschedule', 'display_name' => 'Reschedule Operation', 'category' => 'operation-bookings', 'description' => 'Can reschedule operations'],
+
             // Report Permissions
             ['name' => 'reports.view', 'display_name' => 'View Reports', 'category' => 'reports', 'description' => 'Can view general reports'],
             ['name' => 'reports.patients', 'display_name' => 'View Patient Reports', 'category' => 'reports', 'description' => 'Can view patient reports'],

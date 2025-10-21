@@ -1,5 +1,3 @@
-// resources/js/Pages/MedicineSeller/SalesHistory.tsx
-
 import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
@@ -11,7 +9,12 @@ import {
   DollarSign,
   TrendingUp,
   FileText,
-  Download
+  Download,
+  FileSpreadsheet,
+  Printer,
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface Sale {
@@ -49,6 +52,7 @@ export default function SalesHistory({ sales, totalSales, totalProfit, salesCoun
   const [dateFrom, setDateFrom] = useState(filters.date_from || '');
   const [dateTo, setDateTo] = useState(filters.date_to || '');
   const [paymentStatus, setPaymentStatus] = useState(filters.payment_status || '');
+  const [showFilters, setShowFilters] = useState(false);
 
   const formatCurrency = (amount: number) => {
     const formatted = new Intl.NumberFormat('en-US', {
@@ -71,7 +75,30 @@ export default function SalesHistory({ sales, totalSales, totalProfit, salesCoun
       date_to: dateTo,
       payment_status: paymentStatus,
       search: searchTerm
+    }, {
+      preserveState: true,
+      preserveScroll: true
     });
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setDateFrom('');
+    setDateTo('');
+    setPaymentStatus('');
+    router.get('/medicine-seller/sales');
+  };
+
+  const handleExport = (type: 'pdf' | 'excel' | 'print') => {
+    const params = new URLSearchParams({
+      date_from: dateFrom,
+      date_to: dateTo,
+      payment_status: paymentStatus,
+      search: searchTerm,
+      export: type
+    });
+
+    window.open(`/medicine-seller/sales/export?${params.toString()}`, '_blank');
   };
 
   const getStatusColor = (status: string) => {
@@ -88,18 +115,29 @@ export default function SalesHistory({ sales, totalSales, totalProfit, salesCoun
 
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Sales History</h1>
             <p className="text-gray-600 mt-1">Track your sales performance and transactions</p>
           </div>
-          <Link
-            href="/medicine-seller/pos"
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <FileText className="w-4 h-4" />
-            New Sale
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                showFilters ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+            </button>
+            <Link
+              href="/medicine-seller/pos"
+              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              New Sale
+            </Link>
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -148,72 +186,128 @@ export default function SalesHistory({ sales, totalSales, totalProfit, salesCoun
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Invoice number..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+        {showFilters && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Filter Sales</h3>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Search Invoice</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Invoice number..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
+                    className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
+                <select
+                  value={paymentStatus}
+                  onChange={(e) => setPaymentStatus(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">All Status</option>
+                  <option value="paid">Paid</option>
+                  <option value="partial">Partial</option>
+                  <option value="pending">Pending</option>
+                </select>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
-              <select
-                value={paymentStatus}
-                onChange={(e) => setPaymentStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+              <button
+                onClick={clearFilters}
+                className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
               >
-                <option value="">All Status</option>
-                <option value="paid">Paid</option>
-                <option value="partial">Partial</option>
-                <option value="pending">Pending</option>
-              </select>
-            </div>
-
-            <div className="flex items-end">
+                <X className="w-4 h-4" />
+                Clear Filters
+              </button>
               <button
                 onClick={handleFilter}
-                className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors"
               >
                 <Filter className="w-4 h-4" />
-                Filter
+                Apply Filters
               </button>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Sales Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Sales</h2>
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Sales Records</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Showing {sales.data.length} of {sales.meta?.total || 0} results
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleExport('pdf')}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+                title="Export to PDF"
+              >
+                <Download className="w-4 h-4" />
+                PDF
+              </button>
+              <button
+                onClick={() => handleExport('excel')}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                title="Export to Excel"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                Excel
+              </button>
+              <button
+                onClick={() => handleExport('print')}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors"
+                title="Print"
+              >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -304,14 +398,68 @@ export default function SalesHistory({ sales, totalSales, totalProfit, salesCoun
             <div className="text-center py-12">
               <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No sales found</h3>
-              <p className="text-gray-600 mb-6">Start making sales to see them here.</p>
-              <Link
-                href="/medicine-seller/pos"
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                <FileText className="w-4 h-4" />
-                Make First Sale
-              </Link>
+              <p className="text-gray-600 mb-6">
+                {searchTerm || dateFrom || dateTo || paymentStatus
+                  ? 'Try adjusting your filters'
+                  : 'Start making sales to see them here'}
+              </p>
+              {(searchTerm || dateFrom || dateTo || paymentStatus) ? (
+                <button
+                  onClick={clearFilters}
+                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Clear Filters
+                </button>
+              ) : (
+                <Link
+                  href="/medicine-seller/pos"
+                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  <FileText className="w-4 h-4" />
+                  Make First Sale
+                </Link>
+              )}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {sales.data.length > 0 && (sales.links || sales.meta) && (
+            <div className="px-6 py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between bg-gray-50 gap-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <span>
+                  Showing <span className="font-medium text-gray-900">{sales.meta?.from || 1}</span> to{' '}
+                  <span className="font-medium text-gray-900">{sales.meta?.to || sales.data.length}</span> of{' '}
+                  <span className="font-medium text-gray-900">{sales.meta?.total || sales.data.length}</span> results
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {sales.links && sales.links.map((link: any, index: number) => {
+                  if (link.url === null) return null;
+
+                  const isActive = link.active;
+                  const isPrev = link.label.includes('Previous') || link.label.includes('&laquo;');
+                  const isNext = link.label.includes('Next') || link.label.includes('&raquo;');
+
+                  return (
+                    <Link
+                      key={index}
+                      href={link.url}
+                      preserveState
+                      preserveScroll
+                      className={`inline-flex items-center justify-center min-w-[40px] px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                      }`}
+                    >
+                      {isPrev && <ChevronLeft className="w-4 h-4" />}
+                      {!isPrev && !isNext && <span dangerouslySetInnerHTML={{ __html: link.label }} />}
+                      {isNext && <ChevronRight className="w-4 h-4" />}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

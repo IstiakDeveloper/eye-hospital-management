@@ -554,7 +554,7 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
                         </div>
                         <div className="text-sm font-semibold">
                             <span className="font-bold">যোগাযোগ:</span>
-                            <span className="ml-2">📞 ০১৩০৭-৮৮৫৫৬৬</span>
+                            <span className="ml-2">📞 ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০</span>
                             <span className="ml-3">✉️ niehpc@gmail.com</span>
                         </div>
                     </div>

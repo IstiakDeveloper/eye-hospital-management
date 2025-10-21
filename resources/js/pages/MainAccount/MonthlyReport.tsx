@@ -14,8 +14,6 @@ interface MonthlyReportProps {
     }>;
     total_amount: string;
     amount_in_words: string;
-    hospital_name: string;
-    hospital_location: string;
 }
 
 const MonthlyReport: React.FC<MonthlyReportProps> = ({
@@ -23,9 +21,7 @@ const MonthlyReport: React.FC<MonthlyReportProps> = ({
     voucher_type,
     vouchers,
     total_amount,
-    amount_in_words,
-    hospital_name,
-    hospital_location
+    amount_in_words
 }) => {
     const handlePrint = () => {
         window.print();
@@ -67,8 +63,6 @@ const MonthlyReport: React.FC<MonthlyReportProps> = ({
                         vouchers={vouchers}
                         total_amount={total_amount}
                         amount_in_words={amount_in_words}
-                        hospital_name={hospital_name}
-                        hospital_location={hospital_location}
                         trimNarration={trimNarration}
                     />
                 </div>
@@ -83,8 +77,6 @@ const MonthlyReport: React.FC<MonthlyReportProps> = ({
                     vouchers={vouchers}
                     total_amount={total_amount}
                     amount_in_words={amount_in_words}
-                    hospital_name={hospital_name}
-                    hospital_location={hospital_location}
                     trimNarration={trimNarration}
                 />
             </div>
@@ -195,15 +187,21 @@ const PrintableContent = ({
     vouchers,
     total_amount,
     amount_in_words,
-    hospital_name,
-    hospital_location,
     trimNarration
+}: {
+    month_name: string;
+    voucher_type: 'Debit' | 'Credit';
+    vouchers: Array<{ sl_no: string; voucher_no: string; date: string; narration: string; amount: string; }>;
+    total_amount: string;
+    amount_in_words: string;
+    trimNarration: (text: string, maxLength?: number) => string;
 }) => (
     <div className="printable-content p-6 max-w-4xl mx-auto border-2 border-black print:max-w-none print:mx-0">
         {/* Header */}
         <div className="text-center mb-6">
-            <h1 className="text-xl font-bold text-black mb-2">{hospital_name}</h1>
-            <p className="text-base text-black mb-3">{hospital_location}</p>
+            <h1 className="text-xl font-bold text-black mb-2">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+            <p className="text-base text-black mb-1">সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।</p>
+            <p className="text-sm text-black mb-3">📞 ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০ • ✉️ niehpc@gmail.com</p>
             <p className="text-base font-semibold text-black">
                 Monthly {voucher_type === 'Debit' ? 'Debit/Payment' : 'Credit/Receipt'} Voucher Report
             </p>

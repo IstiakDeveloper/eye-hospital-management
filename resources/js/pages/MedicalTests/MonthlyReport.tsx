@@ -65,8 +65,9 @@ export default function MonthlyReport({ testGroups, summary, year, month }: Prop
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const formatCurrency = (amount: number) => {
-    return `৳${Number(amount).toFixed(2)}`;
+  const formatCurrency = (amount: number | string | null | undefined) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : (amount || 0);
+    return `৳${num.toFixed(2)}`;
   };
 
   const formatDate = (dateStr: string) => {
@@ -223,8 +224,9 @@ export default function MonthlyReport({ testGroups, summary, year, month }: Prop
 
       <div className="report-container">
         <div className="text-center mb-6 pb-4 border-b-4 border-blue-600">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল</h1>
-          <p className="text-sm text-gray-600">Circuit House Road, Naogaon • 📞 01307-885566</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+          <p className="text-sm text-gray-600">সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।</p>
+          <p className="text-sm text-gray-600">📞 ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০ • ✉️ niehpc@gmail.com</p>
           <h2 className="text-lg font-bold text-gray-800 mt-3">Monthly Medical Test Report</h2>
           <p className="text-sm font-semibold text-blue-600 mt-1">
             {monthNames[selectedMonth - 1]} {selectedYear}

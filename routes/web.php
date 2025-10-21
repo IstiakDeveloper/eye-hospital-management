@@ -450,6 +450,7 @@ Route::prefix('medicine-seller')->middleware(['permission:dashboard.medicine-sel
     Route::get('/pos', [MedicineSellerDashboardController::class, 'pos'])->name('medicine-seller.pos')->middleware('permission:medicine-seller.pos');
     Route::post('/pos/sale', [MedicineSellerDashboardController::class, 'processSale'])->name('medicine-seller.process-sale')->middleware('permission:medicine-seller.pos');
     Route::get('/sales', [MedicineSellerDashboardController::class, 'salesHistory'])->name('medicine-seller.sales')->middleware('permission:medicine-seller.sales');
+    Route::get('/sales/export', [MedicineSellerDashboardController::class, 'exportSalesHistory'])->name('medicine-seller.sales-export')->middleware('permission:medicine-seller.sales');
     Route::get('/sales/{sale}', [MedicineSellerDashboardController::class, 'saleDetails'])->name('medicine-seller.sale-details')->middleware('permission:medicine-seller.sales');
     Route::put('/sales/{sale}/payment', [MedicineSellerDashboardController::class, 'updatePayment'])->name('medicine-seller.update-payment')->middleware('permission:medicine-seller.sales');
     Route::get('/my-report', [MedicineSellerDashboardController::class, 'myReport'])->name('medicine-seller.report')->middleware('permission:medicine-seller.reports');
@@ -469,6 +470,7 @@ Route::prefix('optics-seller')->middleware(['permission:dashboard.optics-seller'
     Route::get('/search-customer', [OpticsSellerDashboardController::class, 'searchCustomer'])->name('search-customer');
     Route::get('/customer/{patient}/details', [OpticsSellerDashboardController::class, 'getCustomerDetails'])->name('customer-details');
     Route::get('/sales', [OpticsSellerDashboardController::class, 'salesHistory'])->name('optics-seller.sales')->middleware('permission:optics-seller.sales');
+    Route::get('/sales/export', [OpticsSellerDashboardController::class, 'exportSalesHistory'])->name('optics-seller.sales-export')->middleware('permission:optics-seller.sales');
     Route::get('/sales/{sale}', [OpticsSellerDashboardController::class, 'saleDetails'])->name('optics-seller.sale-details')->middleware('permission:optics-seller.sales');
     Route::post('/sales/{sale}/update-status', [OpticsSellerDashboardController::class, 'updateStatus'])->name('optics-seller.update-status')->middleware('permission:optics-seller.sales');
     Route::post('/sales/{sale}/payment', [OpticsSellerDashboardController::class, 'updatePayment'])->name('optics-seller.add-payment')->middleware('permission:optics-seller.sales');
@@ -717,6 +719,20 @@ Route::middleware(['permission:optics-account.view'])->prefix('optics-account')-
         Route::post('/export', [OpticsAccountController::class, 'exportReport'])->name('export');
 });
 
+Route::middleware(['permission:operations.view'])->prefix('operation-account')->name('operation-account.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'index'])->name('dashboard');
+        Route::post('/fund-in', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'fundIn'])->name('fund-in');
+        Route::post('/fund-out', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'fundOut'])->name('fund-out');
+        Route::post('/expense', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'addExpense'])->name('expense');
+        Route::post('/other-income', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'addOtherIncome'])->name('other-income');
+        Route::get('/transactions', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'transactions'])->name('transactions');
+        Route::get('/fund-history', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'fundHistory'])->name('fund-history');
+        Route::get('/monthly-report', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'monthlyReport'])->name('monthly-report');
+        Route::get('/balance-sheet', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'balanceSheet'])->name('balance-sheet');
+        Route::get('/analytics', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'analytics'])->name('analytics');
+        Route::post('/export', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'exportReport'])->name('export');
+});
+
 Route::middleware(['permission:main-account.view'])->prefix('main-account')->name('main-account.')->group(function () {
     Route::get('/', [MainAccountController::class, 'index'])->name('index');
     Route::get('/vouchers', [MainAccountController::class, 'vouchers'])->name('vouchers');
@@ -824,6 +840,105 @@ Route::prefix('medical-tests')->name('medical-tests.')->middleware(['permission:
         Route::get('/reports/daily', [MedicalTestController::class, 'dailyReport'])->name('reports.daily');
         Route::get('/reports/monthly', [MedicalTestController::class, 'monthlyReport'])->name('reports.monthly');
         Route::get('/reports/test-wise', [MedicalTestController::class, 'testWiseReport'])->name('reports.test-wise');
+    });
+});
+
+// ==================== Operation Routes ====================
+
+use App\Http\Controllers\OperationController;
+use App\Http\Controllers\OperationBookingController;
+
+// Operation Types Management - Permission-based
+Route::middleware(['auth'])->prefix('operations')->name('operations.')->group(function () {
+    // IMPORTANT: Specific routes MUST come BEFORE dynamic {operation} routes
+
+    // Create routes (BEFORE {operation})
+    Route::middleware(['permission:operations.create'])->group(function () {
+        Route::get('/create', [OperationController::class, 'create'])->name('create');
+        Route::post('/', [OperationController::class, 'store'])->name('store');
+    });
+
+    // Active list route (BEFORE {operation})
+    Route::middleware(['permission:operations.view'])->group(function () {
+        Route::get('/active/list', [OperationController::class, 'getActiveOperations'])->name('active-list');
+    });
+
+    // View routes
+    Route::middleware(['permission:operations.view'])->group(function () {
+        Route::get('/', [OperationController::class, 'index'])->name('index');
+        Route::get('/{operation}', [OperationController::class, 'show'])->name('show');
+    });
+
+    // Edit routes (BEFORE {operation} to avoid conflicts)
+    Route::middleware(['permission:operations.edit', 'super-admin-only'])->group(function () {
+        Route::get('/{operation}/edit', [OperationController::class, 'edit'])->name('edit');
+        Route::put('/{operation}', [OperationController::class, 'update'])->name('update');
+        Route::patch('/{operation}/toggle-status', [OperationController::class, 'toggleStatus'])->name('toggle-status');
+    });
+
+    // Delete routes
+    Route::middleware(['permission:operations.delete', 'super-admin-only'])->group(function () {
+        Route::delete('/{operation}', [OperationController::class, 'destroy'])->name('destroy');
+    });
+});
+
+// Operation Bookings - Permission-based
+Route::middleware(['auth'])->prefix('operation-bookings')->name('operation-bookings.')->group(function () {
+    // IMPORTANT: Specific routes MUST come BEFORE dynamic {operationBooking} routes
+
+    // Create routes (BEFORE {operationBooking})
+    Route::middleware(['permission:operation-bookings.create'])->group(function () {
+        Route::get('/create', [OperationBookingController::class, 'create'])->name('create');
+        Route::post('/', [OperationBookingController::class, 'store'])->name('store');
+        Route::get('/search-patients', [OperationBookingController::class, 'searchPatients'])->name('search-patients');
+    });
+
+    // Today route (BEFORE {operationBooking})
+    Route::middleware(['permission:operation-bookings.view'])->group(function () {
+        Route::get('/today', [OperationBookingController::class, 'today'])->name('today');
+    });
+
+    // View routes
+    Route::middleware(['permission:operation-bookings.view'])->group(function () {
+        Route::get('/', [OperationBookingController::class, 'index'])->name('index');
+        Route::get('/{operationBooking}', [OperationBookingController::class, 'show'])->name('show');
+        Route::get('/{operationBooking}/receipt', [OperationBookingController::class, 'receipt'])->name('receipt');
+    });
+
+    // Edit routes (BEFORE other {operationBooking} routes to prioritize /edit)
+    Route::middleware(['permission:operation-bookings.edit', 'super-admin-only'])->group(function () {
+        Route::get('/{operationBooking}/edit', [OperationBookingController::class, 'edit'])->name('edit');
+        Route::put('/{operationBooking}', [OperationBookingController::class, 'update'])->name('update');
+    });
+
+    // Payment routes
+    Route::middleware(['permission:operation-bookings.payment'])->group(function () {
+        Route::post('/{operationBooking}/payment', [OperationBookingController::class, 'addPayment'])->name('add-payment');
+    });
+
+    // Confirm route
+    Route::middleware(['permission:operation-bookings.confirm'])->group(function () {
+        Route::patch('/{operationBooking}/confirm', [OperationBookingController::class, 'confirm'])->name('confirm');
+    });
+
+    // Complete route
+    Route::middleware(['permission:operation-bookings.complete'])->group(function () {
+        Route::patch('/{operationBooking}/complete', [OperationBookingController::class, 'complete'])->name('complete');
+    });
+
+    // Cancel route
+    Route::middleware(['permission:operation-bookings.cancel'])->group(function () {
+        Route::patch('/{operationBooking}/cancel', [OperationBookingController::class, 'cancel'])->name('cancel');
+    });
+
+    // Reschedule route
+    Route::middleware(['permission:operation-bookings.reschedule'])->group(function () {
+        Route::patch('/{operationBooking}/reschedule', [OperationBookingController::class, 'reschedule'])->name('reschedule');
+    });
+
+    // Delete route
+    Route::middleware(['permission:operation-bookings.delete', 'super-admin-only'])->group(function () {
+        Route::delete('/{operationBooking}', [OperationBookingController::class, 'destroy'])->name('destroy');
     });
 });
 

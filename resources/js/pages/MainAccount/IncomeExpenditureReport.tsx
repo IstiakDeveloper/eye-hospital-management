@@ -58,8 +58,6 @@ interface IncomeExpenditureReportProps {
     formattedTotalIncome: string;
     formattedTotalExpenditure: string;
     formattedNetSurplusDeficit: string;
-    hospital_name: string;
-    hospital_location: string;
     month?: number;
     year?: number;
 }
@@ -79,8 +77,6 @@ const IncomeExpenditureReport: React.FC<IncomeExpenditureReportProps> = ({
     formattedTotalIncome,
     formattedTotalExpenditure,
     formattedNetSurplusDeficit,
-    hospital_name,
-    hospital_location,
     month,
     year
 }) => {
@@ -169,11 +165,11 @@ const IncomeExpenditureReport: React.FC<IncomeExpenditureReportProps> = ({
                     body * {
                         visibility: hidden;
                     }
-                    
+
                     .print-area, .print-area * {
                         visibility: visible;
                     }
-                    
+
                     .print-area {
                         position: absolute;
                         left: 0;
@@ -202,12 +198,12 @@ const IncomeExpenditureReport: React.FC<IncomeExpenditureReportProps> = ({
                         width: 100% !important;
                         font-size: 12px !important;
                     }
-                    
+
                     th, td {
                         border: 1px solid #000 !important;
                         padding: 4px 6px !important;
                     }
-                    
+
                     th {
                         background-color: #f0f0f0 !important;
                         font-weight: bold !important;
@@ -225,7 +221,7 @@ const IncomeExpenditureReport: React.FC<IncomeExpenditureReportProps> = ({
                     .bg-gray-50, .bg-green-50, .bg-red-50, .bg-blue-50 {
                         background-color: transparent !important;
                     }
-                    
+
                     .bg-green-200, .bg-red-200, .bg-blue-200, .bg-gray-200 {
                         background-color: #f0f0f0 !important;
                         -webkit-print-color-adjust: exact !important;
@@ -305,8 +301,9 @@ const IncomeExpenditureReport: React.FC<IncomeExpenditureReportProps> = ({
                 <div className="print-area">
                     {/* Report Header */}
                     <div className="text-center mb-6 print-header">
-                        <h1 className="text-2xl font-bold">{hospital_name}</h1>
-                        <p className="text-lg">{hospital_location}</p>
+                        <h1 className="text-2xl font-bold">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+                        <p className="text-base">সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।</p>
+                        <p className="text-sm">📞 ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০ • ✉️ niehpc@gmail.com</p>
                         <h2 className="text-xl font-bold mt-2">Income and Expenditure Report</h2>
                         <p className="text-lg font-semibold">{reportTitle}</p>
                     </div>

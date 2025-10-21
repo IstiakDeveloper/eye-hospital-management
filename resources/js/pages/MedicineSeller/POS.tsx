@@ -213,18 +213,35 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
     return raw;
   })();
 
+  // Calculate discount percentage
+  const discountPercent = subtotal > 0 ? (discountValue / subtotal) * 100 : 0;
+
+  // Check if discount exceeds 7% (strictly greater than 7, with tolerance for floating point)
+  const isDiscountExceeded = discountPercent > 7.01;
+
   const totalAmount = subtotal - discountValue + (Number(data.tax || 0));
 
-  // Auto-set paid amount to total amount
+  // Auto-set paid amount to total amount when total changes
   useEffect(() => {
-    setData('paid_amount', totalAmount);
-  }, [totalAmount]);
+    if (totalAmount >= 0) {
+      setData((prevData) => ({
+        ...prevData,
+        paid_amount: totalAmount
+      }));
+    }
+  }, [totalAmount, subtotal, discountValue]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (cart.length === 0) {
       alert('Please add items to cart');
+      return;
+    }
+
+    // Check if discount exceeds 7%
+    if (isDiscountExceeded) {
+      alert('Discount cannot exceed 7% of subtotal!');
       return;
     }
 
@@ -798,9 +815,9 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
           </div>
 
           {/* Right Panel - Cart & Checkout */}
-          <div className="w-96 flex flex-col bg-white shadow-lg">
+          <div className="w-96 flex flex-col bg-white shadow-lg max-h-[calc(100vh-64px)] overflow-hidden">
             {/* Patient Search */}
-            <div className="p-4 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+            <div className="p-4 border-b bg-gradient-to-r from-gray-50 to-gray-100 flex-shrink-0">
               <label className="block text-xs font-medium text-gray-700 mb-2 uppercase">Customer</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -852,8 +869,8 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
             </div>
 
             {/* Cart */}
-            <div className="flex-1 flex flex-col">
-              <div className="px-4 py-3 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="px-4 py-3 border-b bg-gradient-to-r from-gray-50 to-gray-100 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ShoppingCart className="w-5 h-5 text-blue-600" />
@@ -863,7 +880,7 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+              <div className="flex-1 overflow-y-auto p-4 bg-gray-50 min-h-0">
                 {cart.length === 0 ? (
                   <div className="text-center py-12 text-gray-500">
                     <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -944,7 +961,9 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
                             const v = e.target.value;
                             setData('discount', v === '' ? 0 : parseFloat(v));
                           }}
-                          className="w-full px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className={`w-full px-3 py-2 text-sm border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            isDiscountExceeded ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
                         />
                       </div>
 
@@ -959,6 +978,13 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
                         </select>
                       </div>
                     </div>
+                    {isDiscountExceeded && (
+                      <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded-lg">
+                        <p className="text-xs text-red-700 font-semibold">
+                          ⚠️ Discount cannot exceed 7%! Current: {discountPercent.toFixed(2)}%
+                        </p>
+                      </div>
+                    )}
                   </div>
 
 
@@ -995,8 +1021,9 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
                   <label className="block text-xs font-medium text-gray-700 mb-1">Paid Amount</label>
                   <input
                     type="number"
+                    step="0.01"
                     placeholder={`${Math.round(totalAmount)}`}
-                    value={data.paid_amount === 0 ? '' : data.paid_amount}
+                    value={data.paid_amount || ''}
                     onChange={(e) => {
                       const v = e.target.value;
                       setData('paid_amount', v === '' ? 0 : parseFloat(v));
@@ -1013,11 +1040,11 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
                 {/* Complete Sale Button */}
                 <button
                   type="submit"
-                  disabled={processing || cart.length === 0}
+                  disabled={processing || cart.length === 0 || isDiscountExceeded}
                   className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-400 text-white py-3 rounded-lg font-bold text-base transition-all shadow-lg hover:shadow-xl disabled:shadow-none flex items-center justify-center gap-2"
                 >
                   <Calculator className="w-5 h-5" />
-                  Complete Sale
+                  {isDiscountExceeded ? 'Discount Too High' : 'Complete Sale'}
                 </button>
               </form>
             )}
