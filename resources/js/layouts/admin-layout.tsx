@@ -452,6 +452,13 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             current: 'medicine.*',
             roles: ['Super Admin'],
             children: [
+                ...(hasPermission('medicine-corner.view') ? [{
+                    name: 'Dashboard',
+                    href: route('medicine-corner.dashboard'),
+                    icon: Home,
+                    current: 'medicine-corner.dashboard',
+                    roles: ['Super Admin']
+                }] : []),
                 ...(hasPermission('medicine-corner.stock') ? [{
                     name: 'Stock Management',
                     href: '/medicine-corner/stock',

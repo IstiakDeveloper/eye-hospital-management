@@ -376,6 +376,9 @@ Route::get('/api/appointment-display-data', [AppointmentDisplayController::class
 
 // Medicine Corner Routes - Permission-based
 Route::prefix('medicine-corner')->middleware(['permission:medicine-corner.view'])->name('medicine-corner.')->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [MedicineCornerController::class, 'dashboard'])->name('dashboard');
+
     // Main Medicine Corner Pages
     Route::get('/stock', [MedicineCornerController::class, 'stock'])->name('stock');
     Route::get('/medicines', [MedicineCornerController::class, 'medicines'])->name('medicines');

@@ -7,6 +7,7 @@ use App\Models\MedicineAccount;
 use App\Models\MedicineSale;
 use App\Models\MedicineSaleItem;
 use App\Models\MedicineStock;
+use App\Models\MedicineTransaction;
 use App\Models\MedicineVendor;
 use App\Models\MedicineVendorPayment;
 use App\Models\MedicineVendorTransaction;
@@ -22,6 +23,81 @@ use Carbon\Carbon;
 
 class MedicineCornerController extends Controller
 {
+    /**
+     * Medicine Corner Dashboard
+     */
+    public function dashboard()
+    {
+        $stats = [
+            'total_medicines' => Medicine::active()->count(),
+            'medicines_in_stock' => Medicine::where('total_stock', '>', 0)->count(),
+            'low_stock_medicines' => Medicine::whereHas('stockAlert', function ($query) {
+                $query->whereRaw('medicines.total_stock <= stock_alerts.minimum_stock');
+            })->count(),
+            'total_stock_value' => $this->calculateTotalStockValue(),
+            'account_balance' => MedicineAccount::getBalance(),
+            'today_sales' => MedicineSale::whereDate('sale_date', today())->sum('total_amount'),
+            'today_profit' => MedicineSale::whereDate('sale_date', today())->sum('total_profit'),
+            'month_profit' => MedicineAccount::monthlyReport(now()->year, now()->month),
+
+            // Vendor stats
+            'total_vendors' => MedicineVendor::active()->count(),
+            'total_vendor_due' => MedicineVendor::where('balance_type', 'due')->sum('current_balance'),
+            'pending_purchases' => MedicineStock::where('payment_status', '!=', 'paid')->count(),
+        ];
+
+        // Low stock medicines
+        $lowStockMedicines = Medicine::with('stockAlert')
+            ->whereHas('stockAlert', function ($query) {
+                $query->whereRaw('medicines.total_stock <= stock_alerts.minimum_stock');
+            })
+            ->limit(10)
+            ->get();
+
+        // Expiring medicines in next 30 days
+        $expiringMedicines = MedicineStock::with(['medicine', 'vendor'])
+            ->where('expiry_date', '>', now())
+            ->where('expiry_date', '<=', now()->addDays(30))
+            ->where('available_quantity', '>', 0)
+            ->orderBy('expiry_date', 'asc')
+            ->limit(10)
+            ->get();
+
+        // Recent transactions - Fixed to use correct model
+        $recentTransactions = MedicineTransaction::with('createdBy')
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($transaction) {
+                return [
+                    'id' => $transaction->id,
+                    'transaction_no' => $transaction->transaction_no,
+                    'type' => $transaction->type,
+                    'amount' => $transaction->amount,
+                    'category' => $transaction->category ?? 'General',
+                    'description' => $transaction->description ?? '',
+                    'transaction_date' => $transaction->transaction_date,
+                    'created_by' => [
+                        'name' => $transaction->createdBy->name ?? 'System'
+                    ]
+                ];
+            });
+
+        // Recent sales
+        $recentSales = MedicineSale::with(['patient', 'soldBy'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        return Inertia::render('MedicineCorner/Dashboard', [
+            'stats' => $stats,
+            'lowStockMedicines' => $lowStockMedicines,
+            'expiringMedicines' => $expiringMedicines,
+            'recentTransactions' => $recentTransactions,
+            'recentSales' => $recentSales,
+        ]);
+    }
+
     /**
      * Stock Management Page
      */
