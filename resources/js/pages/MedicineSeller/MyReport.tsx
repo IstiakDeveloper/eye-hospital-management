@@ -15,7 +15,6 @@ import {
 interface SalesSummary {
   date: string;
   total_sales: number;
-  total_profit: number;
   sales_count: number;
 }
 
@@ -24,14 +23,12 @@ interface TopMedicine {
   unit: string;
   total_quantity: number;
   total_amount: number;
-  total_profit: number;
 }
 
 interface MyReportProps {
   salesSummary: SalesSummary[];
   topMedicines: TopMedicine[];
   totalSales: number;
-  totalProfit: number;
   totalTransactions: number;
   dateFrom: string;
   dateTo: string;
@@ -41,7 +38,6 @@ export default function MyReport({
   salesSummary,
   topMedicines,
   totalSales,
-  totalProfit,
   totalTransactions,
   dateFrom,
   dateTo
@@ -70,8 +66,6 @@ export default function MyReport({
   };
 
   const averageDailySales = salesSummary.length > 0 ? totalSales / salesSummary.length : 0;
-  const averageDailyProfit = salesSummary.length > 0 ? totalProfit / salesSummary.length : 0;
-  const profitMargin = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
 
   return (
     <AdminLayout>
@@ -124,7 +118,7 @@ export default function MyReport({
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -145,12 +139,12 @@ export default function MyReport({
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Profit</p>
+                <p className="text-sm font-medium text-gray-600">Total Transactions</p>
                 <p className="text-2xl font-bold text-green-600 mt-1">
-                  {formatCurrency(totalProfit)}
+                  {totalTransactions}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Avg: {formatCurrency(averageDailyProfit)}/day
+                  Avg: {(salesSummary.length > 0 ? totalTransactions / salesSummary.length : 0).toFixed(1)}/day
                 </p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
@@ -162,33 +156,16 @@ export default function MyReport({
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Transactions</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {totalTransactions}
+                <p className="text-sm font-medium text-gray-600">Active Days</p>
+                <p className="text-2xl font-bold text-purple-600 mt-1">
+                  {salesSummary.length}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Avg: {(salesSummary.length > 0 ? totalTransactions / salesSummary.length : 0).toFixed(1)}/day
+                  Days with sales
                 </p>
               </div>
               <div className="bg-purple-100 p-3 rounded-lg">
                 <FileText className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Profit Margin</p>
-                <p className="text-2xl font-bold text-amber-600 mt-1">
-                  {profitMargin.toFixed(1)}%
-                </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Profit per sale
-                </p>
-              </div>
-              <div className="bg-amber-100 p-3 rounded-lg">
-                <Activity className="w-6 h-6 text-amber-600" />
               </div>
             </div>
           </div>
@@ -222,9 +199,6 @@ export default function MyReport({
                         style={{ width: `${percentage}%` }}
                       ></div>
                     </div>
-                    <div className="text-xs text-green-600 text-right">
-                      Profit: {formatCurrency(item.total_profit)}
-                    </div>
                   </div>
                 );
               })}
@@ -257,16 +231,12 @@ export default function MyReport({
                         <h3 className="font-medium text-gray-900 text-sm mb-1">{medicine.name}</h3>
                         <div className="flex items-center gap-4 text-xs text-gray-500">
                           <span>Qty: {medicine.total_quantity} {medicine.unit}</span>
-                          <span>Profit: {formatCurrency(medicine.total_profit)}</span>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-green-600 text-sm">
                         {formatCurrency(medicine.total_amount)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {((medicine.total_profit / medicine.total_amount) * 100).toFixed(1)}% margin
                       </p>
                     </div>
                   </div>

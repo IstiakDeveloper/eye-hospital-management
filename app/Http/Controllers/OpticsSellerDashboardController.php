@@ -59,8 +59,8 @@ class OpticsSellerDashboardController extends Controller
                 return [
                     'id' => $sale->id,
                     'invoice_number' => $sale->invoice_number,
-                    'patient_name' => $sale->patient->name,
-                    'patient_phone' => $sale->patient->phone,
+                    'patient_name' => $sale->customer_name,
+                    'patient_phone' => $sale->customer_phone ?? ($sale->patient ? $sale->patient->phone : 'N/A'),
                     'total_amount' => $sale->total_amount,
                     'due_amount' => $sale->due_amount,
                     'status' => $sale->status,
@@ -301,7 +301,7 @@ class OpticsSellerDashboardController extends Controller
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'nullable|string|max:20',
             'customer_email' => 'nullable|email|max:255',
-            'items' => 'required|array|min:1',
+            'items' => 'nullable|array', // Allow empty items if fitting charge exists
             'items.*.type' => 'required|in:frame,lens,complete_glasses',
             'items.*.id' => 'required|integer',
             'items.*.quantity' => 'required|integer|min:1',
@@ -314,33 +314,38 @@ class OpticsSellerDashboardController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        // Validate that either items exist or fitting charge is provided
+        if (empty($validated['items']) && empty($validated['glass_fitting_price'])) {
+            throw new \Exception('Either items or fitting charge must be provided');
+        }
+
         DB::beginTransaction();
         try {
-            // Create or get patient
-            $patient = null;
+            // Handle customer/patient information
+            $patientId = null;
+            $customerName = $validated['customer_name'];
+            $customerPhone = $validated['customer_phone'] ?? null;
+            $customerEmail = $validated['customer_email'] ?? null;
+
+            // If customer_id is provided, use existing patient
             if ($validated['customer_id']) {
                 $patient = Patient::find($validated['customer_id']);
-            } elseif ($validated['customer_phone'] && $validated['customer_name'] !== 'Walk-in Customer') {
-                $patient = Patient::where('phone', $validated['customer_phone'])->first();
-                if (!$patient) {
-                    $patient = Patient::create([
-                        'name' => $validated['customer_name'],
-                        'phone' => $validated['customer_phone'],
-                        'email' => $validated['customer_email'] ?? null,
-                        'registered_by' => auth()->user()->id,
-                    ]);
+                if ($patient) {
+                    $patientId = $patient->id;
+                    $customerName = $patient->name;
+                    $customerPhone = $patient->phone;
+                    $customerEmail = $patient->email;
                 }
             }
-
-            if (!$patient) {
-                throw new \Exception('Patient information is required');
-            }
+            // Otherwise, just use the provided customer info without creating a patient
 
             // Calculate items total
             $itemsTotal = 0;
             $saleDetails = [];
 
-            foreach ($validated['items'] as $item) {
+            // Process items only if they exist
+            if (!empty($validated['items'])) {
+                foreach ($validated['items'] as $item) {
                 $model = match ($item['type']) {
                     'frame' => Glasses::class,
                     'lens' => LensType::class,
@@ -380,6 +385,7 @@ class OpticsSellerDashboardController extends Controller
 
                 $saleDetails[] = ($product->name ?? $product->full_name) . " x{$item['quantity']}";
             }
+            } // End of items processing
 
             // Calculate total amount
             $fittingCharge = $validated['glass_fitting_price'] ?? 0;
@@ -394,7 +400,10 @@ class OpticsSellerDashboardController extends Controller
 
             // Create the sale record
             $sale = OpticsSale::create([
-                'patient_id' => $patient->id,
+                'patient_id' => $patientId,
+                'customer_name' => $customerName,
+                'customer_phone' => $customerPhone,
+                'customer_email' => $customerEmail,
                 'seller_id' => auth()->user()->id,
                 'glass_fitting_price' => $fittingCharge,
                 'total_amount' => $totalAmount,
@@ -405,7 +414,8 @@ class OpticsSellerDashboardController extends Controller
             ]);
 
             // Save sale items
-            foreach ($validated['items'] as $item) {
+            if (!empty($validated['items'])) {
+                foreach ($validated['items'] as $item) {
                 $model = match ($item['type']) {
                     'frame' => Glasses::class,
                     'lens' => LensType::class,
@@ -424,6 +434,7 @@ class OpticsSellerDashboardController extends Controller
                     'total_price' => $item['price'] * $item['quantity']
                 ]);
             }
+            } // End of saving sale items
 
             // Create payment record if advance payment exists
             if ($validated['advance_payment'] > 0) {
@@ -439,7 +450,10 @@ class OpticsSellerDashboardController extends Controller
 
             // Record income in OpticsAccount (ONLY advance payment, not full amount)
             if ($validated['advance_payment'] > 0) {
-                $description = "Advance Payment - Invoice: {$sale->invoice_number} | Patient: {$patient->name} ({$patient->patient_id})";
+                $description = "Advance Payment - Invoice: {$sale->invoice_number} | Customer: {$customerName}";
+                if ($customerPhone) {
+                    $description .= " ({$customerPhone})";
+                }
                 $description .= " | Total Amount: ৳" . number_format($totalAmount, 2);
                 $description .= " | Advance: ৳" . number_format($validated['advance_payment'], 2);
                 $description .= " | Due: ৳" . number_format($dueAmount, 2);
@@ -495,6 +509,8 @@ class OpticsSellerDashboardController extends Controller
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('invoice_number', 'LIKE', '%' . $request->search . '%')
+                    ->orWhere('customer_name', 'LIKE', '%' . $request->search . '%')
+                    ->orWhere('customer_phone', 'LIKE', '%' . $request->search . '%')
                     ->orWhereHas('patient', function($q) use ($request) {
                         $q->where('name', 'LIKE', '%' . $request->search . '%')
                           ->orWhere('phone', 'LIKE', '%' . $request->search . '%');
@@ -541,6 +557,8 @@ class OpticsSellerDashboardController extends Controller
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('invoice_number', 'LIKE', '%' . $request->search . '%')
+                    ->orWhere('customer_name', 'LIKE', '%' . $request->search . '%')
+                    ->orWhere('customer_phone', 'LIKE', '%' . $request->search . '%')
                     ->orWhereHas('patient', function($q) use ($request) {
                         $q->where('name', 'LIKE', '%' . $request->search . '%')
                           ->orWhere('phone', 'LIKE', '%' . $request->search . '%');
@@ -606,8 +624,8 @@ class OpticsSellerDashboardController extends Controller
             foreach ($sales as $sale) {
                 fputcsv($file, [
                     $sale->invoice_number,
-                    $sale->patient->name ?? 'N/A',
-                    $sale->patient->phone ?? 'N/A',
+                    $sale->customer_name,
+                    $sale->customer_phone ?? ($sale->patient ? $sale->patient->phone : 'N/A'),
                     $sale->created_at->format('d M Y h:i A'),
                     $sale->items->count() . ' items',
                     number_format($sale->total_amount, 2),
@@ -646,6 +664,9 @@ class OpticsSellerDashboardController extends Controller
             'sale' => [
                 'id' => $sale->id,
                 'invoice_number' => $sale->invoice_number,
+                'customer_name' => $sale->customer_name,
+                'customer_phone' => $sale->customer_phone,
+                'customer_email' => $sale->customer_email,
                 'patient' => $sale->patient,
                 'seller' => $sale->seller,
                 'glass_fitting_price' => $sale->glass_fitting_price,
@@ -717,8 +738,10 @@ class OpticsSellerDashboardController extends Controller
             ]);
 
             // Record income in OpticsAccount
-            $patient = $sale->patient;
-            $description = "Due Payment - Invoice: {$sale->invoice_number} | Patient: {$patient->name} ({$patient->patient_id})";
+            $description = "Due Payment - Invoice: {$sale->invoice_number} | Customer: {$sale->customer_name}";
+            if ($sale->customer_phone) {
+                $description .= " ({$sale->customer_phone})";
+            }
             $description .= " | Payment Amount: ৳" . number_format($validated['amount'], 2);
             $description .= " | Remaining Due: ৳" . number_format($newDueAmount, 2);
             $description .= " | Payment Method: " . strtoupper($validated['payment_method']);

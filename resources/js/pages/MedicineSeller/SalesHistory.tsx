@@ -37,7 +37,6 @@ interface SalesHistoryProps {
     meta: any;
   };
   totalSales: number;
-  totalProfit: number;
   salesCount: number;
   filters: {
     date_from?: string;
@@ -47,7 +46,7 @@ interface SalesHistoryProps {
   };
 }
 
-export default function SalesHistory({ sales, totalSales, totalProfit, salesCount, filters }: SalesHistoryProps) {
+export default function SalesHistory({ sales, totalSales, salesCount, filters }: SalesHistoryProps) {
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
   const [dateFrom, setDateFrom] = useState(filters.date_from || '');
   const [dateTo, setDateTo] = useState(filters.date_to || '');
@@ -159,9 +158,9 @@ export default function SalesHistory({ sales, totalSales, totalProfit, salesCoun
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Profit</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">
-                  {formatCurrency(totalProfit)}
+                <p className="text-sm font-medium text-gray-600">Transactions</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {salesCount}
                 </p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
@@ -173,9 +172,9 @@ export default function SalesHistory({ sales, totalSales, totalProfit, salesCoun
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Transactions</p>
+                <p className="text-sm font-medium text-gray-600">Average Sale</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {salesCount}
+                  {formatCurrency(salesCount > 0 ? totalSales / salesCount : 0)}
                 </p>
               </div>
               <div className="bg-purple-100 p-3 rounded-lg">
@@ -330,9 +329,6 @@ export default function SalesHistory({ sales, totalSales, totalProfit, salesCoun
                     Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Profit
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -366,11 +362,6 @@ export default function SalesHistory({ sales, totalSales, totalProfit, salesCoun
                     <td className="px-6 py-4">
                       <div className="text-sm font-semibold text-gray-900">
                         {formatCurrency(sale.total_amount)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-semibold text-green-600">
-                        {formatCurrency(sale.total_profit)}
                       </div>
                     </td>
                     <td className="px-6 py-4">

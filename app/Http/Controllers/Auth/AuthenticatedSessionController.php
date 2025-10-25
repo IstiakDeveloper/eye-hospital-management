@@ -33,7 +33,9 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
         $request->session()->regenerate();
 
-        return redirect()->intended($this->getDashboardRoute());
+        // Always redirect to the appropriate dashboard based on user permissions
+        // Don't use intended() as it might redirect to a dashboard they don't have access to
+        return redirect()->to($this->getDashboardRoute());
     }
 
     private function getDashboardRoute(): string

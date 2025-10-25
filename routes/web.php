@@ -818,17 +818,31 @@ Route::prefix('medical-tests')->name('medical-tests.')->middleware(['permission:
         Route::delete('/tests/{test}', [MedicalTestController::class, 'destroyTest'])->name('tests.destroy');
     });
 
-    // Patient Test Booking
-    Route::get('/', [MedicalTestController::class, 'index'])->name('index');
-    Route::get('/{testGroup}', [MedicalTestController::class, 'show'])->name('show');
-    Route::get('/{testGroup}/receipt', [MedicalTestController::class, 'receipt'])->name('receipt');
-    Route::get('/{testGroup}/print', [MedicalTestController::class, 'printReceipt'])->name('print-receipt');
+    // IMPORTANT: Specific routes MUST come BEFORE dynamic {testGroup} routes
+
+    // Search patients route (BEFORE {testGroup})
     Route::get('/search-patients', [MedicalTestController::class, 'searchPatients'])->name('search-patients');
 
+    // Create routes (BEFORE {testGroup})
     Route::middleware(['permission:medical-tests.create'])->group(function () {
         Route::get('/create', [MedicalTestController::class, 'create'])->name('create');
         Route::post('/', [MedicalTestController::class, 'store'])->name('store');
     });
+
+    // Reports routes (BEFORE {testGroup})
+    Route::middleware(['permission:medical-tests.reports'])->group(function () {
+        Route::get('/reports/daily', [MedicalTestController::class, 'dailyReport'])->name('reports.daily');
+        Route::get('/reports/monthly', [MedicalTestController::class, 'monthlyReport'])->name('reports.monthly');
+        Route::get('/reports/test-wise', [MedicalTestController::class, 'testWiseReport'])->name('reports.test-wise');
+    });
+
+    // Patient Test Booking - Index route
+    Route::get('/', [MedicalTestController::class, 'index'])->name('index');
+
+    // Dynamic routes with {testGroup} parameter (MUST be LAST)
+    Route::get('/{testGroup}', [MedicalTestController::class, 'show'])->name('show');
+    Route::get('/{testGroup}/receipt', [MedicalTestController::class, 'receipt'])->name('receipt');
+    Route::get('/{testGroup}/print', [MedicalTestController::class, 'printReceipt'])->name('print-receipt');
 
     Route::middleware(['permission:medical-tests.payment'])->group(function () {
         Route::get('/{testGroup}/payment', [MedicalTestController::class, 'paymentPage'])->name('payment-page');
@@ -837,13 +851,6 @@ Route::prefix('medical-tests')->name('medical-tests.')->middleware(['permission:
 
     Route::put('/test/{test}/result', [MedicalTestController::class, 'updateResult'])->name('update-result')->middleware('permission:medical-tests.results');
     Route::delete('/{testGroup}/cancel', [MedicalTestController::class, 'cancel'])->name('cancel')->middleware(['permission:medical-tests.delete', 'super-admin-only']);
-
-    // Reports - Permission-based
-    Route::middleware(['permission:medical-tests.reports'])->group(function () {
-        Route::get('/reports/daily', [MedicalTestController::class, 'dailyReport'])->name('reports.daily');
-        Route::get('/reports/monthly', [MedicalTestController::class, 'monthlyReport'])->name('reports.monthly');
-        Route::get('/reports/test-wise', [MedicalTestController::class, 'testWiseReport'])->name('reports.test-wise');
-    });
 });
 
 // ==================== Operation Routes ====================

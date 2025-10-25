@@ -16,10 +16,13 @@ import {
 interface OpticsSale {
   id: number;
   invoice_number: string;
-  patient: {
+  customer_name: string;
+  customer_phone?: string;
+  patient?: {
     name: string;
     phone?: string;
-  };
+    patient_id?: string;
+  } | null;
   seller: {
     name: string;
   };
@@ -274,11 +277,16 @@ export default function SalesHistory({ sales, totalSales, totalDue, salesCount, 
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">
-                        {sale.patient.name}
+                        {sale.customer_name || 'Walk-in Customer'}
                       </div>
-                      {sale.patient.phone && (
+                      {sale.customer_phone && (
                         <div className="text-xs text-gray-500 mt-0.5">
-                          {sale.patient.phone}
+                          {sale.customer_phone}
+                        </div>
+                      )}
+                      {sale.patient?.patient_id && (
+                        <div className="text-xs text-blue-600 mt-0.5">
+                          ID: {sale.patient.patient_id}
                         </div>
                       )}
                     </td>

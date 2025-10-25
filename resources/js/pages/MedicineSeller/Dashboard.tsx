@@ -17,10 +17,8 @@ import {
 
 interface DashboardProps {
   todaySales: number;
-  todayProfit: number;
   todaySalesCount: number;
   monthSales: number;
-  monthProfit: number;
   pendingPayments: number;
   salesGrowth: number;
   recentSales: any[];
@@ -31,10 +29,8 @@ interface DashboardProps {
 
 export default function Dashboard({
   todaySales,
-  todayProfit,
   todaySalesCount,
   monthSales,
-  monthProfit,
   pendingPayments,
   salesGrowth,
   recentSales,
@@ -107,11 +103,11 @@ export default function Dashboard({
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Today's Profit</p>
+                <p className="text-sm font-medium text-gray-600">Today's Transactions</p>
                 <p className="text-2xl font-bold text-green-600 mt-1">
-                  {formatCurrency(todayProfit)}
+                  {todaySalesCount}
                 </p>
-                <p className="text-sm text-gray-500 mt-2">{todaySalesCount} transactions</p>
+                <p className="text-sm text-gray-500 mt-2">Total transactions</p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
                 <TrendingUp className="w-6 h-6 text-green-600" />
@@ -126,8 +122,8 @@ export default function Dashboard({
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {formatCurrency(monthSales)}
                 </p>
-                <p className="text-sm text-green-600 mt-2">
-                  Profit: {formatCurrency(monthProfit)}
+                <p className="text-sm text-gray-500 mt-2">
+                  This month total
                 </p>
               </div>
               <div className="bg-purple-100 p-3 rounded-lg">

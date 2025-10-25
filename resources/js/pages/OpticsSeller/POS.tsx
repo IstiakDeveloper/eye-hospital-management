@@ -98,6 +98,7 @@ export default function POS({
     const [activeTab, setActiveTab] = useState<'all' | 'frames' | 'complete' | 'lenses'>('all');
     const [cart, setCart] = useState<CartItem[]>([]);
     const [showInvoice, setShowInvoice] = useState(false);
+    const [saleMode, setSaleMode] = useState<'product' | 'fitting' | null>(null); // New state for sale mode
 
     // Customer search states
     const [customerSearch, setCustomerSearch] = useState('');
@@ -185,6 +186,8 @@ export default function POS({
     const clearCustomer = () => {
         setSelectedCustomer(null);
         setCustomerSearch('');
+        setSaleMode(null); // Reset sale mode when clearing customer
+        setCart([]); // Clear cart as well
         setData({
             ...data,
             customer_id: null,
@@ -194,13 +197,18 @@ export default function POS({
         });
     };
 
-    const handleManualCustomerInput = (field: string, value: string) => {
+    const handleManualCustomerInput = (field: 'customer_name' | 'customer_phone' | 'customer_email', value: string) => {
         // If manually editing and there's a selected customer, clear the selection
         if (selectedCustomer && field === 'customer_name' && value !== selectedCustomer.name) {
             setSelectedCustomer(null);
             setData({ ...data, customer_id: null });
         }
         setData(field, value);
+    };
+
+    // Handle sale mode selection - no validation, allow customer entry later
+    const handleModeSelection = (mode: 'product' | 'fitting') => {
+        setSaleMode(mode);
     };
 
     // Combine all items for search
@@ -299,8 +307,17 @@ export default function POS({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (cart.length === 0) {
-            alert('Please add items to cart');
+        // Allow sale with only fitting charge (no items required)
+        const hasFittingCharge = fittingCharge > 0;
+        const hasItems = cart.length > 0;
+
+        if (!hasItems && !hasFittingCharge) {
+            alert('Please add items to cart or enter fitting charge');
+            return;
+        }
+
+        if (!data.customer_name || data.customer_name.trim() === '') {
+            alert('Please enter customer name');
             return;
         }
 
@@ -327,6 +344,7 @@ export default function POS({
             onSuccess: () => {
                 setShowInvoice(true);
                 setCart([]);
+                setSaleMode(null); // Reset sale mode after successful sale
                 clearCustomer();
                 reset();
             },
@@ -356,7 +374,59 @@ export default function POS({
                 </div>
 
                 <div className="flex-1 flex overflow-hidden">
-                    {/* Left Panel - Products */}
+                    {/* Left Panel - Mode Selection (always visible) */}
+                    {!saleMode && (
+                        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-white to-gray-50 border-r">
+                            <div className="text-center px-6">
+                                <div className="mb-3">
+                                    <ShoppingCart className="w-16 h-16 mx-auto text-blue-300" />
+                                </div>
+                                <h2 className="text-2xl font-semibold text-gray-800 mb-1">Select Sale Type</h2>
+                                <p className="text-gray-600 mb-6">Choose how you want to process this sale</p>
+
+                                <div className="flex items-center justify-center gap-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleModeSelection('product')}
+                                        className="flex flex-col items-center justify-center w-48 h-40 bg-white border-2 border-blue-300 rounded-xl shadow-md hover:shadow-xl hover:border-blue-400 transition-all transform hover:scale-105 p-6"
+                                        aria-label="Start product sale"
+                                    >
+                                        <ShoppingCart className="w-12 h-12 text-blue-600 mb-3" />
+                                        <span className="font-bold text-base text-gray-800 mb-1">Add Products</span>
+                                        <span className="text-xs text-gray-500">Frames, Lenses, etc.</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => handleModeSelection('fitting')}
+                                        className="flex flex-col items-center justify-center w-48 h-40 bg-white border-2 border-purple-300 rounded-xl shadow-md hover:shadow-xl hover:border-purple-400 transition-all transform hover:scale-105 p-6"
+                                        aria-label="Start fitting only sale"
+                                    >
+                                        <Glasses className="w-12 h-12 text-purple-600 mb-3" />
+                                        <span className="font-bold text-base text-gray-800 mb-1">Fitting Only</span>
+                                        <span className="text-xs text-gray-500">No products</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Left Panel - Fitting mode message */}
+                    {saleMode === 'fitting' && (
+                        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50 border-r">
+                            <div className="text-center px-8">
+                                <div className="mb-4">
+                                    <Glasses className="w-20 h-20 mx-auto text-purple-400" />
+                                </div>
+                                <h2 className="text-2xl font-bold text-gray-800 mb-2">Fitting Service Only</h2>
+                                <p className="text-gray-600 mb-4">No products will be added to this sale</p>
+                                <p className="text-sm text-gray-500">Enter fitting charge and payment details on the right panel</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Left Panel - Products (Show only in product mode) */}
+                    {saleMode === 'product' && (
                     <div className="flex-1 flex flex-col bg-white border-r">
                         {/* Search */}
                         <div className="p-3 border-b">
@@ -447,180 +517,254 @@ export default function POS({
                             </div>
                         </div>
                     </div>
+                    )}
 
                     {/* Right Panel - Cart & Checkout */}
-                    <div className="w-80 flex flex-col bg-white max-h-full">
-                        {/* Customer Info - Fixed Height */}
-                        <div className="p-3 border-b flex-shrink-0 max-h-80 overflow-y-auto">
-                            <div className="relative mb-2" ref={customerDropdownRef}>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <User className="w-4 h-4 text-gray-600" />
-                                    <span className="text-sm font-medium text-gray-700">Customer</span>
-                                    {selectedCustomer && (
-                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                                            ID: {selectedCustomer.patient_id}
-                                        </span>
-                                    )}
+                    <div className="w-96 flex flex-col bg-white max-h-full shadow-lg overflow-hidden">
+                        {/* Customer Info - Simplified & Professional - Scrollable */}
+                        <div className="p-4 border-b flex-shrink-0 bg-blue-50 overflow-y-auto max-h-[50vh]">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <User className="w-5 h-5 text-blue-600" />
+                                    <span className="text-base font-bold text-gray-800">Customer Info</span>
                                 </div>
-
-                                <div className="relative">
-                                    <input
-                                        ref={customerSearchRef}
-                                        type="text"
-                                        placeholder="Search customer by name or phone..."
-                                        value={customerSearch}
-                                        onChange={(e) => setCustomerSearch(e.target.value)}
-                                        onFocus={() => setShowRecentCustomers(true)}
-                                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                                    />
-                                    {customerSearch && (
-                                        <button
-                                            onClick={clearCustomer}
-                                            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                    {isSearchingCustomer && (
-                                        <div className="absolute right-8 top-1/2 transform -translate-y-1/2">
-                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Customer Search Dropdown - Fixed positioning */}
-                                {showCustomerDropdown && customerResults.length > 0 && (
-                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                        {customerResults.map((customer) => (
-                                            <button
-                                                key={customer.id}
-                                                onClick={() => selectCustomer(customer)}
-                                                className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="font-medium text-sm text-gray-900">{customer.name}</p>
-                                                        <p className="text-xs text-gray-600">{customer.phone}</p>
-                                                        {customer.email && (
-                                                            <p className="text-xs text-gray-500">{customer.email}</p>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                                                            ID: {customer.patient_id}
-                                                        </span>
-                                                        {customer.total_visits && (
-                                                            <p className="text-xs text-gray-500 mt-1">
-                                                                {customer.total_visits} visits
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* Recent Customers Dropdown - Fixed positioning */}
-                                {showRecentCustomers && !showCustomerDropdown && recentCustomers.length > 0 && (
-                                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                        <div className="px-3 py-2 bg-gray-50 border-b">
-                                            <div className="flex items-center gap-2">
-                                                <Clock className="w-3 h-3 text-gray-600" />
-                                                <span className="text-xs font-medium text-gray-700">Recent Customers</span>
-                                            </div>
-                                        </div>
-                                        {recentCustomers.map((customer) => (
-                                            <button
-                                                key={customer.id}
-                                                onClick={() => selectCustomer(customer)}
-                                                className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="font-medium text-sm text-gray-900">{customer.name}</p>
-                                                        <p className="text-xs text-gray-600">{customer.phone}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-                                                            ID: {customer.patient_id}
-                                                        </span>
-                                                        {customer.last_visit && (
-                                                            <p className="text-xs text-gray-500 mt-1">
-                                                                Last: {customer.last_visit}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
+                                {selectedCustomer && (
+                                    <button
+                                        type="button"
+                                        onClick={clearCustomer}
+                                        className="text-sm text-red-600 hover:text-red-700 font-semibold px-2 py-1 rounded hover:bg-red-50"
+                                    >
+                                        Clear
+                                    </button>
                                 )}
                             </div>
 
-                            {/* Manual Customer Fields - Compact */}
-                            <div className="space-y-2">
-                                <input
-                                    type="text"
-                                    placeholder="Customer name*"
-                                    value={data.customer_name}
-                                    onChange={(e) => handleManualCustomerInput('customer_name', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                                />
-                                <div className="grid grid-cols-1 gap-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Phone number"
-                                        value={data.customer_phone}
-                                        onChange={(e) => handleManualCustomerInput('customer_phone', e.target.value)}
-                                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                                    />
-                                    <input
-                                        type="email"
-                                        placeholder="Email (optional)"
-                                        value={data.customer_email}
-                                        onChange={(e) => handleManualCustomerInput('customer_email', e.target.value)}
-                                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Selected Customer Info - Compact */}
-                            {selectedCustomer && (
-                                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                            {/* Selected Customer Display */}
+                            {selectedCustomer ? (
+                                <div className="p-2.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-green-900 truncate">
-                                                {selectedCustomer.name}
-                                            </p>
-                                            <p className="text-xs text-green-700">
-                                                {selectedCustomer.phone} • ID: {selectedCustomer.patient_id}
-                                            </p>
-                                            {selectedCustomer.total_visits && (
-                                                <p className="text-xs text-green-600">
-                                                    {selectedCustomer.total_visits} visits
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <p className="text-sm font-semibold text-green-900 truncate">
+                                                    {selectedCustomer.name}
+                                                </p>
+                                                <span className="text-xs bg-green-600 text-white px-1.5 py-0.5 rounded font-medium">
+                                                    ID: {selectedCustomer.patient_id}
+                                                </span>
+                                            </div>
+                                            <div className="space-y-0.5">
+                                                <p className="text-xs text-green-700 flex items-center gap-1">
+                                                    <Phone className="w-3 h-3" />
+                                                    {selectedCustomer.phone}
+                                                </p>
+                                                {selectedCustomer.email && (
+                                                    <p className="text-xs text-green-600 truncate">
+                                                        {selectedCustomer.email}
+                                                    </p>
+                                                )}
+                                                {selectedCustomer.total_visits && (
+                                                    <p className="text-xs text-green-600">
+                                                        Total Visits: {selectedCustomer.total_visits}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {/* Search Existing Customer */}
+                                    <div className="relative" ref={customerDropdownRef}>
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                            <input
+                                                ref={customerSearchRef}
+                                                type="text"
+                                                placeholder="Search existing patient..."
+                                                value={customerSearch}
+                                                onChange={(e) => setCustomerSearch(e.target.value)}
+                                                onFocus={() => setShowRecentCustomers(true)}
+                                                className="w-full pl-9 pr-8 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                            />
+                                            {customerSearch && (
+                                                <button
+                                                    onClick={() => {
+                                                        setCustomerSearch('');
+                                                        setShowCustomerDropdown(false);
+                                                    }}
+                                                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            {isSearchingCustomer && (
+                                                <div className="absolute right-9 top-1/2 transform -translate-y-1/2">
+                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Search Results Dropdown */}
+                                        {showCustomerDropdown && customerResults.length > 0 && (
+                                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                                                <div className="px-2 py-1.5 bg-blue-50 border-b border-blue-100">
+                                                    <span className="text-xs font-medium text-blue-900">Found {customerResults.length} patient(s)</span>
+                                                </div>
+                                                {customerResults.map((customer) => (
+                                                    <button
+                                                        key={customer.id}
+                                                        onClick={() => selectCustomer(customer)}
+                                                        className="w-full px-3 py-2 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="font-medium text-sm text-gray-900 truncate">{customer.name}</p>
+                                                                <p className="text-xs text-gray-600">{customer.phone}</p>
+                                                            </div>
+                                                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded ml-2 font-medium whitespace-nowrap">
+                                                                {customer.patient_id}
+                                                            </span>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Recent Customers Dropdown */}
+                                        {showRecentCustomers && !showCustomerDropdown && !customerSearch && recentCustomers.length > 0 && (
+                                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-64 overflow-y-auto">
+                                                <div className="px-2 py-1.5 bg-gray-50 border-b border-gray-200 flex items-center gap-1.5">
+                                                    <Clock className="w-3 h-3 text-gray-600" />
+                                                    <span className="text-xs font-medium text-gray-700">Recent Patients</span>
+                                                </div>
+                                                {recentCustomers.map((customer) => (
+                                                    <button
+                                                        key={customer.id}
+                                                        onClick={() => selectCustomer(customer)}
+                                                        className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="font-medium text-sm text-gray-900 truncate">{customer.name}</p>
+                                                                <p className="text-xs text-gray-600">{customer.phone}</p>
+                                                            </div>
+                                                            <div className="text-right ml-2">
+                                                                <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded font-medium whitespace-nowrap block">
+                                                                    {customer.patient_id}
+                                                                </span>
+                                                                {customer.last_visit && (
+                                                                    <p className="text-xs text-gray-500 mt-0.5">
+                                                                        {customer.last_visit}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Divider with text */}
+                                    <div className="relative my-4">
+                                        <div className="absolute inset-0 flex items-center">
+                                            <div className="w-full border-t-2 border-gray-300"></div>
+                                        </div>
+                                        <div className="relative flex justify-center text-sm">
+                                            <span className="px-3 bg-white text-gray-600 font-medium">OR ENTER DETAILS</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Manual Entry - Quick Fields */}
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 mb-1">Customer Name *</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter customer name"
+                                                value={data.customer_name}
+                                                onChange={(e) => handleManualCustomerInput('customer_name', e.target.value)}
+                                                className="w-full px-3 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium"
+                                            />
+                                            {data.customer_name && (
+                                                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                                    ✓ Customer ready - Select sale type below
                                                 </p>
                                             )}
                                         </div>
-                                        <button
-                                            onClick={clearCustomer}
-                                            className="text-green-600 hover:text-green-800 flex-shrink-0 ml-2"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 mb-1">Phone Number (Optional)</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Enter phone number"
+                                                value={data.customer_phone}
+                                                onChange={(e) => handleManualCustomerInput('customer_phone', e.target.value)}
+                                                className="w-full px-3 py-2.5 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* Cart - Flexible Height */}
-                        <div className="flex-1 flex flex-col min-h-0">
-                            <div className="px-3 py-2 border-b bg-gray-50 flex-shrink-0">
-                                <div className="flex items-center justify-between">
-                                    <span className="font-medium text-sm">Cart ({cart.length})</span>
-                                    <ShoppingCart className="w-4 h-4 text-gray-600" />
+                        {/* Sale Mode Selection - Always show in right panel */}
+                        {!saleMode && (
+                            <div className="p-6 border-b border-t-2 border-t-blue-300 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex-shrink-0">
+                                <div className="text-center mb-4">
+                                    <h3 className="text-lg font-bold text-gray-800 mb-1">Choose Sale Type</h3>
+                                    <p className="text-xs text-gray-600">Select what to sell</p>
+                                </div>
+                                <div className="space-y-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleModeSelection('product')}
+                                        className="w-full p-5 border-3 border-blue-400 bg-white rounded-xl hover:bg-blue-50 hover:shadow-lg transition-all flex items-center gap-4 group transform hover:scale-105"
+                                    >
+                                        <div className="bg-blue-100 p-3 rounded-lg group-hover:bg-blue-200 transition-colors">
+                                            <ShoppingCart className="w-8 h-8 text-blue-600" />
+                                        </div>
+                                        <div className="text-left flex-1">
+                                            <div className="font-bold text-base text-gray-800 mb-1">Add Products</div>
+                                            <div className="text-xs text-gray-600">Frames, Lenses, Complete Glasses</div>
+                                        </div>
+                                        <ChevronDown className="w-5 h-5 text-blue-600 transform -rotate-90" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleModeSelection('fitting')}
+                                        className="w-full p-5 border-3 border-purple-400 bg-white rounded-xl hover:bg-purple-50 hover:shadow-lg transition-all flex items-center gap-4 group transform hover:scale-105"
+                                    >
+                                        <div className="bg-purple-100 p-3 rounded-lg group-hover:bg-purple-200 transition-colors">
+                                            <Glasses className="w-8 h-8 text-purple-600" />
+                                        </div>
+                                        <div className="text-left flex-1">
+                                            <div className="font-bold text-base text-gray-800 mb-1">Fitting Only</div>
+                                            <div className="text-xs text-gray-600">Service charge without products</div>
+                                        </div>
+                                        <ChevronDown className="w-5 h-5 text-purple-600 transform -rotate-90" />
+                                    </button>
                                 </div>
                             </div>
+                        )}
+
+                        {/* Cart - Flexible Height (Show only in product mode) */}
+                        {saleMode === 'product' && (
+                            <div className="flex-1 flex flex-col min-h-0">
+                                <div className="px-3 py-2 border-b bg-gray-50 flex-shrink-0">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-medium text-sm">Cart ({cart.length})</span>
+                                        <div className="flex items-center gap-2">
+                                            <ShoppingCart className="w-4 h-4 text-gray-600" />
+                                            <button
+                                                type="button"
+                                                onClick={() => setSaleMode(null)}
+                                                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                            >
+                                                Change Mode
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
 
                             <div className="flex-1 overflow-y-auto p-3 min-h-0">
                                 {cart.length === 0 ? (
@@ -683,9 +827,31 @@ export default function POS({
                                 )}
                             </div>
                         </div>
+                        )}
+
+                        {/* Fitting Only Mode - Show fitting charge form */}
+                        {saleMode === 'fitting' && (
+                            <div className="flex-1 flex flex-col p-4">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-semibold text-gray-800">Fitting Charge Only</h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSaleMode(null)}
+                                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                    >
+                                        Change Mode
+                                    </button>
+                                </div>
+                                <div className="text-center py-8 text-gray-500 bg-purple-50 rounded-lg border-2 border-dashed border-purple-200">
+                                    <Glasses className="w-12 h-12 mx-auto mb-3 text-purple-400" />
+                                    <p className="text-sm font-medium text-gray-700">Fitting Service Sale</p>
+                                    <p className="text-xs text-gray-600 mt-1">Enter fitting charge below</p>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Checkout - Fixed at Bottom */}
-                        {cart.length > 0 && (
+                        {(selectedCustomer || data.customer_name) && saleMode && (
                             <div className="border-t bg-gray-50 flex-shrink-0">
                                 <form onSubmit={handleSubmit} className="p-3">
                                     {/* Fitting Charge */}
@@ -850,7 +1016,7 @@ export default function POS({
                                     {/* Complete Sale Button - Always Visible */}
                                     <button
                                         type="submit"
-                                        disabled={processing || cart.length === 0}
+                                        disabled={processing}
                                         className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-base"
                                     >
                                         <Calculator className="w-5 h-5" />

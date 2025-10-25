@@ -42,11 +42,15 @@ interface OpticsSalePayment {
 interface OpticsSale {
     id: number;
     invoice_number: string;
-    patient: {
+    customer_name: string;
+    customer_phone?: string;
+    customer_email?: string;
+    patient?: {
         name: string;
         phone?: string;
         email?: string;
-    };
+        patient_id?: string;
+    } | null;
     seller: {
         name: string;
     };
@@ -232,27 +236,35 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                             <h2 className="text-lg font-semibold text-gray-900 mb-4">Transaction Information</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <h3 className="text-sm font-medium text-gray-500 mb-3">Patient Details</h3>
+                                    <h3 className="text-sm font-medium text-gray-500 mb-3">Customer Details</h3>
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2">
                                             <User className="w-4 h-4 text-gray-400" />
                                             <span className="text-sm font-medium text-gray-900">
-                                                {sale.patient.name}
+                                                {sale.customer_name || 'Walk-in Customer'}
                                             </span>
                                         </div>
-                                        {sale.patient.phone && (
+                                        {sale.customer_phone && (
                                             <div className="flex items-center gap-2">
                                                 <span className="w-4 h-4 text-gray-400">📞</span>
                                                 <span className="text-sm text-gray-900">
-                                                    {sale.patient.phone}
+                                                    {sale.customer_phone}
                                                 </span>
                                             </div>
                                         )}
-                                        {sale.patient.email && (
+                                        {sale.customer_email && (
                                             <div className="flex items-center gap-2">
                                                 <span className="w-4 h-4 text-gray-400">✉️</span>
                                                 <span className="text-sm text-gray-900">
-                                                    {sale.patient.email}
+                                                    {sale.customer_email}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {sale.patient?.patient_id && (
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-4 h-4 text-gray-400">🆔</span>
+                                                <span className="text-xs text-blue-600 font-medium">
+                                                    Patient ID: {sale.patient.patient_id}
                                                 </span>
                                             </div>
                                         )}
@@ -744,8 +756,8 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                 <div className="mb-4">
                                     <p><strong>Invoice:</strong> {sale.invoice_number}</p>
                                     <p><strong>Date:</strong> {formatDate(sale.created_at)}</p>
-                                    <p><strong>Patient:</strong> {sale.patient.name}</p>
-                                    {sale.patient.phone && <p><strong>Phone:</strong> {sale.patient.phone}</p>}
+                                    <p><strong>Customer:</strong> {sale.customer_name || 'Walk-in Customer'}</p>
+                                    {sale.customer_phone && <p><strong>Phone:</strong> {sale.customer_phone}</p>}
                                 </div>
                                 <table className="w-full border-collapse border border-gray-300 mb-4">
                                     <thead>

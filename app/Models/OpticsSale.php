@@ -13,6 +13,9 @@ class OpticsSale extends Model
     protected $fillable = [
         'invoice_number',
         'patient_id',
+        'customer_name',
+        'customer_phone',
+        'customer_email',
         'seller_id',
         'glass_fitting_price',
         'total_amount',
@@ -64,5 +67,32 @@ class OpticsSale extends Model
     public function getItemsTotalAttribute()
     {
         return $this->items->sum('total_price');
+    }
+
+    public function getCustomerNameAttribute($value)
+    {
+        // If there's a patient, return patient name, otherwise return the stored customer name
+        if ($this->patient) {
+            return $this->patient->name;
+        }
+        return $this->attributes['customer_name'] ?? 'Walk-in Customer';
+    }
+
+    public function getCustomerPhoneAttribute($value)
+    {
+        // If there's a patient, return patient phone, otherwise return the stored customer phone
+        if ($this->patient) {
+            return $this->patient->phone;
+        }
+        return $this->attributes['customer_phone'] ?? null;
+    }
+
+    public function getCustomerEmailAttribute($value)
+    {
+        // If there's a patient, return patient email, otherwise return the stored customer email
+        if ($this->patient) {
+            return $this->patient->email;
+        }
+        return $this->attributes['customer_email'] ?? null;
     }
 }

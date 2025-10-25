@@ -18,9 +18,7 @@ interface SaleItem {
     id: number;
     quantity: number;
     unit_price: number;
-    buy_price: number;
     total_price: number;
-    profit: number;
     medicine_stock: {
         batch_number: string;
         medicine: {
@@ -46,7 +44,6 @@ interface Sale {
     total_amount: number;
     paid_amount: number;
     due_amount: number;
-    total_profit: number;
     payment_status: string;
     sold_by: {
         name: string;
@@ -797,9 +794,6 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Total
                                             </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Profit
-                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-200">
@@ -835,11 +829,6 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                                 <td className="px-6 py-4">
                                                     <div className="text-sm font-medium text-gray-900">
                                                         {formatCurrency(item.total_price)}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="text-sm font-medium text-green-600">
-                                                        {formatCurrency(item.profit)}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -893,13 +882,6 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                         <span className="font-medium text-red-600">{formatCurrency(sale.due_amount)}</span>
                                     </div>
                                 )}
-
-                                <div className="border-t border-gray-200 pt-3">
-                                    <div className="flex justify-between">
-                                        <span className="text-sm font-medium text-gray-600">Total Profit:</span>
-                                        <span className="text-base font-bold text-green-600">{formatCurrency(sale.total_profit)}</span>
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -941,16 +923,6 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                         <span className="text-sm text-gray-600">Items Sold</span>
                                     </div>
                                     <span className="text-sm font-semibold text-gray-900">{sale.items.length}</span>
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <DollarSign className="w-4 h-4 text-green-600" />
-                                        <span className="text-sm text-gray-600">Profit Margin</span>
-                                    </div>
-                                    <span className="text-sm font-semibold text-green-600">
-                                        {((sale.total_profit / sale.total_amount) * 100).toFixed(1)}%
-                                    </span>
                                 </div>
 
                                 <div className="flex items-center justify-between">
