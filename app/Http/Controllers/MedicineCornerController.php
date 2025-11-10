@@ -1053,10 +1053,18 @@ class MedicineCornerController extends Controller
     }
 
     /**
-     * Update Sale
+     * Update Sale - 100% Accurate Version Following MedicineSellerDashboardController
      */
     public function updateSale(Request $request, MedicineSale $sale)
     {
+        // Log incoming data for debugging
+        \Log::info('Update Sale Request Data:', [
+            'sale_id' => $sale->id,
+            'items_count' => count($request->get('items', [])),
+            'patient_id' => $request->get('patient_id'),
+            'paid_amount' => $request->get('paid_amount'),
+        ]);
+
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
             'items.*.medicine_stock_id' => 'required|exists:medicine_stocks,id',
@@ -1072,30 +1080,43 @@ class MedicineCornerController extends Controller
         ]);
 
         if ($validator->fails()) {
+            \Log::error('Validation Failed:', $validator->errors()->toArray());
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
         DB::beginTransaction();
         try {
-            // Store original items for stock adjustment
-            $originalItems = $sale->items()->with('medicineStock')->get();
+            // Step 1: Store original values for accounting adjustment
+            $originalTotalAmount = $sale->total_amount;
+            $originalInvoiceNumber = $sale->invoice_number;
 
-            // Restore original stock quantities
+            // Step 2: Store original items for stock adjustment
+            $originalItems = $sale->items()->with('medicineStock.medicine')->get();
+
+            // Step 3: Restore original stock quantities and delete stock transactions
             foreach ($originalItems as $originalItem) {
+                // Restore stock
                 $originalItem->medicineStock->available_quantity += $originalItem->quantity;
                 $originalItem->medicineStock->save();
                 $originalItem->medicineStock->medicine->updateTotalStock();
+
+                // Delete old stock transaction
+                StockTransaction::where('reference_type', 'medicine_sale')
+                    ->where('reference_id', $sale->id)
+                    ->where('medicine_stock_id', $originalItem->medicine_stock_id)
+                    ->delete();
             }
 
-            // Delete original items
+            // Step 4: Delete original items
             $sale->items()->delete();
 
-            // Calculate new totals
+            // Step 5: Process new items and calculate new totals
             $subtotal = 0;
             $totalProfit = 0;
+            $medicineNames = [];
 
             foreach ($request->items as $item) {
-                $stock = MedicineStock::findOrFail($item['medicine_stock_id']);
+                $stock = MedicineStock::with('medicine')->findOrFail($item['medicine_stock_id']);
 
                 // Check stock availability
                 if ($stock->available_quantity < $item['quantity']) {
@@ -1107,6 +1128,7 @@ class MedicineCornerController extends Controller
 
                 $subtotal += $lineTotal;
                 $totalProfit += $lineProfit;
+                $medicineNames[] = $stock->medicine->name;
 
                 // Create new sale item
                 MedicineSaleItem::create([
@@ -1120,28 +1142,31 @@ class MedicineCornerController extends Controller
                 // Update stock
                 $stock->available_quantity -= $item['quantity'];
                 $stock->save();
-                $stock->medicine->updateTotalStock();
 
-                // Create/Update stock transaction
+                // Create new stock transaction
                 StockTransaction::create([
                     'medicine_stock_id' => $stock->id,
-                    'type' => 'sale_update',
+                    'type' => 'sale',
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
                     'total_amount' => $lineTotal,
                     'reference_type' => 'medicine_sale',
                     'reference_id' => $sale->id,
-                    'reason' => 'Sale update - Invoice: ' . $sale->invoice_number,
+                    'reason' => 'Medicine sale update - Invoice: ' . $originalInvoiceNumber,
                     'created_by' => auth()->id(),
                 ]);
+
+                // Update medicine total stock
+                $stock->medicine->updateTotalStock();
             }
 
+            // Step 6: Calculate final amounts
             $discount = $request->discount ?? 0;
             $tax = $request->tax ?? 0;
             $totalAmount = $subtotal - $discount + $tax;
             $dueAmount = max(0, $totalAmount - $request->paid_amount);
 
-            // Update sale record
+            // Step 7: Update sale record
             $sale->update([
                 'patient_id' => $request->patient_id,
                 'subtotal' => $subtotal,
@@ -1156,10 +1181,51 @@ class MedicineCornerController extends Controller
                 'updated_by' => auth()->id(),
             ]);
 
+            // Step 8: Update MedicineAccount
+            // First reverse the old transaction by manually decrementing
+            if ($originalTotalAmount > 0) {
+                $medicineAccount = MedicineAccount::firstOrCreate([]);
+                $medicineAccount->decrement('balance', $originalTotalAmount);
+
+                // Create reversal transaction record
+                MedicineTransaction::create([
+                    'transaction_no' => 'MR-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                    'type' => 'expense',
+                    'amount' => $originalTotalAmount,
+                    'category' => 'sale_reversal',
+                    'description' => "Sale update reversal - Invoice: {$originalInvoiceNumber} | Original Amount: ৳" . number_format($originalTotalAmount, 2),
+                    'reference_type' => 'medicine_sales',
+                    'reference_id' => $sale->id,
+                    'transaction_date' => now()->toDateString(),
+                    'created_by' => auth()->id(),
+                ]);
+            }
+
+            // Then add the new income
+            $customerInfo = $request->patient_id ?
+                "Patient ID: {$request->patient_id}" :
+                ($request->customer_name ? "Customer: {$request->customer_name}" : "Walk-in customer");
+
+            $medicineList = implode(', ', array_slice($medicineNames, 0, 3));
+            if (count($medicineNames) > 3) {
+                $medicineList .= ' + ' . (count($medicineNames) - 3) . ' more';
+            }
+
+            $medicineTransaction = MedicineAccount::addIncome(
+                $totalAmount,
+                'medicine_sale',
+                "Medicine sale updated - Invoice: {$originalInvoiceNumber} | {$customerInfo} | Medicines: {$medicineList} | Updated by: " . auth()->user()->name,
+                'medicine_sales',
+                $sale->id
+            );
+
+            // Update medicine_transaction_id in sale
+            $sale->update(['medicine_transaction_id' => $medicineTransaction->id]);
+
             DB::commit();
 
             return redirect()->route('medicine-corner.sale-details', $sale->id)
-                ->with('success', 'Sale updated successfully!');
+                ->with('success', "Sale updated successfully! Invoice: {$originalInvoiceNumber} | New Total: ৳" . number_format($totalAmount, 2) . " | Medicine Account Updated");
         } catch (\Exception $e) {
             DB::rollback();
             return redirect()->back()->with('error', 'Failed to update sale: ' . $e->getMessage());
@@ -1211,13 +1277,17 @@ class MedicineCornerController extends Controller
     }
 
     /**
-     * Delete Sale
+     * Delete Sale - 100% Accurate Version with MedicineAccount Update
      */
     public function deleteSale(MedicineSale $sale)
     {
         DB::beginTransaction();
         try {
-            // Restore stock quantities
+            // Store values for logging
+            $invoiceNumber = $sale->invoice_number;
+            $totalAmount = $sale->total_amount;
+
+            // Step 1: Restore stock quantities
             foreach ($sale->items as $item) {
                 $item->medicineStock->available_quantity += $item->quantity;
                 $item->medicineStock->save();
@@ -1232,20 +1302,48 @@ class MedicineCornerController extends Controller
                     'total_amount' => $item->quantity * $item->unit_price,
                     'reference_type' => 'medicine_sale',
                     'reference_id' => $sale->id,
-                    'reason' => 'Sale cancellation - Invoice: ' . $sale->invoice_number,
+                    'reason' => 'Sale cancellation - Invoice: ' . $invoiceNumber,
+                    'created_by' => auth()->id(),
+                ]);
+
+                // Delete stock transaction related to sale
+                StockTransaction::where('reference_type', 'medicine_sale')
+                    ->where('reference_id', $sale->id)
+                    ->where('medicine_stock_id', $item->medicine_stock_id)
+                    ->where('type', '!=', 'sale_cancellation')
+                    ->delete();
+            }
+
+            // Step 2: Reverse MedicineAccount transaction
+            if ($totalAmount > 0) {
+                $medicineAccount = MedicineAccount::firstOrCreate([]);
+                $medicineAccount->decrement('balance', $totalAmount);
+
+                // Create cancellation transaction record
+                MedicineTransaction::create([
+                    'transaction_no' => 'MC-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                    'type' => 'expense',
+                    'amount' => $totalAmount,
+                    'category' => 'sale_cancellation',
+                    'description' => "Sale deleted - Invoice: {$invoiceNumber} | Amount: ৳" . number_format($totalAmount, 2) . " | Deleted by: " . auth()->user()->name,
+                    'reference_type' => 'medicine_sales',
+                    'reference_id' => $sale->id,
+                    'transaction_date' => now()->toDateString(),
                     'created_by' => auth()->id(),
                 ]);
             }
 
-            // Delete sale items and sale
+            // Step 3: Delete sale items
             $sale->items()->delete();
+
+            // Step 4: Delete the sale record
             $sale->delete();
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Sale deleted successfully'
+                'message' => "Sale deleted successfully! Invoice: {$invoiceNumber} | ৳" . number_format($totalAmount, 2) . " reversed from Medicine Account"
             ]);
         } catch (\Exception $e) {
             DB::rollback();

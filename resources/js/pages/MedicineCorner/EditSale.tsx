@@ -109,6 +109,9 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
     const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
     const [showPatientSuggestions, setShowPatientSuggestions] = useState(false);
 
+    const [discountType, setDiscountType] = useState<'amount' | 'percentage'>('amount');
+    const [discountInput, setDiscountInput] = useState(sale.discount || 0);
+
     const { data, setData, processing, errors } = useForm({
         items: [] as any[],
         patient_id: sale.patient?.id?.toString() || '',
@@ -196,6 +199,23 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
             setShowPatientSuggestions(false);
         }
     }, [phoneSearch, patients]);
+
+    // Calculate discount amount based on type
+    useEffect(() => {
+        const subtotal = cart.reduce((sum, item) => {
+            const itemTotal = (item.quantity || 0) * (item.unit_price || 0);
+            return sum + itemTotal;
+        }, 0);
+
+        let discountAmount = 0;
+        if (discountType === 'percentage') {
+            discountAmount = (subtotal * discountInput) / 100;
+        } else {
+            discountAmount = discountInput;
+        }
+
+        setData('discount', Math.max(0, discountAmount));
+    }, [cart, discountInput, discountType]);
 
     // Calculate totals using useMemo for performance
     const calculations = useMemo(() => {
@@ -707,16 +727,41 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                     {/* Discount & Tax Inputs */}
                                     <div className="space-y-3">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Discount (৳)</label>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                max={calculations.subtotal}
-                                                value={data.discount}
-                                                onChange={(e) => setData('discount', parseFloat(e.target.value) || 0)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            />
+                                            <div className="flex items-center justify-between mb-1">
+                                                <label className="block text-sm font-medium text-gray-700">
+                                                    Discount {discountType === 'percentage' ? '(%)' : '(৳)'}
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setDiscountType(discountType === 'amount' ? 'percentage' : 'amount');
+                                                        setDiscountInput(0);
+                                                    }}
+                                                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                                >
+                                                    Switch to {discountType === 'amount' ? '%' : '৳'}
+                                                </button>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    max={discountType === 'percentage' ? 100 : calculations.subtotal}
+                                                    value={discountInput}
+                                                    onChange={(e) => setDiscountInput(parseFloat(e.target.value) || 0)}
+                                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    placeholder={discountType === 'percentage' ? '0-100' : '0'}
+                                                />
+                                                <div className="w-12 flex items-center justify-center bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-700">
+                                                    {discountType === 'percentage' ? '%' : '৳'}
+                                                </div>
+                                            </div>
+                                            {discountType === 'percentage' && discountInput > 0 && (
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    Amount: {formatCurrency(calculations.discount)}
+                                                </div>
+                                            )}
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Tax (৳)</label>

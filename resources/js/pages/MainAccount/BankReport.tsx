@@ -71,11 +71,11 @@ const BankReport: React.FC<BankReportProps> = ({
                     body * {
                         visibility: hidden;
                     }
-                    
+
                     .print-area, .print-area * {
                         visibility: visible;
                     }
-                    
+
                     .print-area {
                         position: absolute;
                         left: 0;
@@ -104,12 +104,12 @@ const BankReport: React.FC<BankReportProps> = ({
                         width: 100% !important;
                         font-size: 10px !important;
                     }
-                    
+
                     th, td {
                         border: 1px solid #000 !important;
                         padding: 3px 4px !important;
                     }
-                    
+
                     th {
                         background-color: #f0f0f0 !important;
                         font-weight: bold !important;
@@ -127,13 +127,13 @@ const BankReport: React.FC<BankReportProps> = ({
                     .bg-gray-50, .bg-green-50, .bg-red-50, .bg-blue-50, .bg-yellow-50 {
                         background-color: transparent !important;
                     }
-                    
+
                     .bg-green-100, .bg-red-100, .bg-blue-100, .bg-yellow-100 {
                         background-color: #f5f5f5 !important;
                         -webkit-print-color-adjust: exact !important;
                         color-adjust: exact !important;
                     }
-                    
+
                     .bg-green-200, .bg-red-200, .bg-blue-200, .bg-green-300, .bg-red-300, .bg-gray-200 {
                         background-color: #e5e5e5 !important;
                         -webkit-print-color-adjust: exact !important;
@@ -166,11 +166,11 @@ const BankReport: React.FC<BankReportProps> = ({
                                 <Filter className="w-3 h-3" />Filter
                             </button>
                         </div>
-                        
+
                         <button onClick={handlePrint} className="bg-purple-500 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
                             <Printer className="w-3 h-3" />Print
                         </button>
-                        
+
                         <button className="bg-green-500 text-white px-3 py-1 rounded text-sm flex items-center gap-1 ml-auto">
                             <Download className="w-3 h-3" />Export
                         </button>

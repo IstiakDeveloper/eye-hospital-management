@@ -318,8 +318,8 @@ export default function Reports({ currentMonth, lastMonth, topSellingFrames, low
 
         {/* Quick Actions */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white">
-          <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <h3 className="text-lg font-semibold mb-4">Quick Actions & Reports</h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Link href="/optics/frames/create" className="bg-white bg-opacity-20 hover:bg-opacity-30 transition-colors rounded-lg p-4 text-center">
               <Package className="w-6 h-6 mx-auto mb-2" />
               <p className="text-sm font-medium">Add Frame</p>
@@ -332,9 +332,13 @@ export default function Reports({ currentMonth, lastMonth, topSellingFrames, low
               <DollarSign className="w-6 h-6 mx-auto mb-2" />
               <p className="text-sm font-medium">New Sale</p>
             </Link>
-            <Link href="/optics/lens-types" className="bg-white bg-opacity-20 hover:bg-opacity-30 transition-colors rounded-lg p-4 text-center">
-              <Award className="w-6 h-6 mx-auto mb-2" />
-              <p className="text-sm font-medium">Lens Types</p>
+            <Link href={route('optics.reports.daily-statement')} className="bg-white bg-opacity-20 hover:bg-opacity-30 transition-colors rounded-lg p-4 text-center">
+              <Calendar className="w-6 h-6 mx-auto mb-2" />
+              <p className="text-sm font-medium">Bank Report</p>
+            </Link>
+            <Link href={route('optics.reports.account-statement')} className="bg-white bg-opacity-20 hover:bg-opacity-30 transition-colors rounded-lg p-4 text-center">
+              <Calendar className="w-6 h-6 mx-auto mb-2" />
+              <p className="text-sm font-medium">Account Statement</p>
             </Link>
           </div>
         </div>

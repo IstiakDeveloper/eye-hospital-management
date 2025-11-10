@@ -12,6 +12,10 @@ use App\Models\OpticsAccount;
 use App\Models\OpticsTransaction;
 use App\Models\OpticsExpenseCategory;
 use App\Models\OpticsVendor;
+use App\Models\OpticsSale;
+use App\Models\OpticsSaleItem;
+use App\Models\OpticsSalePayment;
+use App\Models\Patient;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -712,40 +716,57 @@ class OpticsCornerController extends Controller
     // =============== SALES MANAGEMENT ===============
     public function sales()
     {
-        $query = OpticsTransaction::income()
-            ->byCategory('Sales')
-            ->with('createdBy')
-            ->latest();
+        $query = OpticsSale::with(['patient', 'seller', 'payments'])
+            ->withCount('items');
 
         // Search functionality
         if (request('search')) {
             $search = request('search');
             $query->where(function ($q) use ($search) {
-                $q->where('transaction_no', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhereHas('createdBy', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%");
+                $q->where('invoice_number', 'like', "%{$search}%")
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhere('customer_phone', 'like', "%{$search}%")
+                    ->orWhereHas('patient', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
                     });
             });
         }
 
         // Date range filter
         if (request('from_date')) {
-            $query->whereDate('transaction_date', '>=', request('from_date'));
+            $query->whereDate('created_at', '>=', request('from_date'));
         }
 
         if (request('to_date')) {
-            $query->whereDate('transaction_date', '<=', request('to_date'));
+            $query->whereDate('created_at', '<=', request('to_date'));
+        }
+
+        // Status filter
+        if (request('status')) {
+            $query->where('status', request('status'));
         }
 
         // Check if requesting all records for print/export
         if (request('all') === 'true') {
-            $sales = $query->get();
+            $sales = $query->latest()->get();
         } else {
-            $sales = $query->paginate(20)->withQueryString();
+            $sales = $query->latest()->paginate(20)->withQueryString();
         }
 
-        return Inertia::render('OpticsCorner/Sales/Index', compact('sales'));
+        // Calculate totals for the current query
+        $totalQuery = clone $query;
+        $totalSales = $totalQuery->sum('total_amount');
+        $totalDue = $totalQuery->sum('due_amount');
+        $salesCount = $totalQuery->count();
+
+        return Inertia::render('OpticsCorner/Sales/Index', [
+            'sales' => $sales,
+            'totalSales' => $totalSales,
+            'totalDue' => $totalDue,
+            'salesCount' => $salesCount,
+            'filters' => request()->only(['search', 'from_date', 'to_date', 'status']),
+        ]);
     }
 
     public function createSale()
@@ -760,72 +781,539 @@ class OpticsCornerController extends Controller
     public function storeSale(Request $request)
     {
         $validated = $request->validate([
+            'customer_id' => 'nullable|exists:patients,id',
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'nullable|string|max:20',
-            'items' => 'required|array|min:1',
+            'customer_email' => 'nullable|email|max:255',
+            'items' => 'nullable|array',
             'items.*.type' => 'required|in:frame,lens,complete_glasses',
             'items.*.id' => 'required|integer',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric|min:0',
+            'glass_fitting_price' => 'nullable|numeric|min:0',
             'discount' => 'nullable|numeric|min:0',
+            'advance_payment' => 'required|numeric|min:0',
+            'payment_method' => 'required|in:cash,card,bkash,nagad,rocket',
+            'transaction_id' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
         ]);
 
-        DB::transaction(function () use ($validated) {
-            $totalAmount = 0;
+        // Validate that either items exist or fitting charge is provided
+        if (empty($validated['items']) && empty($validated['glass_fitting_price'])) {
+            return back()->with('error', 'Either items or fitting charge must be provided');
+        }
+
+        DB::beginTransaction();
+        try {
+            // Handle customer/patient information
+            $patientId = null;
+            $customerName = $validated['customer_name'];
+            $customerPhone = $validated['customer_phone'] ?? null;
+            $customerEmail = $validated['customer_email'] ?? null;
+
+            // If customer_id is provided, use existing patient
+            if ($validated['customer_id']) {
+                $patient = Patient::find($validated['customer_id']);
+                if ($patient) {
+                    $patientId = $patient->id;
+                    $customerName = $patient->name;
+                    $customerPhone = $patient->phone;
+                    $customerEmail = $patient->email;
+                }
+            }
+
+            // Calculate items total
+            $itemsTotal = 0;
             $saleDetails = [];
 
-            foreach ($validated['items'] as $item) {
-                $model = match ($item['type']) {
+            // Process items only if they exist
+            if (!empty($validated['items'])) {
+                foreach ($validated['items'] as $item) {
+                    $model = match ($item['type']) {
+                        'frame' => Glasses::class,
+                        'lens' => LensType::class,
+                        'complete_glasses' => CompleteGlasses::class,
+                    };
+
+                    $product = $model::findOrFail($item['id']);
+
+                    if ($product->stock_quantity < $item['quantity']) {
+                        throw new \Exception(
+                            "Insufficient stock for " . ($product->name ?? $product->full_name) .
+                                ". Available: {$product->stock_quantity}"
+                        );
+                    }
+
+                    $itemTotal = $item['price'] * $item['quantity'];
+                    $itemsTotal += $itemTotal;
+
+                    // Update stock
+                    $previousStock = $product->stock_quantity;
+                    $newStock = $previousStock - $item['quantity'];
+                    $product->update(['stock_quantity' => $newStock]);
+
+                    // Record stock movement
+                    StockMovement::create([
+                        'item_type' => $item['type'] === 'frame' ? 'glasses' : ($item['type'] === 'lens' ? 'lens_types' : 'complete_glasses'),
+                        'item_id' => $item['id'],
+                        'movement_type' => 'sale',
+                        'quantity' => -$item['quantity'],
+                        'previous_stock' => $previousStock,
+                        'new_stock' => $newStock,
+                        'unit_price' => $item['price'],
+                        'total_amount' => $itemTotal,
+                        'notes' => "Sale - " . ($product->name ?? $product->full_name) . " x{$item['quantity']}",
+                        'user_id' => auth()->id(),
+                    ]);
+
+                    $saleDetails[] = ($product->name ?? $product->full_name) . " x{$item['quantity']}";
+                }
+            }
+
+            // Calculate total amount
+            $fittingCharge = $validated['glass_fitting_price'] ?? 0;
+            $discount = $validated['discount'] ?? 0;
+            $totalAmount = $itemsTotal + $fittingCharge - $discount;
+            $dueAmount = $totalAmount - $validated['advance_payment'];
+
+            // Validate advance payment
+            if ($validated['advance_payment'] > $totalAmount) {
+                throw new \Exception('Advance payment cannot exceed total amount');
+            }
+
+            // Create the sale record
+            $sale = OpticsSale::create([
+                'patient_id' => $patientId,
+                'customer_name' => $customerName,
+                'customer_phone' => $customerPhone,
+                'customer_email' => $customerEmail,
+                'seller_id' => auth()->id(),
+                'glass_fitting_price' => $fittingCharge,
+                'total_amount' => $totalAmount,
+                'advance_payment' => $validated['advance_payment'],
+                'due_amount' => $dueAmount,
+                'status' => 'pending',
+                'notes' => $validated['notes']
+            ]);
+
+            // Save sale items
+            if (!empty($validated['items'])) {
+                foreach ($validated['items'] as $item) {
+                    $model = match ($item['type']) {
+                        'frame' => Glasses::class,
+                        'lens' => LensType::class,
+                        'complete_glasses' => CompleteGlasses::class,
+                    };
+                    $product = $model::find($item['id']);
+                    $itemName = $product ? ($product->name ?? $product->full_name) : 'Unknown Item';
+
+                    OpticsSaleItem::create([
+                        'optics_sale_id' => $sale->id,
+                        'item_type' => $item['type'],
+                        'item_id' => $item['id'],
+                        'item_name' => $itemName,
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $item['price'],
+                        'total_price' => $item['price'] * $item['quantity']
+                    ]);
+                }
+            }
+
+            // Create payment record if advance payment exists
+            if ($validated['advance_payment'] > 0) {
+                OpticsSalePayment::create([
+                    'optics_sale_id' => $sale->id,
+                    'amount' => $validated['advance_payment'],
+                    'payment_method' => $validated['payment_method'],
+                    'transaction_id' => $validated['transaction_id'] ?? null,
+                    'notes' => 'Advance Payment',
+                    'received_by' => auth()->id()
+                ]);
+            }
+
+            // Record income in OpticsAccount (ONLY advance payment, not full amount)
+            if ($validated['advance_payment'] > 0) {
+                $description = "Advance Payment - Invoice: {$sale->invoice_number} | Customer: {$customerName}";
+                if ($customerPhone) {
+                    $description .= " ({$customerPhone})";
+                }
+                $description .= " | Total Amount: ৳" . number_format($totalAmount, 2);
+                $description .= " | Advance: ৳" . number_format($validated['advance_payment'], 2);
+                $description .= " | Due: ৳" . number_format($dueAmount, 2);
+                if (!empty($saleDetails)) {
+                    $description .= " | Items: " . implode(', ', $saleDetails);
+                }
+                if ($fittingCharge > 0) {
+                    $description .= " | Fitting: ৳{$fittingCharge}";
+                }
+                if ($discount > 0) {
+                    $description .= " | Discount: ৳{$discount}";
+                }
+                if ($validated['notes']) {
+                    $description .= " | Notes: {$validated['notes']}";
+                }
+
+                OpticsAccount::addIncome(
+                    $validated['advance_payment'],
+                    'Sales',
+                    $description
+                );
+            }
+
+            DB::commit();
+
+            $responseMessage = "Sale completed successfully! Invoice: {$sale->invoice_number} | Total: ৳" . number_format($totalAmount, 2);
+            if ($dueAmount > 0) {
+                $responseMessage .= " | Due: ৳" . number_format($dueAmount, 2);
+            }
+
+            return redirect()->route('optics.sales')->with('success', $responseMessage);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Sale failed: ' . $e->getMessage());
+        }
+    }
+
+    public function editSale($saleId)
+    {
+        // Get the sale with items and payments
+        $sale = OpticsSale::with(['items', 'payments', 'patient'])
+            ->findOrFail($saleId);
+
+        // Build sale items from OpticsSaleItem
+        $saleItems = $sale->items->map(function ($item) {
+            return [
+                'id' => $item->item_id,
+                'type' => $item->item_type,
+                'name' => $item->item_name,
+                'quantity' => $item->quantity,
+                'price' => $item->unit_price,
+                'total' => $item->total_price,
+            ];
+        })->toArray();
+
+        // Calculate discount (items total + fitting - total amount)
+        $itemsTotal = $sale->items->sum('total_price');
+        $discount = $itemsTotal + $sale->glass_fitting_price - $sale->total_amount;
+
+        // Get first payment details if exists
+        $firstPayment = $sale->payments->first();
+
+        $saleData = [
+            'id' => $sale->id,
+            'invoice_number' => $sale->invoice_number,
+            'customer_id' => $sale->patient_id,
+            'customer_name' => $sale->customer_name,
+            'customer_phone' => $sale->customer_phone,
+            'customer_email' => $sale->customer_email,
+            'items' => $saleItems,
+            'glass_fitting_price' => $sale->glass_fitting_price ?? 0,
+            'discount' => $discount > 0 ? $discount : 0,
+            'advance_payment' => $sale->advance_payment,
+            'payment_method' => $firstPayment->payment_method ?? 'cash',
+            'transaction_id' => $firstPayment->transaction_id ?? null,
+            'notes' => $sale->notes,
+            'total_amount' => $sale->total_amount,
+            'due_amount' => $sale->due_amount,
+            'status' => $sale->status,
+            'created_at' => $sale->created_at,
+        ];
+
+        // Get available products for dropdown
+        $frames = Glasses::active()->inStock()->get(['id', 'brand', 'model', 'sku', 'selling_price', 'stock_quantity']);
+        $lensTypes = LensType::active()->inStock()->get(['id', 'name', 'price', 'stock_quantity']);
+        $completeGlasses = CompleteGlasses::active()->inStock()->with('frame', 'lensType')->get();
+
+        return Inertia::render('OpticsCorner/Sales/Edit', [
+            'sale' => $saleData,
+            'frames' => $frames,
+            'lensTypes' => $lensTypes,
+            'completeGlasses' => $completeGlasses
+        ]);
+    }
+
+    public function updateSale(Request $request, $saleId)
+    {
+        $validated = $request->validate([
+            'customer_id' => 'nullable|exists:patients,id',
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'nullable|string|max:20',
+            'customer_email' => 'nullable|email|max:255',
+            'items' => 'nullable|array',
+            'items.*.type' => 'required|in:frame,lens,complete_glasses',
+            'items.*.id' => 'required|integer',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.price' => 'required|numeric|min:0',
+            'glass_fitting_price' => 'nullable|numeric|min:0',
+            'discount' => 'nullable|numeric|min:0',
+            'advance_payment' => 'required|numeric|min:0',
+            'payment_method' => 'required|in:cash,card,bkash,nagad,rocket',
+            'transaction_id' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+        ]);
+
+        // Validate that either items exist or fitting charge is provided
+        if (empty($validated['items']) && empty($validated['glass_fitting_price'])) {
+            return back()->with('error', 'Either items or fitting charge must be provided');
+        }
+
+        DB::beginTransaction();
+        try {
+            // Get the original sale
+            $sale = OpticsSale::with(['items', 'payments'])->findOrFail($saleId);
+
+            // Step 1: Revert old stock movements
+            foreach ($sale->items as $saleItem) {
+                $model = match ($saleItem->item_type) {
                     'frame' => Glasses::class,
                     'lens' => LensType::class,
                     'complete_glasses' => CompleteGlasses::class,
                 };
 
-                $product = $model::findOrFail($item['id']);
-
-                // Check stock
-                if ($product->stock_quantity < $item['quantity']) {
-                    dd('nothing');
+                $product = $model::find($saleItem->item_id);
+                if ($product) {
+                    // Add back the quantity that was sold
+                    $product->update([
+                        'stock_quantity' => $product->stock_quantity + $saleItem->quantity
+                    ]);
                 }
 
-                $itemTotal = $item['price'] * $item['quantity'];
-                $totalAmount += $itemTotal;
-
-                // Update stock
-                $previousStock = $product->stock_quantity;
-                $newStock = $previousStock - $item['quantity'];
-                $product->update(['stock_quantity' => $newStock]);
-
-                // Record stock movement
-                StockMovement::create([
-                    'item_type' => $item['type'] === 'frame' ? 'glasses' : ($item['type'] === 'lens' ? 'lens_types' : 'complete_glasses'),
-                    'item_id' => $item['id'],
-                    'movement_type' => 'sale',
-                    'quantity' => -$item['quantity'],
-                    'previous_stock' => $previousStock,
-                    'new_stock' => $newStock,
-                    'unit_price' => $item['price'],
-                    'total_amount' => $itemTotal,
-                    'user_id' => auth()->id(),
-                ]);
-
-                $saleDetails[] = ($product->name ?? $product->full_name) . " x{$item['quantity']}";
+                // Find and delete related stock movement
+                StockMovement::where('movement_type', 'sale')
+                    ->where('item_type', $saleItem->item_type === 'frame' ? 'glasses' : ($saleItem->item_type === 'lens' ? 'lens_types' : 'complete_glasses'))
+                    ->where('item_id', $saleItem->item_id)
+                    ->where('user_id', $sale->seller_id)
+                    ->whereDate('created_at', $sale->created_at->toDateString())
+                    ->delete();
             }
 
-            // Apply discount
-            $finalAmount = $totalAmount - ($validated['discount'] ?? 0);
+            // Step 2: Delete old sale items
+            $sale->items()->delete();
 
-            // Record income
-            OpticsAccount::addIncome(
-                $finalAmount,
-                'Sales',
-                "Sale to {$validated['customer_name']} - " . implode(', ', $saleDetails) .
-                    ($validated['notes'] ? " | Notes: {$validated['notes']}" : '')
-            );
-        });
+            // Step 3: Reverse old income transactions
+            $oldPaymentsTotal = $sale->payments->sum('amount');
+            if ($oldPaymentsTotal > 0) {
+                OpticsAccount::adjustAmount(
+                    $oldPaymentsTotal,
+                    'expense',
+                    'Sale Update Reversal',
+                    "Reversed payments for sale update - Invoice: {$sale->invoice_number}"
+                );
+            }
 
-        return redirect()->route('optics.sales')->with('success', 'Sale recorded successfully!');
+            // Step 4: Delete old payments
+            $sale->payments()->delete();
+
+            // Step 5: Handle customer/patient information
+            $patientId = null;
+            $customerName = $validated['customer_name'];
+            $customerPhone = $validated['customer_phone'] ?? null;
+            $customerEmail = $validated['customer_email'] ?? null;
+
+            if ($validated['customer_id']) {
+                $patient = Patient::find($validated['customer_id']);
+                if ($patient) {
+                    $patientId = $patient->id;
+                    $customerName = $patient->name;
+                    $customerPhone = $patient->phone;
+                    $customerEmail = $patient->email;
+                }
+            }
+
+            // Step 6: Process new items and update stock
+            $itemsTotal = 0;
+            $saleDetails = [];
+
+            if (!empty($validated['items'])) {
+                foreach ($validated['items'] as $item) {
+                    $model = match ($item['type']) {
+                        'frame' => Glasses::class,
+                        'lens' => LensType::class,
+                        'complete_glasses' => CompleteGlasses::class,
+                    };
+
+                    $product = $model::findOrFail($item['id']);
+
+                    if ($product->stock_quantity < $item['quantity']) {
+                        throw new \Exception(
+                            "Insufficient stock for " . ($product->name ?? $product->full_name) .
+                                ". Available: {$product->stock_quantity}"
+                        );
+                    }
+
+                    $itemTotal = $item['price'] * $item['quantity'];
+                    $itemsTotal += $itemTotal;
+
+                    // Update stock
+                    $previousStock = $product->stock_quantity;
+                    $newStock = $previousStock - $item['quantity'];
+                    $product->update(['stock_quantity' => $newStock]);
+
+                    // Record stock movement
+                    StockMovement::create([
+                        'item_type' => $item['type'] === 'frame' ? 'glasses' : ($item['type'] === 'lens' ? 'lens_types' : 'complete_glasses'),
+                        'item_id' => $item['id'],
+                        'movement_type' => 'sale',
+                        'quantity' => -$item['quantity'],
+                        'previous_stock' => $previousStock,
+                        'new_stock' => $newStock,
+                        'unit_price' => $item['price'],
+                        'total_amount' => $itemTotal,
+                        'notes' => "Updated Sale - " . ($product->name ?? $product->full_name) . " x{$item['quantity']}",
+                        'user_id' => auth()->id(),
+                    ]);
+
+                    $saleDetails[] = ($product->name ?? $product->full_name) . " x{$item['quantity']}";
+
+                    // Create new sale item
+                    OpticsSaleItem::create([
+                        'optics_sale_id' => $sale->id,
+                        'item_type' => $item['type'],
+                        'item_id' => $item['id'],
+                        'item_name' => $product->name ?? $product->full_name,
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $item['price'],
+                        'total_price' => $itemTotal
+                    ]);
+                }
+            }
+
+            // Step 7: Calculate new totals
+            $fittingCharge = $validated['glass_fitting_price'] ?? 0;
+            $discount = $validated['discount'] ?? 0;
+            $totalAmount = $itemsTotal + $fittingCharge - $discount;
+            $dueAmount = $totalAmount - $validated['advance_payment'];
+
+            if ($validated['advance_payment'] > $totalAmount) {
+                throw new \Exception('Advance payment cannot exceed total amount');
+            }
+
+            // Step 8: Update sale record
+            $sale->update([
+                'patient_id' => $patientId,
+                'customer_name' => $customerName,
+                'customer_phone' => $customerPhone,
+                'customer_email' => $customerEmail,
+                'glass_fitting_price' => $fittingCharge,
+                'total_amount' => $totalAmount,
+                'advance_payment' => $validated['advance_payment'],
+                'due_amount' => $dueAmount,
+                'notes' => $validated['notes']
+            ]);
+
+            // Step 9: Create new payment record
+            if ($validated['advance_payment'] > 0) {
+                OpticsSalePayment::create([
+                    'optics_sale_id' => $sale->id,
+                    'amount' => $validated['advance_payment'],
+                    'payment_method' => $validated['payment_method'],
+                    'transaction_id' => $validated['transaction_id'] ?? null,
+                    'notes' => 'Updated Advance Payment',
+                    'received_by' => auth()->id()
+                ]);
+
+                // Step 10: Record new income
+                $description = "Updated Sale - Invoice: {$sale->invoice_number} | Customer: {$customerName}";
+                if ($customerPhone) {
+                    $description .= " ({$customerPhone})";
+                }
+                $description .= " | Total Amount: ৳" . number_format($totalAmount, 2);
+                $description .= " | Advance: ৳" . number_format($validated['advance_payment'], 2);
+                $description .= " | Due: ৳" . number_format($dueAmount, 2);
+                if (!empty($saleDetails)) {
+                    $description .= " | Items: " . implode(', ', $saleDetails);
+                }
+                if ($fittingCharge > 0) {
+                    $description .= " | Fitting: ৳{$fittingCharge}";
+                }
+                if ($discount > 0) {
+                    $description .= " | Discount: ৳{$discount}";
+                }
+                if ($validated['notes']) {
+                    $description .= " | Notes: {$validated['notes']}";
+                }
+
+                OpticsAccount::addIncome(
+                    $validated['advance_payment'],
+                    'Sales',
+                    $description
+                );
+            }
+
+            DB::commit();
+
+            $responseMessage = "Sale updated successfully! Invoice: {$sale->invoice_number} | Total: ৳" . number_format($totalAmount, 2);
+            if ($dueAmount > 0) {
+                $responseMessage .= " | Due: ৳" . number_format($dueAmount, 2);
+            }
+
+            return redirect()->route('optics.sales')->with('success', $responseMessage);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Sale update failed: ' . $e->getMessage());
+        }
+    }
+
+    public function deleteSale($saleId)
+    {
+        DB::beginTransaction();
+        try {
+            // Get the sale with items and payments
+            $sale = OpticsSale::with(['items', 'payments'])->findOrFail($saleId);
+
+            // Step 1: Revert stock for all items
+            foreach ($sale->items as $saleItem) {
+                $model = match ($saleItem->item_type) {
+                    'frame' => Glasses::class,
+                    'lens' => LensType::class,
+                    'complete_glasses' => CompleteGlasses::class,
+                };
+
+                $product = $model::find($saleItem->item_id);
+                if ($product) {
+                    // Add back the quantity that was sold
+                    $product->update([
+                        'stock_quantity' => $product->stock_quantity + $saleItem->quantity
+                    ]);
+                }
+
+                // Find and delete related stock movements
+                StockMovement::where('movement_type', 'sale')
+                    ->where('item_type', $saleItem->item_type === 'frame' ? 'glasses' : ($saleItem->item_type === 'lens' ? 'lens_types' : 'complete_glasses'))
+                    ->where('item_id', $saleItem->item_id)
+                    ->where('user_id', $sale->seller_id)
+                    ->whereDate('created_at', $sale->created_at->toDateString())
+                    ->delete();
+            }
+
+            // Step 2: Reverse all income transactions (all payments)
+            $totalPayments = $sale->payments->sum('amount');
+            if ($totalPayments > 0) {
+                OpticsAccount::adjustAmount(
+                    $totalPayments,
+                    'expense',
+                    'Sale Deletion',
+                    "Reversed sale - Invoice: {$sale->invoice_number} | Customer: {$sale->customer_name} | Total Refunded: ৳" . number_format($totalPayments, 2)
+                );
+            }
+
+            // Step 3: Delete all payments
+            $sale->payments()->delete();
+
+            // Step 4: Delete all sale items
+            $sale->items()->delete();
+
+            // Step 5: Delete the sale record itself
+            $invoiceNumber = $sale->invoice_number;
+            $sale->delete();
+
+            DB::commit();
+
+            return redirect()->route('optics.sales')->with('success', "Sale deleted successfully! Invoice: {$invoiceNumber} | Stock has been restored and ৳" . number_format($totalPayments, 2) . " has been refunded.");
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Sale deletion failed: ' . $e->getMessage());
+        }
     }
 
     public function account()
@@ -1207,4 +1695,5 @@ class OpticsCornerController extends Controller
 
         return back()->with('success', 'Payment recorded successfully!');
     }
+
 }

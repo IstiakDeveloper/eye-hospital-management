@@ -16,6 +16,7 @@ use App\Http\Controllers\MedicineVendorController; // NEW: Vendor Controller
 use App\Http\Controllers\MedicineSellerDashboardController;
 use App\Http\Controllers\OpticsAccount\OpticsAccountController;
 use App\Http\Controllers\OpticsCornerController;
+use App\Http\Controllers\OpticsReportController;
 use App\Http\Controllers\OpticsSellerDashboardController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientVisitController;
@@ -420,6 +421,11 @@ Route::prefix('medicine-corner')->middleware(['permission:medicine-corner.view']
 
     // Export Reports
     Route::get('/export-reports', [MedicineCornerController::class, 'exportReports'])->name('export-reports');
+
+    // Medicine Reports
+    Route::get('/reports/daily-statement', [\App\Http\Controllers\MedicineReportController::class, 'dailyStatement'])->name('reports.daily-statement');
+    Route::get('/reports/account-statement', [\App\Http\Controllers\MedicineReportController::class, 'accountStatement'])->name('reports.account-statement');
+    Route::get('/reports/account-statement/export', [\App\Http\Controllers\MedicineReportController::class, 'exportAccountStatement'])->name('reports.account-statement.export');
 });
 
 // Medicine Vendor Management Routes - Permission-based
@@ -686,6 +692,11 @@ Route::middleware(['permission:hospital-account.view'])->prefix('hospital-accoun
         // Report Routes
         Route::get('/monthly-report', [HospitalAccountController::class, 'monthlyReport'])->name('monthly-report');
         Route::get('/balance-sheet', [HospitalAccountController::class, 'balanceSheet'])->name('balance-sheet');
+
+        // Hospital Reports
+        Route::get('/reports/daily-statement', [\App\Http\Controllers\HospitalReportController::class, 'dailyStatement'])->name('reports.daily-statement');
+        Route::get('/reports/account-statement', [\App\Http\Controllers\HospitalReportController::class, 'accountStatement'])->name('reports.account-statement');
+        Route::get('/reports/account-statement/export', [\App\Http\Controllers\HospitalReportController::class, 'exportAccountStatement'])->name('reports.account-statement.export');
     });
 
 Route::middleware(['permission:medicine-account.view'])->prefix('medicine-account')->name('medicine-account.')->group(function () {
@@ -734,6 +745,11 @@ Route::middleware(['permission:operations.view'])->prefix('operation-account')->
         Route::get('/balance-sheet', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'balanceSheet'])->name('balance-sheet');
         Route::get('/analytics', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'analytics'])->name('analytics');
         Route::post('/export', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'exportReport'])->name('export');
+
+        // Operation Reports
+        Route::get('/reports/daily-statement', [\App\Http\Controllers\OperationReportController::class, 'dailyStatement'])->name('reports.daily-statement');
+        Route::get('/reports/account-statement', [\App\Http\Controllers\OperationReportController::class, 'accountStatement'])->name('reports.account-statement');
+        Route::get('/reports/account-statement/export', [\App\Http\Controllers\OperationReportController::class, 'exportAccountStatement'])->name('reports.account-statement.export');
 });
 
 Route::middleware(['permission:main-account.view'])->prefix('main-account')->name('main-account.')->group(function () {
@@ -779,6 +795,9 @@ Route::middleware(['permission:optics.view'])->prefix('optics')->name('optics.')
     Route::get('/sales', [OpticsCornerController::class, 'sales'])->name('sales');
     Route::get('/sales/create', [OpticsCornerController::class, 'createSale'])->name('sales.create');
     Route::post('/sales', [OpticsCornerController::class, 'storeSale'])->name('sales.store');
+    Route::get('/sales/{sale}/edit', [OpticsCornerController::class, 'editSale'])->name('sales.edit')->middleware('super-admin-only');
+    Route::put('/sales/{sale}', [OpticsCornerController::class, 'updateSale'])->name('sales.update')->middleware('super-admin-only');
+    Route::delete('/sales/{sale}', [OpticsCornerController::class, 'deleteSale'])->name('sales.delete')->middleware('super-admin-only');
 
     // Lens Types Management
     Route::get('/lens-types', [OpticsCornerController::class, 'lensTypes'])->name('lens-types');
@@ -791,6 +810,13 @@ Route::middleware(['permission:optics.view'])->prefix('optics')->name('optics.')
 
     // Reports
     Route::get('/reports', [OpticsCornerController::class, 'reports'])->name('reports');
+
+    // Daily Statement Report (Bank Report)
+    Route::get('/reports/daily-statement', [OpticsReportController::class, 'dailyStatement'])->name('reports.daily-statement');
+
+    // Account Statement Report
+    Route::get('/reports/account-statement', [OpticsReportController::class, 'accountStatement'])->name('reports.account-statement');
+    Route::get('/reports/account-statement/export', [OpticsReportController::class, 'exportAccountStatement'])->name('reports.account-statement.export');
 
     Route::get('/vendors', [OpticsCornerController::class, 'vendors'])->name('vendors');
     Route::get('/vendors/create', [OpticsCornerController::class, 'createVendor'])->name('vendors.create');
