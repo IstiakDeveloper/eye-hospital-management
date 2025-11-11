@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
 import { formatDate } from '@/lib/utils';
@@ -33,6 +33,7 @@ interface Doctor {
     };
     specialization: string;
     is_active: boolean;
+    consultation_fee?: number;
 }
 
 interface Payment {
@@ -60,7 +61,8 @@ interface Visit {
     total_amount: number;
     total_paid: number;
     total_due: number;
-    created_at: string;
+    registration_fee?: number;
+    final_amount?: number;
     patient: Patient;
     selected_doctor?: Doctor;
     payments: Payment[];
@@ -79,6 +81,13 @@ const EditVisit: React.FC<EditVisitProps> = ({ visit, doctors }) => {
         discount_value: visit.discount_value?.toString() || '0',
         payment_amount: visit.total_paid?.toString() || '0',
     });
+    const [liveSummary, setLiveSummary] = useState({
+        registration_fee: visit.registration_fee || 100,
+        doctor_fee: visit.selected_doctor?.consultation_fee || 0,
+        total_amount: visit.total_amount || 0,
+        discount_amount: visit.discount_type ? visit.discount_value || 0 : 0,
+        final_amount: visit.final_amount || 0,
+    });
 
     const [errors, setErrors] = useState<any>({});
     const [loading, setLoading] = useState(false);
@@ -89,15 +98,34 @@ const EditVisit: React.FC<EditVisitProps> = ({ visit, doctors }) => {
             ...prev,
             [name]: value
         }));
-
-        // Clear error when user starts typing
         if (errors[name]) {
-            setErrors(prev => ({
-                ...prev,
-                [name]: null
-            }));
+            setErrors((prev: any) => ({ ...prev, [name]: null }));
         }
     };
+
+    // Live update financial summary when doctor/discount changes
+    useEffect(() => {
+        const fetchSummary = async () => {
+            const res = await fetch('/patients/calculate-costs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                },
+                body: JSON.stringify({
+                    doctor_id: formData.selected_doctor_id,
+                    discount_type: formData.discount_type,
+                    discount_value: formData.discount_value,
+                }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setLiveSummary(data);
+            }
+        };
+        fetchSummary();
+    }, [formData.selected_doctor_id, formData.discount_type, formData.discount_value]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -131,51 +159,48 @@ const EditVisit: React.FC<EditVisitProps> = ({ visit, doctors }) => {
         }
     };
 
+
     return (
         <AdminLayout title="Edit Visit">
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="bg-white shadow rounded-lg p-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={handleCancel}
-                                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                title="Back to Visit Details"
-                            >
-                                <ArrowLeft className="w-5 h-5" />
-                            </button>
-                            <div>
-                                <h1 className="text-2xl font-bold text-gray-900">Edit Visit</h1>
-                                <p className="text-sm text-gray-600 mt-1">
-                                    Patient: <span className="font-medium text-blue-600">{visit.patient.name}</span>
-                                    ({visit.patient.patient_id})
-                                </p>
-                            </div>
+            <div className="space-y-8 max-w-3xl mx-auto">
+                {/* --- Section: Header --- */}
+                <div className="bg-white shadow rounded-lg p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 sticky top-0 z-10">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={handleCancel}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Back to Visit Details"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900">Edit Visit</h1>
+                            <p className="text-sm text-gray-600 mt-1">
+                                Patient: <span className="font-medium text-blue-600">{visit.patient.name}</span>
+                                ({visit.patient.patient_id})
+                            </p>
                         </div>
-
-                        <div className="flex items-center gap-3">
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                                visit.payment_status === 'paid'
-                                    ? 'bg-green-100 text-green-700'
-                                    : visit.payment_status === 'partial'
-                                    ? 'bg-yellow-100 text-yellow-700'
-                                    : 'bg-red-100 text-red-700'
-                            }`}>
-                                {visit.payment_status?.toUpperCase()}
-                            </span>
-
-                            <button
-                                onClick={handleDelete}
-                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                            >
-                                Delete Visit
-                            </button>
-                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            visit.payment_status === 'paid'
+                                ? 'bg-green-100 text-green-700'
+                                : visit.payment_status === 'partial'
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-red-100 text-red-700'
+                        }`}>
+                            {visit.payment_status?.toUpperCase()}
+                        </span>
+                        <button
+                            onClick={handleDelete}
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                            Delete Visit
+                        </button>
                     </div>
                 </div>
 
-                {/* Patient Info Card */}
+                {/* --- Section: Patient Info --- */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                         <User className="w-4 h-4 text-blue-600" />
@@ -201,26 +226,32 @@ const EditVisit: React.FC<EditVisitProps> = ({ visit, doctors }) => {
                     </div>
                 </div>
 
-                {/* Current Financial Summary */}
+                {/* --- Section: Financial Summary (Live) --- */}
                 <div className="bg-gray-50 border rounded-lg p-4">
                     <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
                         <CreditCard className="w-4 h-4" />
-                        Current Financial Summary
+                        Financial Summary (Live)
                     </h3>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                         <div className="text-center">
-                            <div className="text-2xl font-bold text-blue-600">৳{Number(visit.total_amount || 0).toLocaleString()}</div>
-                            <div className="text-gray-600">Total Amount</div>
+                            <div className="text-xs text-gray-500">Registration Fee</div>
+                            <div className="font-bold text-blue-700">৳{Number(liveSummary.registration_fee || 0).toLocaleString()}</div>
                         </div>
                         <div className="text-center">
-                            <div className="text-2xl font-bold text-green-600">৳{Number(visit.total_paid || 0).toLocaleString()}</div>
-                            <div className="text-gray-600">Total Paid</div>
+                            <div className="text-xs text-gray-500">Doctor Fee</div>
+                            <div className="font-bold text-blue-700">৳{Number(liveSummary.doctor_fee || 0).toLocaleString()}</div>
                         </div>
                         <div className="text-center">
-                            <div className={`text-2xl font-bold ${visit.total_due > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                ৳{Number(visit.total_due || 0).toLocaleString()}
-                            </div>
-                            <div className="text-gray-600">Total Due</div>
+                            <div className="text-xs text-gray-500">Total Amount</div>
+                            <div className="font-bold text-blue-700">৳{Number(liveSummary.total_amount || 0).toLocaleString()}</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-xs text-gray-500">Discount</div>
+                            <div className="font-bold text-orange-600">৳{Number(liveSummary.discount_amount || 0).toLocaleString()}</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-xs text-gray-500">Final Amount</div>
+                            <div className="font-bold text-green-700">৳{Number(liveSummary.final_amount || 0).toLocaleString()}</div>
                         </div>
                     </div>
                 </div>
@@ -269,7 +300,7 @@ const EditVisit: React.FC<EditVisitProps> = ({ visit, doctors }) => {
                                     <option value="">Select Doctor</option>
                                     {doctors.map((doctor) => (
                                         <option key={doctor.id} value={doctor.id}>
-                                            {doctor.user.name} - {doctor.specialization}
+                                            {(doctor.user?.name || 'Unknown Doctor') + (doctor.specialization ? ` - ${doctor.specialization}` : '')}
                                         </option>
                                     ))}
                                 </select>

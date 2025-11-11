@@ -194,7 +194,7 @@ const Transactions: React.FC<Props> = ({ transactions, balance }) => {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <span className={`font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                                                {transaction.type === 'income' ? '+' : '-'}{formatAmount(transaction.amount)}
+                                                {transaction.type === 'income' ? '+' : '-'}{formatAmount(Number(transaction.amount))}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-600">

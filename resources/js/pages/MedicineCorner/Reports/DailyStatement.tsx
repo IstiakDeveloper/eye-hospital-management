@@ -1,5 +1,5 @@
 
-import AdminLayout from '@/layouts/admin-layout';
+import AdminLayout from '@/layouts/MedicineAccountLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';

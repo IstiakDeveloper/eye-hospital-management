@@ -255,4 +255,5 @@ class MedicineReportController extends Controller
             ],
         ]);
     }
+
 }

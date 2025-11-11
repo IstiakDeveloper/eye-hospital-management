@@ -57,6 +57,19 @@ const OperationAccountLayout: React.FC<OperationAccountLayoutProps> = ({
       icon: PieChart,
       current: route().current('operation-account.analytics')
     },
+    // Only Operation Account Reports
+    {
+      name: 'Daily Statement',
+      href: '/operation-account/reports/daily-statement',
+      icon: FileText,
+      current: route().current('operation-account.reports.daily-statement')
+    },
+    {
+      name: 'Account Statement',
+      href: '/operation-account/reports/account-statement',
+      icon: FileText,
+      current: route().current('operation-account.reports.account-statement')
+    },
   ];
 
   return (

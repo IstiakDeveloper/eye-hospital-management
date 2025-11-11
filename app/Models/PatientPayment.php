@@ -35,8 +35,17 @@ class PatientPayment extends Model
         static::creating(function ($payment) {
             if (!$payment->payment_number) {
                 $date = now()->format('Ymd');
-                $count = self::whereDate('created_at', now())->count();
-                $payment->payment_number = 'PAY-' . $date . '-' . str_pad(($count + 1), 4, '0', STR_PAD_LEFT);
+                // Find the max sequence for today
+                $lastPayment = self::whereDate('created_at', now())
+                    ->where('payment_number', 'like', 'PAY-' . $date . '-%')
+                    ->orderByDesc('payment_number')
+                    ->first();
+                if ($lastPayment && preg_match('/PAY-' . $date . '-(\d{4})/', $lastPayment->payment_number, $m)) {
+                    $seq = (int) $m[1] + 1;
+                } else {
+                    $seq = 1;
+                }
+                $payment->payment_number = 'PAY-' . $date . '-' . str_pad($seq, 4, '0', STR_PAD_LEFT);
             }
 
             if (!$payment->payment_date) {

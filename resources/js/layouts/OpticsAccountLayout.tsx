@@ -70,6 +70,19 @@ const OpticsAccountLayout: React.FC<OpticsAccountLayoutProps> = ({
       icon: Package,
       current: route().current('optics-account.inventory-report')
     },
+    // Only Optics Account Reports
+    {
+      name: 'Daily Statement',
+      href: '/optics/reports/daily-statement',
+      icon: FileText,
+      current: route().current('optics.reports.daily-statement')
+    },
+    {
+      name: 'Account Statement',
+      href: '/optics/reports/account-statement',
+      icon: FileText,
+      current: route().current('optics.reports.account-statement')
+    },
   ];
 
   return (

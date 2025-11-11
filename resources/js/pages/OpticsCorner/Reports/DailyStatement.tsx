@@ -1,4 +1,4 @@
-import AdminLayout from '@/layouts/admin-layout';
+import AdminLayout from '@/layouts/OpticsAccountLayout';
 import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 import { router } from '@inertiajs/react';

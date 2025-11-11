@@ -9,10 +9,167 @@ use App\Models\Doctor;
 use App\Models\HospitalAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class PatientVisitController extends Controller
 {
+    /**
+     * Show the form for editing the specified visit
+     */
+    public function edit(PatientVisit $visit)
+    {
+        $visit->load([
+            'patient',
+            'selectedDoctor.user',
+            'payments.paymentMethod',
+            'payments.receivedBy',
+        ]);
+
+        $doctors = Doctor::with('user')->get()->map(function ($doctor) {
+            return [
+                'id' => $doctor->id,
+                'name' => $doctor->user->name ?? 'Unknown Doctor',
+                'specialization' => $doctor->specialization ?? '',
+            ];
+        });
+
+        return Inertia::render('Visits/Edit', [
+            'visit' => $visit,
+            'doctors' => $doctors,
+        ]);
+    }
+
+    /**
+     * Update the specified visit in storage
+     */
+    public function update(Request $request, PatientVisit $visit)
+    {
+        $request->validate([
+            'chief_complaint' => 'required|string|max:500',
+            'selected_doctor_id' => 'nullable|exists:doctors,id',
+            'discount_type' => 'nullable|in:percentage,amount',
+            'discount_value' => 'nullable|numeric|min:0',
+            'payment_amount' => 'required|numeric|min:0',
+        ]);
+
+        try {
+            return DB::transaction(function () use ($request, $visit) {
+                // Update visit fields
+                $visit->chief_complaint = $request->chief_complaint;
+                $visit->selected_doctor_id = $request->selected_doctor_id;
+                $visit->discount_type = $request->discount_type;
+                $visit->discount_value = $request->discount_value ?? 0;
+                $visit->save();
+
+                // Recalculate fees and totals
+                $visit->refresh();
+                $visit->updateTotals();
+
+                // Payment update logic: always match payment_amount to payments
+                $paymentAmount = (float) $request->payment_amount;
+                $alreadyPaid = (float) $visit->payments()->sum('amount');
+                if ($paymentAmount !== $alreadyPaid) {
+                    $originalPaymentDate = null;
+                    foreach ($visit->payments as $oldPayment) {
+                        if (!$originalPaymentDate) {
+                            $originalPaymentDate = $oldPayment->payment_date;
+                        }
+                        $hospitalTransaction = null;
+                        if ($oldPayment->hospital_transaction_id) {
+                            $hospitalTransaction = \App\Models\HospitalTransaction::find($oldPayment->hospital_transaction_id);
+                        }
+                        if (!$hospitalTransaction) {
+                            $hospitalTransaction = \App\Models\HospitalTransaction::where('reference_type', 'patient_payments')
+                                ->where('reference_id', $oldPayment->id)
+                                ->first();
+                        }
+                        if ($hospitalTransaction) {
+                            // Use updateIncome if payment is being edited (not deleted)
+                            if ($paymentAmount > 0) {
+                                \App\Models\HospitalAccount::updateIncome(
+                                    $hospitalTransaction,
+                                    $paymentAmount,
+                                    'patient_payment',
+                                    "Visit payment update from Patient: {$visit->patient->name} (ID: {$visit->patient->patient_id})"
+                                );
+                                $oldPayment->update([
+                                    'amount' => $paymentAmount,
+                                    'payment_date' => $originalPaymentDate ?? today(),
+                                    'notes' => 'Visit payment edited',
+                                    'received_by' => Auth::id(),
+                                ]);
+                                $oldPayment->refresh();
+                                $oldPayment->hospital_transaction_id = $hospitalTransaction->id;
+                                $oldPayment->save();
+                            } else {
+                                // If payment is being deleted (amount set to 0), delete as before
+                                $voucher = \App\Models\MainAccountVoucher::where('source_reference_id', $hospitalTransaction->id)
+                                    ->where('source_account', 'hospital')
+                                    ->where('source_transaction_type', 'patient_payment')
+                                    ->first();
+                                if ($voucher) {
+                                    $voucher->delete();
+                                }
+                                $hospitalAccount = \App\Models\HospitalAccount::first();
+                                if ($hospitalAccount) {
+                                    if ($hospitalTransaction->type === 'income') {
+                                        $hospitalAccount->decrement('balance', (float) $hospitalTransaction->amount);
+                                    } else {
+                                        $hospitalAccount->increment('balance', (float) $hospitalTransaction->amount);
+                                    }
+                                }
+                                $hospitalTransaction->delete();
+                                $oldPayment->delete();
+                            }
+                        }
+                    }
+                    // If there was no previous payment, create new
+                    if ($visit->payments->isEmpty() && $paymentAmount > 0) {
+                        $payment = PatientPayment::create([
+                            'patient_id' => $visit->patient_id,
+                            'visit_id' => $visit->id,
+                            'amount' => $paymentAmount,
+                            'payment_method_id' => 1, // Default to Cash
+                            'payment_date' => $originalPaymentDate ?? today(),
+                            'notes' => 'Visit payment edited',
+                            'received_by' => Auth::id(),
+                        ]);
+                        $hospitalTransaction = HospitalAccount::addIncome(
+                            $paymentAmount,
+                            'patient_payment',
+                            "Visit payment update from Patient: {$visit->patient->name} (ID: {$visit->patient->patient_id})",
+                            'patient_payments',
+                            $payment->id,
+                            $originalPaymentDate ?? today()
+                        );
+                        $payment->update(['hospital_transaction_id' => $hospitalTransaction->id]);
+                    }
+                }
+
+
+                // Recalculate totals again after payment
+                $visit->refresh();
+                $visit->updateTotals();
+
+
+                // Update payment/overall status if needed
+                if ($visit->total_due <= 0 && $visit->payment_status !== 'paid') {
+                    $visit->update([
+                        'payment_status' => 'paid',
+                        'overall_status' => 'vision_test',
+                        'payment_completed_at' => now(),
+                    ]);
+                }
+
+                return redirect()->route('visits.show', $visit->id)
+                    ->with('success', 'Visit updated successfully!');
+            });
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Visit update failed: ' . $e->getMessage());
+        }
+    }
     /**
      * Display a listing of patient visits with filters
      */
@@ -133,7 +290,7 @@ class PatientVisitController extends Controller
                     'discount_type' => $request->discount_type,
                     'discount_value' => $request->discount_value ?? 0,
                     'chief_complaint' => $request->chief_complaint,
-                    'created_by' => auth()->id(),
+                    'created_by' => Auth::id(),
                 ]);
 
                 // Process payment if amount provided
@@ -145,7 +302,7 @@ class PatientVisitController extends Controller
                         'payment_method_id' => 1, // Default to Cash
                         'payment_date' => today(),
                         'notes' => 'New visit registration payment',
-                        'received_by' => auth()->id(),
+                        'received_by' => Auth::id(),
                     ]);
 
                     // ✅ ADD TO HOSPITAL ACCOUNT

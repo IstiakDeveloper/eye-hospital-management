@@ -224,7 +224,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/roles/create', [RolePermissionController::class, 'createRole'])->name('roles.create');
         Route::post('/roles', [RolePermissionController::class, 'storeRole'])->name('roles.store');
     });
-
+    Route::get('/medicine/reports/daily-statement', [\App\Http\Controllers\MedicineReportController::class, 'dailyStatement'])->name('medicine.reports.daily-statement');
     Route::middleware(['permission:roles.edit', 'super-admin-only'])->group(function () {
         Route::get('/roles/{role}/edit', [RolePermissionController::class, 'editRole'])->name('roles.edit');
         Route::put('/roles/{role}', [RolePermissionController::class, 'updateRole'])->name('roles.update');
@@ -423,10 +423,12 @@ Route::prefix('medicine-corner')->middleware(['permission:medicine-corner.view']
     Route::get('/export-reports', [MedicineCornerController::class, 'exportReports'])->name('export-reports');
 
     // Medicine Reports
-    Route::get('/reports/daily-statement', [\App\Http\Controllers\MedicineReportController::class, 'dailyStatement'])->name('reports.daily-statement');
-    Route::get('/reports/account-statement', [\App\Http\Controllers\MedicineReportController::class, 'accountStatement'])->name('reports.account-statement');
-    Route::get('/reports/account-statement/export', [\App\Http\Controllers\MedicineReportController::class, 'exportAccountStatement'])->name('reports.account-statement.export');
+
 });
+
+Route::get('/medicine/reports/daily-statement', [\App\Http\Controllers\MedicineReportController::class, 'dailyStatement'])->name('medicine.reports.daily-statement');
+Route::get('/medicine/reports/account-statement', [\App\Http\Controllers\MedicineReportController::class, 'accountStatement'])->name('medicine.reports.account-statement');
+Route::get('/medicine/reports/account-statement/export', [\App\Http\Controllers\MedicineReportController::class, 'exportAccountStatement'])->name('medicine.reports.account-statement.export');
 
 // Medicine Vendor Management Routes - Permission-based
 Route::prefix('medicine-vendors')->middleware(['permission:medicine-corner.vendors'])->name('medicine-vendors.')->group(function () {
@@ -666,90 +668,90 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
 })->name('patient.save-qr');
 
 Route::middleware(['permission:hospital-account.view'])->prefix('hospital-account')->name('hospital-account.')->group(function () {
-        Route::get('/', [HospitalAccountController::class, 'index'])->name('dashboard');
-        Route::post('/fund-in', [HospitalAccountController::class, 'fundIn'])->name('fund-in');
-        Route::post('/fund-out', [HospitalAccountController::class, 'fundOut'])->name('fund-out');
-        Route::post('/expense', [HospitalAccountController::class, 'addExpense'])->name('expense');
-        Route::post('/other-income', [HospitalAccountController::class, 'addOtherIncome'])->name('other-income');
+    Route::get('/', [HospitalAccountController::class, 'index'])->name('dashboard');
+    Route::post('/fund-in', [HospitalAccountController::class, 'fundIn'])->name('fund-in');
+    Route::post('/fund-out', [HospitalAccountController::class, 'fundOut'])->name('fund-out');
+    Route::post('/expense', [HospitalAccountController::class, 'addExpense'])->name('expense');
+    Route::post('/other-income', [HospitalAccountController::class, 'addOtherIncome'])->name('other-income');
 
-        // Transaction Routes
-        Route::get('/transactions', [HospitalAccountController::class, 'transactions'])->name('transactions');
-        Route::get('/transactions/{transaction}/edit', [HospitalAccountController::class, 'editTransaction'])->name('transactions.edit')->middleware('super-admin-only');
-        Route::put('/transactions/{transaction}', [HospitalAccountController::class, 'updateTransaction'])->name('transactions.update')->middleware('super-admin-only');
-        Route::delete('/transactions/{transaction}', [HospitalAccountController::class, 'deleteTransaction'])->name('transactions.delete')->middleware('super-admin-only');
+    // Transaction Routes
+    Route::get('/transactions', [HospitalAccountController::class, 'transactions'])->name('transactions');
+    Route::get('/transactions/{transaction}/edit', [HospitalAccountController::class, 'editTransaction'])->name('transactions.edit')->middleware('super-admin-only');
+    Route::put('/transactions/{transaction}', [HospitalAccountController::class, 'updateTransaction'])->name('transactions.update')->middleware('super-admin-only');
+    Route::delete('/transactions/{transaction}', [HospitalAccountController::class, 'deleteTransaction'])->name('transactions.delete')->middleware('super-admin-only');
 
-        // Fund Transaction Routes
-        Route::get('/fund-history', [HospitalAccountController::class, 'fundHistory'])->name('fund-history');
-        Route::get('/fund-transactions/{fundTransaction}/edit', [HospitalAccountController::class, 'editFundTransaction'])->name('fund-transactions.edit')->middleware('super-admin-only');
-        Route::put('/fund-transactions/{fundTransaction}', [HospitalAccountController::class, 'updateFundTransaction'])->name('fund-transactions.update')->middleware('super-admin-only');
-        Route::delete('/fund-transactions/{fundTransaction}', [HospitalAccountController::class, 'deleteFundTransaction'])->name('fund-transactions.delete')->middleware('super-admin-only');
+    // Fund Transaction Routes
+    Route::get('/fund-history', [HospitalAccountController::class, 'fundHistory'])->name('fund-history');
+    Route::get('/fund-transactions/{fundTransaction}/edit', [HospitalAccountController::class, 'editFundTransaction'])->name('fund-transactions.edit')->middleware('super-admin-only');
+    Route::put('/fund-transactions/{fundTransaction}', [HospitalAccountController::class, 'updateFundTransaction'])->name('fund-transactions.update')->middleware('super-admin-only');
+    Route::delete('/fund-transactions/{fundTransaction}', [HospitalAccountController::class, 'deleteFundTransaction'])->name('fund-transactions.delete')->middleware('super-admin-only');
 
-        // Category Routes
-        Route::get('/categories', [HospitalAccountController::class, 'categories'])->name('categories');
-        Route::post('/categories', [HospitalAccountController::class, 'storeCategory'])->name('categories.store');
-        Route::put('/categories/{category}', [HospitalAccountController::class, 'updateCategory'])->name('categories.update')->middleware('super-admin-only');
+    // Category Routes
+    Route::get('/categories', [HospitalAccountController::class, 'categories'])->name('categories');
+    Route::post('/categories', [HospitalAccountController::class, 'storeCategory'])->name('categories.store');
+    Route::put('/categories/{category}', [HospitalAccountController::class, 'updateCategory'])->name('categories.update')->middleware('super-admin-only');
 
-        // Report Routes
-        Route::get('/monthly-report', [HospitalAccountController::class, 'monthlyReport'])->name('monthly-report');
-        Route::get('/balance-sheet', [HospitalAccountController::class, 'balanceSheet'])->name('balance-sheet');
+    // Report Routes
+    Route::get('/monthly-report', [HospitalAccountController::class, 'monthlyReport'])->name('monthly-report');
+    Route::get('/balance-sheet', [HospitalAccountController::class, 'balanceSheet'])->name('balance-sheet');
 
-        // Hospital Reports
-        Route::get('/reports/daily-statement', [\App\Http\Controllers\HospitalReportController::class, 'dailyStatement'])->name('reports.daily-statement');
-        Route::get('/reports/account-statement', [\App\Http\Controllers\HospitalReportController::class, 'accountStatement'])->name('reports.account-statement');
-        Route::get('/reports/account-statement/export', [\App\Http\Controllers\HospitalReportController::class, 'exportAccountStatement'])->name('reports.account-statement.export');
-    });
+});
+
+Route::get('/hospital-account/reports/daily-statement', [\App\Http\Controllers\HospitalReportController::class, 'dailyStatement'])->name('reports.daily-statement');
+Route::get('/hospital-account/reports/account-statement', [\App\Http\Controllers\HospitalReportController::class, 'accountStatement'])->name('reports.account-statement');
+Route::get('/hospital-account/reports/account-statement/export', [\App\Http\Controllers\HospitalReportController::class, 'exportAccountStatement'])->name('reports.account-statement.export');
 
 Route::middleware(['permission:medicine-account.view'])->prefix('medicine-account')->name('medicine-account.')->group(function () {
-        Route::get('/', [MedicineAccountController::class, 'index'])->name('dashboard');
-        Route::post('/fund-in', [MedicineAccountController::class, 'fundIn'])->name('fund-in');
-        Route::post('/fund-out', [MedicineAccountController::class, 'fundOut'])->name('fund-out');
-        Route::post('/expense', [MedicineAccountController::class, 'addExpense'])->name('expense');
-        Route::get('/transactions', [MedicineAccountController::class, 'transactions'])->name('transactions');
-        Route::get('/fund-history', [MedicineAccountController::class, 'fundHistory'])->name('fund-history');
-        Route::get('/categories', [MedicineAccountController::class, 'categories'])->name('categories');
-        Route::post('/categories', [MedicineAccountController::class, 'storeCategory'])->name('categories.store');
-        Route::put('/categories/{category}', [MedicineAccountController::class, 'updateCategory'])->name('categories.update')->middleware('super-admin-only');
-        Route::get('/monthly-report', [MedicineAccountController::class, 'monthlyReport'])->name('monthly-report');
-        Route::get('/balance-sheet', [MedicineAccountController::class, 'balanceSheet'])->name('balance-sheet');
-        Route::get('/analytics', [MedicineAccountController::class, 'analytics'])->name('analytics');
-        Route::get('/stock-value-report', [MedicineAccountController::class, 'stockValueReport'])->name('stock-value-report');
-        Route::post('/export', [MedicineAccountController::class, 'exportReport'])->name('export');
-    });
+    Route::get('/', [MedicineAccountController::class, 'index'])->name('dashboard');
+    Route::post('/fund-in', [MedicineAccountController::class, 'fundIn'])->name('fund-in');
+    Route::post('/fund-out', [MedicineAccountController::class, 'fundOut'])->name('fund-out');
+    Route::post('/expense', [MedicineAccountController::class, 'addExpense'])->name('expense');
+    Route::get('/transactions', [MedicineAccountController::class, 'transactions'])->name('transactions');
+    Route::get('/fund-history', [MedicineAccountController::class, 'fundHistory'])->name('fund-history');
+    Route::get('/categories', [MedicineAccountController::class, 'categories'])->name('categories');
+    Route::post('/categories', [MedicineAccountController::class, 'storeCategory'])->name('categories.store');
+    Route::put('/categories/{category}', [MedicineAccountController::class, 'updateCategory'])->name('categories.update')->middleware('super-admin-only');
+    Route::get('/monthly-report', [MedicineAccountController::class, 'monthlyReport'])->name('monthly-report');
+    Route::get('/balance-sheet', [MedicineAccountController::class, 'balanceSheet'])->name('balance-sheet');
+    Route::get('/analytics', [MedicineAccountController::class, 'analytics'])->name('analytics');
+    Route::get('/stock-value-report', [MedicineAccountController::class, 'stockValueReport'])->name('stock-value-report');
+    Route::post('/export', [MedicineAccountController::class, 'exportReport'])->name('export');
+});
 
 Route::middleware(['permission:optics-account.view'])->prefix('optics-account')->name('optics-account.')->group(function () {
-        Route::get('/', [OpticsAccountController::class, 'index'])->name('dashboard');
-        Route::post('/fund-in', [OpticsAccountController::class, 'fundIn'])->name('fund-in');
-        Route::post('/fund-out', [OpticsAccountController::class, 'fundOut'])->name('fund-out');
-        Route::post('/expense', [OpticsAccountController::class, 'addExpense'])->name('expense');
-        Route::get('/transactions', [OpticsAccountController::class, 'transactions'])->name('transactions');
-        Route::get('/fund-history', [OpticsAccountController::class, 'fundHistory'])->name('fund-history');
-        Route::get('/categories', [OpticsAccountController::class, 'categories'])->name('categories');
-        Route::post('/categories', [OpticsAccountController::class, 'storeCategory'])->name('categories.store');
-        Route::put('/categories/{category}', [OpticsAccountController::class, 'updateCategory'])->name('categories.update')->middleware('super-admin-only');
-        Route::get('/monthly-report', [OpticsAccountController::class, 'monthlyReport'])->name('monthly-report');
-        Route::get('/balance-sheet', [OpticsAccountController::class, 'balanceSheet'])->name('balance-sheet');
-        Route::get('/analytics', [OpticsAccountController::class, 'analytics'])->name('analytics');
-        Route::get('/inventory-report', [OpticsAccountController::class, 'inventoryReport'])->name('inventory-report');
-        Route::post('/export', [OpticsAccountController::class, 'exportReport'])->name('export');
+    Route::get('/', [OpticsAccountController::class, 'index'])->name('dashboard');
+    Route::post('/fund-in', [OpticsAccountController::class, 'fundIn'])->name('fund-in');
+    Route::post('/fund-out', [OpticsAccountController::class, 'fundOut'])->name('fund-out');
+    Route::post('/expense', [OpticsAccountController::class, 'addExpense'])->name('expense');
+    Route::get('/transactions', [OpticsAccountController::class, 'transactions'])->name('transactions');
+    Route::get('/fund-history', [OpticsAccountController::class, 'fundHistory'])->name('fund-history');
+    Route::get('/categories', [OpticsAccountController::class, 'categories'])->name('categories');
+    Route::post('/categories', [OpticsAccountController::class, 'storeCategory'])->name('categories.store');
+    Route::put('/categories/{category}', [OpticsAccountController::class, 'updateCategory'])->name('categories.update')->middleware('super-admin-only');
+    Route::get('/monthly-report', [OpticsAccountController::class, 'monthlyReport'])->name('monthly-report');
+    Route::get('/balance-sheet', [OpticsAccountController::class, 'balanceSheet'])->name('balance-sheet');
+    Route::get('/analytics', [OpticsAccountController::class, 'analytics'])->name('analytics');
+    Route::get('/inventory-report', [OpticsAccountController::class, 'inventoryReport'])->name('inventory-report');
+    Route::post('/export', [OpticsAccountController::class, 'exportReport'])->name('export');
 });
 
 Route::middleware(['permission:operations.view'])->prefix('operation-account')->name('operation-account.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'index'])->name('dashboard');
-        Route::post('/fund-in', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'fundIn'])->name('fund-in');
-        Route::post('/fund-out', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'fundOut'])->name('fund-out');
-        Route::post('/expense', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'addExpense'])->name('expense');
-        Route::post('/other-income', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'addOtherIncome'])->name('other-income');
-        Route::get('/transactions', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'transactions'])->name('transactions');
-        Route::get('/fund-history', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'fundHistory'])->name('fund-history');
-        Route::get('/monthly-report', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'monthlyReport'])->name('monthly-report');
-        Route::get('/balance-sheet', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'balanceSheet'])->name('balance-sheet');
-        Route::get('/analytics', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'analytics'])->name('analytics');
-        Route::post('/export', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'exportReport'])->name('export');
+    Route::get('/', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'index'])->name('dashboard');
+    Route::post('/fund-in', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'fundIn'])->name('fund-in');
+    Route::post('/fund-out', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'fundOut'])->name('fund-out');
+    Route::post('/expense', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'addExpense'])->name('expense');
+    Route::post('/other-income', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'addOtherIncome'])->name('other-income');
+    Route::get('/transactions', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'transactions'])->name('transactions');
+    Route::get('/fund-history', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'fundHistory'])->name('fund-history');
+    Route::get('/monthly-report', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'monthlyReport'])->name('monthly-report');
+    Route::get('/balance-sheet', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'balanceSheet'])->name('balance-sheet');
+    Route::get('/analytics', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'analytics'])->name('analytics');
+    Route::post('/export', [\App\Http\Controllers\OperationAccount\OperationAccountController::class, 'exportReport'])->name('export');
 
-        // Operation Reports
-        Route::get('/reports/daily-statement', [\App\Http\Controllers\OperationReportController::class, 'dailyStatement'])->name('reports.daily-statement');
-        Route::get('/reports/account-statement', [\App\Http\Controllers\OperationReportController::class, 'accountStatement'])->name('reports.account-statement');
-        Route::get('/reports/account-statement/export', [\App\Http\Controllers\OperationReportController::class, 'exportAccountStatement'])->name('reports.account-statement.export');
+    // Operation Reports
+    Route::get('/reports/daily-statement', [\App\Http\Controllers\OperationReportController::class, 'dailyStatement'])->name('reports.daily-statement');
+    Route::get('/reports/account-statement', [\App\Http\Controllers\OperationReportController::class, 'accountStatement'])->name('reports.account-statement');
+    Route::get('/reports/account-statement/export', [\App\Http\Controllers\OperationReportController::class, 'exportAccountStatement'])->name('reports.account-statement.export');
 });
 
 Route::middleware(['permission:main-account.view'])->prefix('main-account')->name('main-account.')->group(function () {

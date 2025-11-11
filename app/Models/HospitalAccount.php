@@ -7,6 +7,77 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class HospitalAccount extends Model
 {
+    /**
+     * Update an existing income transaction and its linked main account voucher.
+     * Adjusts balances by the difference between old and new amount.
+     */
+    public static function updateIncome(
+        HospitalTransaction $transaction,
+        float $newAmount,
+        string $newCategory,
+        string $newDescription
+    ): void {
+        $oldAmount = $transaction->amount;
+        $diff = $newAmount - $oldAmount;
+        $account = self::firstOrCreate([]);
+        $account->increment('balance', $diff);
+
+        // Update transaction
+        $transaction->update([
+            'amount' => $newAmount,
+            'category' => $newCategory,
+            'description' => $newDescription,
+        ]);
+
+        // Update MainAccountVoucher
+        $voucher = MainAccountVoucher::where('source_account', 'hospital')
+            ->where('source_transaction_type', $transaction->reference_type ?? 'income')
+            ->where('source_voucher_no', $transaction->transaction_no)
+            ->first();
+        if ($voucher) {
+            $voucher->increment('amount', $diff);
+            $voucher->update([
+                'narration' => "Hospital Income - {$newCategory}: {$newDescription}",
+            ]);
+        }
+    }
+
+    /**
+     * Update an existing expense transaction and its linked main account voucher.
+     * Adjusts balances by the difference between old and new amount.
+     */
+    public static function updateExpense(
+        HospitalTransaction $transaction,
+        float $newAmount,
+        string $newCategory,
+        string $newDescription,
+        ?int $newCategoryId = null
+    ): void {
+        $oldAmount = $transaction->amount;
+        $diff = $newAmount - $oldAmount;
+        $account = self::firstOrCreate([]);
+        $account->decrement('balance', $diff * -1); // If diff is positive, decrease more; if negative, increase
+
+        // Update transaction
+        $transaction->update([
+            'amount' => $newAmount,
+            'category' => $newCategory,
+            'description' => $newDescription,
+            'expense_category_id' => $newCategoryId,
+        ]);
+
+        // Update MainAccountVoucher
+        $voucher = MainAccountVoucher::where('source_account', 'hospital')
+            ->where('source_transaction_type', 'expense')
+            ->where('source_voucher_no', $transaction->transaction_no)
+            ->first();
+        if ($voucher) {
+            $voucher->increment('amount', $diff);
+            $voucher->update([
+                'narration' => "Hospital Expense - {$newCategory}: {$newDescription}",
+            ]);
+        }
+    }
     protected $table = 'hospital_account';
     protected $fillable = ['balance'];
     protected $casts = ['balance' => 'decimal:2'];

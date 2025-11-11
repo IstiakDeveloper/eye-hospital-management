@@ -55,6 +55,19 @@ const HospitalAccountLayout: React.FC<HospitalAccountLayoutProps> = ({
       icon: FileText,
       current: route().current('hospital-account.balance-sheet')
     },
+    // Only Hospital Account Reports
+    {
+      name: 'Daily Statement',
+      href: '/hospital-account/reports/daily-statement',
+      icon: FileText,
+      current: route().current('reports.daily-statement')
+    },
+    {
+      name: 'Account Statement',
+      href: '/hospital-account/reports/account-statement',
+      icon: FileText,
+      current: route().current('reports.account-statement')
+    },
   ];
 
   return (

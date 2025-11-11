@@ -51,11 +51,14 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories })
 
   // Format amount helper
   const formatAmount = (amount: number) => {
+    if (typeof amount !== 'number' || isNaN(amount)) {
+      return '৳0.00';
+    }
     return new Intl.NumberFormat('en-BD', {
       style: 'currency',
       currency: 'BDT',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount).replace('BDT', '৳');
   };
 
@@ -137,43 +140,43 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories })
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="text-sm font-medium text-gray-600">Total Sales</h3>
           <p className="text-2xl font-bold text-green-600">
-            {formatAmount(transactions.data
+            {formatAmount(Number(transactions.data
               .filter(t => t.type === 'income')
-              .reduce((sum, t) => sum + t.amount, 0)
-            )}
+              .reduce((sum, t) => sum + Number(t.amount), 0)
+            ))}
           </p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="text-sm font-medium text-gray-600">Total Purchase</h3>
           <p className="text-2xl font-bold text-orange-600">
-            {formatAmount(transactions.data
+            {formatAmount(Number(transactions.data
               .filter(t => t.category === 'medicine_purchase')
-              .reduce((sum, t) => sum + t.amount, 0)
-            )}
+              .reduce((sum, t) => sum + Number(t.amount), 0)
+            ))}
           </p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="text-sm font-medium text-gray-600">Other Expenses</h3>
           <p className="text-2xl font-bold text-red-600">
-            {formatAmount(transactions.data
+            {formatAmount(Number(transactions.data
               .filter(t => t.type === 'expense' && t.category !== 'medicine_purchase')
-              .reduce((sum, t) => sum + t.amount, 0)
-            )}
+              .reduce((sum, t) => sum + Number(t.amount), 0)
+            ))}
           </p>
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border">
           <h3 className="text-sm font-medium text-gray-600">Net Amount</h3>
           <p className="text-2xl font-bold text-blue-600">
-            {formatAmount(transactions.data
+            {formatAmount(Number(transactions.data
               .filter(t => t.type === 'income')
-              .reduce((sum, t) => sum + t.amount, 0) -
+              .reduce((sum, t) => sum + Number(t.amount), 0) -
               transactions.data
               .filter(t => t.type === 'expense')
-              .reduce((sum, t) => sum + t.amount, 0)
-            )}
+              .reduce((sum, t) => sum + Number(t.amount), 0)
+            ))}
           </p>
         </div>
       </div>
@@ -237,7 +240,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories })
                   <td className={`px-6 py-4 text-sm font-medium ${
                     transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {transaction.type === 'income' ? '+' : '-'}{formatAmount(transaction.amount)}
+                    {transaction.type === 'income' ? '+' : '-'}{formatAmount(Number(transaction.amount))}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {formatDate(transaction.transaction_date)}

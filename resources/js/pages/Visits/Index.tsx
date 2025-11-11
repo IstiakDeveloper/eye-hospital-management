@@ -11,7 +11,8 @@ import {
     Stethoscope,
     Users,
     FileText,
-    Receipt
+    Receipt,
+    Edit as EditIcon
 } from 'lucide-react';
 
 interface Patient {
@@ -418,6 +419,13 @@ export default function Index({ visits, doctors, filters }: Props) {
                                             >
                                                 <Eye className="h-3 w-3" />
                                                 View
+                                            </Link>
+                                            <Link
+                                                href={`/visits/${visit.id}/edit`}
+                                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-yellow-600 hover:text-yellow-800 hover:bg-yellow-50 rounded"
+                                            >
+                                                <EditIcon className="h-3 w-3" />
+                                                Edit
                                             </Link>
                                             <Link
                                                 href={`/visits/${visit.id}/receipt`}

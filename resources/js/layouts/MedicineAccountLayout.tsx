@@ -70,6 +70,19 @@ const MedicineAccountLayout: React.FC<MedicineAccountLayoutProps> = ({
       icon: Package,
       current: route().current('medicine-account.stock-value-report')
     },
+    // Only Medicine Account Reports
+    {
+      name: 'Daily Statement',
+      href: '/medicine/reports/daily-statement',
+      icon: FileText,
+      current: route().current('medicine.reports.daily-statement')
+    },
+    {
+      name: 'Account Statement',
+      href: '/medicine/reports/account-statement',
+      icon: FileText,
+      current: route().current('medicine.reports.account-statement')
+    },
   ];
 
   return (
