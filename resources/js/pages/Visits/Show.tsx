@@ -134,13 +134,21 @@ export default function Show({ visit }: Props) {
                             <p className="text-xs text-gray-500">Visit details and information</p>
                         </div>
                     </div>
-                    <Link
-                        href={`/visits/${visit.id}/receipt`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
-                    >
-                        <Receipt className="h-3 w-3" />
-                        Print Receipt
-                    </Link>
+                    <div className="flex gap-2">
+                        <Link
+                            href={route('visits.edit', visit.id)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-600 text-white text-xs font-medium rounded hover:bg-gray-700"
+                        >
+                            Edit Visit
+                        </Link>
+                        <Link
+                            href={`/visits/${visit.id}/receipt`}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
+                        >
+                            <Receipt className="h-3 w-3" />
+                            Print Receipt
+                        </Link>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

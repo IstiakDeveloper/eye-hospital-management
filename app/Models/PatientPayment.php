@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PatientPayment extends Model
 {
@@ -21,6 +22,7 @@ class PatientPayment extends Model
         'notes',
         'receipt_number',
         'received_by',
+        'hospital_transaction_id',
     ];
 
     protected $casts = [

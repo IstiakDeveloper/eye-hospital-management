@@ -7,6 +7,7 @@ use App\Models\PatientVisit;
 use App\Models\PatientPayment;
 use App\Models\Doctor;
 use App\Models\HospitalAccount;
+use App\Models\HospitalTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -14,165 +15,7 @@ use Inertia\Inertia;
 
 class PatientVisitController extends Controller
 {
-    /**
-     * Show the form for editing the specified visit
-     */
-    public function edit(PatientVisit $visit)
-    {
-        $visit->load([
-            'patient',
-            'selectedDoctor.user',
-            'payments.paymentMethod',
-            'payments.receivedBy',
-        ]);
 
-        $doctors = Doctor::with('user')->get()->map(function ($doctor) {
-            return [
-                'id' => $doctor->id,
-                'name' => $doctor->user->name ?? 'Unknown Doctor',
-                'specialization' => $doctor->specialization ?? '',
-            ];
-        });
-
-        return Inertia::render('Visits/Edit', [
-            'visit' => $visit,
-            'doctors' => $doctors,
-        ]);
-    }
-
-    /**
-     * Update the specified visit in storage
-     */
-    public function update(Request $request, PatientVisit $visit)
-    {
-        $request->validate([
-            'chief_complaint' => 'required|string|max:500',
-            'selected_doctor_id' => 'nullable|exists:doctors,id',
-            'discount_type' => 'nullable|in:percentage,amount',
-            'discount_value' => 'nullable|numeric|min:0',
-            'payment_amount' => 'required|numeric|min:0',
-        ]);
-
-        try {
-            return DB::transaction(function () use ($request, $visit) {
-                // Update visit fields
-                $visit->chief_complaint = $request->chief_complaint;
-                $visit->selected_doctor_id = $request->selected_doctor_id;
-                $visit->discount_type = $request->discount_type;
-                $visit->discount_value = $request->discount_value ?? 0;
-                $visit->save();
-
-                // Recalculate fees and totals
-                $visit->refresh();
-                $visit->updateTotals();
-
-                // Payment update logic: always match payment_amount to payments
-                $paymentAmount = (float) $request->payment_amount;
-                $alreadyPaid = (float) $visit->payments()->sum('amount');
-                if ($paymentAmount !== $alreadyPaid) {
-                    $originalPaymentDate = null;
-                    foreach ($visit->payments as $oldPayment) {
-                        if (!$originalPaymentDate) {
-                            $originalPaymentDate = $oldPayment->payment_date;
-                        }
-                        $hospitalTransaction = null;
-                        if ($oldPayment->hospital_transaction_id) {
-                            $hospitalTransaction = \App\Models\HospitalTransaction::find($oldPayment->hospital_transaction_id);
-                        }
-                        if (!$hospitalTransaction) {
-                            $hospitalTransaction = \App\Models\HospitalTransaction::where('reference_type', 'patient_payments')
-                                ->where('reference_id', $oldPayment->id)
-                                ->first();
-                        }
-                        if ($hospitalTransaction) {
-                            // Use updateIncome if payment is being edited (not deleted)
-                            if ($paymentAmount > 0) {
-                                \App\Models\HospitalAccount::updateIncome(
-                                    $hospitalTransaction,
-                                    $paymentAmount,
-                                    'patient_payment',
-                                    "Visit payment update from Patient: {$visit->patient->name} (ID: {$visit->patient->patient_id})"
-                                );
-                                $oldPayment->update([
-                                    'amount' => $paymentAmount,
-                                    'payment_date' => $originalPaymentDate ?? today(),
-                                    'notes' => 'Visit payment edited',
-                                    'received_by' => Auth::id(),
-                                ]);
-                                $oldPayment->refresh();
-                                $oldPayment->hospital_transaction_id = $hospitalTransaction->id;
-                                $oldPayment->save();
-                            } else {
-                                // If payment is being deleted (amount set to 0), delete as before
-                                $voucher = \App\Models\MainAccountVoucher::where('source_reference_id', $hospitalTransaction->id)
-                                    ->where('source_account', 'hospital')
-                                    ->where('source_transaction_type', 'patient_payment')
-                                    ->first();
-                                if ($voucher) {
-                                    $voucher->delete();
-                                }
-                                $hospitalAccount = \App\Models\HospitalAccount::first();
-                                if ($hospitalAccount) {
-                                    if ($hospitalTransaction->type === 'income') {
-                                        $hospitalAccount->decrement('balance', (float) $hospitalTransaction->amount);
-                                    } else {
-                                        $hospitalAccount->increment('balance', (float) $hospitalTransaction->amount);
-                                    }
-                                }
-                                $hospitalTransaction->delete();
-                                $oldPayment->delete();
-                            }
-                        }
-                    }
-                    // If there was no previous payment, create new
-                    if ($visit->payments->isEmpty() && $paymentAmount > 0) {
-                        $payment = PatientPayment::create([
-                            'patient_id' => $visit->patient_id,
-                            'visit_id' => $visit->id,
-                            'amount' => $paymentAmount,
-                            'payment_method_id' => 1, // Default to Cash
-                            'payment_date' => $originalPaymentDate ?? today(),
-                            'notes' => 'Visit payment edited',
-                            'received_by' => Auth::id(),
-                        ]);
-                        $hospitalTransaction = HospitalAccount::addIncome(
-                            $paymentAmount,
-                            'patient_payment',
-                            "Visit payment update from Patient: {$visit->patient->name} (ID: {$visit->patient->patient_id})",
-                            'patient_payments',
-                            $payment->id,
-                            $originalPaymentDate ?? today()
-                        );
-                        $payment->update(['hospital_transaction_id' => $hospitalTransaction->id]);
-                    }
-                }
-
-
-                // Recalculate totals again after payment
-                $visit->refresh();
-                $visit->updateTotals();
-
-
-                // Update payment/overall status if needed
-                if ($visit->total_due <= 0 && $visit->payment_status !== 'paid') {
-                    $visit->update([
-                        'payment_status' => 'paid',
-                        'overall_status' => 'vision_test',
-                        'payment_completed_at' => now(),
-                    ]);
-                }
-
-                return redirect()->route('visits.show', $visit->id)
-                    ->with('success', 'Visit updated successfully!');
-            });
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'Visit update failed: ' . $e->getMessage());
-        }
-    }
-    /**
-     * Display a listing of patient visits with filters
-     */
     public function index(Request $request)
     {
         $query = PatientVisit::with([
@@ -446,6 +289,207 @@ class PatientVisitController extends Controller
         return Inertia::render('Visits/PrescriptionQueue', [
             'visits' => $visits,
         ]);
+    }
+
+    /**
+     * Show edit form for visit
+     */
+    public function edit(PatientVisit $visit)
+    {
+        $visit->load([
+            'patient',
+            'selectedDoctor.user',
+            'payments.paymentMethod',
+            'payments.receivedBy'
+        ]);
+
+        // Get all doctors for dropdown
+        $doctors = Doctor::with('user')->get()->map(function ($doctor) {
+            return [
+                'id' => $doctor->id,
+                'name' => $doctor->user->name ?? 'Unknown Doctor',
+                'consultation_fee' => $doctor->consultation_fee,
+            ];
+        });
+
+        // Get the first payment (registration payment)
+        $firstPayment = $visit->payments()->orderBy('created_at', 'asc')->first();
+
+        return Inertia::render('Visits/Edit', [
+            'visit' => $visit,
+            'doctors' => $doctors,
+            'firstPayment' => $firstPayment,
+        ]);
+    }
+
+    /**
+     * Update visit details and payment
+     */
+    public function update(Request $request, PatientVisit $visit)
+    {
+        \Log::info('🚀 UPDATE METHOD CALLED!', [
+            'visit_id' => $visit->id,
+            'request_data' => $request->all(),
+            'user_id' => auth()->id(),
+            'user_email' => auth()->user()->email ?? 'N/A',
+        ]);
+
+        $request->validate([
+            'selected_doctor_id' => 'nullable|exists:doctors,id',
+            'discount_type' => 'nullable|in:percentage,amount',
+            'discount_value' => 'nullable|numeric|min:0',
+            'payment_amount' => 'nullable|numeric|min:0',
+            'chief_complaint' => 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        \Log::info('✅ Validation passed');
+
+        try {
+            return DB::transaction(function () use ($request, $visit) {
+                // Update visit details (doctor, discount, complaint)
+                $visit->update([
+                    'selected_doctor_id' => $request->selected_doctor_id ?? $visit->selected_doctor_id,
+                    'discount_type' => $request->discount_type ?? $visit->discount_type,
+                    'discount_value' => $request->discount_value ?? $visit->discount_value,
+                    'chief_complaint' => $request->chief_complaint ?? $visit->chief_complaint,
+                    'visit_notes' => $request->notes ?? $visit->visit_notes,
+                ]);
+
+                // Refresh to get updated calculated fees
+                $visit->refresh();
+
+                // Handle payment update if provided
+                \Log::info('🔵 Payment update check', [
+                    'has_payment_amount' => $request->has('payment_amount'),
+                    'payment_amount_value' => $request->payment_amount,
+                ]);
+
+                if ($request->has('payment_amount')) {
+                    $newPaymentAmount = (float) $request->payment_amount;
+
+                    // Get the first payment (registration payment)
+                    $payment = $visit->payments()->orderBy('created_at', 'asc')->first();
+
+                    \Log::info('🔵 Payment found', [
+                        'payment_exists' => $payment ? true : false,
+                        'payment_id' => $payment ? $payment->id : null,
+                        'old_amount' => $payment ? $payment->amount : null,
+                        'new_amount' => $newPaymentAmount,
+                        'hospital_transaction_id' => $payment ? $payment->hospital_transaction_id : null,
+                    ]);
+
+                    if ($payment) {
+                        $oldPaymentAmount = (float) $payment->amount;
+
+                        if ($newPaymentAmount != $oldPaymentAmount) {
+                            \Log::info('🟢 Payment amount changed, updating...', [
+                                'old' => $oldPaymentAmount,
+                                'new' => $newPaymentAmount,
+                                'diff' => $newPaymentAmount - $oldPaymentAmount,
+                            ]);
+
+                            // Calculate the difference for updates
+                            $paymentDiff = $newPaymentAmount - $oldPaymentAmount;
+
+                            // First update payment record
+                            $payment->updateQuietly([
+                                'amount' => $newPaymentAmount,
+                                'notes' => 'Updated visit registration payment'
+                            ]);
+
+                            \Log::info('✅ Payment record updated');
+
+                            // Update hospital transaction and main account if linked
+                            if ($payment->hospital_transaction_id) {
+                                $hospitalTransaction = HospitalTransaction::find($payment->hospital_transaction_id);
+
+                                \Log::info('🔵 Hospital transaction check', [
+                                    'found' => $hospitalTransaction ? true : false,
+                                    'transaction_id' => $hospitalTransaction ? $hospitalTransaction->id : null,
+                                ]);
+
+                                if ($hospitalTransaction) {
+                                    \Log::info('🟢 Calling HospitalAccount::updatePatientPayment...');
+
+                                    // Update hospital transaction and main account voucher
+                                    HospitalAccount::updatePatientPayment(
+                                        $hospitalTransaction,
+                                        $newPaymentAmount,
+                                        "Updated visit payment from Patient: {$visit->patient->name} (ID: {$visit->patient->patient_id})"
+                                    );
+
+                                    \Log::info('✅ HospitalAccount::updatePatientPayment completed');
+                                }
+                            } else {
+                                \Log::warning('⚠️ No hospital transaction linked');
+
+                                // Try to find hospital transaction by payment reference
+                                $hospitalTransaction = HospitalTransaction::where('reference_type', 'patient_payments')
+                                    ->where('reference_id', $payment->id)
+                                    ->first();
+
+                                if ($hospitalTransaction) {
+                                    \Log::info('🔍 Found hospital transaction by reference, linking...');
+
+                                    // Link it for future use
+                                    $payment->updateQuietly(['hospital_transaction_id' => $hospitalTransaction->id]);
+
+                                    // Update hospital transaction and main account voucher
+                                    HospitalAccount::updatePatientPayment(
+                                        $hospitalTransaction,
+                                        $newPaymentAmount,
+                                        "Updated visit payment from Patient: {$visit->patient->name} (ID: {$visit->patient->patient_id})"
+                                    );
+
+                                    \Log::info('✅ HospitalAccount::updatePatientPayment completed (with auto-link)');
+                                } else {
+                                    \Log::warning('⚠️ No hospital transaction found, updating balance only');
+                                    // Fallback: Just update hospital account balance
+                                    $account = HospitalAccount::firstOrCreate([]);
+                                    $account->increment('balance', $paymentDiff);
+                                }
+                            }
+
+                            // Update patient totals manually (since PatientPayment doesn't have updated event)
+                            $patient = $visit->patient;
+                            $patient->increment('total_paid', $paymentDiff);
+                            $patient->decrement('total_due', $paymentDiff);
+
+                            \Log::info('✅ Patient totals updated');
+                        } else {
+                            \Log::info('⚪ Payment amount unchanged, skipping update');
+                        }
+                    } else {
+                        \Log::warning('❌ No payment found for this visit');
+                    }
+                }
+
+                // Recalculate visit totals after all updates
+                $visit->updateTotals();
+                $visit->refresh();
+
+                // Check if visit status needs to be updated
+                if ($visit->total_due <= 0 && $visit->payment_status !== 'paid') {
+                    $visit->update([
+                        'payment_status' => 'paid',
+                        'overall_status' => 'vision_test',
+                        'payment_completed_at' => now(),
+                    ]);
+                } elseif ($visit->total_due > 0 && $visit->total_paid > 0) {
+                    $visit->update([
+                        'payment_status' => 'partial',
+                    ]);
+                }
+
+                return redirect()->route('visits.show', $visit->id)
+                    ->with('success', 'Visit updated successfully!');
+            });
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Visit update failed: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     /**

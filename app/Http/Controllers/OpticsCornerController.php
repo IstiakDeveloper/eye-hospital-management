@@ -1519,7 +1519,9 @@ class OpticsCornerController extends Controller
             ->latest()
             ->paginate(10);
 
-        return Inertia::render('OpticsCorner/Vendors/Transactions', compact('vendor', 'transactions', 'purchases'));
+        $paymentMethods = \App\Models\PaymentMethod::where('is_active', true)->get(['id', 'name']);
+
+        return Inertia::render('OpticsCorner/Vendors/Transactions', compact('vendor', 'transactions', 'purchases', 'paymentMethods'));
     }
 
     public function makeVendorPayment(Request $request, OpticsVendor $vendor)

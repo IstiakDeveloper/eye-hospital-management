@@ -112,7 +112,7 @@ const Modal = ({ isOpen, onClose, title, children }: any) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
                 <div className="flex items-center justify-between p-6 border-b">
                     <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
@@ -133,11 +133,15 @@ const Modal = ({ isOpen, onClose, title, children }: any) => {
 
 export default function VendorTransactions() {
     const { vendor, transactions, purchases, paymentMethods } = usePage<PageProps>().props;
+    // Fallbacks to prevent .map on undefined
+    const safeTransactions = transactions?.data ?? [];
+    const safePurchases = purchases?.data ?? [];
+    const safePaymentMethods = paymentMethods ?? [];
     const [showPaymentModal, setShowPaymentModal] = useState(false);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         amount: '',
-        payment_method_id: '',
+        payment_method_id: 1, // Default to Cash (id 1)
         description: '',
         payment_date: new Date().toISOString().split('T')[0],
     });
@@ -155,8 +159,8 @@ export default function VendorTransactions() {
     const formatCurrency = (amount: number) => `৳${amount.toLocaleString()}`;
     const formatDate = (date: string) => new Date(date).toLocaleDateString('en-GB');
 
-    const totalPurchases = purchases.data.reduce((sum, p) => sum + p.total_cost, 0);
-    const totalPaid = purchases.data.reduce((sum, p) => sum + p.paid_amount, 0);
+    const totalPurchases = safePurchases.reduce((sum, p) => sum + p.total_cost, 0);
+    const totalPaid = safePurchases.reduce((sum, p) => sum + p.paid_amount, 0);
 
     return (
         <AdminLayout>
@@ -245,7 +249,7 @@ export default function VendorTransactions() {
                     />
                     <StatCard
                         title="Purchase Count"
-                        value={purchases.data.length}
+                        value={safePurchases.length}
                         icon={FileText}
                         color="bg-indigo-500"
                     />
@@ -289,8 +293,8 @@ export default function VendorTransactions() {
                     {/* Transactions List */}
                     <div className="p-6">
                         <div className="space-y-4">
-                            {transactions.data.length > 0 ? (
-                                transactions.data.map((transaction) => (
+                            {safeTransactions.length > 0 ? (
+                                safeTransactions.map((transaction) => (
                                     <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                                         <div className="flex-1">
                                             <div className="flex items-center space-x-3">
@@ -364,8 +368,8 @@ export default function VendorTransactions() {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {purchases.data.length > 0 ? (
-                                    purchases.data.map((purchase) => (
+                                {safePurchases.length > 0 ? (
+                                    safePurchases.map((purchase) => (
                                         <tr key={purchase.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4 text-sm font-medium text-gray-900">
                                                 {purchase.purchase_no}
@@ -462,14 +466,14 @@ export default function VendorTransactions() {
                         </label>
                         <select
                             value={data.payment_method_id}
-                            onChange={(e) => setData('payment_method_id', e.target.value)}
+                            onChange={(e) => setData('payment_method_id', Number(e.target.value))}
                             className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                                 errors.payment_method_id ? 'border-red-300' : 'border-gray-300'
                             }`}
                             required
                         >
                             <option value="">Select payment method</option>
-                            {paymentMethods.map((method) => (
+                            {safePaymentMethods.map((method) => (
                                 <option key={method.id} value={method.id}>
                                     {method.name}
                                 </option>

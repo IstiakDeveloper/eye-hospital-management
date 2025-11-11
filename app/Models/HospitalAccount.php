@@ -248,6 +248,82 @@ class HospitalAccount extends Model
         return $transaction;
     }
 
+    /**
+     * Update an existing patient payment transaction and its linked main account voucher.
+     * Adjusts balances by the difference between old and new amount.
+     */
+    public static function updatePatientPayment(
+        HospitalTransaction $transaction,
+        float $newAmount,
+        string $newDescription
+    ): void {
+        $oldAmount = $transaction->amount;
+        $diff = $newAmount - $oldAmount;
+
+        // Update hospital account balance
+        $account = self::firstOrCreate([]);
+        $account->increment('balance', $diff);
+
+        // Update transaction
+        $transaction->update([
+            'amount' => $newAmount,
+            'description' => $newDescription,
+        ]);
+
+        // 👉 Determine source_transaction_type the same way as addIncome
+        $referenceType = $transaction->reference_type;
+        $sourceTransactionType = in_array($referenceType, ['other_income', 'bank_interest']) ? $referenceType : 'income';
+
+        \Log::info('🔍 Searching for voucher:', [
+            'source_account' => 'hospital',
+            'source_transaction_type' => $sourceTransactionType,
+            'source_voucher_no' => $transaction->transaction_no,
+            'reference_type' => $referenceType,
+        ]);
+
+        // Update MainAccountVoucher - Try by transaction_no first
+        $voucher = MainAccountVoucher::where('source_account', 'hospital')
+            ->where('source_transaction_type', $sourceTransactionType)
+            ->where('source_voucher_no', $transaction->transaction_no)
+            ->first();
+
+        // If not found by transaction_no, try by source_reference_id (transaction id)
+        if (!$voucher) {
+            \Log::info('🔍 Voucher not found by transaction_no, trying by source_reference_id...', [
+                'transaction_id' => $transaction->id
+            ]);
+
+            $voucher = MainAccountVoucher::where('source_account', 'hospital')
+                ->where('source_transaction_type', $sourceTransactionType)
+                ->where('source_reference_id', $transaction->id)
+                ->first();
+        }
+
+        if ($voucher) {
+            \Log::info('✅ Voucher found! Updating...', ['voucher_id' => $voucher->id]);
+
+            // Update main account balance
+            $mainAccount = MainAccount::firstOrCreate([]);
+            $mainAccount->increment('balance', $diff);
+
+            // Update voucher amount and narration
+            $voucher->increment('amount', $diff);
+            $voucher->update([
+                'narration' => "Hospital Income - patient_payment: {$newDescription}",
+            ]);
+
+            \Log::info('✅ Main account and voucher updated successfully');
+        } else {
+            \Log::warning('❌ Voucher NOT FOUND! Main account NOT updated');
+            \Log::warning('Available vouchers for hospital:',
+                MainAccountVoucher::where('source_account', 'hospital')
+                    ->select('id', 'source_transaction_type', 'source_voucher_no', 'source_reference_id')
+                    ->get()
+                    ->toArray()
+            );
+        }
+    }
+
     private static function generateVoucherNo(string $prefix): string
     {
         return $prefix . '-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);

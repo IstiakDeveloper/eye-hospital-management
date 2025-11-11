@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { router } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { formatDate } from '@/lib/utils';
 import {
     ArrowLeft,
     Save,
-    X,
-    Calendar,
-    DollarSign,
-    FileText,
-    Tag,
     User,
     Stethoscope,
-    CreditCard,
+    DollarSign,
     Percent,
-    AlertCircle
+    FileText
 } from 'lucide-react';
 
 interface Patient {
@@ -22,434 +16,405 @@ interface Patient {
     patient_id: string;
     name: string;
     phone: string;
-    age: number;
-    gender: string;
+    address?: string;
+}
+
+interface User {
+    id: number;
+    name: string;
 }
 
 interface Doctor {
     id: number;
-    user: {
-        name: string;
-    };
-    specialization: string;
-    is_active: boolean;
-    consultation_fee?: number;
+    user?: User;
+}
+
+interface PaymentMethod {
+    id: number;
+    name: string;
 }
 
 interface Payment {
     id: number;
     amount: number;
+    payment_method: PaymentMethod;
     payment_date: string;
-    notes: string;
-    payment_method: {
-        name: string;
-    };
-    received_by: {
-        name: string;
-    };
+    received_by?: User;
+    notes?: string;
 }
 
 interface Visit {
     id: number;
-    patient_id: number;
-    selected_doctor_id: number;
-    chief_complaint: string;
-    discount_type: string;
-    discount_value: number;
+    visit_id: string;
+    patient: Patient;
+    selected_doctor: Doctor | null;
+    selected_doctor_id: number | null;
     payment_status: string;
     overall_status: string;
-    total_amount: number;
-    total_paid: number;
-    total_due: number;
-    registration_fee?: number;
-    final_amount?: number;
-    patient: Patient;
-    selected_doctor?: Doctor;
+    vision_test_status: string;
+    prescription_status: string;
+    chief_complaint: string;
+    visit_notes?: string;
+    discount_type: 'percentage' | 'amount' | null;
+    discount_value: number | null;
+    registration_fee: number | null;
+    doctor_fee: number | null;
+    total_amount: number | null;
+    discount_amount: number | null;
+    final_amount: number | null;
+    total_paid: number | null;
+    total_due: number | null;
+    created_at: string;
     payments: Payment[];
 }
 
-interface EditVisitProps {
-    visit: Visit;
-    doctors: Doctor[];
+interface DoctorOption {
+    id: number;
+    name: string;
+    consultation_fee: number;
 }
 
-const EditVisit: React.FC<EditVisitProps> = ({ visit, doctors }) => {
-    const [formData, setFormData] = useState({
-        chief_complaint: visit.chief_complaint || '',
-        selected_doctor_id: visit.selected_doctor_id || '',
-        discount_type: visit.discount_type || '',
+interface FirstPayment {
+    id: number;
+    amount: number;
+    payment_method: PaymentMethod;
+}
+
+interface Props {
+    visit: Visit;
+    doctors: DoctorOption[];
+    firstPayment: FirstPayment | null;
+}
+
+export default function Edit({ visit, doctors, firstPayment }: Props) {
+    const { data, setData, put, processing, errors } = useForm({
+        selected_doctor_id: visit.selected_doctor_id?.toString() || '',
+        discount_type: visit.discount_type || 'amount',
         discount_value: visit.discount_value?.toString() || '0',
-        payment_amount: visit.total_paid?.toString() || '0',
-    });
-    const [liveSummary, setLiveSummary] = useState({
-        registration_fee: visit.registration_fee || 100,
-        doctor_fee: visit.selected_doctor?.consultation_fee || 0,
-        total_amount: visit.total_amount || 0,
-        discount_amount: visit.discount_type ? visit.discount_value || 0 : 0,
-        final_amount: visit.final_amount || 0,
+        payment_amount: firstPayment?.amount?.toString() || '0',
+        chief_complaint: visit.chief_complaint || '',
+        notes: visit.visit_notes || '',
     });
 
-    const [errors, setErrors] = useState<any>({});
-    const [loading, setLoading] = useState(false);
+    // Calculate fees dynamically
+    const [calculatedFees, setCalculatedFees] = useState({
+        registration_fee: 100,
+        doctor_fee: 0,
+        total_amount: 100,
+        discount_amount: 0,
+        final_amount: 100,
+        total_paid: 0,
+        total_due: 0,
+    });
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-        if (errors[name]) {
-            setErrors((prev: any) => ({ ...prev, [name]: null }));
-        }
-    };
-
-    // Live update financial summary when doctor/discount changes
     useEffect(() => {
-        const fetchSummary = async () => {
-            const res = await fetch('/patients/calculate-costs', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-                },
-                body: JSON.stringify({
-                    doctor_id: formData.selected_doctor_id,
-                    discount_type: formData.discount_type,
-                    discount_value: formData.discount_value,
-                }),
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setLiveSummary(data);
+        const registrationFee = 100;
+        const selectedDoctor = doctors.find(d => d.id === Number(data.selected_doctor_id));
+        const doctorFee = selectedDoctor ? Number(selectedDoctor.consultation_fee) : 0;
+        const totalAmount = registrationFee + doctorFee;
+
+        let discountAmount = 0;
+        const discountValue = parseFloat(data.discount_value) || 0;
+        if (discountValue > 0) {
+            if (data.discount_type === 'percentage') {
+                discountAmount = (totalAmount * discountValue) / 100;
+            } else {
+                discountAmount = Math.min(discountValue, totalAmount);
             }
-        };
-        fetchSummary();
-    }, [formData.selected_doctor_id, formData.discount_type, formData.discount_value]);
+        }
+
+        const finalAmount = totalAmount - discountAmount;
+        const paidAmount = parseFloat(data.payment_amount) || 0;
+        const dueAmount = Math.max(0, finalAmount - paidAmount);
+
+        setCalculatedFees({
+            registration_fee: registrationFee,
+            doctor_fee: doctorFee,
+            total_amount: totalAmount,
+            discount_amount: discountAmount,
+            final_amount: finalAmount,
+            total_paid: paidAmount,
+            total_due: dueAmount,
+        });
+    }, [data.selected_doctor_id, data.discount_type, data.discount_value, data.payment_amount, doctors]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-
-        router.put(`/visits/${visit.id}`, formData, {
-            onSuccess: () => {
-                // Will redirect to visit show page
-            },
-            onError: (errors) => {
-                setErrors(errors);
-                setLoading(false);
-            },
-            onFinish: () => {
-                setLoading(false);
-            }
+        put(route('visits.update', visit.id), {
+            preserveScroll: true,
         });
     };
 
-    const handleCancel = () => {
-        router.get(`/visits/${visit.id}`);
-    };
-
-    const handleDelete = () => {
-        if (confirm('Are you sure you want to delete this visit? This will reverse all transactions and cannot be undone.')) {
-            router.delete(`/visits/${visit.id}`, {
-                onSuccess: () => {
-                    router.get('/patients');
-                }
-            });
+    const formatCurrency = (amount: number | null | undefined) => {
+        if (amount === null || amount === undefined || isNaN(amount)) {
+            return '৳0';
         }
+        return '৳' + amount.toLocaleString('en-BD', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        });
     };
-
 
     return (
-        <AdminLayout title="Edit Visit">
-            <div className="space-y-8 max-w-3xl mx-auto">
-                {/* --- Section: Header --- */}
-                <div className="bg-white shadow rounded-lg p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 sticky top-0 z-10">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={handleCancel}
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="Back to Visit Details"
-                        >
-                            <ArrowLeft className="w-5 h-5" />
-                        </button>
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Edit Visit</h1>
-                            <p className="text-sm text-gray-600 mt-1">
-                                Patient: <span className="font-medium text-blue-600">{visit.patient.name}</span>
-                                ({visit.patient.patient_id})
-                            </p>
-                        </div>
-                    </div>
+        <AdminLayout>
+            <Head title={`Edit Visit #${visit.visit_id}`} />
+
+            <div className="p-6 max-w-5xl mx-auto">
+                <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            visit.payment_status === 'paid'
-                                ? 'bg-green-100 text-green-700'
-                                : visit.payment_status === 'partial'
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : 'bg-red-100 text-red-700'
-                        }`}>
-                            {visit.payment_status?.toUpperCase()}
-                        </span>
-                        <button
-                            onClick={handleDelete}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        <Link
+                            href={route('visits.show', visit.id)}
+                            className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
                         >
-                            Delete Visit
-                        </button>
-                    </div>
-                </div>
-
-                {/* --- Section: Patient Info --- */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <User className="w-4 h-4 text-blue-600" />
-                        <span className="font-medium text-blue-900">Patient Information</span>
-                    </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <ArrowLeft className="h-4 w-4" />
+                            Back
+                        </Link>
                         <div>
-                            <span className="text-gray-600">Name:</span>
-                            <div className="font-medium">{visit.patient.name}</div>
-                        </div>
-                        <div>
-                            <span className="text-gray-600">ID:</span>
-                            <div className="font-medium">{visit.patient.patient_id}</div>
-                        </div>
-                        <div>
-                            <span className="text-gray-600">Age:</span>
-                            <div className="font-medium">{visit.patient.age} years</div>
-                        </div>
-                        <div>
-                            <span className="text-gray-600">Phone:</span>
-                            <div className="font-medium">{visit.patient.phone}</div>
+                            <h1 className="text-2xl font-bold text-gray-900">Edit Visit #{visit.visit_id}</h1>
+                            <p className="text-sm text-gray-500">Update visit details and payment information</p>
                         </div>
                     </div>
                 </div>
 
-                {/* --- Section: Financial Summary (Live) --- */}
-                <div className="bg-gray-50 border rounded-lg p-4">
-                    <h3 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-                        <CreditCard className="w-4 h-4" />
-                        Financial Summary (Live)
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
-                        <div className="text-center">
-                            <div className="text-xs text-gray-500">Registration Fee</div>
-                            <div className="font-bold text-blue-700">৳{Number(liveSummary.registration_fee || 0).toLocaleString()}</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-xs text-gray-500">Doctor Fee</div>
-                            <div className="font-bold text-blue-700">৳{Number(liveSummary.doctor_fee || 0).toLocaleString()}</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-xs text-gray-500">Total Amount</div>
-                            <div className="font-bold text-blue-700">৳{Number(liveSummary.total_amount || 0).toLocaleString()}</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-xs text-gray-500">Discount</div>
-                            <div className="font-bold text-orange-600">৳{Number(liveSummary.discount_amount || 0).toLocaleString()}</div>
-                        </div>
-                        <div className="text-center">
-                            <div className="text-xs text-gray-500">Final Amount</div>
-                            <div className="font-bold text-green-700">৳{Number(liveSummary.final_amount || 0).toLocaleString()}</div>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Patient Information (Read-only) */}
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <User className="h-5 w-5" />
+                            Patient Information
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <p className="text-sm text-gray-500">Name</p>
+                                <p className="text-base font-medium text-gray-900">{visit.patient.name}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Patient ID</p>
+                                <p className="text-base font-medium text-gray-900">{visit.patient.patient_id}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500">Phone</p>
+                                <p className="text-base font-medium text-gray-900">{visit.patient.phone}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Edit Form */}
-                <div className="bg-white shadow rounded-lg p-6">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-
-                        {/* Chief Complaint */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                <FileText className="w-4 h-4 inline mr-1" />
-                                Chief Complaint
-                            </label>
-                            <textarea
-                                name="chief_complaint"
-                                value={formData.chief_complaint}
-                                onChange={handleInputChange}
-                                required
-                                rows={3}
-                                className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                    errors.chief_complaint ? 'border-red-400 bg-red-50' : 'border-gray-300'
-                                }`}
-                                placeholder="Enter patient's chief complaint"
-                            />
-                            {errors.chief_complaint && (
-                                <p className="text-red-600 text-sm mt-1">{errors.chief_complaint}</p>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Visit Details */}
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            Visit Details
+                        </h2>
+                        <div className="space-y-4">
                             {/* Doctor Selection */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    <Stethoscope className="w-4 h-4 inline mr-1" />
-                                    Assigned Doctor
+                                <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                                    <Stethoscope className="h-4 w-4" />
+                                    Select Doctor
                                 </label>
                                 <select
-                                    name="selected_doctor_id"
-                                    value={formData.selected_doctor_id}
-                                    onChange={handleInputChange}
-                                    className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                        errors.selected_doctor_id ? 'border-red-400 bg-red-50' : 'border-gray-300'
-                                    }`}
+                                    value={data.selected_doctor_id}
+                                    onChange={(e) => setData('selected_doctor_id', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 >
-                                    <option value="">Select Doctor</option>
+                                    <option value="">No Doctor</option>
                                     {doctors.map((doctor) => (
                                         <option key={doctor.id} value={doctor.id}>
-                                            {(doctor.user?.name || 'Unknown Doctor') + (doctor.specialization ? ` - ${doctor.specialization}` : '')}
+                                            {doctor.name} - ৳{doctor.consultation_fee}
                                         </option>
                                     ))}
                                 </select>
                                 {errors.selected_doctor_id && (
-                                    <p className="text-red-600 text-sm mt-1">{errors.selected_doctor_id}</p>
+                                    <p className="mt-1 text-sm text-red-600">{errors.selected_doctor_id}</p>
                                 )}
                             </div>
 
-                            {/* Payment Amount */}
+                            {/* Chief Complaint */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    <DollarSign className="w-4 h-4 inline mr-1" />
-                                    Payment Amount (৳)
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Chief Complaint
+                                </label>
+                                <textarea
+                                    value={data.chief_complaint}
+                                    onChange={(e) => setData('chief_complaint', e.target.value)}
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Enter chief complaint..."
+                                />
+                                {errors.chief_complaint && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.chief_complaint}</p>
+                                )}
+                            </div>
+
+                            {/* Visit Notes */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Visit Notes (Optional)
+                                </label>
+                                <textarea
+                                    value={data.notes}
+                                    onChange={(e) => setData('notes', e.target.value)}
+                                    rows={2}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Enter visit notes..."
+                                />
+                                {errors.notes && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.notes}</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Discount Settings */}
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <Percent className="h-5 w-5" />
+                            Discount
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Discount Type
+                                </label>
+                                <select
+                                    value={data.discount_type}
+                                    onChange={(e) => setData('discount_type', e.target.value as 'percentage' | 'amount')}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                >
+                                    <option value="amount">Amount</option>
+                                    <option value="percentage">Percentage</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Discount Value
                                 </label>
                                 <input
                                     type="number"
-                                    name="payment_amount"
-                                    value={formData.payment_amount}
-                                    onChange={handleInputChange}
                                     step="0.01"
                                     min="0"
-                                    required
-                                    className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                        errors.payment_amount ? 'border-red-400 bg-red-50' : 'border-gray-300'
-                                    }`}
-                                    placeholder="Enter payment amount"
+                                    value={data.discount_value}
+                                    onChange={(e) => setData('discount_value', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="0"
                                 />
-                                {errors.payment_amount && (
-                                    <p className="text-red-600 text-sm mt-1">{errors.payment_amount}</p>
+                                {errors.discount_value && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.discount_value}</p>
                                 )}
                             </div>
                         </div>
+                    </div>
 
-                        {/* Discount Section */}
-                        <div className="border rounded-lg p-4 bg-gray-50">
-                            <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                                <Percent className="w-4 h-4" />
-                                Discount Settings
-                            </h3>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Discount Type
-                                    </label>
-                                    <select
-                                        name="discount_type"
-                                        value={formData.discount_type}
-                                        onChange={handleInputChange}
-                                        className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300"
-                                    >
-                                        <option value="">No Discount</option>
-                                        <option value="percentage">Percentage (%)</option>
-                                        <option value="amount">Fixed Amount (৳)</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Discount Value
-                                    </label>
-                                    <input
-                                        type="number"
-                                        name="discount_value"
-                                        value={formData.discount_value}
-                                        onChange={handleInputChange}
-                                        step="0.01"
-                                        min="0"
-                                        disabled={!formData.discount_type}
-                                        className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300 disabled:bg-gray-100"
-                                        placeholder={formData.discount_type === 'percentage' ? 'Enter percentage' : 'Enter amount'}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Form Actions */}
-                        <div className="flex items-center justify-between pt-6 border-t">
-                            <div className="text-sm text-gray-600">
-                                <div className="flex items-center gap-1 text-orange-600">
-                                    <AlertCircle className="w-4 h-4" />
-                                    <span>Changing payment amount will update all financial records</span>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-3">
-                                <button
-                                    type="button"
-                                    onClick={handleCancel}
-                                    className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
-                                >
-                                    <X className="w-4 h-4" />
-                                    Cancel
-                                </button>
-
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 ${
-                                        loading ? 'opacity-50 cursor-not-allowed' : ''
-                                    }`}
-                                >
-                                    <Save className="w-4 h-4" />
-                                    {loading ? 'Updating...' : 'Update Visit'}
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-                {/* Payment History */}
-                {visit.payments && visit.payments.length > 0 && (
-                    <div className="bg-white shadow rounded-lg p-6">
-                        <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
-                            <CreditCard className="w-4 h-4" />
-                            Payment History
-                        </h3>
-
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-4 py-2 text-left font-medium text-gray-700">Date</th>
-                                        <th className="px-4 py-2 text-left font-medium text-gray-700">Amount</th>
-                                        <th className="px-4 py-2 text-left font-medium text-gray-700">Method</th>
-                                        <th className="px-4 py-2 text-left font-medium text-gray-700">Received By</th>
-                                        <th className="px-4 py-2 text-left font-medium text-gray-700">Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {visit.payments.map((payment, index) => (
-                                        <tr key={payment.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                                            <td className="px-4 py-2">{formatDate(payment.payment_date)}</td>
-                                            <td className="px-4 py-2 font-medium text-green-600">
-                                                ৳{Number(payment.amount).toLocaleString()}
-                                            </td>
-                                            <td className="px-4 py-2">{payment.payment_method?.name || 'Cash'}</td>
-                                            <td className="px-4 py-2">{payment.received_by?.name || 'Unknown'}</td>
-                                            <td className="px-4 py-2 text-gray-600">{payment.notes || 'No notes'}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                    {/* Payment Amount */}
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <DollarSign className="h-5 w-5" />
+                            Payment Information
+                        </h2>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Payment Amount
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={data.payment_amount}
+                                onChange={(e) => setData('payment_amount', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="0"
+                            />
+                            {errors.payment_amount && (
+                                <p className="mt-1 text-sm text-red-600">{errors.payment_amount}</p>
+                            )}
+                            <p className="mt-2 text-sm text-gray-500">
+                                This will update the registration payment amount for this visit.
+                            </p>
                         </div>
                     </div>
-                )}
+
+                    {/* Calculated Fee Summary */}
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border border-blue-200 p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Calculated Fee Summary</h2>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <div>
+                                <p className="text-sm text-gray-600">Registration Fee</p>
+                                <p className="text-lg font-semibold text-gray-900">
+                                    {formatCurrency(calculatedFees.registration_fee)}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Doctor Fee</p>
+                                <p className="text-lg font-semibold text-gray-900">
+                                    {formatCurrency(calculatedFees.doctor_fee)}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Total Amount</p>
+                                <p className="text-lg font-semibold text-gray-900">
+                                    {formatCurrency(calculatedFees.total_amount)}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Discount</p>
+                                <p className="text-lg font-semibold text-red-600">
+                                    -{formatCurrency(calculatedFees.discount_amount)}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Final Amount</p>
+                                <p className="text-xl font-bold text-blue-600">
+                                    {formatCurrency(calculatedFees.final_amount)}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-blue-300 grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div>
+                                <p className="text-sm text-gray-600">Total Paid</p>
+                                <p className="text-xl font-bold text-green-600">
+                                    {formatCurrency(calculatedFees.total_paid)}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Total Due</p>
+                                <p className="text-xl font-bold text-red-600">
+                                    {formatCurrency(calculatedFees.total_due)}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Status</p>
+                                <p className="text-base font-semibold">
+                                    {calculatedFees.total_due <= 0 ? (
+                                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full">Fully Paid</span>
+                                    ) : calculatedFees.total_paid > 0 ? (
+                                        <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full">Partial</span>
+                                    ) : (
+                                        <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full">Unpaid</span>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-end gap-3">
+                        <Link
+                            href={route('visits.show', visit.id)}
+                            className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                        >
+                            Cancel
+                        </Link>
+                        <button
+                            type="submit"
+                            disabled={processing}
+                            className="inline-flex items-center gap-2 px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Save className="h-4 w-4" />
+                            {processing ? 'Updating...' : 'Update Visit'}
+                        </button>
+                    </div>
+                </form>
             </div>
         </AdminLayout>
     );
-};
-
-export default EditVisit;
+}
