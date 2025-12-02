@@ -113,10 +113,10 @@ class Operation extends Model
         $reportData = [];
 
         foreach ($operations as $operation) {
-            // Get all bookings in the date range
+            // Get all bookings in the date range (by booking created date, not scheduled date)
             $bookings = \DB::table('operation_bookings')
                 ->where('operation_id', $operation->id)
-                ->whereBetween('scheduled_date', [$fromDate, $toDate])
+                ->whereBetween(\DB::raw('DATE(created_at)'), [$fromDate, $toDate])
                 ->whereIn('status', ['scheduled', 'confirmed', 'completed', 'rescheduled'])
                 ->select(
                     'id',

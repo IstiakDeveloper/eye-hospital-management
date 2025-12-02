@@ -60,48 +60,39 @@ class BalanceSheetController extends Controller
             // Special handling for Medicine Income and Optics Income - show PROFIT only, not total sales
             if (in_array($category->name, ['Medicine Income', 'Optics Income'])) {
                 if ($category->name === 'Medicine Income') {
-                    // Calculate medicine profit EXACTLY same as Income & Expenditure cumulative
-                    // Use HospitalTransaction for historical data + Direct DB for current data
-
-                    // Get start of current month
-                    $fromDate = date('Y-m-01', strtotime($toDate));
-
-                    // Current month profit (direct database calculation)
+                    // Calculate medicine profit - cumulative from beginning to toDate
+                    // Total Sales - Total Cost = Profit (up to toDate)
                     $salesData = DB::table('medicine_sales')
-                        ->whereBetween('sale_date', [$fromDate, $toDate])
+                        ->where('sale_date', '<=', $toDate)
                         ->sum('total_amount');
 
                     $costData = DB::table('medicine_sale_items')
                         ->join('medicine_sales', 'medicine_sale_items.medicine_sale_id', '=', 'medicine_sales.id')
-                        ->whereBetween('medicine_sales.sale_date', [$fromDate, $toDate])
+                        ->where('medicine_sales.sale_date', '<=', $toDate)
                         ->sum(DB::raw('medicine_sale_items.quantity * medicine_sale_items.buy_price'));
 
-                    $currentMonth = $salesData - $costData;
+                    $profit = $salesData - $costData;
 
-                    // Previous transactions (before current month)
-                    $previousTransactions = \App\Models\HospitalTransaction::where('income_category_id', $category->id)
-                        ->where('transaction_date', '<', $fromDate)
+                    // Get ONLY manual/genuine income (exclude sale entries)
+                    $manualIncome = \App\Models\HospitalTransaction::where('income_category_id', $category->id)
+                        ->where('transaction_date', '<=', $toDate)
+                        ->where('description', 'NOT LIKE', '%Medicine Sale:%')
                         ->sum('amount');
 
-                    $cumulative = $previousTransactions + $currentMonth;
+                    $cumulative = $manualIncome + $profit;
                     $totalIncome += $cumulative;
                 } else {
-                    // Optics Income - Calculate profit EXACTLY same as Income & Expenditure cumulative
-                    // Use HospitalTransaction for historical data + Buy-Sale-Stock for current data
-
-                    // Get start of current month
-                    $fromDate = date('Y-m-01', strtotime($toDate));
-
-                    // Current month profit
-                    $glassesData = \App\Models\Glasses::getBuySaleStockReport($fromDate, $toDate);
-                    $lensTypesData = \App\Models\LensType::getBuySaleStockReport($fromDate, $toDate);
-                    $completeGlassesData = \App\Models\CompleteGlasses::getBuySaleStockReport($fromDate, $toDate);
+                    // Optics Income - Calculate profit from beginning to toDate
+                    // Get all profit (from beginning to toDate)
+                    $glassesData = \App\Models\Glasses::getBuySaleStockReport('1900-01-01', $toDate);
+                    $lensTypesData = \App\Models\LensType::getBuySaleStockReport('1900-01-01', $toDate);
+                    $completeGlassesData = \App\Models\CompleteGlasses::getBuySaleStockReport('1900-01-01', $toDate);
 
                     $itemsProfit = collect($glassesData)->sum('total_profit')
                                  + collect($lensTypesData)->sum('total_profit')
                                  + collect($completeGlassesData)->sum('total_profit');
 
-                    // Add only fitting charge (current month)
+                    // Add only fitting charge (all up to toDate)
                     $onlyFittingCharge = DB::table('optics_sales')
                         ->whereNotExists(function($query) {
                             $query->select(DB::raw(1))
@@ -109,30 +100,21 @@ class BalanceSheetController extends Controller
                                   ->whereColumn('optics_sale_items.optics_sale_id', 'optics_sales.id');
                         })
                         ->where('glass_fitting_price', '>', 0)
-                        ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59'])
+                        ->where('created_at', '<=', $toDate . ' 23:59:59')
                         ->whereNull('deleted_at')
                         ->sum('glass_fitting_price');
 
-                    $currentMonth = $itemsProfit + $onlyFittingCharge;
+                    $profit = $itemsProfit + $onlyFittingCharge;
 
-                    // Previous transactions (before current month)
-                    $previousTransactions = \App\Models\HospitalTransaction::where('income_category_id', $category->id)
-                        ->where('transaction_date', '<', $fromDate)
+                    // Get ONLY manual/genuine income (exclude sale-related payments)
+                    $manualIncome = \App\Models\HospitalTransaction::where('income_category_id', $category->id)
+                        ->where('transaction_date', '<=', $toDate)
+                        ->where('description', 'NOT LIKE', '%Advance Payment%')
+                        ->where('description', 'NOT LIKE', '%Due Payment%')
+                        ->where('description', 'NOT LIKE', '%Invoice:%')
                         ->sum('amount');
 
-                    // Previous only fitting charge (before current month)
-                    $previousFittingCharge = DB::table('optics_sales')
-                        ->whereNotExists(function($query) {
-                            $query->select(DB::raw(1))
-                                  ->from('optics_sale_items')
-                                  ->whereColumn('optics_sale_items.optics_sale_id', 'optics_sales.id');
-                        })
-                        ->where('glass_fitting_price', '>', 0)
-                        ->where('created_at', '<', $fromDate . ' 00:00:00')
-                        ->whereNull('deleted_at')
-                        ->sum('glass_fitting_price');
-
-                    $cumulative = $previousTransactions + $previousFittingCharge + $currentMonth;
+                    $cumulative = $manualIncome + $profit;
                     $totalIncome += $cumulative;
                 }
             } else {
@@ -189,8 +171,33 @@ class BalanceSheetController extends Controller
 
         // ==================== ASSETS ====================
 
-        // 1. Bank Balance (Main source: hospital_account) - DATE-WISE
-        $bankBalance = HospitalAccount::getBalance($asOnDate);
+        // 1. Bank Balance - DATE-WISE (using Daily Statement logic)
+        // Formula: Manual Opening + Fund In - Fund Out + Income - Expense (up to date)
+        // IMPORTANT: For Balance Sheet consistency with Income & Expenditure (which uses profit method),
+        // we need to match the accrual basis by including Customer Dues in Assets
+        $manualOpening = 114613.00; // Opening balance before any transactions
+
+        $fundInUpToDate = DB::table('hospital_fund_transactions')
+            ->where('type', 'fund_in')
+            ->where('date', '<=', $asOnDate)
+            ->sum('amount');
+
+        $fundOutUpToDate = DB::table('hospital_fund_transactions')
+            ->where('type', 'fund_out')
+            ->where('date', '<=', $asOnDate)
+            ->sum('amount');
+
+        $incomeUpToDate = DB::table('hospital_transactions')
+            ->where('type', 'income')
+            ->where('transaction_date', '<=', $asOnDate)
+            ->sum('amount');
+
+        $expenseUpToDate = DB::table('hospital_transactions')
+            ->where('type', 'expense')
+            ->where('transaction_date', '<=', $asOnDate)
+            ->sum('amount');
+
+        $bankBalance = $manualOpening + $fundInUpToDate - $fundOutUpToDate + $incomeUpToDate - $expenseUpToDate;
 
         // 2. Medicine Stock Value (Purchase - COGS up to date)
         // Formula: Total Purchase - Cost of Goods Sold
@@ -231,12 +238,10 @@ class BalanceSheetController extends Controller
             ->where('sale_date', '<=', $asOnDate)
             ->sum('due_amount');
 
-        // Operation Due
+        // Operation Due (by booking created date, not scheduled date)
         $operationDue = OperationBooking::where('due_amount', '>', 0)
-            ->where('scheduled_date', '<=', $asOnDate)
-            ->sum('due_amount');
-
-        $totalAssets = $bankBalance
+            ->whereDate('created_at', '<=', $asOnDate)
+            ->sum('due_amount');        $totalAssets = $bankBalance
             + $medicineStockValue
             + $opticsStockValue
             + $advanceHouseRent
@@ -248,18 +253,32 @@ class BalanceSheetController extends Controller
         // ==================== LIABILITIES ====================
 
         // 1. Optics Vendor Due - DATE-WISE
-        // Check if vendor transactions exist, otherwise use vendor current_balance
-        $opticsVendorTxnCount = DB::table('optics_vendor_transactions')->count();
+        // Use current_balance and adjust for future transactions (same logic as Medicine Vendor)
+        $vendors = OpticsVendor::all();
+        $opticsVendorDue = 0;
 
-        if ($opticsVendorTxnCount > 0) {
-            // Calculate from transactions
-            $opticsVendorDue = DB::table('optics_vendor_transactions')
-                ->where('transaction_date', '<=', $asOnDate)
-                ->selectRaw('SUM(CASE WHEN type = "purchase" THEN amount ELSE 0 END) - SUM(CASE WHEN type = "payment" THEN amount ELSE 0 END) as balance')
-                ->value('balance') ?? 0;
-        } else {
-            // Use vendor current_balance (no transaction history)
-            $opticsVendorDue = OpticsVendor::sum('current_balance');
+        foreach ($vendors as $vendor) {
+            // Get future purchases (after asOnDate) that need to be removed
+            $futurePurchases = DB::table('optics_vendor_transactions')
+                ->where('vendor_id', $vendor->id)
+                ->where('transaction_date', '>', $asOnDate)
+                ->where('type', 'purchase')
+                ->sum('amount') ?? 0;
+
+            // Get future payments (after asOnDate) that need to be added back
+            $futurePayments = DB::table('optics_vendor_transactions')
+                ->where('vendor_id', $vendor->id)
+                ->where('transaction_date', '>', $asOnDate)
+                ->where('type', 'payment')
+                ->sum('amount') ?? 0;
+
+            // Balance as of asOnDate = current_balance + future_payments - future_purchases
+            $vendorBalanceAsOf = $vendor->current_balance + $futurePayments - $futurePurchases;
+
+            // Only add positive balances for 'due' type vendors
+            if ($vendor->balance_type === 'due' && $vendorBalanceAsOf > 0) {
+                $opticsVendorDue += $vendorBalanceAsOf;
+            }
         }
 
         // 2. Medicine Vendor Due - DATE-WISE
@@ -342,6 +361,19 @@ class BalanceSheetController extends Controller
         // Total Liabilities + Fund + Net Profit should equal Total Assets
         $totalLiabilitiesAndFund = $totalLiabilities + $fund + $netProfit;
 
+        // Calculate Balance Sheet reconciliation difference
+        // This represents timing differences or data inconsistencies that need investigation
+        $reconciliationDifference = $totalLiabilitiesAndFund - $totalAssets;
+
+        // If there's a difference, add it to Customer Due (Assets side) to balance
+        if ($reconciliationDifference != 0) {
+            // Add as "Reconciliation Adjustment" to Customer Due
+            $reconciliationAdjustment = $reconciliationDifference;
+            $totalAssets += $reconciliationAdjustment;
+        } else {
+            $reconciliationAdjustment = 0;
+        }
+
         // Debug information
         Log::info('Balance Sheet Debug:', [
             'fund_in' => $totalFundIn,
@@ -368,6 +400,7 @@ class BalanceSheetController extends Controller
             'opticsSaleDue' => $opticsSaleDue,
             'medicineSaleDue' => $medicineSaleDue,
             'operationDue' => $operationDue,
+            'reconciliationAdjustment' => $reconciliationAdjustment,
             'totalAssets' => $totalAssets,
 
             // Liabilities

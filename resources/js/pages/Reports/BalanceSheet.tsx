@@ -19,6 +19,7 @@ interface BalanceSheetProps {
     opticsSaleDue: number;
     medicineSaleDue: number;
     operationDue: number;
+    reconciliationAdjustment: number;
     totalAssets: number;
 
     // Liabilities
@@ -48,6 +49,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
     opticsSaleDue,
     medicineSaleDue,
     operationDue,
+    reconciliationAdjustment,
     totalAssets,
     opticsVendorDue,
     medicineVendorDue,

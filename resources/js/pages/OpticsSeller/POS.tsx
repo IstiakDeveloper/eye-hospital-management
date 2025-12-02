@@ -17,7 +17,8 @@ import {
     Users,
     ChevronDown,
     Clock,
-    UserPlus
+    UserPlus,
+    Calendar
 } from 'lucide-react';
 
 interface Frame {
@@ -112,6 +113,7 @@ export default function POS({
     const customerDropdownRef = useRef<HTMLDivElement>(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
+        sale_date: new Date().toISOString().split('T')[0], // Default to today's date
         customer_id: null as number | null,
         customer_name: '',
         customer_phone: '',
@@ -128,6 +130,29 @@ export default function POS({
 
     const formatCurrency = (amount: number) => {
         return `৳${Math.round(amount)}`;
+    };
+
+    const formatDateDisplay = (dateString: string) => {
+        const date = new Date(dateString);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const selectedDate = new Date(dateString);
+        selectedDate.setHours(0, 0, 0, 0);
+
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayName = dayNames[date.getDay()];
+
+        if (selectedDate.getTime() === today.getTime()) {
+            return `Today (${dayName})`;
+        }
+
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (selectedDate.getTime() === yesterday.getTime()) {
+            return `Yesterday (${dayName})`;
+        }
+
+        return `${date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} (${dayName})`;
     };
 
     // Customer search with debounce
@@ -193,7 +218,8 @@ export default function POS({
             customer_id: null,
             customer_name: '',
             customer_phone: '',
-            customer_email: ''
+            customer_email: '',
+            // Keep sale_date when clearing customer
         });
     };
 
@@ -329,6 +355,7 @@ export default function POS({
         }));
 
         router.post('/optics-seller/pos/sale', {
+            sale_date: data.sale_date,
             customer_id: data.customer_id,
             customer_name: data.customer_name || 'Walk-in Customer',
             customer_phone: data.customer_phone,
@@ -346,7 +373,8 @@ export default function POS({
                 setCart([]);
                 setSaleMode(null); // Reset sale mode after successful sale
                 clearCustomer();
-                reset();
+                reset('customer_id', 'customer_name', 'customer_phone', 'customer_email', 'items', 'glass_fitting_price', 'discount_type', 'discount_value', 'advance_payment', 'payment_method', 'transaction_id', 'notes');
+                // Keep sale_date intact for next sale
             },
             onError: (errors) => {
                 console.error('Sale failed:', errors);
@@ -368,8 +396,28 @@ export default function POS({
                             Today: {todaySalesCount} • Last: {lastInvoiceNumber}
                         </div>
                     </div>
-                    <div className="text-lg font-bold text-green-600">
-                        {formatCurrency(totalAmount)}
+                    <div className="flex items-center gap-4">
+                        {/* Date Picker */}
+                        <div className="relative">
+                            <label
+                                htmlFor="sale-date-picker"
+                                className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors cursor-pointer"
+                            >
+                                <Calendar className="w-4 h-4 text-blue-600" />
+                                <span className="text-xs font-medium text-blue-700">{formatDateDisplay(data.sale_date)}</span>
+                            </label>
+                            <input
+                                id="sale-date-picker"
+                                type="date"
+                                value={data.sale_date}
+                                max={new Date().toISOString().split('T')[0]}
+                                onChange={(e) => setData('sale_date', e.target.value)}
+                                className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                        </div>
+                        <div className="text-lg font-bold text-green-600">
+                            {formatCurrency(totalAmount)}
+                        </div>
                     </div>
                 </div>
 

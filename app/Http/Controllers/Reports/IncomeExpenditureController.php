@@ -85,14 +85,37 @@ class IncomeExpenditureController extends Controller
                         ->whereBetween('medicine_sales.sale_date', [$fromDate, $toDate])
                         ->sum(DB::raw('medicine_sale_items.quantity * medicine_sale_items.buy_price'));
 
-                    $currentMonth = $salesData - $costData;
+                    $currentProfit = $salesData - $costData;
 
-                    // Cumulative = Previous transactions + Current period profit
-                    $previousTransactions = HospitalTransaction::where('income_category_id', $category->id)
+                    // Get ONLY manual/genuine income transactions (exclude sale-related entries)
+                    // Sale entries contain "Medicine Sale:" keyword
+                    $previousManualIncome = HospitalTransaction::where('income_category_id', $category->id)
                         ->where('transaction_date', '<', $fromDate)
+                        ->where('description', 'NOT LIKE', '%Medicine Sale:%')
                         ->sum('amount');
 
-                    $cumulative = $previousTransactions + $currentMonth;
+                    $currentManualIncome = HospitalTransaction::where('income_category_id', $category->id)
+                        ->whereBetween('transaction_date', [$fromDate, $toDate])
+                        ->where('description', 'NOT LIKE', '%Medicine Sale:%')
+                        ->sum('amount');
+
+                    // Get previous profit (from beginning to fromDate - 1)
+                    $previousSalesData = DB::table('medicine_sales')
+                        ->where('sale_date', '<', $fromDate)
+                        ->sum('total_amount');
+
+                    $previousCostData = DB::table('medicine_sale_items')
+                        ->join('medicine_sales', 'medicine_sale_items.medicine_sale_id', '=', 'medicine_sales.id')
+                        ->where('medicine_sales.sale_date', '<', $fromDate)
+                        ->sum(DB::raw('medicine_sale_items.quantity * medicine_sale_items.buy_price'));
+
+                    $previousProfit = $previousSalesData - $previousCostData;
+
+                    // Current month = Current period profit + Current manual income
+                    $currentMonth = $currentProfit + $currentManualIncome;
+
+                    // Cumulative = All manual income + All profit
+                    $cumulative = $previousManualIncome + $currentManualIncome + $previousProfit + $currentProfit;
                 } else {
                     // Optics Income - Calculate profit from Optics Buy-Sale-Stock Report + Only Fitting Charge
                     $glassesData = \App\Models\Glasses::getBuySaleStockReport($fromDate, $toDate);
@@ -117,11 +140,31 @@ class IncomeExpenditureController extends Controller
 
                     $currentMonth = $itemsProfit + $onlyFittingCharge;
 
-                    // Cumulative = Previous transactions + Current period profit
-                    // Get previous transactions (before fromDate)
-                    $previousTransactions = HospitalTransaction::where('income_category_id', $category->id)
+                    // Cumulative = Manual income (non-sale) + Previous profit + Current period profit
+                    // Get ONLY manual/genuine income transactions (exclude sale-related payments)
+                    // Sale payments contain "Advance Payment", "Due Payment", or "Invoice:" keywords
+                    $previousManualIncome = HospitalTransaction::where('income_category_id', $category->id)
                         ->where('transaction_date', '<', $fromDate)
+                        ->where('description', 'NOT LIKE', '%Advance Payment%')
+                        ->where('description', 'NOT LIKE', '%Due Payment%')
+                        ->where('description', 'NOT LIKE', '%Invoice:%')
                         ->sum('amount');
+
+                    $currentManualIncome = HospitalTransaction::where('income_category_id', $category->id)
+                        ->whereBetween('transaction_date', [$fromDate, $toDate])
+                        ->where('description', 'NOT LIKE', '%Advance Payment%')
+                        ->where('description', 'NOT LIKE', '%Due Payment%')
+                        ->where('description', 'NOT LIKE', '%Invoice:%')
+                        ->sum('amount');
+
+                    // Get previous profit from Buy-Sale-Stock (from beginning to fromDate)
+                    $previousGlassesData = \App\Models\Glasses::getBuySaleStockReport('1900-01-01', date('Y-m-d', strtotime($fromDate . ' -1 day')));
+                    $previousLensTypesData = \App\Models\LensType::getBuySaleStockReport('1900-01-01', date('Y-m-d', strtotime($fromDate . ' -1 day')));
+                    $previousCompleteGlassesData = \App\Models\CompleteGlasses::getBuySaleStockReport('1900-01-01', date('Y-m-d', strtotime($fromDate . ' -1 day')));
+
+                    $previousProfit = collect($previousGlassesData)->sum('total_profit')
+                                    + collect($previousLensTypesData)->sum('total_profit')
+                                    + collect($previousCompleteGlassesData)->sum('total_profit');
 
                     // Get previous only fitting charge (before fromDate)
                     $previousFittingCharge = DB::table('optics_sales')
@@ -135,7 +178,11 @@ class IncomeExpenditureController extends Controller
                         ->whereNull('deleted_at')
                         ->sum('glass_fitting_price');
 
-                    $cumulative = $previousTransactions + $previousFittingCharge + $currentMonth;
+                    // Update current month to include manual income
+                    $currentMonth = $currentMonth + $currentManualIncome;
+
+                    // Cumulative = Manual income (all) + All profit (previous + current) + All fitting charge
+                    $cumulative = $previousManualIncome + $currentManualIncome + $previousProfit + $previousFittingCharge + $itemsProfit + $onlyFittingCharge;
                 }
             } else {
                 // Regular income categories - get from HospitalTransaction

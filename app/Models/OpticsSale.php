@@ -30,7 +30,9 @@ class OpticsSale extends Model
         parent::boot();
 
         static::creating(function ($sale) {
-            $date = date('Ymd');
+            // Use created_at date if set, otherwise current date
+            $saleDate = $sale->created_at ? \Carbon\Carbon::parse($sale->created_at) : now();
+            $date = $saleDate->format('Ymd');
             $prefix = 'OPT-' . $date . '-';
             $lastSale = static::withTrashed()
                 ->where('invoice_number', 'like', $prefix . '%')

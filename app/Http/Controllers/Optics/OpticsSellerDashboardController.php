@@ -298,6 +298,7 @@ class OpticsSellerDashboardController extends Controller
     public function processSale(Request $request)
     {
         $validated = $request->validate([
+            'sale_date' => 'required|date|before_or_equal:today',
             'customer_id' => 'nullable|exists:patients,id',
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'nullable|string|max:20',
@@ -382,6 +383,8 @@ class OpticsSellerDashboardController extends Controller
                     'total_amount' => $itemTotal,
                     'notes' => "POS Sale - " . ($product->name ?? $product->full_name) . " x{$item['quantity']}",
                     'user_id' => auth()->user()->id,
+                    'created_at' => $validated['sale_date'] . ' ' . now()->format('H:i:s'),
+                    'updated_at' => $validated['sale_date'] . ' ' . now()->format('H:i:s'),
                 ]);
 
                 $saleDetails[] = ($product->name ?? $product->full_name) . " x{$item['quantity']}";
@@ -400,7 +403,8 @@ class OpticsSellerDashboardController extends Controller
             }
 
             // Create the sale record (invoice_number will be set in model)
-            $sale = OpticsSale::create([
+            // Disable timestamps temporarily to set custom created_at based on sale_date
+            $sale = new OpticsSale([
                 'patient_id' => $patientId,
                 'customer_name' => $customerName,
                 'customer_phone' => $customerPhone,
@@ -411,8 +415,18 @@ class OpticsSellerDashboardController extends Controller
                 'advance_payment' => $validated['advance_payment'],
                 'due_amount' => $dueAmount,
                 'status' => 'pending',
-                'notes' => $validated['notes']
+                'notes' => $validated['notes'],
             ]);
+
+            // Set timestamps manually based on sale_date
+            $saleDateTime = $validated['sale_date'] . ' ' . now()->format('H:i:s');
+            $sale->created_at = $saleDateTime;
+            $sale->updated_at = $saleDateTime;
+
+            // Save without automatic timestamps
+            $sale->timestamps = false;
+            $sale->save();
+            $sale->timestamps = true; // Re-enable timestamps for future updates
 
             // Save sale items
             if (!empty($validated['items'])) {
@@ -432,7 +446,9 @@ class OpticsSellerDashboardController extends Controller
                     'item_name' => $itemName,
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['price'],
-                    'total_price' => $item['price'] * $item['quantity']
+                    'total_price' => $item['price'] * $item['quantity'],
+                    'created_at' => $validated['sale_date'] . ' ' . now()->format('H:i:s'),
+                    'updated_at' => $validated['sale_date'] . ' ' . now()->format('H:i:s'),
                 ]);
             }
             } // End of saving sale items
@@ -445,7 +461,9 @@ class OpticsSellerDashboardController extends Controller
                     'payment_method' => $validated['payment_method'],
                     'transaction_id' => $validated['transaction_id'] ?? null,
                     'notes' => 'Advance Payment',
-                    'received_by' => auth()->user()->id
+                    'received_by' => auth()->user()->id,
+                    'created_at' => $validated['sale_date'] . ' ' . now()->format('H:i:s'),
+                    'updated_at' => $validated['sale_date'] . ' ' . now()->format('H:i:s'),
                 ]);
             }
 
@@ -481,7 +499,7 @@ class OpticsSellerDashboardController extends Controller
                     $description,
                     'optics_sales',
                     $sale->id,
-                    null,
+                    $validated['sale_date'],
                     $opticsCategory->id
                 );
             }

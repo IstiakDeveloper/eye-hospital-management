@@ -224,7 +224,7 @@ class OperationBookingController extends Controller
                     ['name' => 'Operation Income'],
                     ['is_active' => true]
                 );
-                
+
                 \App\Models\HospitalAccount::addIncome(
                     amount: $advancePayment,
                     category: 'Operation Income',
