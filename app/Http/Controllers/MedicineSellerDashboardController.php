@@ -197,7 +197,7 @@ class MedicineSellerDashboardController extends Controller
         // Recent customers for search
         $recentCustomers = Patient::orderBy('created_at', 'desc')
             ->limit(50)
-            ->get(['id', 'name', 'phone', 'email']);
+            ->get(['id', 'patient_id', 'name', 'phone', 'email']);
 
         // Quick stats for POS
         $todaySalesCount = MedicineSale::whereDate('sale_date', today())
@@ -479,6 +479,38 @@ class MedicineSellerDashboardController extends Controller
         return Inertia::render('MedicineSeller/SaleDetails', [
             'sale' => $sale,
         ]);
+    }
+
+    /**
+     * Search Patients for POS
+     */
+    public function searchPatients(Request $request)
+    {
+        $query = $request->get('q', '');
+
+        if (strlen($query) < 1) {
+            return response()->json([]);
+        }
+
+        $patients = Patient::where(function ($q) use ($query) {
+                // Search by patient_id (exact or partial match)
+                if (is_numeric($query)) {
+                    $q->where('patient_id', '=', $query)
+                        ->orWhere('patient_id', 'LIKE', "%{$query}%")
+                        ->orWhere('phone', 'LIKE', "%{$query}%");
+                }
+                // Search by phone
+                $q->orWhere('phone', 'LIKE', "%{$query}%")
+                    // Search by name
+                    ->orWhere('name', 'LIKE', "%{$query}%")
+                    // Search by email
+                    ->orWhere('email', 'LIKE', "%{$query}%");
+            })
+            ->orderBy('patient_id', 'desc')
+            ->limit(10)
+            ->get(['id', 'patient_id', 'name', 'phone', 'email']);
+
+        return response()->json($patients);
     }
 
     /**

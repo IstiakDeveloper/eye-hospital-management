@@ -474,6 +474,7 @@ Route::prefix('medicine-seller')->middleware(['permission:dashboard.medicine-sel
     Route::get('/sales/{sale}', [MedicineSellerDashboardController::class, 'saleDetails'])->name('medicine-seller.sale-details')->middleware('permission:medicine-seller.sales');
     Route::put('/sales/{sale}/payment', [MedicineSellerDashboardController::class, 'updatePayment'])->name('medicine-seller.update-payment')->middleware('permission:medicine-seller.sales');
     Route::get('/my-report', [MedicineSellerDashboardController::class, 'myReport'])->name('medicine-seller.report')->middleware('permission:medicine-seller.reports');
+    Route::get('/search-patients', [MedicineSellerDashboardController::class, 'searchPatients'])->name('medicine-seller.search-patients');
     Route::get('/api/search-medicines', [MedicineSellerDashboardController::class, 'searchMedicines'])->name('medicine-seller.search-medicines');
     Route::get('/api/medicine/{medicine}/stock', [MedicineSellerDashboardController::class, 'getMedicineStock'])->name('medicine-seller.medicine-stock');
 });

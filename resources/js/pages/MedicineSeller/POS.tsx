@@ -11,7 +11,8 @@ import {
   User,
   Package,
   Printer,
-  X
+  X,
+  Hash
 } from 'lucide-react';
 
 interface Medicine {
@@ -30,6 +31,7 @@ interface Medicine {
 
 interface Patient {
   id: number;
+  patient_id: string;
   name: string;
   phone: string;
   email?: string;
@@ -107,21 +109,27 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
     sale_date: new Date().toISOString().split('T')[0],
   });
 
-  // Search patients by ID, phone, or name
+  // Search patients by ID, phone, or name using API
   useEffect(() => {
     if (phoneSearch.length >= 1) {
-      const searchLower = phoneSearch.toLowerCase();
-      const filtered = recentCustomers.filter(patient => {
-        const patientIdMatch = patient.id.toString().includes(phoneSearch);
-        const phoneMatch = patient.phone?.includes(phoneSearch);
-        const nameMatch = patient.name?.toLowerCase().includes(searchLower);
-        return patientIdMatch || phoneMatch || nameMatch;
-      });
-      setFilteredPatients(filtered.slice(0, 5));
+      const timeoutId = setTimeout(() => {
+        // Make API call to search patients
+        fetch(`/medicine-seller/search-patients?q=${encodeURIComponent(phoneSearch)}`)
+          .then(response => response.json())
+          .then(data => {
+            setFilteredPatients(data.slice(0, 10));
+          })
+          .catch(error => {
+            console.error('Error searching patients:', error);
+            setFilteredPatients([]);
+          });
+      }, 300); // Debounce for 300ms
+
+      return () => clearTimeout(timeoutId);
     } else {
       setFilteredPatients([]);
     }
-  }, [phoneSearch, recentCustomers]);
+  }, [phoneSearch]);
 
   const formatCurrency = (amount: number) => {
     const numAmount = Number(amount) || 0;
@@ -846,7 +854,7 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search by ID, phone or name..."
+                  placeholder="Search by Patient ID, phone or name..."
                   value={phoneSearch}
                   onChange={(e) => setPhoneSearch(e.target.value)}
                   disabled={!!selectedPatient}
@@ -864,20 +872,25 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
 
               {/* Patient Results */}
               {filteredPatients.length > 0 && !selectedPatient && (
-                <div className="absolute z-10 w-[calc(100%-2rem)] mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <div className="absolute z-20 w-[calc(100%-2rem)] mt-1 bg-white border-2 border-blue-300 rounded-lg shadow-xl max-h-64 overflow-y-auto">
                   {filteredPatients.map((patient) => (
                     <div
                       key={patient.id}
                       onClick={() => selectPatient(patient)}
-                      className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                      className="p-3 hover:bg-blue-100 cursor-pointer border-b border-gray-200 last:border-b-0 transition-colors"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="font-medium text-sm text-gray-900">{patient.name}</div>
-                          <div className="text-xs text-gray-600">{patient.phone}</div>
-                        </div>
-                        <div className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                          ID: {patient.id}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-sm text-gray-900">{patient.name}</span>
+                            <span className="flex items-center gap-1 bg-blue-600 text-white px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap">
+                              <Hash className="w-3 h-3" />
+                              {patient.patient_id}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            {patient.phone || 'No phone'}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -887,12 +900,21 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
 
               {/* Selected Patient */}
               {selectedPatient && (
-                <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                  <div className="flex items-center gap-2">
-                    <User className="w-5 h-5 text-blue-600" />
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm text-gray-900">{selectedPatient.name}</div>
-                      <div className="text-xs text-gray-600">{selectedPatient.phone} • ID: {selectedPatient.id}</div>
+                <div className="mt-3 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border-2 border-blue-300 shadow-md">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-1">
+                      <User className="w-5 h-5 text-blue-600" />
+                      <div className="flex-1">
+                        <div className="font-bold text-sm text-gray-900">{selectedPatient.name}</div>
+                        <div className="text-xs text-gray-700 mt-0.5">
+                          {selectedPatient.phone}
+                          {selectedPatient.email && <span className="ml-1">• {selectedPatient.email}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-blue-800 text-white px-3 py-2 rounded-md shadow">
+                      <Hash className="w-4 h-4" />
+                      <span className="text-base font-bold">{selectedPatient.patient_id}</span>
                     </div>
                   </div>
                 </div>
