@@ -304,6 +304,11 @@ class OperationBookingController extends Controller
      */
     public function update(Request $request, OperationBooking $operationBooking)
     {
+        // Prevent editing cancelled or completed bookings
+        if (in_array($operationBooking->status, ['cancelled', 'completed'])) {
+            return back()->with('error', 'Cannot edit cancelled or completed bookings!');
+        }
+
         $validated = $request->validate([
             'operation_id' => 'required|exists:operations,id',
             'scheduled_date' => 'required|date',
@@ -347,22 +352,38 @@ class OperationBookingController extends Controller
             $paymentDifference = $newAdvancePayment - $oldAdvancePayment;
 
             if ($paymentDifference != 0) {
-                // Find existing Hospital Transaction
-                $existingTransaction = \App\Models\HospitalTransaction::where('reference_type', 'operation_bookings')
+                // Find ALL existing Hospital Transactions for this booking
+                $existingTransactions = \App\Models\HospitalTransaction::where('reference_type', 'operation_bookings')
                     ->where('reference_id', $operationBooking->id)
                     ->where('type', 'income')
                     ->where('category', 'Operation Income')
-                    ->first();
+                    ->get();
 
                 $operationCategory = \App\Models\HospitalIncomeCategory::firstOrCreate(
                     ['name' => 'Operation Income'],
                     ['is_active' => true]
                 );
 
-                if ($existingTransaction) {
+                // Calculate current total from existing transactions
+                $currentTotal = $existingTransactions->sum('amount');
+
+                if ($existingTransactions->count() > 0) {
+                    // Update the FIRST transaction to reflect the new total advance payment
+                    // Delete any additional transactions (in case of duplicates)
+                    $firstTransaction = $existingTransactions->first();
+
+                    // Delete duplicate transactions if any
+                    if ($existingTransactions->count() > 1) {
+                        foreach ($existingTransactions->skip(1) as $duplicateTransaction) {
+                            // Reverse the duplicate transaction's effect on balance
+                            \App\Models\HospitalAccount::updateBalance(-$duplicateTransaction->amount);
+                            $duplicateTransaction->delete();
+                        }
+                    }
+
                     // Use HospitalAccount's updateIncome method to properly update balance
                     \App\Models\HospitalAccount::updateIncome(
-                        transaction: $existingTransaction,
+                        transaction: $firstTransaction,
                         newAmount: $newAdvancePayment,
                         newCategory: 'Operation Income',
                         newDescription: "Payment for {$operation->name} - Booking: {$operationBooking->booking_no} (Edited)",

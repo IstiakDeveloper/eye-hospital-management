@@ -244,7 +244,7 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                 <Receipt className="w-4 h-4" />
                                 Receipt
                             </button>
-                            {can.payment && booking.payment_status !== 'paid' && (
+                            {can.payment && booking.payment_status !== 'paid' && booking.status !== 'cancelled' && booking.status !== 'completed' && (
                                 <button
                                     onClick={() => setShowPaymentModal(true)}
                                     className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
@@ -259,6 +259,47 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Main Content */}
                         <div className="lg:col-span-2 space-y-6">
+                            {/* Cancelled Booking Alert */}
+                            {booking.status === 'cancelled' && (
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                    <div className="flex items-start gap-3">
+                                        <X className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-red-900">Booking Cancelled</h3>
+                                            <p className="text-sm text-red-700 mt-1">
+                                                This booking has been cancelled on {formatDateTime(booking.cancelled_at || '')}.
+                                                No further payments or modifications are allowed.
+                                            </p>
+                                            {booking.cancellation_reason && (
+                                                <div className="mt-2 p-2 bg-red-100 rounded text-sm text-red-800">
+                                                    <span className="font-medium">Reason:</span> {booking.cancellation_reason}
+                                                </div>
+                                            )}
+                                            {booking.advance_payment > 0 && (
+                                                <div className="mt-2 text-sm text-red-700">
+                                                    <span className="font-medium">Paid Amount:</span> {formatCurrency(booking.advance_payment)} (Refund to be processed manually)
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Completed Booking Notice */}
+                            {booking.status === 'completed' && (
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                    <div className="flex items-start gap-3">
+                                        <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                        <div className="flex-1">
+                                            <h3 className="font-semibold text-green-900">Operation Completed</h3>
+                                            <p className="text-sm text-green-700 mt-1">
+                                                This operation was successfully completed on {formatDateTime(booking.completed_at || '')}.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Patient & Operation Info */}
                             <div className="bg-white rounded-lg shadow p-6">
                                 <h2 className="text-xl font-semibold mb-4">Booking Information</h2>
@@ -459,40 +500,64 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                             {/* Actions */}
                             <div className="bg-white rounded-lg shadow p-6">
                                 <h3 className="font-semibold mb-4">Actions</h3>
-                                <div className="space-y-2">
-                                    {can.confirm && booking.status === 'scheduled' && (
-                                        <button
-                                            onClick={handleConfirm}
-                                            className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                                        >
-                                            Confirm Booking
-                                        </button>
-                                    )}
-                                    {can.complete && ['scheduled', 'confirmed'].includes(booking.status) && (
-                                        <button
-                                            onClick={handleComplete}
-                                            className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                                        >
-                                            Mark as Completed
-                                        </button>
-                                    )}
-                                    {can.reschedule && booking.status !== 'completed' && booking.status !== 'cancelled' && (
-                                        <button
-                                            onClick={() => setShowRescheduleModal(true)}
-                                            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                        >
-                                            Reschedule
-                                        </button>
-                                    )}
-                                    {can.cancel && booking.status !== 'completed' && (
-                                        <button
-                                            onClick={() => setShowCancelModal(true)}
-                                            className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                                        >
-                                            Cancel Booking
-                                        </button>
-                                    )}
-                                </div>
+
+                                {/* Show message if booking is cancelled or completed */}
+                                {(booking.status === 'cancelled' || booking.status === 'completed') ? (
+                                    <div className={`text-center py-8 px-4 rounded-lg ${
+                                        booking.status === 'cancelled'
+                                            ? 'bg-red-50 border border-red-200'
+                                            : 'bg-green-50 border border-green-200'
+                                    }`}>
+                                        {booking.status === 'cancelled' ? (
+                                            <>
+                                                <X className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                                                <p className="text-red-700 font-medium">Booking Cancelled</p>
+                                                <p className="text-sm text-red-600 mt-1">No actions available</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
+                                                <p className="text-green-700 font-medium">Operation Completed</p>
+                                                <p className="text-sm text-green-600 mt-1">No further actions needed</p>
+                                            </>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {can.confirm && booking.status === 'scheduled' && (
+                                            <button
+                                                onClick={handleConfirm}
+                                                className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                                            >
+                                                Confirm Booking
+                                            </button>
+                                        )}
+                                        {can.complete && ['scheduled', 'confirmed'].includes(booking.status) && (
+                                            <button
+                                                onClick={handleComplete}
+                                                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                            >
+                                                Mark as Completed
+                                            </button>
+                                        )}
+                                        {can.reschedule && booking.status !== 'completed' && booking.status !== 'cancelled' && (
+                                            <button
+                                                onClick={() => setShowRescheduleModal(true)}
+                                                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                            >
+                                                Reschedule
+                                            </button>
+                                        )}
+                                        {can.cancel && booking.status !== 'completed' && booking.status !== 'cancelled' && (
+                                            <button
+                                                onClick={() => setShowCancelModal(true)}
+                                                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                            >
+                                                Cancel Booking
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Metadata */}

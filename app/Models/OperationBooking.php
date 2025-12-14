@@ -256,30 +256,19 @@ class OperationBooking extends Model
 
     public function cancel(string $reason): void
     {
+        // Prevent double cancellation
+        if ($this->status === 'cancelled') {
+            return;
+        }
+
         $this->update([
             'status' => 'cancelled',
             'cancellation_reason' => $reason,
             'cancelled_at' => now()
         ]);
 
-        // Refund if any payment made - Add to both accounts
-        if ($this->advance_payment > 0) {
-            // Refund from Operation Account
-            OperationAccount::addExpense(
-                amount: (float)$this->advance_payment,
-                category: 'Operation Refund',
-                description: "Refund for cancelled operation - {$this->operation_name} - Booking: {$this->booking_no}",
-                date: now()->toDateString()
-            );
-
-            // Refund from Hospital Account
-            \App\Models\HospitalAccount::addExpense(
-                amount: (float)$this->advance_payment,
-                category: 'Operation Refund',
-                description: "Refund for cancelled operation - {$this->operation_name} - Booking: {$this->booking_no}",
-                date: now()->toDateString()
-            );
-        }
+        // Note: Refund will be processed manually
+        // No automatic refund transaction is created
     }
 
     // Keep old method for backward compatibility
