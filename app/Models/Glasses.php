@@ -322,7 +322,6 @@ class Glasses extends Model
     {
         $sales = DB::table('optics_sale_items')
             ->join('optics_sales', 'optics_sale_items.optics_sale_id', '=', 'optics_sales.id')
-            ->leftJoin('optics_sale_payments', 'optics_sales.id', '=', 'optics_sale_payments.optics_sale_id')
             ->whereIn('optics_sale_items.item_type', ['glasses', 'frame'])
             ->where('optics_sale_items.item_id', $this->id)
             ->whereBetween('optics_sales.created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59'])

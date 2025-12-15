@@ -225,7 +225,8 @@ class IncomeExpenditureController extends Controller
             'Medicine Purchase',
             'Medicine Vendor Payment',
             'Optics Purchase',
-            'Optics Vendor Payment'
+            'Optics Vendor Payment',
+            'House Security'
         ];
 
         $categories = HospitalExpenseCategory::whereNotIn('name', $excludeCategories)

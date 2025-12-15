@@ -128,8 +128,9 @@ export default function POS({
         notes: '',
     });
 
-    const formatCurrency = (amount: number) => {
-        return `৳${Math.round(amount)}`;
+    const formatCurrency = (amount: number | null | undefined) => {
+        const numericAmount = Number(amount) || 0;
+        return `৳${Math.round(numericAmount)}`;
     };
 
     const formatDateDisplay = (dateString: string) => {

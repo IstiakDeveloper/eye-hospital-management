@@ -58,10 +58,11 @@ export default function Dashboard({
   lowStockLenses,
   topSellingItems
 }: DashboardProps) {
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | null | undefined) => {
+    const numericAmount = Number(amount) || 0;
     const formatted = new Intl.NumberFormat('en-US', {
         minimumFractionDigits: 0,
-    }).format(amount);
+    }).format(numericAmount);
     return `৳${formatted}`;
   };
 

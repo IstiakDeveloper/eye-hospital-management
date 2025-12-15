@@ -476,7 +476,9 @@ class OpticsSellerDashboardController extends Controller
                 $description .= " | Total Amount: ৳" . number_format($totalAmount, 2);
                 $description .= " | Advance: ৳" . number_format($validated['advance_payment'], 2);
                 $description .= " | Due: ৳" . number_format($dueAmount, 2);
-                $description .= " | Items: " . implode(', ', $saleDetails);
+                if (!empty($saleDetails)) {
+                    $description .= " | Items: " . implode(', ', $saleDetails);
+                }
                 if ($fittingCharge > 0) {
                     $description .= " | Fitting: ৳{$fittingCharge}";
                 }
@@ -493,15 +495,26 @@ class OpticsSellerDashboardController extends Controller
                     ['is_active' => true]
                 );
 
-                \App\Models\HospitalAccount::addIncome(
+                // Create hospital transaction with sale_date
+                $hospitalTransaction = \App\Models\HospitalAccount::addIncome(
                     $validated['advance_payment'], // Only advance amount
                     'Optics Income',
                     $description,
                     'optics_sales',
                     $sale->id,
-                    $validated['sale_date'],
+                    $validated['sale_date'], // Use sale_date for transaction
                     $opticsCategory->id
                 );
+
+                // Update the created_at timestamp to match sale_date
+                if ($hospitalTransaction) {
+                    DB::table('hospital_transactions')
+                        ->where('id', $hospitalTransaction->id)
+                        ->update([
+                            'created_at' => $saleDateTime,
+                            'updated_at' => $saleDateTime
+                        ]);
+                }
             }
 
             DB::commit();
@@ -803,15 +816,27 @@ class OpticsSellerDashboardController extends Controller
                 ['is_active' => true]
             );
 
-            \App\Models\HospitalAccount::addIncome(
+            // Create hospital transaction with today's date
+            $paymentDate = now()->toDateString();
+            $hospitalTransaction = \App\Models\HospitalAccount::addIncome(
                 $validated['amount'],
                 'Optics Income',
                 $description,
                 'optics_sales',
                 $sale->id,
-                null,
+                $paymentDate, // Use today's date for payment
                 $opticsCategory->id
             );
+
+            // Update the created_at timestamp to match current time
+            if ($hospitalTransaction) {
+                DB::table('hospital_transactions')
+                    ->where('id', $hospitalTransaction->id)
+                    ->update([
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+            }
 
             DB::commit();
 

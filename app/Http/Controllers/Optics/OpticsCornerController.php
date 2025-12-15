@@ -547,25 +547,32 @@ class OpticsCornerController extends Controller
                     );
                 }
 
-                // Only paid amount goes to Hospital Account expense
+                // Only create hospital expense for PAID amount
+                // Due amount will be recorded as expense when payment is made later
                 if ($paidAmount > 0) {
                     $purchaseCategory = HospitalExpenseCategory::firstOrCreate(
                         ['name' => 'Optics Purchase'],
                         ['is_active' => true]
                     );
 
+                    $description = "Stock purchase: {$itemName} - {$validated['quantity']} pcs";
+                    if ($dueAmount > 0) {
+                        $description .= " (Paid: ৳" . number_format($paidAmount, 2) . " | Due: ৳" . number_format($dueAmount, 2) . ")";
+                    } else {
+                        $description .= " (Fully Paid)";
+                    }
+
                     $transaction = HospitalAccount::addExpense(
-                        $paidAmount,
+                        $paidAmount, // Only paid amount
                         'Optics Purchase',
-                        "Stock purchase: {$itemName} - {$validated['quantity']} pcs (Paid to vendor)",
+                        $description,
                         $purchaseCategory->id,
                         now()->toDateString()
                     );
 
-                    $purchase->update(['optics_transaction_id' => $transaction->id]);
                 }
             } else {
-                // ✅ Vendor না থাকলে সরাসরি expense (cash purchase)
+                // Vendor না থাকলে সরাসরি expense (cash purchase)
                 $purchaseCategory = HospitalExpenseCategory::firstOrCreate(
                     ['name' => 'Optics Purchase'],
                     ['is_active' => true]
@@ -913,12 +920,15 @@ class OpticsCornerController extends Controller
             $fittingCharge = $validated['glass_fitting_price'] ?? 0;
             $discount = $validated['discount'] ?? 0;
             $totalAmount = $itemsTotal + $fittingCharge - $discount;
-            $dueAmount = $totalAmount - $validated['advance_payment'];
 
             // Validate advance payment
             if ($validated['advance_payment'] > $totalAmount) {
                 throw new \Exception('Advance payment cannot exceed total amount');
             }
+
+            // Due calculation: Since we'll create payment record, advance will be in payment table
+            // So initially due = total - 0, then after payment creation, it will be updated
+            $dueAmount = $totalAmount - $validated['advance_payment'];
 
             // Create the sale record
             $sale = OpticsSale::create([
@@ -998,15 +1008,25 @@ class OpticsCornerController extends Controller
                     ['is_active' => true]
                 );
 
-                \App\Models\HospitalAccount::addIncome(
+                $hospitalTransaction = \App\Models\HospitalAccount::addIncome(
                     $validated['advance_payment'],
                     'Optics Income',
                     $description,
                     'optics_sales',
                     $sale->id,
-                    null,
+                    now()->toDateString(),
                     $opticsCategory->id
                 );
+
+                // Update the created_at timestamp to match current time
+                if ($hospitalTransaction) {
+                    DB::table('hospital_transactions')
+                        ->where('id', $hospitalTransaction->id)
+                        ->update([
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ]);
+                }
             }
 
             DB::commit();
@@ -1231,11 +1251,13 @@ class OpticsCornerController extends Controller
             $fittingCharge = $validated['glass_fitting_price'] ?? 0;
             $discount = $validated['discount'] ?? 0;
             $totalAmount = $itemsTotal + $fittingCharge - $discount;
-            $dueAmount = $totalAmount - $validated['advance_payment'];
 
             if ($validated['advance_payment'] > $totalAmount) {
                 throw new \Exception('Advance payment cannot exceed total amount');
             }
+
+            // Due calculation: Since we'll create payment record, advance will be in payment table
+            $dueAmount = $totalAmount - $validated['advance_payment'];
 
             // Step 8: Update sale record
             $sale->update([

@@ -80,10 +80,11 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
         notes: ''
     });
 
-    const formatCurrency = (amount: number) => {
+    const formatCurrency = (amount: number | null | undefined) => {
+        const numericAmount = Number(amount) || 0;
         const formatted = new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 0,
-        }).format(amount);
+        }).format(numericAmount);
         return `৳${formatted}`;
     };
 
@@ -184,13 +185,13 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
     };
 
     // Calculate totals from items
-    const itemsSubtotal = sale.items.reduce((sum, item) => sum + item.total_price, 0);
+    const itemsSubtotal = sale.items.reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
 
     // Calculate total paid - Only sum due payments (exclude advance payment from payments array)
     const duePaymentsTotal = sale.payments
         .filter(payment => payment.notes !== 'Advance Payment')
-        .reduce((sum, payment) => sum + payment.amount, 0);
-    const totalPaid = sale.advance_payment + duePaymentsTotal;
+        .reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0);
+    const totalPaid = (Number(sale.advance_payment) || 0) + duePaymentsTotal;
 
     const statusBadge = getStatusBadge(sale.status);
 

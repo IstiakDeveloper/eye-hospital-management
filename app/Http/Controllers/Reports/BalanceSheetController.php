@@ -16,7 +16,8 @@ use App\Models\{
     MedicineVendor,
     OpticsSale,
     MedicineSale,
-    OperationBooking
+    OperationBooking,
+    HospitalExpenseCategory
 };
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -136,7 +137,8 @@ class BalanceSheetController extends Controller
             'Medicine Purchase',
             'Medicine Vendor Payment',
             'Optics Purchase',
-            'Optics Vendor Payment'
+            'Optics Vendor Payment',
+            'House Security'
         ];
 
         $expenseCategories = \App\Models\HospitalExpenseCategory::whereNotIn('name', $excludeCategories)
@@ -154,13 +156,20 @@ class BalanceSheetController extends Controller
             $totalExpenditure += abs($cumulative);
         }
 
-        // Add special expenses without category_id (excluding Fixed Asset related)
+        // Add House Rent (Adjustment) from Advance Rent Deductions - EXACTLY same as Income & Expenditure
+        $houseRentAdjustment = \App\Models\AdvanceHouseRentDeduction::where('deduction_date', '<=', $toDate)
+            ->sum('amount');
+
+        $totalExpenditure += $houseRentAdjustment;
+
+        // Add special expenses without category_id (excluding Fixed Asset and Advance House Rent related)
         $specialExpenses = DB::table('hospital_transactions')
             ->whereNull('expense_category_id')
             ->whereNull('income_category_id')
             ->where('amount', '<', 0)
             ->where('description', 'NOT LIKE', '%Fixed Asset%')
             ->where('description', 'NOT LIKE', '%Asset Purchase%')
+            ->where('description', 'NOT LIKE', '%Advance House Rent%')
             ->where('transaction_date', '<=', $toDate)
             ->sum(DB::raw('ABS(amount)'));
 
@@ -218,34 +227,90 @@ class BalanceSheetController extends Controller
         $opticsStockValue = $framesStockValue + $lensesStockValue + $completeGlassesStockValue;
 
         // 4. Advance House Rent (Prepaid Expense) - DATE-WISE
-        $advanceHouseRent = AdvanceHouseRent::where('status', 'active')
+        // Calculate by taking original advance_amount and subtracting deductions up to the date
+        $advanceRents = AdvanceHouseRent::where('status', 'active')
             ->where('payment_date', '<=', $asOnDate)
-            ->sum('remaining_amount');
+            ->get();
+
+        $advanceHouseRent = 0;
+        foreach ($advanceRents as $rent) {
+            // Start with original advance amount
+            $amount = $rent->advance_amount;
+
+            // Subtract only deductions up to the selected date
+            $deductedUpToDate = DB::table('advance_house_rent_deductions')
+                ->where('advance_house_rent_id', $rent->id)
+                ->where('deduction_date', '<=', $asOnDate)
+                ->sum('amount');
+
+            $remainingAsOfDate = $amount - $deductedUpToDate;
+            $advanceHouseRent += max(0, $remainingAsOfDate);
+        }
 
         // 5. Fixed Assets - DATE-WISE
         $fixedAssets = FixedAsset::where('status', '!=', 'inactive')
             ->where('purchase_date', '<=', $asOnDate)
             ->sum('total_amount');
 
+        // 5a. House Security (Prepaid Expense) - DATE-WISE
+        // Get the cumulative amount spent on House Security category up to the date
+        $houseSecurity = DB::table('hospital_transactions')
+            ->join('hospital_expense_categories', 'hospital_transactions.expense_category_id', '=', 'hospital_expense_categories.id')
+            ->where('hospital_expense_categories.name', 'House Security')
+            ->where('hospital_transactions.transaction_date', '<=', $asOnDate)
+            ->sum(DB::raw('ABS(hospital_transactions.amount)'));
+
         // 6. Customer Dues (Receivables) - DATE-WISE
-        // Optics Sale Due
-        $opticsSaleDue = OpticsSale::where('due_amount', '>', 0)
-            ->whereDate('created_at', '<=', $asOnDate)
-            ->sum('due_amount');
+        // Optics Sale Due - Calculate based on payments up to asOnDate
+        $opticsSales = OpticsSale::whereDate('created_at', '<=', $asOnDate)
+            ->whereNull('deleted_at')
+            ->get(['id', 'total_amount', 'advance_payment']);
+
+        $opticsSaleDue = 0;
+        foreach ($opticsSales as $sale) {
+            // Get payments from payment table up to asOnDate
+            $paymentsUpToDate = DB::table('optics_sale_payments')
+                ->where('optics_sale_id', $sale->id)
+                ->whereDate('created_at', '<=', $asOnDate)
+                ->sum('amount');
+
+            // Check if advance payment is recorded in payment table
+            $advanceInTable = DB::table('optics_sale_payments')
+                ->where('optics_sale_id', $sale->id)
+                ->where('notes', 'like', '%Advance%')
+                ->whereDate('created_at', '<=', $asOnDate)
+                ->sum('amount');
+
+            // Calculate total paid correctly
+            // If advance is in payment table, use only payment table (newer sales)
+            // If advance is NOT in payment table, use advance_payment field + other payments (older sales)
+            $totalPaid = $advanceInTable > 0 ? $paymentsUpToDate : ($sale->advance_payment + $paymentsUpToDate);
+
+            // Due = Total - Total Paid
+            $dueAsOnDate = $sale->total_amount - $totalPaid;
+            if ($dueAsOnDate > 0) {
+                $opticsSaleDue += $dueAsOnDate;
+            }
+        }
 
         // Medicine Sale Due
         $medicineSaleDue = MedicineSale::where('due_amount', '>', 0)
             ->where('sale_date', '<=', $asOnDate)
             ->sum('due_amount');
 
-        // Operation Due (by booking created date, not scheduled date)
+        // Operation Due - Only for COMPLETED operations (service already provided)
+        // Scheduled/Pending operations are not assets yet (advance is unearned revenue)
         $operationDue = OperationBooking::where('due_amount', '>', 0)
             ->whereDate('created_at', '<=', $asOnDate)
-            ->sum('due_amount');        $totalAssets = $bankBalance
+            ->where('status', 'completed') // Only completed operations
+            ->sum('due_amount');
+
+        $totalAssets = $bankBalance
             + $medicineStockValue
             + $opticsStockValue
             + $advanceHouseRent
             + $fixedAssets
+            + $houseSecurity
             + $opticsSaleDue
             + $medicineSaleDue
             + $operationDue;
@@ -358,33 +423,50 @@ class BalanceSheetController extends Controller
 
         // ==================== TOTAL CALCULATION ====================
 
+        // Calculate actual totals WITHOUT forcing balance
+        $actualTotalAssets = $bankBalance
+            + $medicineStockValue
+            + $opticsStockValue
+            + $advanceHouseRent
+            + $fixedAssets
+            + $houseSecurity
+            + $opticsSaleDue
+            + $medicineSaleDue
+            + $operationDue;
+
         // Total Liabilities + Fund + Net Profit should equal Total Assets
         $totalLiabilitiesAndFund = $totalLiabilities + $fund + $netProfit;
 
-        // Calculate Balance Sheet reconciliation difference
-        // This represents timing differences or data inconsistencies that need investigation
-        $reconciliationDifference = $totalLiabilitiesAndFund - $totalAssets;
+        // DO NOT force balance - show actual totals
+        $totalAssets = $actualTotalAssets;
+        $reconciliationAdjustment = 0;
 
-        // If there's a difference, add it to Customer Due (Assets side) to balance
-        if ($reconciliationDifference != 0) {
-            // Add as "Reconciliation Adjustment" to Customer Due
-            $reconciliationAdjustment = $reconciliationDifference;
-            $totalAssets += $reconciliationAdjustment;
-        } else {
-            $reconciliationAdjustment = 0;
-        }
+        // Calculate the actual difference for debugging
+        $balanceDifference = $totalAssets - $totalLiabilitiesAndFund;
 
         // Debug information
         Log::info('Balance Sheet Debug:', [
+            'as_on_date' => $asOnDate,
             'fund_in' => $totalFundIn,
             'fund_out' => $totalFundOut,
             'total_fund' => $fund,
             'total_income' => $totalIncome,
             'total_expenditure' => $totalExpenditure,
+            'house_rent_adjustment' => $houseRentAdjustment ?? 0,
             'net_profit' => $netProfit,
-            'total_assets' => $totalAssets,
+            'bank_balance' => $bankBalance,
+            'medicine_stock' => $medicineStockValue,
+            'optics_stock' => $opticsStockValue,
+            'advance_house_rent' => $advanceHouseRent,
+            'fixed_assets' => $fixedAssets,
+            'house_security' => $houseSecurity,
+            'optics_sale_due' => $opticsSaleDue,
+            'medicine_sale_due' => $medicineSaleDue,
+            'operation_due' => $operationDue,
+            'actual_total_assets' => $actualTotalAssets,
             'total_liabilities' => $totalLiabilities,
-            'balance_check' => $totalAssets - $totalLiabilitiesAndFund
+            'total_liabilities_and_fund' => $totalLiabilitiesAndFund,
+            'balance_difference' => $balanceDifference
         ]);
 
         return Inertia::render('Reports/BalanceSheet', [
@@ -397,6 +479,7 @@ class BalanceSheetController extends Controller
             'opticsStockValue' => $opticsStockValue,
             'advanceHouseRent' => $advanceHouseRent,
             'fixedAssets' => $fixedAssets,
+            'houseSecurity' => $houseSecurity,
             'opticsSaleDue' => $opticsSaleDue,
             'medicineSaleDue' => $medicineSaleDue,
             'operationDue' => $operationDue,
@@ -419,6 +502,9 @@ class BalanceSheetController extends Controller
             'totalFundOut' => $totalFundOut,
             'totalIncome' => $totalIncome,
             'totalExpenditure' => $totalExpenditure,
+            'houseRentAdjustment' => $houseRentAdjustment ?? 0,
+            'balanceDifference' => $balanceDifference,
+            'actualTotalAssets' => $actualTotalAssets,
 
             // Date filter
             'filters' => [
