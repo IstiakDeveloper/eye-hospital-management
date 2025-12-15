@@ -175,6 +175,14 @@ const ReceptionistDashboard: React.FC<Props> = ({
         router.visit(route('patients.show', patientId));;
     };
 
+    const handleViewVisitDetails = (visitId: number): void => {
+        router.visit(route('visits.show', visitId));
+    };
+
+    const handlePrintVisitReceipt = (visitId: number): void => {
+        router.visit(route('visits.receipt', visitId));
+    };
+
     const handleNewVisit = (patient: Patient): void => {
         setSelectedPatientForVisit({
             id: patient.patient_id,
@@ -539,14 +547,14 @@ const ReceptionistDashboard: React.FC<Props> = ({
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <button
-                                                        onClick={() => handleViewVisit(visit.id)}
+                                                        onClick={() => handleViewVisitDetails(visit.id)}
                                                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                                         title="View Visit Details"
                                                     >
                                                         <Eye className="h-4 w-4" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handlePrintReceipt(visit.id)}
+                                                        onClick={() => handlePrintVisitReceipt(visit.id)}
                                                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                                         title="Print Receipt"
                                                     >
@@ -661,7 +669,7 @@ const ReceptionistDashboard: React.FC<Props> = ({
                                                 </span>
                                                 <div className="flex items-center gap-2">
                                                     <button
-                                                        onClick={() => handleViewVisit(visit.id)}
+                                                        onClick={() => handleViewVisitDetails(visit.id)}
                                                         className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                                                         title="View & Process Payment"
                                                     >
