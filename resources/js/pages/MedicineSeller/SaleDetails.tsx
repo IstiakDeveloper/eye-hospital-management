@@ -262,11 +262,10 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
     };    // Printable Invoice Component
     const PrintableInvoice = () => {
         const companyInfo = {
-            name: "Eye Hospital Pharmacy",
-            address: "123 Medical Center, Dhaka-1000, Bangladesh",
-            phone: "+880 1234-567890",
-            email: "pharmacy@eyehospital.com",
-            license: "DL-12345"
+            name: "Naogaon Islamia Eye Hospital & Phaco Centre",
+            address: "Adjacent Circuit House, Main Road, Naogaon",
+            phone: "01307-885566, 01334-925910",
+            email: "niehpc@gmail.com"
         };
 
         const handlePrint = () => {
@@ -286,49 +285,54 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                     <div className="p-6">
                         {/* Print Styles */}
                         <style>{`
+    @page {
+        size: 80mm auto;
+        margin: 0;
+    }
+
     @media print {
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            width: 80mm !important;
+            height: auto !important;
+            overflow: visible !important;
+        }
+
         body * {
             visibility: hidden;
         }
-        .print-area, .print-area * {
-            visibility: visible;
-        }
+
         .print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            max-width: 100%;
-            transform: scale(0.95);
-            transform-origin: top left;
+            visibility: visible !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 3mm !important;
+            width: 70mm !important;
+            margin: 0 !important;
+            margin-left: 5mm !important;
+            padding: 0 !important;
             background: white !important;
             color: black !important;
-            box-sizing: border-box;
-            margin-top: 20px;
-            margin-left: 15px;
-            margin-right: 15px;
-            padding: 10px;
+            page-break-after: avoid !important;
+            page-break-before: avoid !important;
+            page-break-inside: avoid !important;
         }
+
+        .print-area * {
+            visibility: visible !important;
+            page-break-inside: avoid !important;
+        }
+
         .no-print {
             display: none !important;
+            visibility: hidden !important;
         }
-        table {
-            border-collapse: collapse !important;
-            width: 100% !important;
-            table-layout: fixed;
-        }
-        th, td {
-            border: 1px solid #000 !important;
-            padding: 6px !important;
-            text-align: left !important;
-            font-size: 12px !important;
-            word-wrap: break-word;
-        }
-    }
-
-    @page {
-        size: A4 portrait;
-        margin: 12mm;
     }
 `}</style>
 
@@ -366,285 +370,166 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
 
                         {/* Printable Invoice */}
                         <div className="print-area" style={{
-                            fontFamily: 'Arial, sans-serif',
+                            fontFamily: 'Courier New, monospace',
                             backgroundColor: 'white',
                             color: 'black',
-                            fontSize: '14px',
-                            lineHeight: '1.4'
+                            fontSize: '11px',
+                            lineHeight: '1.2',
+                            width: '70mm',
+                            maxWidth: '70mm',
+                            margin: '0 auto',
+                            padding: '5mm'
                         }}>
                             {/* Header */}
                             <div style={{
-                                borderBottom: '2px solid black',
-                                paddingBottom: '16px',
-                                marginBottom: '24px',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'flex-start'
+                                textAlign: 'center',
+                                borderBottom: '1px dashed black',
+                                paddingBottom: '6px',
+                                marginBottom: '6px'
                             }}>
-                                <div>
-                                    <h1 style={{
-                                        fontSize: '24px',
-                                        fontWeight: 'bold',
-                                        color: 'black',
-                                        margin: '0 0 8px 0'
-                                    }}>
-                                        {companyInfo.name}
-                                    </h1>
-                                    <div style={{ fontSize: '12px', color: '#666' }}>
-                                        <p style={{ margin: '2px 0' }}>{companyInfo.address}</p>
-                                        <p style={{ margin: '2px 0' }}>Phone: {companyInfo.phone}</p>
-                                        <p style={{ margin: '2px 0' }}>Email: {companyInfo.email}</p>
-                                        <p style={{ margin: '2px 0' }}>License: {companyInfo.license}</p>
-                                    </div>
+                                <h1 style={{
+                                    fontSize: '14px',
+                                    fontWeight: 'bold',
+                                    margin: '0 0 3px 0',
+                                    textTransform: 'uppercase'
+                                }}>
+                                    {companyInfo.name}
+                                </h1>
+                                <div style={{ fontSize: '9px', lineHeight: '1.3' }}>
+                                    <div>{companyInfo.address}</div>
+                                    <div>Tel: {companyInfo.phone}</div>
+                                    <div>Email: {companyInfo.email}</div>
                                 </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <h2 style={{
-                                        fontSize: '20px',
-                                        fontWeight: 'bold',
-                                        color: 'black',
-                                        margin: '0 0 8px 0'
-                                    }}>
-                                        INVOICE
-                                    </h2>
-                                    <div style={{ fontSize: '12px' }}>
-                                        <p style={{ margin: '2px 0', fontWeight: 'bold' }}>
-                                            Invoice #: {sale.invoice_number}
-                                        </p>
-                                        <p style={{ margin: '2px 0' }}>Date: {formatDate(sale.sale_date)}</p>
-                                        <p style={{ margin: '2px 0' }}>Cashier: {sale.sold_by.name}</p>
-                                    </div>
+                            </div>
+
+                            {/* Invoice Info */}
+                            <div style={{
+                                borderBottom: '1px dashed black',
+                                paddingBottom: '6px',
+                                marginBottom: '6px',
+                                fontSize: '9px'
+                            }}>
+                                <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '3px' }}>
+                                    INVOICE
                                 </div>
+                                <div>Invoice: {sale.invoice_number}</div>
+                                <div>Date: {formatDate(sale.sale_date)}</div>
+                                <div>Cashier: {sale.sold_by.name}</div>
                             </div>
 
                             {/* Customer Info */}
-                            <div style={{ marginBottom: '24px' }}>
-                                <h3 style={{
-                                    fontSize: '16px',
-                                    fontWeight: 'bold',
-                                    color: 'black',
-                                    margin: '0 0 8px 0'
-                                }}>
-                                    Bill To:
-                                </h3>
-                                <div style={{ fontSize: '12px', color: 'black' }}>
-                                    <p style={{ margin: '2px 0', fontWeight: 'bold' }}>
-                                        {sale.patient?.name || 'Walk-in Customer'}
-                                    </p>
-                                    {sale.patient?.phone && (
-                                        <p style={{ margin: '2px 0' }}>Phone: {sale.patient.phone}</p>
-                                    )}
-                                    {sale.patient?.email && (
-                                        <p style={{ margin: '2px 0' }}>Email: {sale.patient.email}</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Items Table */}
-                            <div style={{ marginBottom: '24px' }}>
-                                <table style={{
-                                    width: '100%',
-                                    borderCollapse: 'collapse',
-                                    border: '1px solid black'
-                                }}>
-                                    <thead>
-                                        <tr style={{ backgroundColor: '#f5f5f5' }}>
-                                            <th style={{
-                                                border: '1px solid black',
-                                                padding: '8px',
-                                                textAlign: 'left',
-                                                fontSize: '12px',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                #
-                                            </th>
-                                            <th style={{
-                                                border: '1px solid black',
-                                                padding: '8px',
-                                                textAlign: 'left',
-                                                fontSize: '12px',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                Medicine
-                                            </th>
-                                            <th style={{
-                                                border: '1px solid black',
-                                                padding: '8px',
-                                                textAlign: 'left',
-                                                fontSize: '12px',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                Batch
-                                            </th>
-                                            <th style={{
-                                                border: '1px solid black',
-                                                padding: '8px',
-                                                textAlign: 'center',
-                                                fontSize: '12px',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                Qty
-                                            </th>
-                                            <th style={{
-                                                border: '1px solid black',
-                                                padding: '8px',
-                                                textAlign: 'right',
-                                                fontSize: '12px',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                Unit Price
-                                            </th>
-                                            <th style={{
-                                                border: '1px solid black',
-                                                padding: '8px',
-                                                textAlign: 'right',
-                                                fontSize: '12px',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                Total
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {sale.items.map((item, index) => (
-                                            <tr key={item.id}>
-                                                <td style={{
-                                                    border: '1px solid black',
-                                                    padding: '8px',
-                                                    fontSize: '12px'
-                                                }}>
-                                                    {index + 1}
-                                                </td>
-                                                <td style={{
-                                                    border: '1px solid black',
-                                                    padding: '8px',
-                                                    fontSize: '12px'
-                                                }}>
-                                                    <div>
-                                                        <div style={{ fontWeight: 'bold' }}>
-                                                            {item.medicine_stock.medicine.name}
-                                                        </div>
-                                                        {item.medicine_stock.medicine.generic_name && (
-                                                            <div style={{
-                                                                fontSize: '10px',
-                                                                color: '#666',
-                                                                marginTop: '2px'
-                                                            }}>
-                                                                {item.medicine_stock.medicine.generic_name}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td style={{
-                                                    border: '1px solid black',
-                                                    padding: '8px',
-                                                    fontSize: '12px'
-                                                }}>
-                                                    {item.medicine_stock.batch_number}
-                                                </td>
-                                                <td style={{
-                                                    border: '1px solid black',
-                                                    padding: '8px',
-                                                    fontSize: '12px',
-                                                    textAlign: 'center'
-                                                }}>
-                                                    {item.quantity} {item.medicine_stock.medicine.unit}
-                                                </td>
-                                                <td style={{
-                                                    border: '1px solid black',
-                                                    padding: '8px',
-                                                    fontSize: '12px',
-                                                    textAlign: 'right'
-                                                }}>
-                                                    {formatCurrency(item.unit_price)}
-                                                </td>
-                                                <td style={{
-                                                    border: '1px solid black',
-                                                    padding: '8px',
-                                                    fontSize: '12px',
-                                                    textAlign: 'right',
-                                                    fontWeight: 'bold'
-                                                }}>
-                                                    {formatCurrency(item.total_price)}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Totals */}
                             <div style={{
-                                display: 'flex',
-                                justifyContent: 'flex-end',
-                                marginBottom: '24px'
+                                borderBottom: '1px dashed black',
+                                paddingBottom: '6px',
+                                marginBottom: '6px',
+                                fontSize: '9px'
                             }}>
-                                <div style={{ width: '250px' }}>
-                                    <div style={{
-                                        borderTop: '1px solid black',
-                                        paddingTop: '16px'
-                                    }}>
+                                <div style={{ fontWeight: 'bold' }}>Customer:</div>
+                                <div>{sale.patient?.name || 'Walk-in Customer'}</div>
+                                {sale.patient?.phone && (
+                                    <div>Tel: {sale.patient.phone}</div>
+                                )}
+                            </div>
+
+                            {/* Items */}
+                            <div style={{
+                                borderBottom: '1px dashed black',
+                                paddingBottom: '6px',
+                                marginBottom: '6px'
+                            }}>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    fontWeight: 'bold',
+                                    fontSize: '9px',
+                                    marginBottom: '3px',
+                                    borderBottom: '1px solid black',
+                                    paddingBottom: '2px'
+                                }}>
+                                    <span>ITEM</span>
+                                    <span>AMOUNT</span>
+                                </div>
+                                {sale.items.map((item) => (
+                                    <div key={item.id} style={{ marginBottom: '4px', fontSize: '9px' }}>
+                                        <div style={{ fontWeight: 'bold' }}>
+                                            {item.medicine_stock.medicine.name}
+                                        </div>
                                         <div style={{
                                             display: 'flex',
                                             justifyContent: 'space-between',
-                                            fontSize: '12px',
-                                            marginBottom: '4px'
+                                            marginTop: '1px'
                                         }}>
-                                            <span>Subtotal:</span>
-                                            <span>{formatCurrency(sale.subtotal)}</span>
+                                            <span>
+                                                {item.quantity} {item.medicine_stock.medicine.unit} x {formatCurrency(item.unit_price)}
+                                            </span>
+                                            <span style={{ fontWeight: 'bold' }}>
+                                                {formatCurrency(item.total_price)}
+                                            </span>
                                         </div>
-
-                                        {discountToShow > 0 && (
-                                            <div style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                fontSize: '12px',
-                                                marginBottom: '4px'
-                                            }}>
-                                                <span>Discount:</span>
-                                                <span>-{formatCurrency(discountToShow)}</span>
+                                        {item.medicine_stock.medicine.generic_name && (
+                                            <div style={{ fontSize: '8px', color: '#666' }}>
+                                                ({item.medicine_stock.medicine.generic_name})
                                             </div>
                                         )}
-
-                                        {sale.tax > 0 && (
-                                            <div style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                fontSize: '12px',
-                                                marginBottom: '4px'
-                                            }}>
-                                                <span>Tax:</span>
-                                                <span>+{formatCurrency(sale.tax)}</span>
-                                            </div>
-                                        )}
-
-                                        <div style={{
-                                            borderTop: '2px solid black',
-                                            paddingTop: '8px',
-                                            marginTop: '8px'
-                                        }}>
-                                            <div style={{
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                fontSize: '16px',
-                                                fontWeight: 'bold'
-                                            }}>
-                                                <span>Total Amount:</span>
-                                                <span>{formatCurrency(totalToShow)}</span>
-                                            </div>
-                                        </div>
                                     </div>
-                                </div>
+                                ))}
                             </div>
 
-                            {/* Payment Status */}
-                            <div style={{ marginBottom: '24px' }}>
-                                <div style={{ fontSize: '12px' }}>
-                                    <span style={{ fontWeight: 'bold' }}>Payment Status: </span>
-                                    <span style={{
-                                        fontWeight: 'bold',
-                                        color: sale.payment_status === 'paid' ? 'green' :
-                                            sale.payment_status === 'partial' ? 'orange' : 'red'
+                            {/* Totals */}
+                            <div style={{ fontSize: '9px', marginBottom: '6px' }}>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    marginBottom: '2px'
+                                }}>
+                                    <span>Subtotal:</span>
+                                    <span>{formatCurrency(sale.subtotal)}</span>
+                                </div>
+
+                                {discountToShow > 0 && (
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        marginBottom: '2px'
                                     }}>
+                                        <span>Discount:</span>
+                                        <span>-{formatCurrency(discountToShow)}</span>
+                                    </div>
+                                )}
+
+                                {sale.tax > 0 && (
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        marginBottom: '2px'
+                                    }}>
+                                        <span>Tax:</span>
+                                        <span>+{formatCurrency(sale.tax)}</span>
+                                    </div>
+                                )}
+
+                                <div style={{
+                                    borderTop: '1px solid black',
+                                    paddingTop: '3px',
+                                    marginTop: '3px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    fontWeight: 'bold',
+                                    fontSize: '11px'
+                                }}>
+                                    <span>TOTAL:</span>
+                                    <span>{formatCurrency(totalToShow)}</span>
+                                </div>
+
+                                {/* Payment Status */}
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    marginTop: '3px',
+                                    fontSize: '9px'
+                                }}>
+                                    <span>Payment:</span>
+                                    <span style={{ fontWeight: 'bold' }}>
                                         {sale.payment_status.toUpperCase()}
                                     </span>
                                 </div>
@@ -652,20 +537,18 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
 
                             {/* Footer */}
                             <div style={{
-                                borderTop: '1px solid #ccc',
-                                paddingTop: '16px',
-                                marginTop: '32px'
+                                borderTop: '1px dashed black',
+                                paddingTop: '6px',
+                                textAlign: 'center',
+                                fontSize: '8px',
+                                lineHeight: '1.3'
                             }}>
-                                <div style={{
-                                    textAlign: 'center',
-                                    fontSize: '10px',
-                                    color: '#666'
-                                }}>
-                                    <p style={{ margin: '2px 0' }}>Thank you for your business!</p>
-                                    <p style={{ margin: '2px 0' }}>This is a computer generated invoice.</p>
-                                    <p style={{ margin: '8px 0 2px 0' }}>
-                                        For any queries, please contact us at {companyInfo.phone} or {companyInfo.email}
-                                    </p>
+                                <div style={{ marginBottom: '3px', fontWeight: 'bold' }}>
+                                    Thank you for your business!
+                                </div>
+                                <div>Tel: {companyInfo.phone}</div>
+                                <div style={{ marginTop: '3px' }}>
+                                    This is a computer generated invoice
                                 </div>
                             </div>
                         </div>
