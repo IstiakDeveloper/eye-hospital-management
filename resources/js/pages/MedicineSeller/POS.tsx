@@ -453,7 +453,7 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
 
             {/* Printable Invoice */}
             <div className="print-area" style={{
-              fontFamily: 'Courier New, monospace',
+              fontFamily: 'Arial, sans-serif',
               backgroundColor: 'white',
               color: 'black',
               fontSize: '11px',

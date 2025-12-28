@@ -370,7 +370,7 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
 
                         {/* Printable Invoice */}
                         <div className="print-area" style={{
-                            fontFamily: 'Courier New, monospace',
+                            fontFamily: 'Arial, sans-serif',
                             backgroundColor: 'white',
                             color: 'black',
                             fontSize: '11px',
