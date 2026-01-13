@@ -30,7 +30,7 @@ class FollowupPatientIncomeController extends Controller
         // Get followup patient visits with doctor info
         $query = PatientVisit::with(['patient', 'selectedDoctor.user'])
             ->where('is_followup', true)
-            ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59']);
+            ->whereBetween('created_at', [$fromDate.' 00:00:00', $toDate.' 23:59:59']);
 
         // Apply search filter
         if ($search) {
@@ -40,17 +40,14 @@ class FollowupPatientIncomeController extends Controller
                         ->orWhere('patient_id', 'like', "%{$search}%")
                         ->orWhere('phone', 'like', "%{$search}%");
                 })
-                ->orWhereHas('selectedDoctor.user', function ($doctorQuery) use ($search) {
-                    $doctorQuery->where('name', 'like', "%{$search}%");
-                });
+                    ->orWhereHas('selectedDoctor.user', function ($doctorQuery) use ($search) {
+                        $doctorQuery->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
-        // Order by Doctor name, then by date
-        $visits = $query->get()->sortBy([
-            fn ($a, $b) => ($a->selectedDoctor->user->name ?? 'ZZZ') <=> ($b->selectedDoctor->user->name ?? 'ZZZ'),
-            fn ($a, $b) => $a->created_at <=> $b->created_at,
-        ]);
+        // Order by date
+        $visits = $query->orderBy('created_at', 'asc')->get();
 
         // Format report data
         $reportData = $visits->map(function ($visit, $index) {

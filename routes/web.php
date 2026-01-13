@@ -4,41 +4,39 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AppointmentDisplayController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DoctorController;
-use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\DoctorDashboardController;
-use App\Http\Controllers\HospitalAccount\HospitalAccountController;
 use App\Http\Controllers\HospitalAccount\AdvanceHouseRentController;
 use App\Http\Controllers\HospitalAccount\FixedAssetController;
 use App\Http\Controllers\HospitalAccount\FixedAssetVendorController;
+use App\Http\Controllers\HospitalAccount\HospitalAccountController;
 use App\Http\Controllers\MainAccountController;
 use App\Http\Controllers\MedicalTestController;
 use App\Http\Controllers\MedicineAccount\MedicineAccountController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\MedicineCornerController;
-use App\Http\Controllers\MedicineVendorController; // NEW: Vendor Controller
 use App\Http\Controllers\MedicineSellerDashboardController;
-use App\Http\Controllers\OpticsAccount\OpticsAccountController;
+use App\Http\Controllers\MedicineVendorController; // NEW: Vendor Controller
 use App\Http\Controllers\Optics\OpticsCornerController;
-use App\Http\Controllers\Optics\OpticsVendorController;
 use App\Http\Controllers\Optics\OpticsReportController;
 use App\Http\Controllers\Optics\OpticsSellerDashboardController;
+use App\Http\Controllers\Optics\OpticsVendorController;
+use App\Http\Controllers\OpticsAccount\OpticsAccountController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientVisitController;
 use App\Http\Controllers\PrescriptionController;
-use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\ReceptionistDashboardController;
 use App\Http\Controllers\RefractionistDashboardController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RolePermissionController;
+use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VisionTestController;
 use App\Models\Patient;
-use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
-use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,13 +46,13 @@ use Inertia\Inertia;
 
 Route::get('/', function () {
     // Check if user is authenticated
-    if (!auth()->check()) {
+    if (! auth()->check()) {
         return redirect()->route('login');
     }
 
     $user = auth()->user();
 
-    if (!$user || !$user->role) {
+    if (! $user || ! $user->role) {
         return redirect()->route('dashboard');
     }
 
@@ -104,11 +102,13 @@ Route::get('/', function () {
 
 Route::get('/storage-link', function () {
     Artisan::call('storage:link');
+
     return response()->json(['message' => 'Storage link created successfully.']);
 })->name('storage.link');
 
 Route::get('/migrate', function () {
     Artisan::call('migrate');
+
     return response()->json(['message' => 'Migrations run successfully.']);
 })->name('migrate');
 
@@ -328,7 +328,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/visits/bulk-complete', [PatientController::class, 'bulkCompleteVisits'])->name('patients.visits.bulk-complete')->middleware('permission:visits.complete');
 });
 
-
 Route::middleware(['permission:dashboard.receptionist'])->prefix('receptionist')->name('receptionist.')->group(function () {
     Route::get('/dashboard', [ReceptionistDashboardController::class, 'index'])->name('dashboard');
     Route::post('/quick-search', [ReceptionistDashboardController::class, 'quickSearch'])->name('quick-search');
@@ -499,12 +498,10 @@ Route::prefix('optics-seller')->middleware(['permission:dashboard.optics-seller'
     Route::get('/api/search-items', [OpticsSellerDashboardController::class, 'searchItems'])->name('optics-seller.search-items');
 });
 
-
 // Default redirect for Optics Seller
 Route::get('/optics-seller', function () {
     return redirect()->route('optics-seller.dashboard');
 })->middleware(['auth', 'role:Optics Seller']);
-
 
 Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $request) {
     try {
@@ -512,7 +509,7 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
         Log::info('QR save request received', [
             'patient_id' => $patient->id,
             'patient_code' => $patient->patient_id,
-            'current_qr_path' => $patient->qr_code_image_path
+            'current_qr_path' => $patient->qr_code_image_path,
         ]);
 
         $request->validate([
@@ -522,10 +519,10 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
         $dataUrl = $request->qr_data_url;
 
         // Validate base64 image format
-        if (!preg_match('/^data:image\/png;base64,(.+)$/', $dataUrl, $matches)) {
+        if (! preg_match('/^data:image\/png;base64,(.+)$/', $dataUrl, $matches)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid image format. Expected PNG base64.'
+                'message' => 'Invalid image format. Expected PNG base64.',
             ], 400);
         }
 
@@ -536,7 +533,7 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
         if ($imageData === false) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to decode base64 image data.'
+                'message' => 'Failed to decode base64 image data.',
             ], 400);
         }
 
@@ -544,36 +541,36 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
         if (strlen($imageData) < 1000) {
             return response()->json([
                 'success' => false,
-                'message' => 'Image data too small. Minimum 1KB required.'
+                'message' => 'Image data too small. Minimum 1KB required.',
             ], 400);
         }
 
         // Create directory if not exists
         $directory = 'qr-codes';
-        if (!Storage::disk('public')->exists($directory)) {
+        if (! Storage::disk('public')->exists($directory)) {
             Storage::disk('public')->makeDirectory($directory);
         }
 
         // Generate unique filename
-        $filename = $directory . '/patient-' . $patient->patient_id . '-' . time() . '.png';
+        $filename = $directory.'/patient-'.$patient->patient_id.'-'.time().'.png';
 
         // Save image to storage
-        if (!Storage::disk('public')->put($filename, $imageData)) {
+        if (! Storage::disk('public')->put($filename, $imageData)) {
             Log::error('Failed to save QR image to storage', [
                 'filename' => $filename,
-                'patient_id' => $patient->id
+                'patient_id' => $patient->id,
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to save image to storage.'
+                'message' => 'Failed to save image to storage.',
             ], 500);
         }
 
         Log::info('QR image saved to storage', [
             'filename' => $filename,
             'patient_id' => $patient->id,
-            'file_size' => strlen($imageData)
+            'file_size' => strlen($imageData),
         ]);
 
         // Delete old QR image if exists
@@ -581,20 +578,20 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
             Storage::disk('public')->delete($patient->qr_code_image_path);
             Log::info('Old QR image deleted', [
                 'old_path' => $patient->qr_code_image_path,
-                'patient_id' => $patient->id
+                'patient_id' => $patient->id,
             ]);
         }
 
         // ** CRITICAL FIX: Update patient record with proper error handling **
         try {
             $updateResult = $patient->update([
-                'qr_code_image_path' => $filename
+                'qr_code_image_path' => $filename,
             ]);
 
-            if (!$updateResult) {
+            if (! $updateResult) {
                 Log::error('Failed to update patient record', [
                     'patient_id' => $patient->id,
-                    'filename' => $filename
+                    'filename' => $filename,
                 ]);
 
                 // Delete the uploaded file since DB update failed
@@ -602,7 +599,7 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to update patient record in database.'
+                    'message' => 'Failed to update patient record in database.',
                 ], 500);
             }
 
@@ -612,13 +609,13 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
             Log::info('Patient record updated successfully', [
                 'patient_id' => $patient->id,
                 'new_qr_path' => $patient->qr_code_image_path,
-                'filename' => $filename
+                'filename' => $filename,
             ]);
         } catch (\Exception $dbError) {
             Log::error('Database update error', [
                 'patient_id' => $patient->id,
                 'filename' => $filename,
-                'error' => $dbError->getMessage()
+                'error' => $dbError->getMessage(),
             ]);
 
             // Delete the uploaded file since DB update failed
@@ -626,7 +623,7 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
 
             return response()->json([
                 'success' => false,
-                'message' => 'Database update failed: ' . $dbError->getMessage()
+                'message' => 'Database update failed: '.$dbError->getMessage(),
             ], 500);
         }
 
@@ -643,18 +640,18 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
             'patient_db_id' => $patient->id,
             'saved_at' => now()->toISOString(),
             'file_size' => strlen($imageData),
-            'updated_qr_path' => $patient->qr_code_image_path
+            'updated_qr_path' => $patient->qr_code_image_path,
         ]);
     } catch (\Illuminate\Validation\ValidationException $e) {
         Log::error('Validation failed for QR save', [
             'patient_id' => $patient->id,
-            'errors' => $e->errors()
+            'errors' => $e->errors(),
         ]);
 
         return response()->json([
             'success' => false,
             'message' => 'Validation failed',
-            'errors' => $e->errors()
+            'errors' => $e->errors(),
         ], 422);
     } catch (\Exception $e) {
         Log::error('QR save failed with exception', [
@@ -663,16 +660,16 @@ Route::post('/patient/{patient}/save-qr', function (Patient $patient, Request $r
             'error' => $e->getMessage(),
             'file' => $e->getFile(),
             'line' => $e->getLine(),
-            'trace' => $e->getTraceAsString()
+            'trace' => $e->getTraceAsString(),
         ]);
 
         return response()->json([
             'success' => false,
-            'message' => 'Server error: ' . $e->getMessage(),
+            'message' => 'Server error: '.$e->getMessage(),
             'debug_info' => [
                 'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]
+                'line' => $e->getLine(),
+            ],
         ], 500);
     }
 })->name('patient.save-qr');
@@ -741,6 +738,10 @@ Route::middleware(['permission:hospital-account.view'])->prefix('hospital-accoun
     // Fund Ledger Routes
     Route::get('/fund-ledger', [\App\Http\Controllers\HospitalAccount\FundLedgerController::class, 'index'])->name('fund-ledger');
     Route::get('/fund-ledger/print', [\App\Http\Controllers\HospitalAccount\FundLedgerController::class, 'print'])->name('fund-ledger.print');
+
+    // House Security Ledger Routes
+    Route::get('/house-security-ledger', [\App\Http\Controllers\HospitalAccount\HouseSecurityLedgerController::class, 'index'])->name('house-security-ledger');
+    Route::get('/house-security-ledger/print', [\App\Http\Controllers\HospitalAccount\HouseSecurityLedgerController::class, 'print'])->name('house-security-ledger.print');
 
     // Vendor Due Ledger Routes
     Route::get('/vendor-due-ledger/fixed-asset', [\App\Http\Controllers\HospitalAccount\VendorDueLedgerController::class, 'fixedAssetVendorDue'])->name('vendor-due-ledger.fixed-asset');
@@ -945,8 +946,6 @@ Route::middleware(['auth'])->prefix('optics')->name('optics.')->group(function (
     Route::get('/reports/buy-sale-stock/export', [OpticsReportController::class, 'exportBuySaleStockReport'])->name('reports.buy-sale-stock.export')->middleware('permission:optics.reports.buy-sale-stock');
 });
 
-
-
 Route::prefix('medical-tests')->name('medical-tests.')->middleware(['auth', 'permission:medical-tests.view'])->group(function () {
 
     // Test Master Management - Permission-based
@@ -994,8 +993,8 @@ Route::prefix('medical-tests')->name('medical-tests.')->middleware(['auth', 'per
 
 // ==================== Operation Routes ====================
 
-use App\Http\Controllers\OperationController;
 use App\Http\Controllers\OperationBookingController;
+use App\Http\Controllers\OperationController;
 
 // Operation Types Management - Permission-based
 Route::middleware(['auth'])->prefix('operations')->name('operations.')->group(function () {
@@ -1091,6 +1090,5 @@ Route::middleware(['auth'])->prefix('operation-bookings')->name('operation-booki
     });
 });
 
-
-require __DIR__ . '/settings.php';
-require __DIR__ . '/auth.php';
+require __DIR__.'/settings.php';
+require __DIR__.'/auth.php';

@@ -3,42 +3,54 @@
 namespace App\Http\Controllers\HospitalAccount;
 
 use App\Http\Controllers\Controller;
-use App\Models\{AdvanceHouseRent, AdvanceHouseRentDeduction, HospitalAccount};
+use App\Models\AdvanceHouseRent;
+use App\Models\AdvanceHouseRentDeduction;
+use App\Models\HospitalAccount;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdvanceHouseRentController extends Controller
 {
     // Dashboard - Show advance rent overview
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $floorType = $request->get('floor_type', '2_3_floor'); // Default to 2nd & 3rd floor
+
         $activeAdvances = AdvanceHouseRent::active()
+            ->where('floor_type', $floorType)
             ->with('createdBy')
             ->orderBy('payment_date', 'desc')
             ->get();
 
         $exhaustedAdvances = AdvanceHouseRent::where('status', 'exhausted')
+            ->where('floor_type', $floorType)
             ->with('createdBy')
             ->orderBy('payment_date', 'desc')
             ->take(5)
             ->get();
 
         $recentDeductions = AdvanceHouseRentDeduction::with(['advanceHouseRent', 'deductedBy'])
+            ->whereHas('advanceHouseRent', function ($q) use ($floorType) {
+                $q->where('floor_type', $floorType);
+            })
             ->orderBy('deduction_date', 'desc')
             ->take(10)
             ->get();
 
-        $totalAdvanceBalance = AdvanceHouseRent::getActiveBalance();
-        $totalAdvanceGiven = AdvanceHouseRent::sum('advance_amount');
-        $totalUsed = AdvanceHouseRent::sum('used_amount');
+        $totalAdvanceBalance = AdvanceHouseRent::getActiveBalance($floorType);
+        $totalAdvanceGiven = AdvanceHouseRent::where('floor_type', $floorType)->sum('advance_amount');
+        $totalUsed = AdvanceHouseRent::where('floor_type', $floorType)->sum('used_amount');
 
         // Monthly deduction summary
         $currentYear = now()->year;
         $monthlyDeductions = AdvanceHouseRentDeduction::where('year', $currentYear)
+            ->whereHas('advanceHouseRent', function ($q) use ($floorType) {
+                $q->where('floor_type', $floorType);
+            })
             ->selectRaw('month, SUM(amount) as total')
             ->groupBy('month')
             ->orderBy('month', 'asc')
@@ -53,6 +65,7 @@ class AdvanceHouseRentController extends Controller
             'totalAdvanceGiven' => $totalAdvanceGiven,
             'totalUsed' => $totalUsed,
             'monthlyDeductions' => $monthlyDeductions,
+            'floorType' => $floorType,
         ]);
     }
 
@@ -63,6 +76,7 @@ class AdvanceHouseRentController extends Controller
             'amount' => 'required|numeric|min:1',
             'description' => 'required|string|max:500',
             'date' => 'required|date',
+            'floor_type' => 'required|in:2_3_floor,4_floor',
         ]);
 
         $hospitalBalance = HospitalAccount::getBalance();
@@ -75,15 +89,19 @@ class AdvanceHouseRentController extends Controller
             $advanceRent = HospitalAccount::addAdvanceRent(
                 amount: $request->amount,
                 description: $request->description,
-                date: $request->date
+                date: $request->date,
+                floorType: $request->floor_type
             );
 
             DB::commit();
 
-            return back()->with('success', "Advance house rent payment of ৳{$request->amount} recorded successfully! Payment No: {$advanceRent->payment_number}");
+            $floorLabel = $request->floor_type === '4_floor' ? '4th Floor' : '2nd & 3rd Floor';
+
+            return back()->with('success', "Advance house rent payment of ৳{$request->amount} for {$floorLabel} recorded successfully! Payment No: {$advanceRent->payment_number}");
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Failed to record advance rent: ' . $e->getMessage()]);
+
+            return back()->withErrors(['error' => 'Failed to record advance rent: '.$e->getMessage()]);
         }
     }
 
@@ -95,16 +113,20 @@ class AdvanceHouseRentController extends Controller
             'month' => 'required|integer|min:1|max:12',
             'year' => 'required|integer|min:2020|max:2100',
             'notes' => 'nullable|string|max:500',
+            'floor_type' => 'required|in:2_3_floor,4_floor',
         ]);
 
-        // Find active advance with sufficient balance
+        // Find active advance with sufficient balance for specific floor
         $advanceRent = AdvanceHouseRent::where('status', 'active')
+            ->where('floor_type', $request->floor_type)
             ->where('remaining_amount', '>=', $request->amount)
             ->orderBy('payment_date', 'asc') // Use oldest first (FIFO)
             ->first();
 
-        if (!$advanceRent) {
-            return back()->withErrors(['amount' => 'No active advance found with sufficient balance!']);
+        if (! $advanceRent) {
+            $floorLabel = $request->floor_type === '4_floor' ? '4th Floor' : '2nd & 3rd Floor';
+
+            return back()->withErrors(['amount' => "No active advance found for {$floorLabel} with sufficient balance!"]);
         }
 
         if ($advanceRent->status !== 'active') {
@@ -115,13 +137,18 @@ class AdvanceHouseRentController extends Controller
             return back()->withErrors(['amount' => 'Deduction amount exceeds remaining advance balance!']);
         }
 
-        // Check if already deducted for this month/year (from ANY advance)
+        // Check if already deducted for this month/year and floor type
         $existingDeduction = AdvanceHouseRentDeduction::where('month', $request->month)
             ->where('year', $request->year)
+            ->whereHas('advanceHouseRent', function ($q) use ($request) {
+                $q->where('floor_type', $request->floor_type);
+            })
             ->first();
 
         if ($existingDeduction) {
-            return back()->withErrors(['error' => 'Rent for this month has already been deducted!']);
+            $floorLabel = $request->floor_type === '4_floor' ? '4th Floor' : '2nd & 3rd Floor';
+
+            return back()->withErrors(['error' => "Rent for {$floorLabel} in this month has already been deducted!"]);
         }
 
         DB::beginTransaction();
@@ -137,10 +164,13 @@ class AdvanceHouseRentController extends Controller
             DB::commit();
 
             $monthName = date('F', mktime(0, 0, 0, $request->month, 1));
-            return back()->with('success', "House rent of ৳{$request->amount} deducted for {$monthName} {$request->year}. Deduction No: {$deduction->deduction_number}");
+            $floorLabel = $request->floor_type === '4_floor' ? '4th Floor' : '2nd & 3rd Floor';
+
+            return back()->with('success', "{$floorLabel} house rent of ৳{$request->amount} deducted for {$monthName} {$request->year}. Deduction No: {$deduction->deduction_number}");
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Failed to deduct rent: ' . $e->getMessage()]);
+
+            return back()->withErrors(['error' => 'Failed to deduct rent: '.$e->getMessage()]);
         }
     }
 
@@ -149,9 +179,11 @@ class AdvanceHouseRentController extends Controller
     {
         $year = $request->filled('year') ? $request->year : now()->year;
         $month = $request->filled('month') ? $request->month : null;
+        $floorType = $request->get('floor_type', '2_3_floor');
 
         // Get all advances for the period
         $advancesQuery = AdvanceHouseRent::with('createdBy')
+            ->where('floor_type', $floorType)
             ->whereYear('payment_date', $year);
 
         if ($month) {
@@ -162,6 +194,9 @@ class AdvanceHouseRentController extends Controller
 
         // Get all deductions for the period
         $deductionsQuery = AdvanceHouseRentDeduction::with(['advanceHouseRent', 'deductedBy'])
+            ->whereHas('advanceHouseRent', function ($q) use ($floorType) {
+                $q->where('floor_type', $floorType);
+            })
             ->where('year', $year);
 
         if ($month) {
@@ -171,33 +206,37 @@ class AdvanceHouseRentController extends Controller
         $deductions = $deductionsQuery->orderBy('deduction_date', 'asc')->get();
 
         // Calculate previous balance (before the selected period)
-        $previousAdvances = AdvanceHouseRent::where(function($q) use ($year, $month) {
-            if ($month) {
-                $q->where(function($query) use ($year, $month) {
-                    $query->whereYear('payment_date', '<', $year)
-                          ->orWhere(function($q2) use ($year, $month) {
-                              $q2->whereYear('payment_date', $year)
-                                 ->whereMonth('payment_date', '<', $month);
-                          });
-                });
-            } else {
-                $q->whereYear('payment_date', '<', $year);
-            }
-        })->sum('advance_amount');
+        $previousAdvances = AdvanceHouseRent::where('floor_type', $floorType)
+            ->where(function ($q) use ($year, $month) {
+                if ($month) {
+                    $q->where(function ($query) use ($year, $month) {
+                        $query->whereYear('payment_date', '<', $year)
+                            ->orWhere(function ($q2) use ($year, $month) {
+                                $q2->whereYear('payment_date', $year)
+                                    ->whereMonth('payment_date', '<', $month);
+                            });
+                    });
+                } else {
+                    $q->whereYear('payment_date', '<', $year);
+                }
+            })->sum('advance_amount');
 
-        $previousDeductions = AdvanceHouseRentDeduction::where(function($q) use ($year, $month) {
-            if ($month) {
-                $q->where(function($query) use ($year, $month) {
-                    $query->where('year', '<', $year)
-                          ->orWhere(function($q2) use ($year, $month) {
-                              $q2->where('year', $year)
-                                 ->where('month', '<', $month);
-                          });
-                });
-            } else {
-                $q->where('year', '<', $year);
-            }
-        })->sum('amount');
+        $previousDeductions = AdvanceHouseRentDeduction::whereHas('advanceHouseRent', function ($q) use ($floorType) {
+            $q->where('floor_type', $floorType);
+        })
+            ->where(function ($q) use ($year, $month) {
+                if ($month) {
+                    $q->where(function ($query) use ($year, $month) {
+                        $query->where('year', '<', $year)
+                            ->orWhere(function ($q2) use ($year, $month) {
+                                $q2->where('year', $year)
+                                    ->where('month', '<', $month);
+                            });
+                    });
+                } else {
+                    $q->where('year', '<', $year);
+                }
+            })->sum('amount');
 
         $previousBalance = $previousAdvances - $previousDeductions;
 
@@ -223,7 +262,7 @@ class AdvanceHouseRentController extends Controller
             $monthName = date('F', mktime(0, 0, 0, $deduction->month, 1));
             $allTransactions->push([
                 'date' => $deduction->deduction_date,
-                'description' => "Rent for {$monthName} {$deduction->year}" . ($deduction->notes ? " - {$deduction->notes}" : ''),
+                'description' => "Rent for {$monthName} {$deduction->year}".($deduction->notes ? " - {$deduction->notes}" : ''),
                 'payment_number' => $deduction->deduction_number,
                 'credit' => 0,
                 'debit' => $deduction->amount,
@@ -272,6 +311,7 @@ class AdvanceHouseRentController extends Controller
             'filters' => [
                 'year' => $year,
                 'month' => $month,
+                'floor_type' => $floorType,
             ],
             'years' => $years,
         ]);
@@ -320,38 +360,47 @@ class AdvanceHouseRentController extends Controller
     {
         $year = $request->filled('year') ? $request->year : now()->year;
         $month = $request->filled('month') ? $request->month : null;
+        $floorType = $request->get('floor_type', '2_3_floor');
         $format = $request->get('format', 'pdf');
 
         // Get data (same logic as history)
-        $advancesQuery = AdvanceHouseRent::whereYear('payment_date', $year);
-        if ($month) $advancesQuery->whereMonth('payment_date', $month);
+        $advancesQuery = AdvanceHouseRent::where('floor_type', $floorType)->whereYear('payment_date', $year);
+        if ($month) {
+            $advancesQuery->whereMonth('payment_date', $month);
+        }
         $advances = $advancesQuery->orderBy('payment_date', 'asc')->get();
 
-        $deductionsQuery = AdvanceHouseRentDeduction::with('advanceHouseRent')->where('year', $year);
-        if ($month) $deductionsQuery->where('month', $month);
+        $deductionsQuery = AdvanceHouseRentDeduction::whereHas('advanceHouseRent', function ($q) use ($floorType) {
+            $q->where('floor_type', $floorType);
+        })->where('year', $year);
+        if ($month) {
+            $deductionsQuery->where('month', $month);
+        }
         $deductions = $deductionsQuery->orderBy('deduction_date', 'asc')->get();
 
         // Calculate previous balance
-        $previousAdvances = AdvanceHouseRent::where(function($q) use ($year, $month) {
+        $previousAdvances = AdvanceHouseRent::where('floor_type', $floorType)->where(function ($q) use ($year, $month) {
             if ($month) {
-                $q->where(function($query) use ($year, $month) {
+                $q->where(function ($query) use ($year, $month) {
                     $query->whereYear('payment_date', '<', $year)
-                          ->orWhere(function($q2) use ($year, $month) {
-                              $q2->whereYear('payment_date', $year)->whereMonth('payment_date', '<', $month);
-                          });
+                        ->orWhere(function ($q2) use ($year, $month) {
+                            $q2->whereYear('payment_date', $year)->whereMonth('payment_date', '<', $month);
+                        });
                 });
             } else {
                 $q->whereYear('payment_date', '<', $year);
             }
         })->sum('advance_amount');
 
-        $previousDeductions = AdvanceHouseRentDeduction::where(function($q) use ($year, $month) {
+        $previousDeductions = AdvanceHouseRentDeduction::whereHas('advanceHouseRent', function ($q) use ($floorType) {
+            $q->where('floor_type', $floorType);
+        })->where(function ($q) use ($year, $month) {
             if ($month) {
-                $q->where(function($query) use ($year, $month) {
+                $q->where(function ($query) use ($year, $month) {
                     $query->where('year', '<', $year)
-                          ->orWhere(function($q2) use ($year, $month) {
-                              $q2->where('year', $year)->where('month', '<', $month);
-                          });
+                        ->orWhere(function ($q2) use ($year, $month) {
+                            $q2->where('year', $year)->where('month', '<', $month);
+                        });
                 });
             } else {
                 $q->where('year', '<', $year);
@@ -379,7 +428,7 @@ class AdvanceHouseRentController extends Controller
             $monthName = date('F', mktime(0, 0, 0, $deduction->month, 1));
             $allTransactions->push([
                 'date' => $deduction->deduction_date,
-                'description' => "Rent for {$monthName} {$deduction->year}" . ($deduction->notes ? " - {$deduction->notes}" : ''),
+                'description' => "Rent for {$monthName} {$deduction->year}".($deduction->notes ? " - {$deduction->notes}" : ''),
                 'payment_number' => $deduction->deduction_number,
                 'credit' => 0,
                 'debit' => $deduction->amount,
@@ -416,7 +465,7 @@ class AdvanceHouseRentController extends Controller
         $totalDebit = collect($transactions)->sum('debit');
 
         $periodTitle = $month
-            ? date('F', mktime(0, 0, 0, $month, 1)) . " {$year}"
+            ? date('F', mktime(0, 0, 0, $month, 1))." {$year}"
             : "Year {$year}";
 
         if ($format === 'excel') {
@@ -444,7 +493,7 @@ class AdvanceHouseRentController extends Controller
             'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
         ];
 
-        return response()->stream(function() use ($transactions, $previousBalance, $totalCredit, $totalDebit, $finalBalance, $periodTitle) {
+        return response()->stream(function () use ($transactions, $previousBalance, $totalCredit, $totalDebit, $finalBalance, $periodTitle) {
             $handle = fopen('php://output', 'w');
 
             // Title
@@ -472,8 +521,8 @@ class AdvanceHouseRentController extends Controller
                     ]);
                 } else {
                     // Multiple transactions on same date - show merged row
-                    $descriptions = implode('; ', array_map(fn($d) => $d['description'], $transaction['details']));
-                    $paymentNumbers = implode('; ', array_map(fn($d) => $d['payment_number'], $transaction['details']));
+                    $descriptions = implode('; ', array_map(fn ($d) => $d['description'], $transaction['details']));
+                    $paymentNumbers = implode('; ', array_map(fn ($d) => $d['payment_number'], $transaction['details']));
 
                     fputcsv($handle, [
                         $transaction['date'],

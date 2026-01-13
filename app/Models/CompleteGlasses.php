@@ -73,6 +73,7 @@ class CompleteGlasses extends Model
         if ($this->total_cost > 0) {
             return (($this->selling_price - $this->total_cost) / $this->total_cost) * 100;
         }
+
         return 0;
     }
 
@@ -103,6 +104,46 @@ class CompleteGlasses extends Model
     }
 
     /**
+     * Get cumulative stock value from beginning till a specific date
+     * Formula: Total Purchases - Total COGS
+     */
+    public function getCumulativeStockValue($tillDate)
+    {
+        // Get all purchases till date from stock_movements (inclusive)
+        $totalPurchases = \DB::table('stock_movements')
+            ->where('item_type', 'complete_glasses')
+            ->where('item_id', $this->id)
+            ->whereIn('movement_type', ['purchase', 'adjustment', 'return'])
+            ->where('created_at', '<=', $tillDate.' 23:59:59')
+            ->sum('total_amount');
+
+        // Get all sales till date (inclusive)
+        $totalSalesQty = \DB::table('optics_sale_items')
+            ->join('optics_sales', 'optics_sale_items.optics_sale_id', '=', 'optics_sales.id')
+            ->where('optics_sale_items.item_type', 'complete_glasses')
+            ->where('optics_sale_items.item_id', $this->id)
+            ->where('optics_sales.created_at', '<=', $tillDate.' 23:59:59')
+            ->whereNull('optics_sales.deleted_at')
+            ->sum('optics_sale_items.quantity');
+
+        // Calculate COGS
+        $totalCOGS = $totalSalesQty * $this->total_cost;
+
+        // Get quantity
+        $totalPurchaseQty = \DB::table('stock_movements')
+            ->where('item_type', 'complete_glasses')
+            ->where('item_id', $this->id)
+            ->whereIn('movement_type', ['purchase', 'adjustment', 'return'])
+            ->where('created_at', '<=', $tillDate.' 23:59:59')
+            ->sum(\DB::raw('ABS(quantity)'));
+
+        return [
+            'quantity' => $totalPurchaseQty - $totalSalesQty,
+            'value' => $totalPurchases - $totalCOGS,
+        ];
+    }
+
+    /**
      * Get buy-sale-stock report data for complete glasses
      */
     public static function getBuySaleStockReport($fromDate, $toDate, $search = null)
@@ -113,24 +154,26 @@ class CompleteGlasses extends Model
 
         // Apply search filter
         if ($search) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('sku', 'like', "%{$search}%")
-                  ->orWhereHas('frame', function($fq) use ($search) {
-                      $fq->where('brand', 'like', "%{$search}%")
-                         ->orWhere('model', 'like', "%{$search}%");
-                  })
-                  ->orWhereHas('lensType', function($lq) use ($search) {
-                      $lq->where('name', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('frame', function ($fq) use ($search) {
+                        $fq->where('brand', 'like', "%{$search}%")
+                            ->orWhere('model', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('lensType', function ($lq) use ($search) {
+                        $lq->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
         $completeGlasses = $query->get();
 
         return $completeGlasses->map(function ($cg) use ($fromDate, $toDate) {
-            // Calculate before stock
-            $beforeStockQty = $cg->getStockBeforeDate($fromDate);
-            $beforeStockValue = $beforeStockQty * $cg->total_cost;
+            // Use cumulative method for perfect continuity - calculate till day BEFORE fromDate
+            $dayBeforeFrom = date('Y-m-d', strtotime($fromDate.' -1 day'));
+            $beforeStockData = $cg->getCumulativeStockValue($dayBeforeFrom);
+            $beforeStockQty = $beforeStockData['quantity'];
+            $beforeStockValue = $beforeStockData['value'];
 
             // Get purchases in date range (via stock movements)
             $buyData = $cg->getPurchasesInDateRange($fromDate, $toDate);
@@ -152,50 +195,48 @@ class CompleteGlasses extends Model
             $availableQty = $beforeStockQty + $buyQty - $saleQty;
 
             // Profit calculation
-            // Total profit = Sale Total - Total Purchase Cost for sold items
-            // Note: Sale Total already includes fitting charge, so we don't subtract it separately
             $purchaseCostForSoldItems = $saleQty * $cg->total_cost;
             $totalProfit = $saleTotal - $purchaseCostForSoldItems;
 
-            // Available Value = Before Stock Value + Buy Value - Cost of Sold Items
+            // Available Value = Before + Buy - COGS (NO ROUNDING for continuity)
             $availableValue = $beforeStockValue + $buyValue - $purchaseCostForSoldItems;
             $profitPerUnit = $saleQty > 0 ? ($salePrice - $cg->total_cost) : 0;
 
-            $frameName = $cg->frame ? $cg->frame->brand . ' ' . $cg->frame->model : 'N/A';
+            $frameName = $cg->frame ? $cg->frame->brand.' '.$cg->frame->model : 'N/A';
             $lensName = $cg->lensType ? $cg->lensType->name : 'N/A';
 
             return [
                 'id' => $cg->id,
                 'sl' => null,
-                'name' => $frameName . ' + ' . $lensName,
+                'name' => $frameName.' + '.$lensName,
                 'sku' => $cg->sku,
 
-                // Before stock information
-                'before_stock_qty' => $beforeStockQty,
-                'before_stock_price' => round($cg->total_cost, 2),
-                'before_stock_value' => round($beforeStockValue, 2),
+                // Before stock information - raw values for continuity (cast to prevent null)
+                'before_stock_qty' => (int) $beforeStockQty,
+                'before_stock_price' => (float) ($cg->total_cost ?? 0),
+                'before_stock_value' => (float) $beforeStockValue,
 
-                // Buy information
-                'buy_qty' => $buyQty,
-                'buy_price' => round($buyPrice, 2),
-                'buy_total' => round($buyValue, 2),
+                // Buy information - raw values (cast to prevent null)
+                'buy_qty' => (int) $buyQty,
+                'buy_price' => (float) $buyPrice,
+                'buy_total' => (float) $buyValue,
 
-                // Sale information
-                'sale_qty' => $saleQty,
-                'sale_price' => round($salePrice, 2),
-                'sale_subtotal' => round($saleSubtotal, 2),
-                'sale_discount' => round($saleDiscount, 2),
-                'sale_fitting' => round($saleFitting, 2),
-                'sale_total' => round($saleTotal, 2),
-                'sale_due' => round($saleDue, 2),
+                // Sale information (cast to prevent null)
+                'sale_qty' => (int) $saleQty,
+                'sale_price' => (float) $salePrice,
+                'sale_subtotal' => (float) $saleSubtotal,
+                'sale_discount' => (float) $saleDiscount,
+                'sale_fitting' => (float) $saleFitting,
+                'sale_total' => (float) $saleTotal,
+                'sale_due' => (float) $saleDue,
 
-                // Available information
-                'available_stock' => $availableQty,
-                'available_value' => round($availableValue, 2),
+                // Available information - raw values for continuity (cast to prevent null)
+                'available_stock' => (int) $availableQty,
+                'available_value' => (float) $availableValue,
 
-                // Profit information
-                'profit_per_unit' => round($profitPerUnit, 2),
-                'total_profit' => round($totalProfit, 2),
+                // Profit information - raw values (cast to prevent null)
+                'profit_per_unit' => (float) $profitPerUnit,
+                'total_profit' => (float) $totalProfit,
             ];
         })->values()->toArray();
     }
@@ -238,7 +279,7 @@ class CompleteGlasses extends Model
             ->where('item_type', 'complete_glasses')
             ->where('item_id', $this->id)
             ->whereIn('movement_type', ['purchase', 'adjustment'])
-            ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59'])
+            ->whereBetween('created_at', [$fromDate.' 00:00:00', $toDate.' 23:59:59'])
             ->get();
 
         $quantity = $movements->sum('quantity');
@@ -258,7 +299,7 @@ class CompleteGlasses extends Model
             ->join('optics_sales', 'optics_sale_items.optics_sale_id', '=', 'optics_sales.id')
             ->where('optics_sale_items.item_type', 'complete_glasses')
             ->where('optics_sale_items.item_id', $this->id)
-            ->whereBetween('optics_sales.created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59'])
+            ->whereBetween('optics_sales.created_at', [$fromDate.' 00:00:00', $toDate.' 23:59:59'])
             ->whereNull('optics_sales.deleted_at')
             ->select(
                 'optics_sale_items.quantity',

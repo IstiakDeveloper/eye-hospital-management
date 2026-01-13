@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Http\Controllers\Controller;
-use App\Models\HospitalTransaction;
-use App\Models\HospitalIncomeCategory;
 use App\Models\HospitalExpenseCategory;
+use App\Models\HospitalIncomeCategory;
+use App\Models\HospitalTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -128,13 +128,13 @@ class IncomeExpenditureController extends Controller
 
                     // Add only fitting charge (sales without any items)
                     $onlyFittingCharge = DB::table('optics_sales')
-                        ->whereNotExists(function($query) {
+                        ->whereNotExists(function ($query) {
                             $query->select(DB::raw(1))
-                                  ->from('optics_sale_items')
-                                  ->whereColumn('optics_sale_items.optics_sale_id', 'optics_sales.id');
+                                ->from('optics_sale_items')
+                                ->whereColumn('optics_sale_items.optics_sale_id', 'optics_sales.id');
                         })
                         ->where('glass_fitting_price', '>', 0)
-                        ->whereBetween('created_at', [$fromDate . ' 00:00:00', $toDate . ' 23:59:59'])
+                        ->whereBetween('created_at', [$fromDate.' 00:00:00', $toDate.' 23:59:59'])
                         ->whereNull('deleted_at')
                         ->sum('glass_fitting_price');
 
@@ -158,9 +158,9 @@ class IncomeExpenditureController extends Controller
                         ->sum('amount');
 
                     // Get previous profit from Buy-Sale-Stock (from beginning to fromDate)
-                    $previousGlassesData = \App\Models\Glasses::getBuySaleStockReport('1900-01-01', date('Y-m-d', strtotime($fromDate . ' -1 day')));
-                    $previousLensTypesData = \App\Models\LensType::getBuySaleStockReport('1900-01-01', date('Y-m-d', strtotime($fromDate . ' -1 day')));
-                    $previousCompleteGlassesData = \App\Models\CompleteGlasses::getBuySaleStockReport('1900-01-01', date('Y-m-d', strtotime($fromDate . ' -1 day')));
+                    $previousGlassesData = \App\Models\Glasses::getBuySaleStockReport('1900-01-01', date('Y-m-d', strtotime($fromDate.' -1 day')));
+                    $previousLensTypesData = \App\Models\LensType::getBuySaleStockReport('1900-01-01', date('Y-m-d', strtotime($fromDate.' -1 day')));
+                    $previousCompleteGlassesData = \App\Models\CompleteGlasses::getBuySaleStockReport('1900-01-01', date('Y-m-d', strtotime($fromDate.' -1 day')));
 
                     $previousProfit = collect($previousGlassesData)->sum('total_profit')
                                     + collect($previousLensTypesData)->sum('total_profit')
@@ -168,13 +168,13 @@ class IncomeExpenditureController extends Controller
 
                     // Get previous only fitting charge (before fromDate)
                     $previousFittingCharge = DB::table('optics_sales')
-                        ->whereNotExists(function($query) {
+                        ->whereNotExists(function ($query) {
                             $query->select(DB::raw(1))
-                                  ->from('optics_sale_items')
-                                  ->whereColumn('optics_sale_items.optics_sale_id', 'optics_sales.id');
+                                ->from('optics_sale_items')
+                                ->whereColumn('optics_sale_items.optics_sale_id', 'optics_sales.id');
                         })
                         ->where('glass_fitting_price', '>', 0)
-                        ->where('created_at', '<', $fromDate . ' 00:00:00')
+                        ->where('created_at', '<', $fromDate.' 00:00:00')
                         ->whereNull('deleted_at')
                         ->sum('glass_fitting_price');
 
@@ -226,7 +226,7 @@ class IncomeExpenditureController extends Controller
             'Medicine Vendor Payment',
             'Optics Purchase',
             'Optics Vendor Payment',
-            'House Security'
+            'House Security',
         ];
 
         $categories = HospitalExpenseCategory::whereNotIn('name', $excludeCategories)
@@ -236,20 +236,49 @@ class IncomeExpenditureController extends Controller
         $expenses = [];
         $serial = 1;
 
-        // Add House Rent (Adjustment) from Advance Rent Deductions
-        $houseRentCurrent = \App\Models\AdvanceHouseRentDeduction::whereBetween('deduction_date', [$fromDate, $toDate])
-            ->sum('amount');
+        // Add House Rent (Adjustment) from Advance Rent Deductions - SEPARATED BY FLOOR
+        // 2nd & 3rd Floor
+        $houseRent2And3Current = \App\Models\AdvanceHouseRentDeduction::join('advance_house_rents', 'advance_house_rent_deductions.advance_house_rent_id', '=', 'advance_house_rents.id')
+            ->where('advance_house_rents.floor_type', '2_3_floor')
+            ->whereBetween('advance_house_rent_deductions.deduction_date', [$fromDate, $toDate])
+            ->sum('advance_house_rent_deductions.amount');
 
-        $houseRentCumulative = \App\Models\AdvanceHouseRentDeduction::where('deduction_date', '<=', $toDate)
-            ->sum('amount');
+        $houseRent2And3Cumulative = \App\Models\AdvanceHouseRentDeduction::join('advance_house_rents', 'advance_house_rent_deductions.advance_house_rent_id', '=', 'advance_house_rents.id')
+            ->where('advance_house_rents.floor_type', '2_3_floor')
+            ->where('advance_house_rent_deductions.deduction_date', '<=', $toDate)
+            ->sum('advance_house_rent_deductions.amount');
 
-        if ($houseRentCurrent > 0 || $houseRentCumulative > 0) {
+        if ($houseRent2And3Current > 0 || $houseRent2And3Cumulative > 0) {
             $expenses[] = [
                 'serial' => $serial++,
-                'category' => 'House Rent (Adjustment)',
+                'category' => 'House Rent (2nd & 3rd Floor)',
                 'category_id' => null,
-                'current_month' => (float) $houseRentCurrent,
-                'cumulative' => (float) $houseRentCumulative,
+                'current_month' => (float) $houseRent2And3Current,
+                'cumulative' => (float) $houseRent2And3Cumulative,
+                'is_active' => true,
+                'is_special' => true,
+                'is_adjustment' => true,
+            ];
+        }
+
+        // 4th Floor
+        $houseRent4Current = \App\Models\AdvanceHouseRentDeduction::join('advance_house_rents', 'advance_house_rent_deductions.advance_house_rent_id', '=', 'advance_house_rents.id')
+            ->where('advance_house_rents.floor_type', '4_floor')
+            ->whereBetween('advance_house_rent_deductions.deduction_date', [$fromDate, $toDate])
+            ->sum('advance_house_rent_deductions.amount');
+
+        $houseRent4Cumulative = \App\Models\AdvanceHouseRentDeduction::join('advance_house_rents', 'advance_house_rent_deductions.advance_house_rent_id', '=', 'advance_house_rents.id')
+            ->where('advance_house_rents.floor_type', '4_floor')
+            ->where('advance_house_rent_deductions.deduction_date', '<=', $toDate)
+            ->sum('advance_house_rent_deductions.amount');
+
+        if ($houseRent4Current > 0 || $houseRent4Cumulative > 0) {
+            $expenses[] = [
+                'serial' => $serial++,
+                'category' => 'House Rent (4th Floor)',
+                'category_id' => null,
+                'current_month' => (float) $houseRent4Current,
+                'cumulative' => (float) $houseRent4Cumulative,
                 'is_active' => true,
                 'is_special' => true,
                 'is_adjustment' => true,
@@ -396,7 +425,6 @@ class IncomeExpenditureController extends Controller
      */
     public function export(Request $request)
     {
-        // TODO: Implement PDF export
         return response()->json(['message' => 'PDF export coming soon']);
     }
 }

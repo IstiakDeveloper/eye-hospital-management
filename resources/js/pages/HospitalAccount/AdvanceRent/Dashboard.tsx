@@ -51,6 +51,7 @@ interface Props {
     totalAdvanceGiven: number;
     totalUsed: number;
     monthlyDeductions: Record<number, number>;
+    floor_type?: string;
 }
 
 const formatCurrency = (amount: number) => {
@@ -81,8 +82,10 @@ export default function AdvanceRentDashboard({
     totalAdvanceBalance,
     totalAdvanceGiven,
     totalUsed,
-    monthlyDeductions
+    monthlyDeductions,
+    floor_type = '2_3_floor'
 }: Props) {
+    const [currentFloor, setCurrentFloor] = useState<string>(floor_type);
     const [showAddModal, setShowAddModal] = useState(false);
     const [showDeductModal, setShowDeductModal] = useState(false);
     const [isAddLoading, setIsAddLoading] = useState(false);
@@ -92,22 +95,38 @@ export default function AdvanceRentDashboard({
     const [addFormData, setAddFormData] = useState({
         amount: '',
         description: '',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        floor_type: currentFloor
     });
 
     const [deductFormData, setDeductFormData] = useState({
         amount: '5000',
         month: new Date().getMonth() + 1,
         year: new Date().getFullYear(),
-        notes: ''
+        notes: '',
+        floor_type: currentFloor
     });
+
+    // Update form data when floor changes
+    const handleFloorChange = (floorType: string) => {
+        setCurrentFloor(floorType);
+        router.visit(`/hospital-account/advance-rent?floor_type=${floorType}`, {
+            preserveState: true,
+            preserveScroll: true
+        });
+    };
 
     const handleAddAdvance = () => {
         setIsAddLoading(true);
-        router.post('/hospital-account/advance-rent', addFormData, {
+        router.post('/hospital-account/advance-rent', { ...addFormData, floor_type: currentFloor }, {
             onSuccess: () => {
                 setShowAddModal(false);
-                setAddFormData({ amount: '', description: '', date: new Date().toISOString().split('T')[0] });
+                setAddFormData({
+                    amount: '',
+                    description: '',
+                    date: new Date().toISOString().split('T')[0],
+                    floor_type: currentFloor
+                });
                 setIsAddLoading(false);
             },
             onError: () => {
@@ -123,9 +142,9 @@ export default function AdvanceRentDashboard({
         }
 
         setDeductError(null);
-        console.log('Deduct Form Data:', deductFormData);
+        console.log('Deduct Form Data:', { ...deductFormData, floor_type: currentFloor });
         setIsDeductLoading(true);
-        router.post('/hospital-account/advance-rent/deduct', deductFormData, {
+        router.post('/hospital-account/advance-rent/deduct', { ...deductFormData, floor_type: currentFloor }, {
             onSuccess: (page) => {
                 console.log('Deduct Success:', page);
                 setShowDeductModal(false);
@@ -133,7 +152,8 @@ export default function AdvanceRentDashboard({
                     amount: '5000',
                     month: new Date().getMonth() + 1,
                     year: new Date().getFullYear(),
-                    notes: ''
+                    notes: '',
+                    floor_type: currentFloor
                 });
                 setIsDeductLoading(false);
             },
@@ -169,11 +189,37 @@ export default function AdvanceRentDashboard({
                                 Add Advance
                             </button>
                             <button
-                                onClick={() => router.visit('/hospital-account/advance-rent/history')}
+                                onClick={() => router.visit(`/hospital-account/advance-rent/history?floor_type=${currentFloor}`)}
                                 className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
                             >
                                 <Calendar className="w-4 h-4 mr-2" />
                                 History
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Floor Tabs */}
+                    <div className="mb-6 border-b border-gray-200">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => handleFloorChange('2_3_floor')}
+                                className={`px-6 py-3 font-medium text-sm border-b-2 transition ${
+                                    currentFloor === '2_3_floor'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                2nd & 3rd Floor
+                            </button>
+                            <button
+                                onClick={() => handleFloorChange('4_floor')}
+                                className={`px-6 py-3 font-medium text-sm border-b-2 transition ${
+                                    currentFloor === '4_floor'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                4th Floor
                             </button>
                         </div>
                     </div>

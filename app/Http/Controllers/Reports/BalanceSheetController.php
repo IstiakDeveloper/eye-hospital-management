@@ -3,22 +3,16 @@
 namespace App\Http\Controllers\Reports;
 
 use App\Http\Controllers\Controller;
-use App\Models\{
-    HospitalAccount,
-    Medicine,
-    Glasses,
-    LensType,
-    CompleteGlasses,
-    FixedAsset,
-    FixedAssetVendor,
-    AdvanceHouseRent,
-    OpticsVendor,
-    MedicineVendor,
-    OpticsSale,
-    MedicineSale,
-    OperationBooking,
-    HospitalExpenseCategory
-};
+use App\Models\AdvanceHouseRent;
+use App\Models\CompleteGlasses;
+use App\Models\FixedAsset;
+use App\Models\Glasses;
+use App\Models\LensType;
+use App\Models\Medicine;
+use App\Models\MedicineSale;
+use App\Models\OperationBooking;
+use App\Models\OpticsSale;
+use App\Models\OpticsVendor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -95,13 +89,13 @@ class BalanceSheetController extends Controller
 
                     // Add only fitting charge (all up to toDate)
                     $onlyFittingCharge = DB::table('optics_sales')
-                        ->whereNotExists(function($query) {
+                        ->whereNotExists(function ($query) {
                             $query->select(DB::raw(1))
-                                  ->from('optics_sale_items')
-                                  ->whereColumn('optics_sale_items.optics_sale_id', 'optics_sales.id');
+                                ->from('optics_sale_items')
+                                ->whereColumn('optics_sale_items.optics_sale_id', 'optics_sales.id');
                         })
                         ->where('glass_fitting_price', '>', 0)
-                        ->where('created_at', '<=', $toDate . ' 23:59:59')
+                        ->where('created_at', '<=', $toDate.' 23:59:59')
                         ->whereNull('deleted_at')
                         ->sum('glass_fitting_price');
 
@@ -138,7 +132,7 @@ class BalanceSheetController extends Controller
             'Medicine Vendor Payment',
             'Optics Purchase',
             'Optics Vendor Payment',
-            'House Security'
+            'House Security',
         ];
 
         $expenseCategories = \App\Models\HospitalExpenseCategory::whereNotIn('name', $excludeCategories)
@@ -226,26 +220,45 @@ class BalanceSheetController extends Controller
 
         $opticsStockValue = $framesStockValue + $lensesStockValue + $completeGlassesStockValue;
 
-        // 4. Advance House Rent (Prepaid Expense) - DATE-WISE
+        // 4. Advance House Rent (Prepaid Expense) - DATE-WISE - SEPARATED BY FLOOR
         // Calculate by taking original advance_amount and subtracting deductions up to the date
-        $advanceRents = AdvanceHouseRent::where('status', 'active')
+
+        // 4a. Advance House Rent - 2nd & 3rd Floor
+        $advanceRents2And3 = AdvanceHouseRent::where('status', 'active')
             ->where('payment_date', '<=', $asOnDate)
+            ->where('floor_type', '2_3_floor')
             ->get();
 
-        $advanceHouseRent = 0;
-        foreach ($advanceRents as $rent) {
-            // Start with original advance amount
+        $advanceHouseRent2And3 = 0;
+        foreach ($advanceRents2And3 as $rent) {
             $amount = $rent->advance_amount;
-
-            // Subtract only deductions up to the selected date
             $deductedUpToDate = DB::table('advance_house_rent_deductions')
                 ->where('advance_house_rent_id', $rent->id)
                 ->where('deduction_date', '<=', $asOnDate)
                 ->sum('amount');
-
             $remainingAsOfDate = $amount - $deductedUpToDate;
-            $advanceHouseRent += max(0, $remainingAsOfDate);
+            $advanceHouseRent2And3 += max(0, $remainingAsOfDate);
         }
+
+        // 4b. Advance House Rent - 4th Floor
+        $advanceRents4 = AdvanceHouseRent::where('status', 'active')
+            ->where('payment_date', '<=', $asOnDate)
+            ->where('floor_type', '4_floor')
+            ->get();
+
+        $advanceHouseRent4 = 0;
+        foreach ($advanceRents4 as $rent) {
+            $amount = $rent->advance_amount;
+            $deductedUpToDate = DB::table('advance_house_rent_deductions')
+                ->where('advance_house_rent_id', $rent->id)
+                ->where('deduction_date', '<=', $asOnDate)
+                ->sum('amount');
+            $remainingAsOfDate = $amount - $deductedUpToDate;
+            $advanceHouseRent4 += max(0, $remainingAsOfDate);
+        }
+
+        // Total advance house rent
+        $advanceHouseRent = $advanceHouseRent2And3 + $advanceHouseRent4;
 
         // 5. Fixed Assets - DATE-WISE
         $fixedAssets = FixedAsset::where('status', '!=', 'inactive')
@@ -308,7 +321,8 @@ class BalanceSheetController extends Controller
         $totalAssets = $bankBalance
             + $medicineStockValue
             + $opticsStockValue
-            + $advanceHouseRent
+            + $advanceHouseRent2And3
+            + $advanceHouseRent4
             + $fixedAssets
             + $houseSecurity
             + $opticsSaleDue
@@ -427,7 +441,8 @@ class BalanceSheetController extends Controller
         $actualTotalAssets = $bankBalance
             + $medicineStockValue
             + $opticsStockValue
-            + $advanceHouseRent
+            + $advanceHouseRent2And3
+            + $advanceHouseRent4
             + $fixedAssets
             + $houseSecurity
             + $opticsSaleDue
@@ -457,7 +472,9 @@ class BalanceSheetController extends Controller
             'bank_balance' => $bankBalance,
             'medicine_stock' => $medicineStockValue,
             'optics_stock' => $opticsStockValue,
-            'advance_house_rent' => $advanceHouseRent,
+            'advance_house_rent_2_3_floor' => $advanceHouseRent2And3,
+            'advance_house_rent_4_floor' => $advanceHouseRent4,
+            'advance_house_rent_total' => $advanceHouseRent,
             'fixed_assets' => $fixedAssets,
             'house_security' => $houseSecurity,
             'optics_sale_due' => $opticsSaleDue,
@@ -466,7 +483,7 @@ class BalanceSheetController extends Controller
             'actual_total_assets' => $actualTotalAssets,
             'total_liabilities' => $totalLiabilities,
             'total_liabilities_and_fund' => $totalLiabilitiesAndFund,
-            'balance_difference' => $balanceDifference
+            'balance_difference' => $balanceDifference,
         ]);
 
         return Inertia::render('Reports/BalanceSheet', [
@@ -477,6 +494,8 @@ class BalanceSheetController extends Controller
             'bankBalance' => $bankBalance,
             'medicineStockValue' => $medicineStockValue,
             'opticsStockValue' => $opticsStockValue,
+            'advanceHouseRent2And3' => $advanceHouseRent2And3,
+            'advanceHouseRent4' => $advanceHouseRent4,
             'advanceHouseRent' => $advanceHouseRent,
             'fixedAssets' => $fixedAssets,
             'houseSecurity' => $houseSecurity,

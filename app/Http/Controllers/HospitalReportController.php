@@ -49,7 +49,12 @@ class HospitalReportController extends Controller
 
             // Medical Test Income
             $medicalTestIncome = $transactions->where('transaction_date', $date)
-                ->where('category', 'Medical Test Income')
+                ->where('category', 'Medical Test')
+                ->sum('amount');
+
+            // OPD Income
+            $opdIncome = $transactions->where('transaction_date', $date)
+                ->where('category', 'OPD Income')
                 ->sum('amount');
 
             // Operation Income
@@ -60,7 +65,7 @@ class HospitalReportController extends Controller
             // Other Income (all other income categories)
             $otherIncome = $transactions->where('transaction_date', $date)
                 ->where('type', 'income')
-                ->whereNotIn('category', ['Medicine Income', 'Optics Income', 'Medical Test Income', 'Operation Income'])
+                ->whereNotIn('category', ['Medicine Income', 'Optics Income', 'Medical Test', 'OPD Income', 'Operation Income'])
                 ->sum('amount');
 
             // DEBIT SIDE
@@ -73,7 +78,7 @@ class HospitalReportController extends Controller
 
             // Optics Purchase
             $opticsPurchase = $transactions->where('transaction_date', $date)
-                ->where('category', 'Optics Purchase')
+                ->where('category', 'Optics Vendor Payment')
                 ->sum('amount');
 
             // Fixed Assets
@@ -89,10 +94,10 @@ class HospitalReportController extends Controller
             // Other Expenses (all other expense categories except the ones already counted)
             $otherExpenses = $transactions->where('transaction_date', $date)
                 ->where('type', 'expense')
-                ->whereNotIn('category', ['Medicine Purchase', 'Optics Purchase', 'Fixed Asset Purchase', 'Fixed Asset Vendor Payment', 'Advance House Rent'])
+                ->whereNotIn('category', ['Medicine Purchase', 'Optics Vendor Payment', 'Fixed Asset Purchase', 'Fixed Asset Vendor Payment', 'Advance House Rent'])
                 ->sum('amount');
 
-            $totalCredit = $fundIn + $medicineIncome + $opticsIncome + $medicalTestIncome + $operationIncome + $otherIncome;
+            $totalCredit = $fundIn + $medicineIncome + $opticsIncome + $medicalTestIncome + $opdIncome + $operationIncome + $otherIncome;
             $totalDebit = $fundOut + $medicinePurchase + $opticsPurchase + $fixedAssets + $advanceHouseRent + $otherExpenses;
 
             $balance += $totalCredit - $totalDebit;
@@ -104,6 +109,7 @@ class HospitalReportController extends Controller
                 'medicine_income' => $medicineIncome,
                 'optics_income' => $opticsIncome,
                 'medical_test_income' => $medicalTestIncome,
+                'opd_income' => $opdIncome,
                 'operation_income' => $operationIncome,
                 'other_income' => $otherIncome,
                 'total_credit' => $totalCredit,
@@ -126,6 +132,7 @@ class HospitalReportController extends Controller
             'medicine_income' => collect($dailyRows)->sum('medicine_income'),
             'optics_income' => collect($dailyRows)->sum('optics_income'),
             'medical_test_income' => collect($dailyRows)->sum('medical_test_income'),
+            'opd_income' => collect($dailyRows)->sum('opd_income'),
             'operation_income' => collect($dailyRows)->sum('operation_income'),
             'other_income' => collect($dailyRows)->sum('other_income'),
             'total_credit' => collect($dailyRows)->sum('total_credit'),

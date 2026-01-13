@@ -72,8 +72,6 @@ class Medicine extends Model
     /**
      * Scope a query to filter by type.
      */
-
-
     public function scopeOfType($query, $type)
     {
         return $query->where('type', $type);
@@ -108,6 +106,7 @@ class Medicine extends Model
     public function getExpiringStockAttribute()
     {
         $alertDays = $this->stockAlert?->expiry_alert_days ?? 30;
+
         return $this->stocks()
             ->where('expiry_date', '>', now())
             ->where('expiry_date', '<=', now()->addDays($alertDays))
@@ -134,14 +133,14 @@ class Medicine extends Model
 
             if ($purchaseTxn && $stock->quantity > 0) {
                 // Calculate proportional value based on available quantity
-                $proportion = bcdiv((string)$stock->available_quantity, (string)$stock->quantity, 6);
-                $itemValue = bcmul($proportion, (string)$purchaseTxn->total_amount, 6);
+                $proportion = bcdiv((string) $stock->available_quantity, (string) $stock->quantity, 6);
+                $itemValue = bcmul($proportion, (string) $purchaseTxn->total_amount, 6);
                 $totalValue = bcadd($totalValue, $itemValue, 6);
                 $totalQuantity += $stock->available_quantity;
             }
         }
 
-        $this->average_buy_price = $totalQuantity > 0 ? round((float)bcdiv($totalValue, (string)$totalQuantity, 6), 2) : 0;
+        $this->average_buy_price = $totalQuantity > 0 ? round((float) bcdiv($totalValue, (string) $totalQuantity, 6), 2) : 0;
         $this->save();
     }
 
@@ -156,17 +155,17 @@ class Medicine extends Model
 
         // Calculate weighted average using bcmath for precision
         if ($oldStock > 0 && $oldPrice > 0) {
-            $oldValue = bcmul((string)$oldStock, (string)$oldPrice, 6);
-            $newValue = bcmul((string)$newQuantity, (string)$newUnitPrice, 6);
+            $oldValue = bcmul((string) $oldStock, (string) $oldPrice, 6);
+            $newValue = bcmul((string) $newQuantity, (string) $newUnitPrice, 6);
             $totalValue = bcadd($oldValue, $newValue, 6);
             $totalQuantity = $oldStock + $newQuantity;
-            $averagePrice = bcdiv($totalValue, (string)$totalQuantity, 6);
+            $averagePrice = bcdiv($totalValue, (string) $totalQuantity, 6);
         } else {
             // First purchase
             $averagePrice = $newUnitPrice;
         }
 
-        $this->update(['average_buy_price' => round((float)$averagePrice, 2)]);
+        $this->update(['average_buy_price' => round((float) $averagePrice, 2)]);
     }
 
     /**
@@ -176,7 +175,7 @@ class Medicine extends Model
      */
     public static function getTotalStockValue($asOnDate = null)
     {
-        if (!$asOnDate) {
+        if (! $asOnDate) {
             $asOnDate = now()->format('Y-m-d');
         }
 
@@ -199,6 +198,49 @@ class Medicine extends Model
     }
 
     /**
+     * Get cumulative stock value from beginning till a specific date
+     * Formula: Total Purchases - Total COGS
+     */
+    public function getCumulativeStockValue($tillDate)
+    {
+        // Get all purchases till date
+        $totalPurchases = \DB::table('stock_transactions')
+            ->join('medicine_stocks', 'stock_transactions.medicine_stock_id', '=', 'medicine_stocks.id')
+            ->where('medicine_stocks.medicine_id', $this->id)
+            ->where('stock_transactions.type', 'purchase')
+            ->where('stock_transactions.created_at', '<', $tillDate)
+            ->sum('stock_transactions.total_amount');
+
+        // Get all COGS till date
+        $totalCOGS = \DB::table('medicine_sale_items')
+            ->join('medicine_sales', 'medicine_sale_items.medicine_sale_id', '=', 'medicine_sales.id')
+            ->join('medicine_stocks', 'medicine_sale_items.medicine_stock_id', '=', 'medicine_stocks.id')
+            ->where('medicine_stocks.medicine_id', $this->id)
+            ->where('medicine_sales.sale_date', '<', $tillDate)
+            ->sum(\DB::raw('medicine_sale_items.quantity * medicine_sale_items.buy_price'));
+
+        // Get quantity
+        $totalPurchaseQty = \DB::table('stock_transactions')
+            ->join('medicine_stocks', 'stock_transactions.medicine_stock_id', '=', 'medicine_stocks.id')
+            ->where('medicine_stocks.medicine_id', $this->id)
+            ->where('stock_transactions.type', 'purchase')
+            ->where('stock_transactions.created_at', '<', $tillDate)
+            ->sum('stock_transactions.quantity');
+
+        $totalSoldQty = \DB::table('medicine_sale_items')
+            ->join('medicine_sales', 'medicine_sale_items.medicine_sale_id', '=', 'medicine_sales.id')
+            ->join('medicine_stocks', 'medicine_sale_items.medicine_stock_id', '=', 'medicine_stocks.id')
+            ->where('medicine_stocks.medicine_id', $this->id)
+            ->where('medicine_sales.sale_date', '<', $tillDate)
+            ->sum('medicine_sale_items.quantity');
+
+        return [
+            'quantity' => $totalPurchaseQty - $totalSoldQty,
+            'value' => $totalPurchases - $totalCOGS,
+        ];
+    }
+
+    /**
      * Get Buy-Sale-Stock Report for a specific date range
      */
     public static function getBuySaleStockReport($fromDate, $toDate, $search = null)
@@ -208,8 +250,8 @@ class Medicine extends Model
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('generic_name', 'like', "%{$search}%")
-                  ->orWhere('manufacturer', 'like', "%{$search}%");
+                    ->orWhere('generic_name', 'like', "%{$search}%")
+                    ->orWhere('manufacturer', 'like', "%{$search}%");
             });
         }
 
@@ -217,8 +259,8 @@ class Medicine extends Model
         $reportData = [];
 
         foreach ($medicines as $medicine) {
-            // Get stock before the start date
-            $beforeStockData = $medicine->getStockBeforeDate($fromDate);
+            // Get stock before the start date using cumulative method for continuity
+            $beforeStockData = $medicine->getCumulativeStockValue($fromDate);
             $beforeStockQty = $beforeStockData['quantity'];
             $beforeStockValue = $beforeStockData['value'];
 
@@ -244,7 +286,7 @@ class Medicine extends Model
             $purchaseCostForSoldItems = $salesData['cost'];
             $totalProfit = $saleTotal - $purchaseCostForSoldItems;
 
-            // Available Value = Before + Buy - Sale Cost
+            // Available Value = Before + Buy - Sale Cost (COGS) - NO ROUNDING for continuity
             $availableValue = $beforeStockValue + $buyValue - $purchaseCostForSoldItems;
             $profitPerUnit = $saleQty > 0 ? ($salePrice - ($purchaseCostForSoldItems / $saleQty)) : 0;
 
@@ -256,17 +298,17 @@ class Medicine extends Model
                 'manufacturer' => $medicine->manufacturer ?? 'N/A',
                 'unit' => $medicine->unit,
 
-                // Before stock information
+                // Before stock information - raw values for continuity
                 'before_stock_qty' => $beforeStockQty,
-                'before_stock_price' => $beforeStockQty > 0 ? round($beforeStockValue / $beforeStockQty, 2) : 0,
-                'before_stock_value' => round($beforeStockValue, 2),
+                'before_stock_price' => $beforeStockQty > 0 ? $beforeStockValue / $beforeStockQty : 0,
+                'before_stock_value' => $beforeStockValue,
 
-                // Buy information
+                // Buy information - raw values
                 'buy_qty' => $buyQty,
-                'buy_price' => round($buyPrice, 2),
-                'buy_total' => round($buyValue, 2),
+                'buy_price' => $buyPrice,
+                'buy_total' => $buyValue,
 
-                // Sale information
+                // Sale information - keep rounded (from DB)
                 'sale_qty' => $saleQty,
                 'sale_price' => round($salePrice, 2),
                 'sale_subtotal' => round($saleSubtotal, 2),
@@ -274,13 +316,13 @@ class Medicine extends Model
                 'sale_total' => round($saleTotal, 2),
                 'sale_due' => round($saleDue, 2),
 
-                // Available information
+                // Available information - raw values for continuity
                 'available_stock' => $availableQty,
-                'available_value' => round($availableValue, 2),
+                'available_value' => $availableValue,
 
                 // Profit information
-                'profit_per_unit' => round($profitPerUnit, 2),
-                'total_profit' => round($totalProfit, 2),
+                'profit_per_unit' => $profitPerUnit,
+                'total_profit' => $totalProfit,
             ];
         }
 
@@ -308,7 +350,9 @@ class Medicine extends Model
                 ->where('type', 'purchase')
                 ->first();
 
-            if (!$purchaseTxn) continue;
+            if (! $purchaseTxn) {
+                continue;
+            }
 
             // Calculate how much was sold from this stock before the date
             $soldQty = \DB::table('medicine_sale_items')
@@ -322,17 +366,19 @@ class Medicine extends Model
 
             // Calculate proportional value from original total_amount
             if ($stock->quantity > 0) {
-                $proportion = bcdiv((string)$remainingQty, (string)$stock->quantity, 6);
-                $itemValue = bcmul($proportion, (string)$purchaseTxn->total_amount, 6);
+                $proportion = bcdiv((string) $remainingQty, (string) $stock->quantity, 6);
+                $itemValue = bcmul($proportion, (string) $purchaseTxn->total_amount, 6);
                 $totalValue = bcadd($totalValue, $itemValue, 6);
             }
         }
 
         return [
             'quantity' => $totalQty,
-            'value' => (float)$totalValue,
+            'value' => (float) $totalValue,
         ];
-    }    /**
+    }
+
+    /**
      * Get purchases in a specific date range
      */
     public function getPurchasesInDateRange($fromDate, $toDate)
@@ -352,10 +398,12 @@ class Medicine extends Model
 
         return [
             'quantity' => $totalQty,
-            'total' => (float)$totalValue,
-            'average_price' => (float)$avgPrice,
+            'total' => (float) $totalValue,
+            'average_price' => (float) $avgPrice,
         ];
-    }    /**
+    }
+
+    /**
      * Get sales in a specific date range
      */
     public function getSalesInDateRange($fromDate, $toDate)
@@ -385,11 +433,11 @@ class Medicine extends Model
         $subtotal = '0';
         $cost = '0';
         foreach ($saleItems as $item) {
-            $subtotal = bcadd($subtotal, (string)$item->item_total, 6);
-            $cost = bcadd($cost, (string)$item->item_cost, 6);
+            $subtotal = bcadd($subtotal, (string) $item->item_total, 6);
+            $cost = bcadd($cost, (string) $item->item_cost, 6);
         }
 
-        $unitPrice = $quantity > 0 ? bcdiv($subtotal, (string)$quantity, 6) : '0';
+        $unitPrice = $quantity > 0 ? bcdiv($subtotal, (string) $quantity, 6) : '0';
 
         // Calculate proportional discount and due using bcmath for precision
         $discount = '0';
@@ -405,20 +453,20 @@ class Medicine extends Model
 
             $saleItemsTotal = '0';
             foreach ($allItems as $item) {
-                $itemTotal = bcmul((string)$item->quantity, (string)$item->unit_price, 6);
+                $itemTotal = bcmul((string) $item->quantity, (string) $item->unit_price, 6);
                 $saleItemsTotal = bcadd($saleItemsTotal, $itemTotal, 6);
             }
 
             // Get total for THIS medicine in this sale using bcmath
             $thisMedicineTotal = '0';
             foreach ($saleItems->where('sale_id', $sale->sale_id) as $item) {
-                $thisMedicineTotal = bcadd($thisMedicineTotal, (string)$item->item_total, 6);
+                $thisMedicineTotal = bcadd($thisMedicineTotal, (string) $item->item_total, 6);
             }
 
             if (bccomp($saleItemsTotal, '0', 6) > 0) {
                 $itemPortion = bcdiv($thisMedicineTotal, $saleItemsTotal, 6);
-                $saleDiscount = bcmul((string)($sale->sale_discount ?? 0), $itemPortion, 6);
-                $saleDue = bcmul((string)($sale->due_amount ?? 0), $itemPortion, 6);
+                $saleDiscount = bcmul((string) ($sale->sale_discount ?? 0), $itemPortion, 6);
+                $saleDue = bcmul((string) ($sale->due_amount ?? 0), $itemPortion, 6);
                 $discount = bcadd($discount, $saleDiscount, 6);
                 $due = bcadd($due, $saleDue, 6);
             }
@@ -426,15 +474,15 @@ class Medicine extends Model
 
         $total = bcsub($subtotal, $discount, 6);
 
-        // Round only at the end for display
+        // Return raw values without rounding for perfect continuity
         return [
             'quantity' => $quantity,
-            'unit_price' => round((float)$unitPrice, 2),
-            'subtotal' => round((float)$subtotal, 2),
-            'discount' => round((float)$discount, 2),
-            'total' => round((float)$total, 2),
-            'due' => round((float)$due, 2),
-            'cost' => round((float)$cost, 2),
+            'unit_price' => (float) $unitPrice,
+            'subtotal' => (float) $subtotal,
+            'discount' => (float) $discount,
+            'total' => (float) $total,
+            'due' => (float) $due,
+            'cost' => (float) $cost,
         ];
     }
 }

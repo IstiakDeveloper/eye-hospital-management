@@ -275,7 +275,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                 </div>
 
                 {/* Report Table */}
-                <div className="overflow-x-auto rounded-lg bg-white shadow report-section">
+                <div className="overflow-x-auto rounded-lg bg-white shadow report-section max-h-[calc(100vh-300px)]">
                     {/* Print Header */}
                     <div className="print-header mb-3">
                         <div className="text-center mb-1">
@@ -289,7 +289,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                         </div>
                     </div>
                     <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                        <thead className="bg-gray-50 sticky top-0 z-10">
                             <tr>
                                 <th
                                     rowSpan={2}
@@ -580,10 +580,15 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                             padding: 5px !important;
                             margin: 0 !important;
                             box-shadow: none !important;
+                            max-height: none !important;
+                            overflow: visible !important;
                         }
                         .print-header {
                             display: block !important;
                             visibility: visible !important;
+                        }
+                        thead {
+                            position: static !important;
                         }
                         h1 {
                             font-size: 10px !important;

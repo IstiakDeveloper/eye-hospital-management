@@ -91,8 +91,11 @@ class HospitalAccount extends Model
             ]);
         }
     }
+
     protected $table = 'hospital_account';
+
     protected $fillable = ['balance'];
+
     protected $casts = ['balance' => 'decimal:2'];
 
     // Relationships
@@ -109,7 +112,7 @@ class HospitalAccount extends Model
     // Helper Methods
     public static function getBalance(?string $asOnDate = null): float
     {
-        if (!$asOnDate) {
+        if (! $asOnDate) {
             // Current balance from hospital_accounts table
             return self::first()?->balance ?? 0;
         }
@@ -221,7 +224,7 @@ class HospitalAccount extends Model
         }
 
         // If category name is provided but no ID, try to find or create the category
-        if (!$incomeCategoryId && $category) {
+        if (! $incomeCategoryId && $category) {
             $incomeCategory = HospitalIncomeCategory::firstOrCreate(
                 ['name' => $category],
                 ['is_active' => true]
@@ -230,16 +233,16 @@ class HospitalAccount extends Model
         }
 
         $transaction = HospitalTransaction::create([
-            'transaction_no'   => 'HT-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
-            'type'             => 'income',
-            'amount'           => $amount,
-            'category'         => $category,
+            'transaction_no' => 'HT-'.date('Ymd').'-'.str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+            'type' => 'income',
+            'amount' => $amount,
+            'category' => $category,
             'income_category_id' => $incomeCategoryId,
-            'reference_type'   => $referenceType,
-            'reference_id'     => $referenceId,
-            'description'      => $description,
+            'reference_type' => $referenceType,
+            'reference_id' => $referenceId,
+            'description' => $description,
             'transaction_date' => $transactionDate,
-            'created_by'       => auth()->id(),
+            'created_by' => auth()->id(),
         ]);
 
         // 👉 Determine source_transaction_type dynamically
@@ -259,7 +262,7 @@ class HospitalAccount extends Model
 
             $existingVoucher->increment('amount', $amount);
             $existingVoucher->update([
-                'narration' => $existingVoucher->narration . " + Hospital Income - {$category}: {$description}",
+                'narration' => $existingVoucher->narration." + Hospital Income - {$category}: {$description}",
             ]);
         } else {
             // 👉 Use dynamic sourceTransactionType here
@@ -276,7 +279,6 @@ class HospitalAccount extends Model
 
         return $transaction;
     }
-
 
     public static function addExpense(float $amount, string $category, string $description, ?int $categoryId = null, ?string $date = null): HospitalTransaction
     {
@@ -350,9 +352,9 @@ class HospitalAccount extends Model
             ->first();
 
         // If not found by transaction_no, try by source_reference_id (transaction id)
-        if (!$voucher) {
+        if (! $voucher) {
             \Log::info('🔍 Voucher not found by transaction_no, trying by source_reference_id...', [
-                'transaction_id' => $transaction->id
+                'transaction_id' => $transaction->id,
             ]);
 
             $voucher = MainAccountVoucher::where('source_account', 'hospital')
@@ -450,7 +452,8 @@ class HospitalAccount extends Model
     public static function addAdvanceRent(
         float $amount,
         string $description,
-        ?string $date = null
+        ?string $date = null,
+        string $floorType = '2_3_floor'
     ): AdvanceHouseRent {
         $account = self::firstOrCreate([]);
         $account->decrement('balance', $amount);
@@ -463,6 +466,7 @@ class HospitalAccount extends Model
             'used_amount' => 0,
             'remaining_amount' => $amount,
             'status' => 'active',
+            'floor_type' => $floorType,
             'description' => $description,
             'payment_date' => $transactionDate,
             'created_by' => auth()->id() ?? 1,
@@ -522,7 +526,7 @@ class HospitalAccount extends Model
 
     private static function generateVoucherNo(string $prefix): string
     {
-        return $prefix . '-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+        return $prefix.'-'.date('Ymd').'-'.str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
     }
 
     // Report Methods
@@ -542,7 +546,7 @@ class HospitalAccount extends Model
             'income' => $income,
             'expense' => $expense,
             'profit' => $income - $expense,
-            'balance' => self::getBalance()
+            'balance' => self::getBalance(),
         ];
     }
 }

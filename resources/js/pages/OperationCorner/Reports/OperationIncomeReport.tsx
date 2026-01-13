@@ -5,47 +5,40 @@ import { router } from '@inertiajs/react';
 import * as XLSX from 'xlsx';
 
 interface ReportItem {
-    id: number;
     sl: number;
-    name: string;
+    transaction_id: number;
+    receipt_date: string;
+    transaction_no: string;
+    booking_no: string;
+    patient_id: string;
+    patient_name: string;
+    patient_age: number;
+    patient_gender: string;
+    operation_name: string;
     operation_code: string;
-    type: string;
-    standard_price: number;
-
-    // Booking Information
-    total_bookings: number;
-    scheduled: number;
-    confirmed: number;
-    completed: number;
-    avg_original_price: number;
-    total_original_price: number;
-
-    // Discount Information
-    avg_discount: number;
-    total_discount: number;
-
-    // Income Information
-    avg_income: number;
-    total_income: number;
+    operation_type: string;
+    doctor_name: string | null;
+    scheduled_date: string;
+    base_amount: number;
+    discount: number;
+    total_bill: number;
+    payment_received: number;
     total_paid: number;
-    total_due: number;
+    remaining_due: number;
+    status: string;
 }
 
-interface Totals {
-    total_bookings: number;
-    scheduled: number;
-    confirmed: number;
-    completed: number;
-    total_original_price: number;
+interface Summary {
+    total_receipts: number;
+    total_base_amount: number;
     total_discount: number;
-    total_income: number;
-    total_paid: number;
-    total_due: number;
+    total_bill: number;
+    total_received: number;
 }
 
 interface Props {
     reportData: ReportItem[];
-    totals: Totals;
+    summary: Summary;
     filters: {
         from_date: string;
         to_date: string;
@@ -53,7 +46,7 @@ interface Props {
     };
 }
 
-export default function OperationIncomeReport({ reportData, totals, filters }: Props) {
+export default function OperationIncomeReport({ reportData, summary, filters }: Props) {
     const [fromDate, setFromDate] = useState(filters.from_date);
     const [toDate, setToDate] = useState(filters.to_date);
     const [search, setSearch] = useState(filters.search || '');
@@ -77,7 +70,7 @@ export default function OperationIncomeReport({ reportData, totals, filters }: P
     const handleExportExcel = () => {
         const excelData = [];
 
-        excelData.push(['Operation Income Report']);
+        excelData.push(['Operation Income Receipt Report']);
         excelData.push([
             `Period: ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}`,
         ]);
@@ -85,84 +78,57 @@ export default function OperationIncomeReport({ reportData, totals, filters }: P
 
         excelData.push([
             'SL',
-            'OPERATION NAME',
-            'CODE',
-            'TYPE',
-            'TOTAL BOOKINGS',
-            'SCHEDULED',
-            'CONFIRMED',
-            'COMPLETED',
-            'AVG PRICE',
-            'TOTAL PRICE',
-            'TOTAL DISCOUNT',
-            'TOTAL INCOME',
-            'TOTAL PAID',
-            'TOTAL DUE',
+            'DATE',
+            'PATIENT ID',
+            'PATIENT NAME',
+            'AGE',
+            'OPERATION',
+            'BILL AMOUNT',
+            'DISCOUNT',
+            'NET BILL',
+            'RECEIVED',
         ]);
 
         reportData.forEach((item) => {
             excelData.push([
                 item.sl,
-                item.name,
-                item.operation_code,
-                item.type,
-                item.total_bookings,
-                item.scheduled,
-                item.confirmed,
-                item.completed,
-                item.avg_original_price.toFixed(2),
-                item.total_original_price.toFixed(2),
-                item.total_discount.toFixed(2),
-                item.total_income.toFixed(2),
-                item.total_paid.toFixed(2),
-                item.total_due.toFixed(2),
+                item.receipt_date,
+                item.patient_id,
+                item.patient_name,
+                item.patient_age,
+                item.operation_name,
+                item.doctor_name || '-',
+                item.base_amount.toFixed(2),
+                item.discount.toFixed(2),
+                item.total_bill.toFixed(2),
+                item.payment_received.toFixed(2),
             ]);
         });
 
         excelData.push([]);
         excelData.push([
             '',
+            '',
+            '',
+            '',
+            '',
+            '',
             'TOTAL',
-            '',
-            '',
-            totals.total_bookings,
-            totals.scheduled,
-            totals.confirmed,
-            totals.completed,
-            '',
-            totals.total_original_price.toFixed(2),
-            totals.total_discount.toFixed(2),
-            totals.total_income.toFixed(2),
-            totals.total_paid.toFixed(2),
-            totals.total_due.toFixed(2),
+            summary.total_base_amount.toFixed(2),
+            summary.total_discount.toFixed(2),
+            summary.total_bill.toFixed(2),
+            summary.total_received.toFixed(2),
         ]);
 
         const ws = XLSX.utils.aoa_to_sheet(excelData);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Operation Income');
-        XLSX.writeFile(wb, `Operation_Income_Report_${fromDate}_to_${toDate}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, 'Operation Receipts');
+        XLSX.writeFile(wb, `Operation_Income_Receipts_${fromDate}_to_${toDate}.xlsx`);
     };
 
     return (
         <>
             <Head title="Operation Income Report" />
-
-            <style>{`
-                @media print {
-                    body * {
-                        visibility: hidden;
-                    }
-                    #printable-area, #printable-area * {
-                        visibility: visible;
-                    }
-                    #printable-area {
-                        position: absolute;
-                        left: 0;
-                        top: 0;
-                        width: 100%;
-                    }
-                }
-            `}</style>
 
             <AdminLayout>
                 <div className="p-4 sm:p-6 lg:p-8">
@@ -232,178 +198,108 @@ export default function OperationIncomeReport({ reportData, totals, filters }: P
                     </div>
 
                     <div id="printable-area">
-                        <div className="mb-6 hidden text-center print:block">
-                            <h1 className="text-2xl font-bold">Operation Income Report</h1>
-                            <p className="mt-2 text-sm text-gray-600">
-                                Period: {new Date(fromDate).toLocaleDateString()} to{' '}
-                                {new Date(toDate).toLocaleDateString()}
-                            </p>
-                        </div>
-
-                        <div className="overflow-hidden rounded-lg bg-white shadow">
+                        <div className="overflow-hidden rounded-lg bg-white shadow report-section">
+                            {/* Print Header */}
+                            <div className="print-header mb-3">
+                                <div className="text-center mb-2">
+                                    <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                                    <h2 className="text-sm font-semibold mt-1">Operation Corner - Operation Income Receipt Report</h2>
+                                </div>
+                                <div className="flex justify-between items-center mt-2">
+                                    <p className="text-xs font-medium">Period Report</p>
+                                    <p className="text-xs">
+                                        {new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                    </p>
+                                </div>
+                            </div>
                             <div className="overflow-x-auto">
-                                <table className="min-w-full table-auto border-collapse">
-                                    <thead>
+                                <table className="min-w-full">
+                                    <thead className="bg-gray-50">
                                         <tr>
-                                            <th
-                                                rowSpan={2}
-                                                className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                            >
+                                            <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
                                                 SL
                                             </th>
-                                            <th
-                                                rowSpan={2}
-                                                className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                            >
-                                                OPERATION NAME
+                                            <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
+                                                DATE
                                             </th>
-                                            <th
-                                                rowSpan={2}
-                                                className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                            >
-                                                TYPE
+                                            <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-900">
+                                                PATIENT
                                             </th>
-                                            <th
-                                                colSpan={5}
-                                                className="border border-gray-300 bg-blue-100 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                            >
-                                                BOOKING INFORMATION
+                                            <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-900">
+                                                OPERATION
                                             </th>
-                                            <th
-                                                colSpan={1}
-                                                className="border border-gray-300 bg-red-100 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                            >
+                                            <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
+                                                BILL
+                                            </th>
+                                            <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-red-600">
                                                 DISCOUNT
                                             </th>
-                                            <th
-                                                colSpan={3}
-                                                className="border border-gray-300 bg-green-100 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                            >
-                                                INCOME INFORMATION
+                                            <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
+                                                NET BILL
                                             </th>
-                                        </tr>
-                                        <tr>
-                                            <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                                TOTAL
-                                            </th>
-                                            <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                                SCHEDULED
-                                            </th>
-                                            <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                                CONFIRMED
-                                            </th>
-                                            <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                                COMPLETED
-                                            </th>
-                                            <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                                TOTAL PRICE
-                                            </th>
-                                            <th className="border border-gray-300 bg-red-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                                TOTAL
-                                            </th>
-                                            <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                                TOTAL
-                                            </th>
-                                            <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                                PAID
-                                            </th>
-                                            <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                                DUE
+                                            <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-green-600">
+                                                RECEIVED
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-200 bg-white">
+                                    <tbody className="bg-white">
                                         {reportData.length === 0 ? (
                                             <tr>
-                                                <td colSpan={12} className="px-6 py-8 text-center text-gray-500">
-                                                    No data found for the selected period
+                                                <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                                                    No receipts found for the selected period
                                                 </td>
                                             </tr>
                                         ) : (
                                             <>
                                                 {reportData.map((item) => (
-                                                    <tr key={item.id} className="hover:bg-gray-50">
+                                                    <tr key={item.transaction_id} className="hover:bg-gray-50">
                                                         <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-900">
                                                             {item.sl}
                                                         </td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                                                            <div className="font-medium">{item.name}</div>
-                                                            <div className="text-xs text-gray-500 mt-0.5">
-                                                                {item.operation_code}
-                                                            </div>
+                                                        <td className="border border-gray-300 px-3 py-2 text-center text-sm text-gray-700">
+                                                            {new Date(item.receipt_date).toLocaleDateString('en-GB')}
                                                         </td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-center text-sm text-gray-600">
-                                                            {item.type}
+                                                        <td className="border border-gray-300 px-3 py-2 text-sm">
+                                                            <span className="font-medium text-gray-900">{item.patient_name}</span>
+                                                            <span className="text-xs text-gray-500"> (ID: {item.patient_id}, {item.patient_age}y/{item.patient_gender})</span>
                                                         </td>
-
-                                                        <td className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-sm text-gray-900">
-                                                            {item.total_bookings}
+                                                        <td className="border border-gray-300 px-3 py-2 text-sm">
+                                                            <span className="font-medium text-gray-900">{item.operation_name}</span>
+                                                            <span className="text-xs text-gray-500"> ({item.operation_code})</span>
                                                         </td>
-                                                        <td className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-sm text-gray-600">
-                                                            {item.scheduled}
+                                                        <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-900">
+                                                            ৳{item.base_amount.toFixed(2)}
                                                         </td>
-                                                        <td className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-sm text-gray-600">
-                                                            {item.confirmed}
+                                                        <td className="border border-gray-300 px-2 py-2 text-right text-sm text-red-600">
+                                                            ৳{item.discount.toFixed(2)}
                                                         </td>
-                                                        <td className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-sm text-green-700">
-                                                            {item.completed}
+                                                        <td className="border border-gray-300 px-2 py-2 text-right text-sm font-medium text-gray-900">
+                                                            ৳{item.total_bill.toFixed(2)}
                                                         </td>
-                                                        <td className="border border-gray-300 bg-blue-50 px-2 py-2 text-right text-sm text-gray-900">
-                                                            {item.total_original_price.toFixed(2)}
-                                                        </td>
-
-                                                        <td className="border border-gray-300 bg-red-50 px-2 py-2 text-right text-sm text-red-600">
-                                                            {item.total_discount.toFixed(2)}
-                                                        </td>
-
-                                                        <td className="border border-gray-300 bg-green-50 px-2 py-2 text-right text-sm text-green-600 font-medium">
-                                                            {item.total_income.toFixed(2)}
-                                                        </td>
-                                                        <td className="border border-gray-300 bg-green-50 px-2 py-2 text-right text-sm text-gray-900">
-                                                            {item.total_paid.toFixed(2)}
-                                                        </td>
-                                                        <td className="border border-gray-300 bg-green-50 px-2 py-2 text-right text-sm text-orange-600">
-                                                            {item.total_due.toFixed(2)}
+                                                        <td className="border border-gray-300 px-2 py-2 text-right text-sm font-semibold text-green-600">
+                                                            ৳{item.payment_received.toFixed(2)}
                                                         </td>
                                                     </tr>
                                                 ))}
 
                                                 <tr className="bg-gray-100 font-bold">
                                                     <td
-                                                        colSpan={3}
-                                                        className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900"
+                                                        colSpan={4}
+                                                        className="border border-gray-300 px-3 py-3 text-right text-sm text-gray-900"
                                                     >
-                                                        TOTAL
+                                                        TOTAL ({summary.total_receipts} receipts)
                                                     </td>
-
-                                                    <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-center text-sm text-gray-900">
-                                                        {totals.total_bookings}
+                                                    <td className="border border-gray-300 px-2 py-3 text-right text-sm text-gray-900">
+                                                        ৳{summary.total_base_amount.toFixed(2)}
                                                     </td>
-                                                    <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-center text-sm text-gray-900">
-                                                        {totals.scheduled}
+                                                    <td className="border border-gray-300 px-2 py-3 text-right text-sm text-red-600">
+                                                        ৳{summary.total_discount.toFixed(2)}
                                                     </td>
-                                                    <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-center text-sm text-gray-900">
-                                                        {totals.confirmed}
+                                                    <td className="border border-gray-300 px-2 py-3 text-right text-sm text-gray-900">
+                                                        ৳{summary.total_bill.toFixed(2)}
                                                     </td>
-                                                    <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-center text-sm text-gray-900">
-                                                        {totals.completed}
-                                                    </td>
-                                                    <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-right text-sm text-gray-900">
-                                                        {totals.total_original_price.toFixed(2)}
-                                                    </td>
-
-                                                    <td className="border border-gray-300 bg-red-100 px-2 py-3 text-right text-sm text-red-600">
-                                                        {totals.total_discount.toFixed(2)}
-                                                    </td>
-
-                                                    <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-green-600">
-                                                        {totals.total_income.toFixed(2)}
-                                                    </td>
-                                                    <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-gray-900">
-                                                        {totals.total_paid.toFixed(2)}
-                                                    </td>
-                                                    <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-orange-600">
-                                                        {totals.total_due.toFixed(2)}
+                                                    <td className="border border-gray-300 px-2 py-3 text-right text-sm text-green-600">
+                                                        ৳{summary.total_received.toFixed(2)}
                                                     </td>
                                                 </tr>
                                             </>
@@ -414,6 +310,157 @@ export default function OperationIncomeReport({ reportData, totals, filters }: P
                         </div>
                     </div>
                 </div>
+
+                {/* Print-only styles */}
+                <style>{`
+                    .print-header {
+                        display: none;
+                    }
+
+                    @media print {
+                        * {
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        body {
+                            margin: 0;
+                            padding: 0;
+                        }
+                        body * {
+                            visibility: hidden;
+                        }
+                        #printable-area,
+                        #printable-area * {
+                            visibility: visible;
+                        }
+                        #printable-area {
+                            position: absolute;
+                            left: 0;
+                            top: 0;
+                            width: 100%;
+                        }
+                        .report-section {
+                            position: relative !important;
+                            width: 100%;
+                            background: white;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            box-shadow: none !important;
+                        }
+                        .print-header {
+                            display: block !important;
+                            visibility: visible !important;
+                            margin-bottom: 8px !important;
+                        }
+                        .print-header h1 {
+                            font-size: 12px !important;
+                            margin: 0 0 4px 0 !important;
+                            padding: 0 !important;
+                            font-weight: bold;
+                            line-height: 1.3 !important;
+                            font-family: 'Arial', 'Helvetica', sans-serif !important;
+                        }
+                        .print-header h2 {
+                            font-size: 10px !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            font-weight: bold;
+                            font-family: 'Arial', 'Helvetica', sans-serif !important;
+                        }
+                        .print-header p {
+                            font-size: 8px !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            font-family: 'Arial', 'Helvetica', sans-serif !important;
+                        }
+                        .print-header .flex {
+                            display: flex !important;
+                        }
+                        .print-header .justify-between {
+                            justify-content: space-between !important;
+                        }
+                        .print-header .items-center {
+                            align-items: center !important;
+                        }
+                        button,
+                        .mb-6,
+                        .mb-4 {
+                            display: none !important;
+                        }
+                        .no-print {
+                            display: none !important;
+                        }
+                        @page {
+                            size: A4 portrait;
+                            margin: 8mm 10mm;
+                        }
+                        table {
+                            font-size: 9px !important;
+                            width: 100%;
+                            border-collapse: collapse;
+                            font-family: 'Arial', 'Helvetica', sans-serif !important;
+                        }
+                        table th {
+                            font-size: 9px !important;
+                            padding: 3px 4px !important;
+                            border: 1px solid #000 !important;
+                            font-weight: bold;
+                            line-height: 1.3 !important;
+                            background-color: #f3f4f6 !important;
+                        }
+                        table td {
+                            font-size: 9px !important;
+                            padding: 3px 4px !important;
+                            border: 1px solid #000 !important;
+                            line-height: 1.3 !important;
+                        }
+                        table td span {
+                            display: inline !important;
+                        }
+                        tr {
+                            page-break-inside: avoid;
+                        }
+                        thead {
+                            display: table-header-group;
+                        }
+                        tbody {
+                            display: table-row-group;
+                        }
+                        .text-xs {
+                            font-size: 8px !important;
+                        }
+                        .text-sm {
+                            font-size: 9px !important;
+                        }
+                        .font-medium {
+                            font-weight: 600 !important;
+                        }
+                        .font-semibold {
+                            font-weight: 700 !important;
+                        }
+                        .font-bold {
+                            font-weight: bold !important;
+                        }
+                        .text-red-600 {
+                            color: #dc2626 !important;
+                        }
+                        .text-green-600 {
+                            color: #16a34a !important;
+                        }
+                        .text-gray-500 {
+                            color: #6b7280 !important;
+                        }
+                        .text-gray-700 {
+                            color: #374151 !important;
+                        }
+                        .text-gray-900 {
+                            color: #111827 !important;
+                        }
+                        .bg-gray-100 {
+                            background-color: #f3f4f6 !important;
+                        }
+                    }
+                `}</style>
             </AdminLayout>
         </>
     );

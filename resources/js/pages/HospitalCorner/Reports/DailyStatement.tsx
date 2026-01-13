@@ -9,6 +9,7 @@ interface DailyRow {
     medicine_income: number;
     optics_income: number;
     medical_test_income: number;
+    opd_income: number;
     operation_income: number;
     other_income: number;
     total_credit: number;
@@ -30,6 +31,7 @@ interface Totals {
     medicine_income: number;
     optics_income: number;
     medical_test_income: number;
+    opd_income: number;
     operation_income: number;
     other_income: number;
     total_credit: number;
@@ -111,7 +113,7 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                                 <thead>
                                     <tr className="bg-gray-100 dark:bg-gray-700 print:bg-white">
                                         <th rowSpan={2} className="border border-gray-300 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:text-gray-300 print:border-black print:py-1">Date</th>
-                                        <th colSpan={7} className="border border-gray-300 bg-green-100 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:bg-green-900/30 dark:text-gray-300 print:bg-white print:border-black print:py-1">Credit</th>
+                                        <th colSpan={8} className="border border-gray-300 bg-green-100 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:bg-green-900/30 dark:text-gray-300 print:bg-white print:border-black print:py-1">Credit</th>
                                         <th colSpan={7} className="border border-gray-300 bg-red-100 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:bg-red-900/30 dark:text-gray-300 print:bg-white print:border-black print:py-1">Debit</th>
                                         <th rowSpan={2} className="border border-gray-300 bg-blue-100 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:bg-blue-900/30 dark:text-gray-300 print:bg-white print:border-black print:py-1">Balance</th>
                                     </tr>
@@ -121,6 +123,7 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                                         <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">Medicine Income</th>
                                         <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">Optics Income</th>
                                         <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">Medical Test</th>
+                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">OPD Income</th>
                                         <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">Operation</th>
                                         <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">Others</th>
                                         <th className="border border-gray-300 bg-green-100 px-2 py-1 text-center text-xs font-bold text-gray-700 dark:border-gray-600 dark:bg-green-900/30 dark:text-gray-300 print:bg-white print:border-black">Total</th>
@@ -136,7 +139,7 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                                 </thead>
                                 <tbody>
                                     <tr className="bg-blue-50 font-semibold dark:bg-blue-900/20 print:bg-white">
-                                        <td className="border border-gray-300 px-4 py-2 text-center dark:border-gray-600 print:border-black print:py-1" colSpan={15}>Opening Balance</td>
+                                        <td className="border border-gray-300 px-4 py-2 text-center dark:border-gray-600 print:border-black print:py-1" colSpan={16}>Opening Balance</td>
                                         <td className="border border-gray-300 px-4 py-2 text-right dark:border-gray-600 print:border-black print:py-1">৳{openingBalance.toFixed(2)}</td>
                                     </tr>
                                     {rows.map((row, idx) => (
@@ -147,6 +150,7 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                                             <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{row.medicine_income > 0 ? `৳${row.medicine_income.toFixed(2)}` : '-'}</td>
                                             <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{row.optics_income > 0 ? `৳${row.optics_income.toFixed(2)}` : '-'}</td>
                                             <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{row.medical_test_income > 0 ? `৳${row.medical_test_income.toFixed(2)}` : '-'}</td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{row.opd_income > 0 ? `৳${row.opd_income.toFixed(2)}` : '-'}</td>
                                             <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{row.operation_income > 0 ? `৳${row.operation_income.toFixed(2)}` : '-'}</td>
                                             <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{row.other_income > 0 ? `৳${row.other_income.toFixed(2)}` : '-'}</td>
                                             <td className="border border-gray-300 bg-green-50 px-2 py-1 text-right text-xs font-semibold text-green-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-green-400 print:bg-white print:border-black">{row.total_credit > 0 ? `৳${row.total_credit.toFixed(2)}` : '-'}</td>
@@ -169,6 +173,7 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                                         <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{totals.medicine_income.toFixed(2)}</td>
                                         <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{totals.optics_income.toFixed(2)}</td>
                                         <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{totals.medical_test_income.toFixed(2)}</td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{totals.opd_income.toFixed(2)}</td>
                                         <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{totals.operation_income.toFixed(2)}</td>
                                         <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{totals.other_income.toFixed(2)}</td>
                                         <td className="border border-gray-300 bg-green-100 px-2 py-2 text-right text-xs text-green-700 dark:border-gray-600 dark:bg-green-900/30 dark:text-green-400 print:bg-white print:border-black">৳{totals.total_credit.toFixed(2)}</td>

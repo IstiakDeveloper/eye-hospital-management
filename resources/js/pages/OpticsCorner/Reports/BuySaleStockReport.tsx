@@ -58,9 +58,27 @@ interface Totals {
     only_fitting_charge: number;
 }
 
+interface OpticsTotals {
+    before_stock_qty: number;
+    before_stock_value: number;
+    buy_qty: number;
+    buy_total: number;
+    sale_qty: number;
+    sale_subtotal: number;
+    sale_discount: number;
+    sale_fitting: number;
+    sale_total: number;
+    sale_cash: number;
+    sale_due: number;
+    available_stock: number;
+    available_value: number;
+    total_profit: number;
+}
+
 interface Props {
     reportData: ReportItem[];
     totals: Totals;
+    opticsTotals: OpticsTotals;
     filters: {
         from_date: string;
         to_date: string;
@@ -69,7 +87,7 @@ interface Props {
     };
 }
 
-export default function BuySaleStockReport({ reportData: rawReportData, totals: rawTotals, filters }: Props) {
+export default function BuySaleStockReport({ reportData: rawReportData, totals: rawTotals, opticsTotals, filters }: Props) {
     const [fromDate, setFromDate] = useState(filters.from_date);
     const [toDate, setToDate] = useState(filters.to_date);
     const [search, setSearch] = useState(filters.search || '');
@@ -322,7 +340,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                 </div>
 
                 {/* Report Table */}
-                <div className="overflow-x-auto rounded-lg bg-white shadow report-section">
+                <div className="overflow-x-auto rounded-lg bg-white shadow report-section max-h-[calc(100vh-300px)]">
                     {/* Print Header */}
                     <div className="print-header mb-3">
                         <div className="text-center mb-1">
@@ -336,7 +354,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                         </div>
                     </div>
                     <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                        <thead className="bg-gray-50 sticky top-0 z-10">
                             <tr>
                                 <th
                                     rowSpan={2}
@@ -534,6 +552,72 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                         </tr>
                                     ))}
 
+                                    {/* Optics Total Row */}
+                                    <tr className="bg-indigo-50 font-semibold">
+                                        <td
+                                            colSpan={2}
+                                            className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900"
+                                        >
+                                            OPTICS TOTAL
+                                        </td>
+
+                                        {/* Before Stock */}
+                                        <td className="border border-gray-300 bg-blue-50 px-2 py-3 text-center text-sm text-gray-900">
+                                            {opticsTotals.before_stock_qty}
+                                        </td>
+                                        <td className="border border-gray-300 bg-blue-50 px-2 py-3 text-center text-sm text-gray-500">-</td>
+                                        <td className="border border-gray-300 bg-blue-50 px-2 py-3 text-right text-sm text-gray-900">
+                                            ৳{opticsTotals.before_stock_value.toFixed(2)}
+                                        </td>
+
+                                        {/* Buy */}
+                                        <td className="border border-gray-300 bg-green-50 px-2 py-3 text-center text-sm text-gray-900">
+                                            {opticsTotals.buy_qty}
+                                        </td>
+                                        <td className="border border-gray-300 bg-green-50 px-2 py-3 text-center text-sm text-gray-500">-</td>
+                                        <td className="border border-gray-300 bg-green-50 px-2 py-3 text-right text-sm text-gray-900">
+                                            ৳{opticsTotals.buy_total.toFixed(2)}
+                                        </td>
+
+                                        {/* Sale */}
+                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-center text-sm text-gray-900">
+                                            {opticsTotals.sale_qty}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-center text-sm text-gray-500">-</td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-1 py-3 text-right text-sm text-gray-900">
+                                            ৳{opticsTotals.sale_subtotal.toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-1 py-3 text-right text-sm text-gray-900">
+                                            ৳{opticsTotals.sale_discount.toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-1 py-3 text-right text-sm text-gray-900">
+                                            ৳{opticsTotals.sale_fitting.toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-right text-sm text-gray-900">
+                                            ৳{opticsTotals.sale_total.toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-right text-sm font-medium text-green-600">
+                                            ৳{opticsTotals.sale_cash.toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-right text-sm text-red-600 font-medium">
+                                            ৳{opticsTotals.sale_due.toFixed(2)}
+                                        </td>
+
+                                        {/* Profit */}
+                                        <td className="border border-gray-300 bg-pink-50 px-2 py-3 text-center text-sm text-gray-500">-</td>
+                                        <td className="border border-gray-300 bg-pink-50 px-2 py-3 text-right text-sm font-medium text-green-600">
+                                            ৳{opticsTotals.total_profit.toFixed(2)}
+                                        </td>
+
+                                        {/* Available */}
+                                        <td className="border border-gray-300 bg-purple-50 px-1 py-3 text-center text-sm text-gray-900">
+                                            {opticsTotals.available_stock}
+                                        </td>
+                                        <td className="border border-gray-300 bg-purple-50 px-2 py-3 text-right text-sm text-gray-900">
+                                            ৳{opticsTotals.available_value.toFixed(2)}
+                                        </td>
+                                    </tr>
+
                                     {/* Only Fitting Charge Row */}
                                     <tr className="bg-orange-50 font-semibold">
                                         <td
@@ -679,10 +763,15 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                             padding: 5px !important;
                             margin: 0 !important;
                             box-shadow: none !important;
+                            max-height: none !important;
+                            overflow: visible !important;
                         }
                         .print-header {
                             display: block !important;
                             visibility: visible !important;
+                        }
+                        thead {
+                            position: static !important;
                         }
                         h1 {
                             font-size: 10px !important;

@@ -129,15 +129,15 @@ const IncomeExpenditure: React.FC<IncomeExpenditureProps> = ({
                 </div>
 
                 {/* Report Content - Printable */}
-                <div className="bg-white shadow-lg rounded-lg print-section" style={{ padding: '40px' }}>
+                <div className="bg-white shadow-lg rounded-lg print-section" style={{ padding: '30px' }}>
                     {/* Report Header */}
-                    <div className="mb-4">
-                        <div className="text-center mb-2">
-                            <h1 className="text-xl font-bold mb-1">Naogaon Islamia Eye Hospital and Phaco Center</h1>
-                            <p className="text-sm">Circuit House Adjacent, Main Road, Naogaon.</p>
+                    <div className="mb-1">
+                        <div className="text-center mb-0">
+                            <h1 className="text-base font-bold mb-0">Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                            <p className="text-xs mb-0">Circuit House Adjacent, Main Road, Naogaon.</p>
                         </div>
-                        <h2 className="text-lg text-center mt-4 mb-4">Statement of Comprehensive Income & Expenditure</h2>
-                        <p className="text-sm text-right">
+                        <h2 className="text-sm text-center mt-1 mb-1">Statement of Comprehensive Income & Expenditure</h2>
+                        <p className="text-xs text-right mb-0">
                             Date: {formatDate(fromDate)} to {formatDate(toDate)}
                         </p>
                     </div>
@@ -262,20 +262,20 @@ const IncomeExpenditure: React.FC<IncomeExpenditureProps> = ({
                     </table>
 
                     {/* Signatures */}
-                    <div className="mt-16 grid grid-cols-3 gap-8">
+                    <div className="mt-6 grid grid-cols-3 gap-8">
                         <div className="text-center">
-                            <div className="border-t-2 border-gray-800 pt-2 mt-16">
-                                <p className="font-semibold text-sm">Prepared By</p>
+                            <div className="border-t border-gray-800 pt-1 mt-8">
+                                <p className="font-medium text-xs">Prepared By</p>
                             </div>
                         </div>
                         <div className="text-center">
-                            <div className="border-t-2 border-gray-800 pt-2 mt-16">
-                                <p className="font-semibold text-sm">Checked By</p>
+                            <div className="border-t border-gray-800 pt-1 mt-8">
+                                <p className="font-medium text-xs">Checked By</p>
                             </div>
                         </div>
                         <div className="text-center">
-                            <div className="border-t-2 border-gray-800 pt-2 mt-16">
-                                <p className="font-semibold text-sm">Approved By</p>
+                            <div className="border-t border-gray-800 pt-1 mt-8">
+                                <p className="font-medium text-xs">Approved By</p>
                             </div>
                         </div>
                     </div>
@@ -335,18 +335,18 @@ const IncomeExpenditure: React.FC<IncomeExpenditureProps> = ({
                         page-break-after: auto;
                     }
                     h1 {
-                        font-size: 22px !important;
-                        margin-bottom: 4px !important;
+                        font-size: 18px !important;
+                        margin-bottom: 0px !important;
                         font-weight: bold;
                     }
                     h2 {
-                        font-size: 20px !important;
-                        margin-top: 6px !important;
-                        margin-bottom: 4px !important;
+                        font-size: 16px !important;
+                        margin-top: 2px !important;
+                        margin-bottom: 2px !important;
                     }
                     p {
-                        font-size: 18px !important;
-                        margin: 2px 0 !important;
+                        font-size: 14px !important;
+                        margin: 0px !important;
                     }
                 }
             `}</style>

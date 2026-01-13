@@ -9,7 +9,6 @@ use Inertia\Inertia;
 
 class OperationReportController extends Controller
 {
-
     private function calculateOpeningBalance(string $fromDate): float
     {
         $fundIns = DB::table('operation_fund_transactions')
@@ -158,28 +157,11 @@ class OperationReportController extends Controller
         $search = $request->search ?? null;
 
         $reportData = Operation::getIncomeReport($fromDate, $toDate, $search);
-
-        // Add serial numbers
-        foreach ($reportData as $index => $item) {
-            $reportData[$index]['sl'] = $index + 1;
-        }
-
-        // Calculate totals
-        $totals = [
-            'total_bookings' => collect($reportData)->sum('total_bookings'),
-            'scheduled' => collect($reportData)->sum('scheduled'),
-            'confirmed' => collect($reportData)->sum('confirmed'),
-            'completed' => collect($reportData)->sum('completed'),
-            'total_original_price' => collect($reportData)->sum('total_original_price'),
-            'total_discount' => collect($reportData)->sum('total_discount'),
-            'total_income' => collect($reportData)->sum('total_income'),
-            'total_paid' => collect($reportData)->sum('total_paid'),
-            'total_due' => collect($reportData)->sum('total_due'),
-        ];
+        $summary = Operation::getIncomeReportSummary($fromDate, $toDate);
 
         return Inertia::render('OperationCorner/Reports/OperationIncomeReport', [
             'reportData' => $reportData,
-            'totals' => $totals,
+            'summary' => $summary,
             'filters' => [
                 'from_date' => $fromDate,
                 'to_date' => $toDate,

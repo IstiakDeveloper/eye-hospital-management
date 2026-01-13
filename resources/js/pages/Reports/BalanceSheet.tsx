@@ -14,6 +14,8 @@ interface BalanceSheetProps {
     bankBalance: number;
     medicineStockValue: number;
     opticsStockValue: number;
+    advanceHouseRent2And3: number;
+    advanceHouseRent4: number;
     advanceHouseRent: number;
     fixedAssets: number;
     houseSecurity: number;
@@ -54,6 +56,8 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
     bankBalance,
     medicineStockValue,
     opticsStockValue,
+    advanceHouseRent2And3,
+    advanceHouseRent4,
     advanceHouseRent,
     fixedAssets,
     houseSecurity,
@@ -227,38 +231,38 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                                 <td className="border border-gray-800 px-2 py-1 text-xs">Medicine Vendor Due</td>
                                 <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(medicineVendorDue)}</td>
                                 <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">4</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Advance House Rent</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(advanceHouseRent)}</td>
+                                <td className="border border-gray-800 px-2 py-1 text-xs">Advance House Rent (2nd & 3rd Floor)</td>
+                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(advanceHouseRent2And3)}</td>
                             </tr>
 
-                            {/* Row 5 - Asset Purchase Due vs Fixed Asset */}
+                            {/* Row 5 - Advance House Rent 4th Floor */}
                             <tr>
                                 <td className="border border-gray-800 px-2 py-1 text-center text-xs">5</td>
                                 <td className="border border-gray-800 px-2 py-1 text-xs">Asset Vendor Due</td>
                                 <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(assetPurchaseDue)}</td>
                                 <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">5</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Fixed Asset</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(fixedAssets)}</td>
+                                <td className="border border-gray-800 px-2 py-1 text-xs">Advance House Rent (4th Floor)</td>
+                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(advanceHouseRent4)}</td>
                             </tr>
 
-                            {/* Row 6 - Empty vs House Security */}
+                            {/* Row 6 - Empty vs Fixed Asset */}
                             <tr>
                                 <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
                                 <td className="border border-gray-800 px-2 py-1 text-xs"></td>
                                 <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
                                 <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">6</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">House Security</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(houseSecurity)}</td>
+                                <td className="border border-gray-800 px-2 py-1 text-xs">Fixed Asset</td>
+                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(fixedAssets)}</td>
                             </tr>
 
-                            {/* Row 7 - Empty left side */}
+                            {/* Row 7 - Empty vs House Security */}
                             <tr>
                                 <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
                                 <td className="border border-gray-800 px-2 py-1 text-xs"></td>
                                 <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
                                 <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">7</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Optics Sale Due</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(opticsSaleDue)}</td>
+                                <td className="border border-gray-800 px-2 py-1 text-xs">House Security</td>
+                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(houseSecurity)}</td>
                             </tr>
 
                             {/* Row 8 - Empty left side */}
@@ -267,8 +271,8 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                                 <td className="border border-gray-800 px-2 py-1 text-xs"></td>
                                 <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
                                 <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">8</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Medicine Sale Due</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(medicineSaleDue)}</td>
+                                <td className="border border-gray-800 px-2 py-1 text-xs">Optics Sale Due</td>
+                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(opticsSaleDue)}</td>
                             </tr>
 
                             {/* Row 9 - Empty left side */}
@@ -277,6 +281,16 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                                 <td className="border border-gray-800 px-2 py-1 text-xs"></td>
                                 <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
                                 <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">9</td>
+                                <td className="border border-gray-800 px-2 py-1 text-xs">Medicine Sale Due</td>
+                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(medicineSaleDue)}</td>
+                            </tr>
+
+                            {/* Row 10 - Empty left side */}
+                            <tr>
+                                <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
+                                <td className="border border-gray-800 px-2 py-1 text-xs"></td>
+                                <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
+                                <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">10</td>
                                 <td className="border border-gray-800 px-2 py-1 text-xs">Operation Due</td>
                                 <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(operationDue)}</td>
                             </tr>

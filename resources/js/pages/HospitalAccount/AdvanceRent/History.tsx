@@ -32,6 +32,7 @@ interface Props {
     filters: {
         year?: number;
         month?: number;
+        floor_type?: string;
     };
     years: number[];
 }
@@ -57,17 +58,26 @@ const getMonthName = (month: number) => {
 };
 
 export default function AdvanceRentHistory({ transactions, previousBalance, filters, years }: Props) {
+    const [currentFloor, setCurrentFloor] = useState<string>(filters.floor_type || '2_3_floor');
     const [selectedYear, setSelectedYear] = useState(filters.year || new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState<number | ''>(filters.month || '');
 
+    const handleFloorChange = (floorType: string) => {
+        setCurrentFloor(floorType);
+        const params: any = { floor_type: floorType, year: selectedYear };
+        if (selectedMonth) params.month = selectedMonth;
+        router.get('/hospital-account/advance-rent/history', params, { preserveState: true });
+    };
+
     const handleFilter = () => {
-        const params: any = { year: selectedYear };
+        const params: any = { floor_type: currentFloor, year: selectedYear };
         if (selectedMonth) params.month = selectedMonth;
         router.get('/hospital-account/advance-rent/history', params, { preserveState: true });
     };
 
     const handleExport = (format: 'pdf' | 'excel') => {
         const params: any = {
+            floor_type: currentFloor,
             year: selectedYear,
             format
         };
@@ -99,12 +109,38 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
                             <p className="text-gray-600 mt-1">Complete transaction history with balance tracking</p>
                         </div>
                         <button
-                            onClick={() => router.visit('/hospital-account/advance-rent')}
+                            onClick={() => router.visit(`/hospital-account/advance-rent?floor_type=${currentFloor}`)}
                             className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition print:hidden"
                         >
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Back
                         </button>
+                    </div>
+
+                    {/* Floor Tabs */}
+                    <div className="mb-4 border-b border-gray-200 print:hidden">
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => handleFloorChange('2_3_floor')}
+                                className={`px-6 py-3 font-medium text-sm border-b-2 transition ${
+                                    currentFloor === '2_3_floor'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                2nd & 3rd Floor
+                            </button>
+                            <button
+                                onClick={() => handleFloorChange('4_floor')}
+                                className={`px-6 py-3 font-medium text-sm border-b-2 transition ${
+                                    currentFloor === '4_floor'
+                                        ? 'border-blue-600 text-blue-600'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                4th Floor
+                            </button>
+                        </div>
                     </div>
 
                     {/* Filters */}

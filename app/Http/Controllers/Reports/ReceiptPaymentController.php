@@ -4,10 +4,8 @@ namespace App\Http\Controllers\Reports;
 
 use App\Http\Controllers\Controller;
 use App\Models\HospitalAccount;
-use App\Models\HospitalTransaction;
-use App\Models\HospitalFundTransaction;
-use App\Models\HospitalIncomeCategory;
 use App\Models\HospitalExpenseCategory;
+use App\Models\HospitalIncomeCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -81,7 +79,7 @@ class ReceiptPaymentController extends Controller
                 'current_difference' => round($currentReceiptSideTotal - $currentPaymentSideTotal, 2),
                 'cumulative_is_balanced' => round($cumulativeReceiptSideTotal, 2) === round($cumulativePaymentSideTotal, 2),
                 'cumulative_difference' => round($cumulativeReceiptSideTotal - $cumulativePaymentSideTotal, 2),
-            ]
+            ],
         ]);
     }
 
@@ -119,7 +117,7 @@ class ReceiptPaymentController extends Controller
         foreach ($allFundInPurposes as $purpose) {
             $receipts[] = [
                 'serial' => $serialNumber++,
-                'category' => 'Fund In - ' . $purpose,
+                'category' => 'Fund In - '.$purpose,
                 'current_month' => (float) ($fundInCurrent[$purpose]->amount ?? 0),
                 'cumulative' => (float) ($fundInCumulative[$purpose]->amount ?? 0),
                 'type' => 'fund_in',
@@ -203,88 +201,102 @@ class ReceiptPaymentController extends Controller
         foreach ($allFundOutPurposes as $purpose) {
             $payments[] = [
                 'serial' => $serialNumber++,
-                'category' => 'Fund Out - ' . $purpose,
+                'category' => 'Fund Out - '.$purpose,
                 'current_month' => (float) ($fundOutCurrent[$purpose]->amount ?? 0),
                 'cumulative' => (float) ($fundOutCumulative[$purpose]->amount ?? 0),
                 'type' => 'fund_out',
             ];
         }
 
+        // 2. Get Fixed Asset Purchase expenses
+        $specialExpenseCategories = HospitalExpenseCategory::where('name', 'Fixed Asset Purchase')->first();
+        $specialExpenseCategoryId = $specialExpenseCategories ? $specialExpenseCategories->id : null;
 
-        // 2. Get expense transactions for special categories (Fixed Asset Purchase, Advance House Rent)
-        // These can exist both WITH and WITHOUT expense_category_id, so we need to combine both
-
-        // First, get special expense category names and IDs
-        $specialExpenseCategories = HospitalExpenseCategory::whereIn('name', ['Fixed Asset Purchase', 'Advance House Rent'])
-            ->get()
-            ->keyBy('name');
-
-        $specialExpenseNames = ['Fixed Asset Purchase', 'Advance House Rent'];
-        $specialExpenseCategoryIds = $specialExpenseCategories->pluck('id')->toArray();
-
-        // Get transactions WITHOUT expense_category_id
-        $specialExpensesCurrentWithoutCat = DB::table('hospital_transactions')
+        // Get Fixed Asset Purchase transactions (with and without category_id)
+        $fixedAssetCurrentWithoutCat = DB::table('hospital_transactions')
             ->where('type', 'expense')
             ->whereNull('expense_category_id')
-            ->whereIn('category', $specialExpenseNames)
+            ->where('category', 'Fixed Asset Purchase')
             ->whereBetween('transaction_date', [$fromDate, $toDate])
-            ->select('category', DB::raw('SUM(amount) as amount'))
-            ->groupBy('category')
-            ->get()
-            ->keyBy('category');
+            ->sum('amount');
 
-        $specialExpensesCumulativeWithoutCat = DB::table('hospital_transactions')
+        $fixedAssetCumulativeWithoutCat = DB::table('hospital_transactions')
             ->where('type', 'expense')
             ->whereNull('expense_category_id')
-            ->whereIn('category', $specialExpenseNames)
+            ->where('category', 'Fixed Asset Purchase')
             ->where('transaction_date', '<=', $toDate)
-            ->select('category', DB::raw('SUM(amount) as amount'))
-            ->groupBy('category')
-            ->get()
-            ->keyBy('category');
+            ->sum('amount');
 
-        // Get transactions WITH expense_category_id
-        $specialExpensesCurrentWithCat = DB::table('hospital_transactions')
-            ->leftJoin('hospital_expense_categories', 'hospital_transactions.expense_category_id', '=', 'hospital_expense_categories.id')
-            ->where('hospital_transactions.type', 'expense')
-            ->whereIn('hospital_transactions.expense_category_id', $specialExpenseCategoryIds)
-            ->whereBetween('hospital_transactions.transaction_date', [$fromDate, $toDate])
-            ->select('hospital_expense_categories.name as category', DB::raw('SUM(hospital_transactions.amount) as amount'))
-            ->groupBy('hospital_expense_categories.name')
-            ->get()
-            ->keyBy('category');
+        $fixedAssetCurrentWithCat = 0;
+        $fixedAssetCumulativeWithCat = 0;
+        if ($specialExpenseCategoryId) {
+            $fixedAssetCurrentWithCat = DB::table('hospital_transactions')
+                ->where('type', 'expense')
+                ->where('expense_category_id', $specialExpenseCategoryId)
+                ->whereBetween('transaction_date', [$fromDate, $toDate])
+                ->sum('amount');
 
-        $specialExpensesCumulativeWithCat = DB::table('hospital_transactions')
-            ->leftJoin('hospital_expense_categories', 'hospital_transactions.expense_category_id', '=', 'hospital_expense_categories.id')
-            ->where('hospital_transactions.type', 'expense')
-            ->whereIn('hospital_transactions.expense_category_id', $specialExpenseCategoryIds)
-            ->where('hospital_transactions.transaction_date', '<=', $toDate)
-            ->select('hospital_expense_categories.name as category', DB::raw('SUM(hospital_transactions.amount) as amount'))
-            ->groupBy('hospital_expense_categories.name')
-            ->get()
-            ->keyBy('category');
-
-        // Combine both types for each special expense category
-        foreach ($specialExpenseNames as $categoryName) {
-            $currentWithoutCat = (float) ($specialExpensesCurrentWithoutCat[$categoryName]->amount ?? 0);
-            $currentWithCat = (float) ($specialExpensesCurrentWithCat[$categoryName]->amount ?? 0);
-            $cumulativeWithoutCat = (float) ($specialExpensesCumulativeWithoutCat[$categoryName]->amount ?? 0);
-            $cumulativeWithCat = (float) ($specialExpensesCumulativeWithCat[$categoryName]->amount ?? 0);
-
-            // Only add if there are any transactions
-            if ($currentWithoutCat + $currentWithCat + $cumulativeWithoutCat + $cumulativeWithCat > 0) {
-                $payments[] = [
-                    'serial' => $serialNumber++,
-                    'category' => $categoryName,
-                    'current_month' => $currentWithoutCat + $currentWithCat,
-                    'cumulative' => $cumulativeWithoutCat + $cumulativeWithCat,
-                    'type' => 'special_expense',
-                ];
-            }
+            $fixedAssetCumulativeWithCat = DB::table('hospital_transactions')
+                ->where('type', 'expense')
+                ->where('expense_category_id', $specialExpenseCategoryId)
+                ->where('transaction_date', '<=', $toDate)
+                ->sum('amount');
         }
 
-        // 3. Get ALL other expense categories (excluding special expense categories to avoid duplicates)
-        $allCategories = HospitalExpenseCategory::whereNotIn('name', $specialExpenseNames)
+        $fixedAssetCurrent = $fixedAssetCurrentWithoutCat + $fixedAssetCurrentWithCat;
+        $fixedAssetCumulative = $fixedAssetCumulativeWithoutCat + $fixedAssetCumulativeWithCat;
+
+        if ($fixedAssetCurrent + $fixedAssetCumulative > 0) {
+            $payments[] = [
+                'serial' => $serialNumber++,
+                'category' => 'Fixed Asset Purchase',
+                'current_month' => (float) $fixedAssetCurrent,
+                'cumulative' => (float) $fixedAssetCumulative,
+                'type' => 'special_expense',
+            ];
+        }
+
+        // 3. Get Advance House Rent payments (from advance_house_rents table, separated by floor)
+        // 2nd & 3rd Floor
+        $advanceRent2And3Current = DB::table('advance_house_rents')
+            ->where('floor_type', '2_3_floor')
+            ->whereBetween('payment_date', [$fromDate, $toDate])
+            ->sum('advance_amount');
+
+        $advanceRent2And3Cumulative = DB::table('advance_house_rents')
+            ->where('floor_type', '2_3_floor')
+            ->where('payment_date', '<=', $toDate)
+            ->sum('advance_amount');
+
+        $payments[] = [
+            'serial' => $serialNumber++,
+            'category' => 'Advance House Rent (2nd & 3rd Floor)',
+            'current_month' => (float) $advanceRent2And3Current,
+            'cumulative' => (float) $advanceRent2And3Cumulative,
+            'type' => 'advance_rent',
+        ];
+
+        // 4th Floor
+        $advanceRent4Current = DB::table('advance_house_rents')
+            ->where('floor_type', '4_floor')
+            ->whereBetween('payment_date', [$fromDate, $toDate])
+            ->sum('advance_amount');
+
+        $advanceRent4Cumulative = DB::table('advance_house_rents')
+            ->where('floor_type', '4_floor')
+            ->where('payment_date', '<=', $toDate)
+            ->sum('advance_amount');
+
+        $payments[] = [
+            'serial' => $serialNumber++,
+            'category' => 'Advance House Rent (4th Floor)',
+            'current_month' => (float) $advanceRent4Current,
+            'cumulative' => (float) $advanceRent4Cumulative,
+            'type' => 'advance_rent',
+        ];
+
+        // 4. Get ALL other expense categories (excluding Fixed Asset Purchase and Advance House Rent to avoid duplicates)
+        $allCategories = HospitalExpenseCategory::whereNotIn('name', ['Fixed Asset Purchase', 'Advance House Rent'])
             ->orderBy('name')
             ->get();
 
@@ -293,6 +305,7 @@ class ReceiptPaymentController extends Controller
             ->leftJoin('hospital_expense_categories', 'hospital_transactions.expense_category_id', '=', 'hospital_expense_categories.id')
             ->where('hospital_transactions.type', 'expense')
             ->whereNotNull('hospital_transactions.expense_category_id')
+            ->whereNotIn('hospital_expense_categories.name', ['Fixed Asset Purchase', 'Advance House Rent'])
             ->whereBetween('hospital_transactions.transaction_date', [$fromDate, $toDate])
             ->select(
                 'hospital_expense_categories.id as category_id',
@@ -307,6 +320,7 @@ class ReceiptPaymentController extends Controller
             ->leftJoin('hospital_expense_categories', 'hospital_transactions.expense_category_id', '=', 'hospital_expense_categories.id')
             ->where('hospital_transactions.type', 'expense')
             ->whereNotNull('hospital_transactions.expense_category_id')
+            ->whereNotIn('hospital_expense_categories.name', ['Fixed Asset Purchase', 'Advance House Rent'])
             ->where('hospital_transactions.transaction_date', '<=', $toDate)
             ->select(
                 'hospital_expense_categories.id as category_id',
@@ -316,7 +330,7 @@ class ReceiptPaymentController extends Controller
             ->groupBy('hospital_expense_categories.id')
             ->pluck('amount', 'category_id');
 
-        // Build payments array with ALL categories (excluding special expenses)
+        // Build payments array with ALL categories (excluding Fixed Asset Purchase and Advance House Rent)
         foreach ($allCategories as $category) {
             $payments[] = [
                 'serial' => $serialNumber++,

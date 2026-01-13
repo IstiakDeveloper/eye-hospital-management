@@ -537,18 +537,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                                     </option>
                                 ))}
                             </select>
-                            {!formData.expense_category_id && (
-                                <div className="mt-2">
-                                    <input
-                                        type="text"
-                                        name="category"
-                                        value={formData.category}
-                                        onChange={handleInputChange}
-                                        placeholder="Or type custom category"
-                                        className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-                            )}
                         </div>
                         <div className="mb-4">
                             <label className="block text-sm font-medium mb-2">Date *</label>
@@ -576,7 +564,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <div className="flex gap-2">
                             <button
                                 onClick={handleExpense}
-                                disabled={!formData.amount || (!formData.category && !formData.expense_category_id) || !formData.description || parseFloat(formData.amount) > balance || loading}
+                                disabled={!formData.amount || !formData.expense_category_id || !formData.description || parseFloat(formData.amount) > balance || loading}
                                 className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                             >
                                 {loading ? 'Adding...' : 'Add Expense'}
@@ -625,18 +613,6 @@ const Dashboard: React.FC<DashboardProps> = ({
                                     </option>
                                 ))}
                             </select>
-                            <p className="text-xs text-gray-500 mt-1">Or enter custom category below</p>
-                        </div>
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Custom Category (Optional)</label>
-                            <input
-                                type="text"
-                                name="category"
-                                value={formData.category}
-                                onChange={handleInputChange}
-                                placeholder="e.g., Bank Interest, Commission, Refund etc."
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            />
                         </div>
                         <div className="mb-4">
                             <label className="block text-sm font-medium mb-2">Date *</label>
@@ -665,7 +641,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <div className="flex gap-2">
                             <button
                                 onClick={handleOtherIncome}
-                                disabled={!formData.amount || (!formData.income_category_id && !formData.category) || !formData.description || loading}
+                                disabled={!formData.amount || !formData.income_category_id || !formData.description || loading}
                                 className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                             >
                                 {loading ? 'Adding...' : 'Add Income'}

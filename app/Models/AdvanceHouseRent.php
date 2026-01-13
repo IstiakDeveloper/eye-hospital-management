@@ -3,7 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\{BelongsTo, HasMany};
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AdvanceHouseRent extends Model
@@ -18,6 +19,7 @@ class AdvanceHouseRent extends Model
         'description',
         'payment_date',
         'payment_number',
+        'floor_type',
         'created_by',
     ];
 
@@ -33,14 +35,14 @@ class AdvanceHouseRent extends Model
         parent::boot();
 
         static::creating(function ($advanceRent) {
-            if (!$advanceRent->payment_number) {
+            if (! $advanceRent->payment_number) {
                 $date = now()->format('Ymd');
                 $count = self::whereDate('created_at', now())->count();
-                $advanceRent->payment_number = 'ADV-RENT-' . $date . '-' . str_pad(($count + 1), 4, '0', STR_PAD_LEFT);
+                $advanceRent->payment_number = 'ADV-RENT-'.$date.'-'.str_pad(($count + 1), 4, '0', STR_PAD_LEFT);
             }
 
             // Set remaining amount same as advance amount initially
-            if (!$advanceRent->remaining_amount) {
+            if (! $advanceRent->remaining_amount) {
                 $advanceRent->remaining_amount = $advanceRent->advance_amount;
             }
         });
@@ -63,6 +65,16 @@ class AdvanceHouseRent extends Model
         return $query->where('status', 'active')->where('remaining_amount', '>', 0);
     }
 
+    public function scopeFloor2And3($query)
+    {
+        return $query->where('floor_type', '2_3_floor');
+    }
+
+    public function scopeFloor4($query)
+    {
+        return $query->where('floor_type', '4_floor');
+    }
+
     // Methods
     public function deduct(float $amount, int $month, int $year, ?string $notes = null): AdvanceHouseRentDeduction
     {
@@ -80,8 +92,8 @@ class AdvanceHouseRent extends Model
         ]);
 
         $this->update([
-            'used_amount' => bcadd((string)$this->used_amount, (string)$amount, 2),
-            'remaining_amount' => bcsub((string)$this->remaining_amount, (string)$amount, 2),
+            'used_amount' => bcadd((string) $this->used_amount, (string) $amount, 2),
+            'remaining_amount' => bcsub((string) $this->remaining_amount, (string) $amount, 2),
         ]);
 
         if ($this->remaining_amount <= 0) {
@@ -91,8 +103,19 @@ class AdvanceHouseRent extends Model
         return $deduction;
     }
 
-    public static function getActiveBalance(): float
+    public static function getActiveBalance(?string $floorType = null): float
     {
-        return self::active()->sum('remaining_amount');
+        $query = self::active();
+
+        if ($floorType) {
+            $query->where('floor_type', $floorType);
+        }
+
+        return $query->sum('remaining_amount');
+    }
+
+    public function getFloorLabelAttribute(): string
+    {
+        return $this->floor_type === '4_floor' ? '4th Floor' : '2nd & 3rd Floor';
     }
 }

@@ -75,6 +75,13 @@ const HospitalAccountLayout: React.FC<HospitalAccountLayoutProps> = ({
             permission: 'hospital-account.view'
         },
         {
+            name: 'House Security Ledger',
+            href: '/hospital-account/house-security-ledger',
+            icon: BookOpen,
+            current: route().current('hospital-account.house-security-ledger'),
+            permission: 'hospital-account.view'
+        },
+        {
             name: 'Categories',
             href: '/hospital-account/categories',
             icon: Tags,

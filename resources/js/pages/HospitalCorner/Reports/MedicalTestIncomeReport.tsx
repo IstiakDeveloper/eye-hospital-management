@@ -142,11 +142,24 @@ export default function MedicalTestIncomeReport({ reportData, totals, filters }:
 
             {/* Print Styles */}
             <style>{`
+                .print-header {
+                    display: none;
+                }
+
                 @media print {
+                    * {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    body {
+                        margin: 0;
+                        padding: 0;
+                    }
                     body * {
                         visibility: hidden;
                     }
-                    #printable-area, #printable-area * {
+                    #printable-area,
+                    #printable-area * {
                         visibility: visible;
                     }
                     #printable-area {
@@ -154,6 +167,160 @@ export default function MedicalTestIncomeReport({ reportData, totals, filters }:
                         left: 0;
                         top: 0;
                         width: 100%;
+                    }
+                    .report-section {
+                        position: relative !important;
+                        width: 100%;
+                        background: white;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        box-shadow: none !important;
+                    }
+                    .print-header {
+                        display: block !important;
+                        visibility: visible !important;
+                        margin-bottom: 8px !important;
+                    }
+                    .print-header h1 {
+                        font-size: 11px !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        font-weight: bold;
+                        line-height: 1.3 !important;
+                        font-family: 'Arial', 'Helvetica', sans-serif !important;
+                    }
+                    .print-header h2 {
+                        font-size: 9px !important;
+                        margin: 2px 0 !important;
+                        padding: 0 !important;
+                        font-weight: bold;
+                        font-family: 'Arial', 'Helvetica', sans-serif !important;
+                    }
+                    .print-header p {
+                        font-size: 8px !important;
+                        margin: 2px 0 0 0 !important;
+                        padding: 0 !important;
+                        font-family: 'Arial', 'Helvetica', sans-serif !important;
+                    }
+                    button,
+                    .mb-6,
+                    .mb-4 {
+                        display: none !important;
+                    }
+                    .no-print {
+                        display: none !important;
+                    }
+                    @page {
+                        size: A4 landscape;
+                        margin: 8mm 10mm;
+                    }
+                    .overflow-x-auto {
+                        overflow: visible !important;
+                    }
+                    .overflow-hidden {
+                        overflow: visible !important;
+                    }
+                    .rounded-lg {
+                        border-radius: 0 !important;
+                    }
+                    .shadow {
+                        box-shadow: none !important;
+                    }
+                    table {
+                        font-size: 8px !important;
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                        font-family: 'Arial', 'Helvetica', sans-serif !important;
+                        table-layout: auto !important;
+                    }
+                    table th {
+                        font-size: 8px !important;
+                        padding: 2px 3px !important;
+                        border: 1px solid #000 !important;
+                        font-weight: bold;
+                        line-height: 1.2 !important;
+                    }
+                    table td {
+                        font-size: 8px !important;
+                        padding: 2px 3px !important;
+                        border: 1px solid #000 !important;
+                        line-height: 1.2 !important;
+                    }
+                    table td span {
+                        display: inline !important;
+                    }
+                    table tbody {
+                        display: table-row-group !important;
+                    }
+                    table tr {
+                        page-break-inside: avoid !important;
+                        display: table-row !important;
+                    }
+                    thead {
+                        display: table-header-group !important;
+                    }
+                    tbody {
+                        display: table-row-group !important;
+                    }
+                    tfoot {
+                        display: table-row-group !important;
+                    }
+                    .text-xs {
+                        font-size: 7px !important;
+                    }
+                    .text-sm {
+                        font-size: 8px !important;
+                    }
+                    .font-medium {
+                        font-weight: 600 !important;
+                    }
+                    .font-semibold {
+                        font-weight: 700 !important;
+                    }
+                    .font-bold {
+                        font-weight: bold !important;
+                    }
+                    .text-red-600 {
+                        color: #dc2626 !important;
+                    }
+                    .text-green-600 {
+                        color: #16a34a !important;
+                    }
+                    .text-orange-600 {
+                        color: #ea580c !important;
+                    }
+                    .text-gray-500 {
+                        color: #6b7280 !important;
+                    }
+                    .text-gray-600 {
+                        color: #4b5563 !important;
+                    }
+                    .text-gray-700 {
+                        color: #374151 !important;
+                    }
+                    .text-gray-900 {
+                        color: #111827 !important;
+                    }
+                    .bg-blue-50 {
+                        background-color: #eff6ff !important;
+                    }
+                    .bg-blue-100 {
+                        background-color: #dbeafe !important;
+                    }
+                    .bg-red-50 {
+                        background-color: #fef2f2 !important;
+                    }
+                    .bg-red-100 {
+                        background-color: #fee2e2 !important;
+                    }
+                    .bg-green-50 {
+                        background-color: #f0fdf4 !important;
+                    }
+                    .bg-green-100 {
+                        background-color: #dcfce7 !important;
+                    }
+                    .bg-gray-100 {
+                        background-color: #f3f4f6 !important;
                     }
                 }
             `}</style>
@@ -230,19 +397,23 @@ export default function MedicalTestIncomeReport({ reportData, totals, filters }:
 
                     {/* Printable Area */}
                     <div id="printable-area">
-                        {/* Print Header */}
-                        <div className="mb-6 hidden text-center print:block">
-                            <h1 className="text-2xl font-bold">Medical Test Income Report</h1>
-                            <p className="mt-2 text-sm text-gray-600">
-                                Period: {new Date(fromDate).toLocaleDateString()} to{' '}
-                                {new Date(toDate).toLocaleDateString()}
-                            </p>
-                        </div>
+                        <div className="overflow-hidden rounded-lg bg-white shadow report-section">
+                            {/* Print Header */}
+                            <div className="print-header mb-3">
+                                <div className="text-center mb-2">
+                                    <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                                    <h2 className="text-sm font-semibold mt-1">Hospital Corner - Medical Test Income Report</h2>
+                                </div>
+                                <div className="flex justify-between items-center mt-2">
+                                    <p className="text-xs font-medium">Period Report</p>
+                                    <p className="text-xs">
+                                        {new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                    </p>
+                                </div>
+                            </div>
 
-                {/* Report Table */}
-                <div className="overflow-hidden rounded-lg bg-white shadow">
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full table-auto border-collapse">
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full table-auto border-collapse">
                             <thead>
                                 <tr>
                                     <th
@@ -324,10 +495,8 @@ export default function MedicalTestIncomeReport({ reportData, totals, filters }:
                                                     {item.sl}
                                                 </td>
                                                 <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                                                    <div className="font-medium">{item.name}</div>
-                                                    <div className="text-xs text-gray-500 mt-0.5">
-                                                        {item.code}
-                                                    </div>
+                                                    <span className="font-medium">{item.name}</span>
+                                                    <span className="text-xs text-gray-500"> ({item.code})</span>
                                                 </td>
                                                 <td className="border border-gray-300 px-3 py-2 text-center text-sm text-gray-600">
                                                     {item.category}
@@ -403,7 +572,7 @@ export default function MedicalTestIncomeReport({ reportData, totals, filters }:
                             </tbody>
                         </table>
                     </div>
-                </div>
+                        </div>
                     </div>
                     {/* End Printable Area */}
                 </div>
