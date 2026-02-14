@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\HospitalAccount;
+use App\Models\HospitalExpenseCategory;
 use App\Models\Medicine;
 use App\Models\MedicineAccount;
 use App\Models\MedicineSale;
@@ -12,16 +14,13 @@ use App\Models\MedicineVendor;
 use App\Models\MedicineVendorPayment;
 use App\Models\MedicineVendorTransaction;
 use App\Models\Patient;
-use App\Models\StockTransaction;
 use App\Models\StockAlert;
-use App\Models\HospitalAccount;
-use App\Models\HospitalExpenseCategory;
+use App\Models\StockTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class MedicineCornerController extends Controller
 {
@@ -80,8 +79,8 @@ class MedicineCornerController extends Controller
                     'description' => $transaction->description ?? '',
                     'transaction_date' => $transaction->transaction_date,
                     'created_by' => [
-                        'name' => $transaction->createdBy->name ?? 'System'
-                    ]
+                        'name' => $transaction->createdBy->name ?? 'System',
+                    ],
                 ];
             });
 
@@ -162,10 +161,10 @@ class MedicineCornerController extends Controller
             'stockAlert',
             'stocks' => function ($q) {
                 $q->where('available_quantity', '>', 0)
-                  ->where('expiry_date', '>', now())
-                  ->orderBy('sale_price', 'asc')
-                  ->limit(1);
-            }
+                    ->where('expiry_date', '>', now())
+                    ->orderBy('sale_price', 'asc')
+                    ->limit(1);
+            },
         ])->withCount('stocks');
 
         // Search functionality
@@ -289,8 +288,8 @@ class MedicineCornerController extends Controller
             'stockAlert',
             'stocks' => function ($q) {
                 $q->where('available_quantity', '>', 0)
-                  ->where('expiry_date', '>', now());
-            }
+                    ->where('expiry_date', '>', now());
+            },
         ]);
 
         // Apply same filters as index
@@ -346,7 +345,7 @@ class MedicineCornerController extends Controller
         Log::info('Export Medicines', [
             'count' => $medicines->count(),
             'filters' => $request->only(['search', 'type', 'manufacturer', 'stock_status', 'active']),
-            'export_format' => $request->get('export')
+            'export_format' => $request->get('export'),
         ]);
 
         $exportFormat = $request->get('export'); // 'excel' or 'print'
@@ -363,7 +362,7 @@ class MedicineCornerController extends Controller
      */
     private function exportToExcel($medicines)
     {
-        $filename = 'medicines_stock_report_' . now()->format('Y-m-d_H-i-s') . '.csv';
+        $filename = 'medicines_stock_report_'.now()->format('Y-m-d_H-i-s').'.csv';
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -373,7 +372,7 @@ class MedicineCornerController extends Controller
             'Expires' => '0',
         ];
 
-        $callback = function() use ($medicines) {
+        $callback = function () use ($medicines) {
             $file = fopen('php://output', 'w');
 
             // Add BOM for Excel UTF-8 support
@@ -393,7 +392,7 @@ class MedicineCornerController extends Controller
                 'Status',
                 'Minimum Stock',
                 'Reorder Level',
-                'Stock Status'
+                'Stock Status',
             ]);
 
             // Data rows
@@ -422,7 +421,7 @@ class MedicineCornerController extends Controller
                     $medicine->is_active ? 'Active' : 'Inactive',
                     $medicine->stockAlert ? $medicine->stockAlert->minimum_stock : 'N/A',
                     $medicine->stockAlert ? $medicine->stockAlert->reorder_level : 'N/A',
-                    $stockStatus
+                    $stockStatus,
                 ]);
             }
 
@@ -457,7 +456,7 @@ class MedicineCornerController extends Controller
                         ->with('vendor')
                         ->orderBy('expiry_date', 'asc');
                 },
-                'stockAlert'
+                'stockAlert',
             ])->findOrFail($id);
 
             // Calculate stock summary
@@ -509,6 +508,7 @@ class MedicineCornerController extends Controller
             ->get(['id', 'name', 'generic_name', 'standard_sale_price', 'average_buy_price', 'total_stock'])
             ->map(function ($medicine) {
                 $latestStock = $medicine->stocks->first();
+
                 return [
                     'id' => $medicine->id,
                     'name' => $medicine->name,
@@ -548,7 +548,6 @@ class MedicineCornerController extends Controller
             'vendorsWithDues' => $vendorsWithDues,
         ]);
     }
-
 
     /**
      * Alerts Page
@@ -618,7 +617,7 @@ class MedicineCornerController extends Controller
             $dueAmount = $totalPurchaseAmount - $paidAmount;
 
             // ✅ Auto-generate batch number if not provided
-            $batchNumber = $request->batch_number ?: 'AUTO-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
+            $batchNumber = $request->batch_number ?: 'AUTO-'.date('Ymd').'-'.strtoupper(substr(uniqid(), -6));
 
             // ✅ Set default expiry date (2 years from now) if not provided
             $expiryDate = $request->expiry_date ?: now()->addYears(2)->toDateString();
@@ -665,7 +664,6 @@ class MedicineCornerController extends Controller
                 'added_by' => auth()->id(),
             ]);
 
-
             // Create stock transaction
             StockTransaction::create([
                 'medicine_stock_id' => $stock->id,
@@ -674,7 +672,7 @@ class MedicineCornerController extends Controller
                 'unit_price' => $unitPrice, // ✅ Use calculated unit price
                 'total_amount' => $totalPurchaseAmount,
                 'vendor_transaction_id' => $vendorTransaction->id,
-                'reason' => 'Stock purchase - Batch: ' . $batchNumber,
+                'reason' => 'Stock purchase - Batch: '.$batchNumber,
                 'created_by' => auth()->id(),
             ]);
 
@@ -727,12 +725,13 @@ class MedicineCornerController extends Controller
             if ($dueAmount > 0) {
                 $message .= ", Due to {$vendor->name}: ৳{$dueAmount}";
             }
-            $message .= " | New Average Price: ৳" . number_format($medicine->fresh()->average_buy_price, 2);
+            $message .= ' | New Average Price: ৳'.number_format($medicine->fresh()->average_buy_price, 2);
 
             return redirect()->back()->with('success', $message);
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Failed to add stock: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to add stock: '.$e->getMessage());
         }
     }
 
@@ -786,7 +785,8 @@ class MedicineCornerController extends Controller
             return redirect()->back()->with('success', 'Medicine added successfully');
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Failed to add medicine: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to add medicine: '.$e->getMessage());
         }
     }
 
@@ -869,7 +869,8 @@ class MedicineCornerController extends Controller
             return redirect()->back()->with('success', 'Stock adjusted successfully');
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Failed to adjust stock: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to adjust stock: '.$e->getMessage());
         }
     }
 
@@ -892,7 +893,7 @@ class MedicineCornerController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -902,12 +903,12 @@ class MedicineCornerController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Medicine updated successfully',
-                'medicine' => $medicine
+                'medicine' => $medicine,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update medicine: ' . $e->getMessage()
+                'message' => 'Failed to update medicine: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -928,7 +929,7 @@ class MedicineCornerController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -940,16 +941,15 @@ class MedicineCornerController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Stock alert settings updated successfully'
+                'message' => 'Stock alert settings updated successfully',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update stock alert: ' . $e->getMessage()
+                'message' => 'Failed to update stock alert: '.$e->getMessage(),
             ], 500);
         }
     }
-
 
     /**
      * Export Reports
@@ -961,7 +961,7 @@ class MedicineCornerController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Export functionality to be implemented'
+            'message' => 'Export functionality to be implemented',
         ]);
     }
 
@@ -1028,7 +1028,7 @@ class MedicineCornerController extends Controller
             'patient',
             'soldBy',
             'prescription',
-            'items.medicineStock.medicine'
+            'items.medicineStock.medicine',
         ]);
 
         return Inertia::render('MedicineCorner/SaleDetails', [
@@ -1044,7 +1044,7 @@ class MedicineCornerController extends Controller
         $sale->load([
             'patient',
             'soldBy',
-            'items.medicineStock.medicine'
+            'items.medicineStock.medicine',
         ]);
 
         $medicines = Medicine::with(['stocks' => function ($query) {
@@ -1097,6 +1097,7 @@ class MedicineCornerController extends Controller
 
         if ($validator->fails()) {
             \Log::error('Validation Failed:', $validator->errors()->toArray());
+
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
@@ -1168,7 +1169,7 @@ class MedicineCornerController extends Controller
                     'total_amount' => $lineTotal,
                     'reference_type' => 'medicine_sale',
                     'reference_id' => $sale->id,
-                    'reason' => 'Medicine sale update - Invoice: ' . $originalInvoiceNumber,
+                    'reason' => 'Medicine sale update - Invoice: '.$originalInvoiceNumber,
                     'created_by' => auth()->id(),
                 ]);
 
@@ -1205,11 +1206,11 @@ class MedicineCornerController extends Controller
 
                 // Create reversal transaction record
                 MedicineTransaction::create([
-                    'transaction_no' => 'MR-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                    'transaction_no' => 'MR-'.date('Ymd').'-'.str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
                     'type' => 'expense',
                     'amount' => $originalTotalAmount,
                     'category' => 'sale_reversal',
-                    'description' => "Sale update reversal - Invoice: {$originalInvoiceNumber} | Original Amount: ৳" . number_format($originalTotalAmount, 2),
+                    'description' => "Sale update reversal - Invoice: {$originalInvoiceNumber} | Original Amount: ৳".number_format($originalTotalAmount, 2),
                     'reference_type' => 'medicine_sales',
                     'reference_id' => $sale->id,
                     'transaction_date' => now()->toDateString(),
@@ -1220,11 +1221,11 @@ class MedicineCornerController extends Controller
             // Then add the new income
             $customerInfo = $request->patient_id ?
                 "Patient ID: {$request->patient_id}" :
-                ($request->customer_name ? "Customer: {$request->customer_name}" : "Walk-in customer");
+                ($request->customer_name ? "Customer: {$request->customer_name}" : 'Walk-in customer');
 
             $medicineList = implode(', ', array_slice($medicineNames, 0, 3));
             if (count($medicineNames) > 3) {
-                $medicineList .= ' + ' . (count($medicineNames) - 3) . ' more';
+                $medicineList .= ' + '.(count($medicineNames) - 3).' more';
             }
 
             // Note: When updating sale, we don't add new income to Hospital Account
@@ -1232,10 +1233,11 @@ class MedicineCornerController extends Controller
             // Only payment changes through updatePayment method should affect Hospital Account            DB::commit();
 
             return redirect()->route('medicine-corner.sale-details', $sale->id)
-                ->with('success', "Sale updated successfully! Invoice: {$originalInvoiceNumber} | New Total: ৳" . number_format($totalAmount, 2) . " | Medicine Account Updated");
+                ->with('success', "Sale updated successfully! Invoice: {$originalInvoiceNumber} | New Total: ৳".number_format($totalAmount, 2).' | Medicine Account Updated');
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Failed to update sale: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to update sale: '.$e->getMessage());
         }
     }
 
@@ -1253,7 +1255,7 @@ class MedicineCornerController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -1295,18 +1297,23 @@ class MedicineCornerController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Payment updated successfully',
-                'sale' => $sale->fresh()
+                'sale' => $sale->fresh(),
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update payment: ' . $e->getMessage()
+                'message' => 'Failed to update payment: '.$e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Delete Sale - 100% Accurate Version with MedicineAccount Update
+     * Delete Sale - 100% Accurate Version with ALL Account Updates
+     * This properly reverses:
+     * 1. Stock quantities
+     * 2. Medicine Account balance
+     * 3. Hospital Account balance
+     * 4. All related transactions
      */
     public function deleteSale(MedicineSale $sale)
     {
@@ -1315,31 +1322,35 @@ class MedicineCornerController extends Controller
             // Store values for logging
             $invoiceNumber = $sale->invoice_number;
             $totalAmount = $sale->total_amount;
+            $paidAmount = $sale->paid_amount;
 
             // Step 1: Restore stock quantities
             foreach ($sale->items as $item) {
+                // Restore available quantity
                 $item->medicineStock->available_quantity += $item->quantity;
                 $item->medicineStock->save();
+
+                // Update medicine total stock
                 $item->medicineStock->medicine->updateTotalStock();
 
-                // Create reverse stock transaction
+                // Create reverse stock transaction using 'return' type (valid ENUM value)
                 StockTransaction::create([
                     'medicine_stock_id' => $item->medicine_stock_id,
-                    'type' => 'sale_cancellation',
+                    'type' => 'return',
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unit_price,
                     'total_amount' => $item->quantity * $item->unit_price,
-                    'reference_type' => 'medicine_sale',
+                    'reference_type' => 'medicine_sale_cancellation',
                     'reference_id' => $sale->id,
-                    'reason' => 'Sale cancellation - Invoice: ' . $invoiceNumber,
+                    'reason' => 'Sale deleted - Invoice: '.$invoiceNumber,
                     'created_by' => auth()->id(),
                 ]);
 
-                // Delete stock transaction related to sale
+                // Delete original sale stock transaction
                 StockTransaction::where('reference_type', 'medicine_sale')
                     ->where('reference_id', $sale->id)
                     ->where('medicine_stock_id', $item->medicine_stock_id)
-                    ->where('type', '!=', 'sale_cancellation')
+                    ->where('type', 'sale')
                     ->delete();
             }
 
@@ -1350,11 +1361,11 @@ class MedicineCornerController extends Controller
 
                 // Create cancellation transaction record
                 MedicineTransaction::create([
-                    'transaction_no' => 'MC-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                    'transaction_no' => 'MC-'.date('Ymd').'-'.str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
                     'type' => 'expense',
                     'amount' => $totalAmount,
                     'category' => 'sale_cancellation',
-                    'description' => "Sale deleted - Invoice: {$invoiceNumber} | Amount: ৳" . number_format($totalAmount, 2) . " | Deleted by: " . auth()->user()->name,
+                    'description' => "Sale deleted - Invoice: {$invoiceNumber} | Amount: ৳".number_format($totalAmount, 2).' | Deleted by: '.auth()->user()->name,
                     'reference_type' => 'medicine_sales',
                     'reference_id' => $sale->id,
                     'transaction_date' => now()->toDateString(),
@@ -1362,24 +1373,43 @@ class MedicineCornerController extends Controller
                 ]);
             }
 
-            // Step 3: Delete sale items
+            // Step 3: Reverse Hospital Account transaction
+            // CRITICAL: Sale creates income in Hospital Account, so deletion must reverse it
+            if ($totalAmount > 0) {
+                HospitalAccount::addExpense(
+                    $totalAmount,
+                    'Medicine Sale Deletion',
+                    "Reversed medicine sale - Invoice: {$invoiceNumber} | Customer: ".($sale->customer_name ?? 'Walk-in').' | Amount: ৳'.number_format($totalAmount, 2).' | Deleted by: '.auth()->user()->name
+                );
+            }
+
+            // Step 4: Delete sale items
             $sale->items()->delete();
 
-            // Step 4: Delete the sale record
+            // Step 5: Delete the sale record
             $sale->delete();
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => "Sale deleted successfully! Invoice: {$invoiceNumber} | ৳" . number_format($totalAmount, 2) . " reversed from Medicine Account"
-            ]);
+            return redirect()->route('medicine-corner.sales')->with('success',
+                "✅ Sale Deleted Successfully!\n\n".
+                "Invoice: {$invoiceNumber}\n".
+                'Amount: ৳'.number_format($totalAmount, 2)."\n\n".
+                "✓ Stock restored to inventory\n".
+                '✓ Medicine Account reversed: ৳'.number_format($totalAmount, 2)."\n".
+                '✓ Hospital Account reversed: ৳'.number_format($totalAmount, 2)
+            );
         } catch (\Exception $e) {
             DB::rollback();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete sale: ' . $e->getMessage()
-            ], 500);
+            \Log::error('Delete Sale Error: '.$e->getMessage(), [
+                'sale_id' => $sale->id,
+                'invoice' => $sale->invoice_number ?? 'N/A',
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return redirect()->back()->with('error',
+                '❌ Failed to delete sale: '.$e->getMessage()
+            );
         }
     }
 
@@ -1397,7 +1427,7 @@ class MedicineCornerController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -1427,12 +1457,12 @@ class MedicineCornerController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => $message
+                'message' => $message,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Bulk action failed: ' . $e->getMessage()
+                'message' => 'Bulk action failed: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -1481,11 +1511,9 @@ class MedicineCornerController extends Controller
                 'daily_sales' => $dailySales,
                 'top_medicines' => $topMedicines,
                 'payment_status' => $paymentStatus,
-            ]
+            ],
         ]);
     }
-
-
 
     /**
      * Enhanced Reports with Vendor Information
@@ -1544,6 +1572,7 @@ class MedicineCornerController extends Controller
                 $totalValue = $medicine->stocks->sum(function ($stock) {
                     return $stock->available_quantity * $stock->buy_price;
                 });
+
                 return [
                     'name' => $medicine->name,
                     'total_stock' => $medicine->total_stock,
@@ -1555,9 +1584,9 @@ class MedicineCornerController extends Controller
                             'quantity' => $stocks->sum('available_quantity'),
                             'value' => $stocks->sum(function ($stock) {
                                 return $stock->available_quantity * $stock->buy_price;
-                            })
+                            }),
                         ];
-                    })->values()
+                    })->values(),
                 ];
             })
             ->sortByDesc('total_value')
@@ -1587,7 +1616,7 @@ class MedicineCornerController extends Controller
                 $query->where('type', 'purchase')
                     ->where('payment_status', '!=', 'paid')
                     ->orderBy('due_date', 'asc');
-            }
+            },
         ])
             ->withDues()
             ->orderBy('current_balance', 'desc')
@@ -1661,11 +1690,13 @@ class MedicineCornerController extends Controller
             ]);
 
             // Update allocated transactions
-            if (!empty($request->allocated_transactions)) {
+            if (! empty($request->allocated_transactions)) {
                 $remainingAmount = $request->amount;
 
                 foreach ($request->allocated_transactions as $transactionId) {
-                    if ($remainingAmount <= 0) break;
+                    if ($remainingAmount <= 0) {
+                        break;
+                    }
 
                     $transaction = MedicineVendorTransaction::findOrFail($transactionId);
                     $paymentForTransaction = min($remainingAmount, $transaction->due_amount);
@@ -1716,7 +1747,8 @@ class MedicineCornerController extends Controller
             return redirect()->back()->with('success', "Payment of ৳{$request->amount} made successfully to {$vendor->name}");
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Failed to make payment: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to make payment: '.$e->getMessage());
         }
     }
 
@@ -1727,7 +1759,7 @@ class MedicineCornerController extends Controller
     {
         $vendorId = $request->get('vendor_id');
 
-        if (!$vendorId) {
+        if (! $vendorId) {
             return response()->json(['error' => 'Vendor ID required'], 400);
         }
 
@@ -1817,10 +1849,9 @@ class MedicineCornerController extends Controller
                 'vendor_purchases' => $vendorPurchases,
                 'daily_purchases' => $dailyPurchases,
                 'payment_methods' => $paymentMethods,
-            ]
+            ],
         ]);
     }
-
 
     /**
      * Show Edit Stock Form
@@ -1832,7 +1863,7 @@ class MedicineCornerController extends Controller
         // Find existing vendor transaction
         $vendorTransaction = MedicineVendorTransaction::where([
             'reference_type' => 'medicine_purchase',
-            'reference_id' => $stock->id
+            'reference_id' => $stock->id,
         ])->first();
 
         $medicines = Medicine::active()
@@ -1917,7 +1948,7 @@ class MedicineCornerController extends Controller
             // Find existing vendor transaction manually
             $vendorTransaction = MedicineVendorTransaction::where([
                 'reference_type' => 'medicine_purchase',
-                'reference_id' => $stock->id
+                'reference_id' => $stock->id,
             ])->first();
 
             // Handle potential null relationships
@@ -2028,7 +2059,7 @@ class MedicineCornerController extends Controller
                 'unit_price' => $request->buy_price,
                 'total_amount' => $newTotalAmount,
                 'vendor_transaction_id' => $vendorTransaction->id,
-                'reason' => 'Stock purchase updated - Batch: ' . $request->batch_number,
+                'reason' => 'Stock purchase updated - Batch: '.$request->batch_number,
                 'created_by' => auth()->id(),
             ]);
 
@@ -2096,7 +2127,8 @@ class MedicineCornerController extends Controller
             return redirect()->route('medicine-corner.stock')->with('success', $message);
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Failed to update stock: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to update stock: '.$e->getMessage());
         }
     }
 
@@ -2107,7 +2139,7 @@ class MedicineCornerController extends Controller
                 'medicine',
                 'vendor',
                 'vendorTransaction',
-                'addedBy'
+                'addedBy',
             ])->findOrFail($id);
 
             $vendorTransaction = $stock->vendorTransaction;
@@ -2147,7 +2179,7 @@ class MedicineCornerController extends Controller
                     'total_purchase_amount' => $stock->quantity * $stock->buy_price,
                     'due_amount' => $vendorTransaction ? $vendorTransaction->due_amount : 0,
                     'payment_status' => $vendorTransaction ? $vendorTransaction->payment_status : 'pending',
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json([
