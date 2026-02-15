@@ -3,26 +3,25 @@
 namespace App\Http\Controllers\Optics;
 
 use App\Http\Controllers\Controller;
-use App\Models\Glasses;
-use App\Models\LensType;
 use App\Models\CompleteGlasses;
+use App\Models\Glasses;
 use App\Models\GlassesPurchase;
-use App\Models\MainAccount;
-use App\Models\StockMovement;
+use App\Models\HospitalAccount;
+use App\Models\HospitalExpenseCategory;
+use App\Models\LensType;
 use App\Models\OpticsAccount;
-use App\Models\OpticsTransaction;
 use App\Models\OpticsExpenseCategory;
-use App\Models\OpticsVendor;
 use App\Models\OpticsSale;
 use App\Models\OpticsSaleItem;
 use App\Models\OpticsSalePayment;
+use App\Models\OpticsTransaction;
+use App\Models\OpticsVendor;
 use App\Models\Patient;
-use App\Models\HospitalAccount;
-use App\Models\HospitalExpenseCategory;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 class OpticsCornerController extends Controller
 {
@@ -46,7 +45,7 @@ class OpticsCornerController extends Controller
         ];
 
         $lowStockItems = collect()
-            ->merge(Glasses::active()->lowStock()->with(['stockMovements' => fn($q) => $q->latest()->limit(3)])->get())
+            ->merge(Glasses::active()->lowStock()->with(['stockMovements' => fn ($q) => $q->latest()->limit(3)])->get())
             ->merge(LensType::active()->lowStock()->get())
             ->merge(CompleteGlasses::active()->lowStock()->with('frame', 'lensType')->get());
 
@@ -60,24 +59,23 @@ class OpticsCornerController extends Controller
         $query = Glasses::query()
             ->when(
                 request('search'),
-                fn($q, $search) =>
-                $q->where('brand', 'like', "%{$search}%")
+                fn ($q, $search) => $q->where('brand', 'like', "%{$search}%")
                     ->orWhere('model', 'like', "%{$search}%")
                     ->orWhere('sku', 'like', "%{$search}%")
                     ->orWhere('color', 'like', "%{$search}%")
                     ->orWhere('size', 'like', "%{$search}%")
                     ->orWhere('material', 'like', "%{$search}%")
             )
-            ->when(request('type'), fn($q, $type) => $q->where('type', $type))
-            ->when(request('frame_type'), fn($q, $frameType) => $q->where('frame_type', $frameType))
-            ->when(request('material'), fn($q, $material) => $q->where('material', $material))
-            ->when(request('gender'), fn($q, $gender) => $q->where('gender', $gender))
-            ->when(request('color'), fn($q, $color) => $q->where('color', 'like', "%{$color}%"))
-            ->when(request('status') === 'active', fn($q) => $q->where('is_active', true))
-            ->when(request('status') === 'inactive', fn($q) => $q->where('is_active', false))
-            ->when(request('low_stock'), fn($q) => $q->lowStock())
-            ->when(request('in_stock'), fn($q) => $q->inStock())
-            ->when(request('out_of_stock'), fn($q) => $q->where('stock_quantity', 0))
+            ->when(request('type'), fn ($q, $type) => $q->where('type', $type))
+            ->when(request('frame_type'), fn ($q, $frameType) => $q->where('frame_type', $frameType))
+            ->when(request('material'), fn ($q, $material) => $q->where('material', $material))
+            ->when(request('gender'), fn ($q, $gender) => $q->where('gender', $gender))
+            ->when(request('color'), fn ($q, $color) => $q->where('color', 'like', "%{$color}%"))
+            ->when(request('status') === 'active', fn ($q) => $q->where('is_active', true))
+            ->when(request('status') === 'inactive', fn ($q) => $q->where('is_active', false))
+            ->when(request('low_stock'), fn ($q) => $q->lowStock())
+            ->when(request('in_stock'), fn ($q) => $q->inStock())
+            ->when(request('out_of_stock'), fn ($q) => $q->where('stock_quantity', 0))
             ->latest();
 
         // Check if requesting all frames for print
@@ -146,7 +144,7 @@ class OpticsCornerController extends Controller
 
     public function toggleStatus(Glasses $frame)
     {
-        $frame->update(['is_active' => !$frame->is_active]);
+        $frame->update(['is_active' => ! $frame->is_active]);
 
         $statusText = $frame->is_active ? 'activated' : 'deactivated';
 
@@ -189,7 +187,7 @@ class OpticsCornerController extends Controller
 
         DB::transaction(function () use ($validated) {
             // Generate SKU
-            $validated['sku'] = 'FR-' . strtoupper(Str::random(8));
+            $validated['sku'] = 'FR-'.strtoupper(Str::random(8));
 
             $frame = Glasses::create($validated);
 
@@ -213,9 +211,9 @@ class OpticsCornerController extends Controller
                 ]);
 
                 // ✅ Vendor থাকলে purchase record তৈরি করা হবে
-                if (!empty($validated['default_vendor_id'])) {
+                if (! empty($validated['default_vendor_id'])) {
                     $purchase = GlassesPurchase::create([
-                        'purchase_no' => 'GP-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                        'purchase_no' => 'GP-'.date('Ymd').'-'.str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
                         'vendor_id' => $validated['default_vendor_id'],
                         'glasses_id' => $frame->id,
                         'quantity' => $validated['stock_quantity'],
@@ -313,10 +311,10 @@ class OpticsCornerController extends Controller
     {
         // Get stock movements with related data
         $movements = StockMovement::with(['user'])
-            ->when(request('type'), fn($q, $type) => $q->where('movement_type', $type))
-            ->when(request('item_type'), fn($q, $itemType) => $q->where('item_type', $itemType))
-            ->when(request('date_from'), fn($q, $date) => $q->whereDate('created_at', '>=', $date))
-            ->when(request('date_to'), fn($q, $date) => $q->whereDate('created_at', '<=', $date))
+            ->when(request('type'), fn ($q, $type) => $q->where('movement_type', $type))
+            ->when(request('item_type'), fn ($q, $itemType) => $q->where('item_type', $itemType))
+            ->when(request('date_from'), fn ($q, $date) => $q->whereDate('created_at', '>=', $date))
+            ->when(request('date_to'), fn ($q, $date) => $q->whereDate('created_at', '<=', $date))
             ->latest()
             ->paginate(20)
             ->through(function ($movement) {
@@ -336,7 +334,7 @@ class OpticsCornerController extends Controller
                     'notes' => $movement->notes,
                     'created_at' => $movement->created_at->format('Y-m-d H:i:s'),
                     'user' => [
-                        'name' => $movement->user->name ?? 'System'
+                        'name' => $movement->user->name ?? 'System',
                     ],
                     // Item details
                     'item_brand' => $itemDetails['brand'] ?? 'N/A',
@@ -352,7 +350,7 @@ class OpticsCornerController extends Controller
         return Inertia::render('OpticsCorner/Stock/Index', [
             'movements' => $movements,
             'stats' => $stats,
-            'filters' => request()->only(['type', 'item_type', 'date_from', 'date_to'])
+            'filters' => request()->only(['type', 'item_type', 'date_from', 'date_to']),
         ]);
     }
 
@@ -361,29 +359,32 @@ class OpticsCornerController extends Controller
         switch ($itemType) {
             case 'glasses':
                 $item = \App\Models\Glasses::find($itemId);
+
                 return [
                     'brand' => $item->brand ?? 'N/A',
                     'model' => $item->model ?? 'N/A',
                     'sku' => $item->sku ?? 'N/A',
-                    'name' => ($item->brand ?? '') . ' ' . ($item->model ?? ''),
+                    'name' => ($item->brand ?? '').' '.($item->model ?? ''),
                 ];
 
             case 'lens_types':
                 $item = \App\Models\LensType::find($itemId);
+
                 return [
                     'brand' => $item->type ?? 'N/A',
                     'model' => $item->name ?? 'N/A',
-                    'sku' => 'LENS-' . $itemId,
+                    'sku' => 'LENS-'.$itemId,
                     'name' => $item->name ?? 'Unknown Lens',
                 ];
 
             case 'complete_glasses':
                 $item = \App\Models\CompleteGlasses::with('frame')->find($itemId);
+
                 return [
                     'brand' => $item->frame->brand ?? 'N/A',
                     'model' => $item->frame->model ?? 'N/A',
                     'sku' => $item->sku ?? 'N/A',
-                    'name' => 'Complete: ' . ($item->frame->brand ?? '') . ' ' . ($item->frame->model ?? ''),
+                    'name' => 'Complete: '.($item->frame->brand ?? '').' '.($item->frame->model ?? ''),
                 ];
 
             default:
@@ -413,7 +414,7 @@ class OpticsCornerController extends Controller
                 ->count(),
             'today_value' => StockMovement::whereDate('created_at', $today)
                 ->get()
-                ->sum(fn($m) => abs($m->total_amount)),
+                ->sum(fn ($m) => abs($m->total_amount)),
 
             // This week
             'week_purchases' => StockMovement::where('movement_type', 'purchase')
@@ -424,7 +425,7 @@ class OpticsCornerController extends Controller
                 ->sum('quantity')),
             'week_value' => StockMovement::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
                 ->get()
-                ->sum(fn($m) => abs($m->total_amount)),
+                ->sum(fn ($m) => abs($m->total_amount)),
         ];
     }
 
@@ -435,6 +436,7 @@ class OpticsCornerController extends Controller
             ->get(['id', 'brand', 'model', 'sku', 'stock_quantity', 'purchase_price', 'default_vendor_id'])
             ->map(function ($frame) {
                 $frame->full_name = $frame->full_name;
+
                 return $frame;
             });
 
@@ -442,6 +444,7 @@ class OpticsCornerController extends Controller
             ->get(['id', 'name', 'stock_quantity'])
             ->map(function ($lens) {
                 $lens->full_name = $lens->name;
+
                 return $lens;
             });
 
@@ -450,6 +453,7 @@ class OpticsCornerController extends Controller
             ->get(['id', 'frame_id', 'lens_type_id', 'stock_quantity'])
             ->map(function ($glass) {
                 $glass->full_name = $glass->full_name;
+
                 return $glass;
             });
 
@@ -517,13 +521,13 @@ class OpticsCornerController extends Controller
             };
 
             // ✅ Vendor check করা হচ্ছে
-            if (!empty($validated['vendor_id']) && $validated['item_type'] === 'glasses') {
+            if (! empty($validated['vendor_id']) && $validated['item_type'] === 'glasses') {
                 $paidAmount = $validated['paid_amount'] ?? 0;
                 $dueAmount = $totalAmount - $paidAmount;
 
                 // Create purchase record
                 $purchase = GlassesPurchase::create([
-                    'purchase_no' => 'GP-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
+                    'purchase_no' => 'GP-'.date('Ymd').'-'.str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT),
                     'vendor_id' => $validated['vendor_id'],
                     'glasses_id' => $validated['item_id'],
                     'quantity' => $validated['quantity'],
@@ -557,9 +561,9 @@ class OpticsCornerController extends Controller
 
                     $description = "Stock purchase: {$itemName} - {$validated['quantity']} pcs";
                     if ($dueAmount > 0) {
-                        $description .= " (Paid: ৳" . number_format($paidAmount, 2) . " | Due: ৳" . number_format($dueAmount, 2) . ")";
+                        $description .= ' (Paid: ৳'.number_format($paidAmount, 2).' | Due: ৳'.number_format($dueAmount, 2).')';
                     } else {
-                        $description .= " (Fully Paid)";
+                        $description .= ' (Fully Paid)';
                     }
 
                     $transaction = HospitalAccount::addExpense(
@@ -591,7 +595,6 @@ class OpticsCornerController extends Controller
         return redirect()->route('optics.stock')->with('success', 'Stock added successfully!');
     }
 
-
     public function editStock($id)
     {
         $movement = StockMovement::with(['user'])->findOrFail($id);
@@ -611,6 +614,7 @@ class OpticsCornerController extends Controller
                 ->get(['id', 'brand', 'model', 'sku', 'stock_quantity'])
                 ->map(function ($frame) {
                     $frame->full_name = $frame->full_name;
+
                     return $frame;
                 });
         } elseif ($movement->item_type === 'lens_types') {
@@ -618,6 +622,7 @@ class OpticsCornerController extends Controller
                 ->get(['id', 'name', 'stock_quantity'])
                 ->map(function ($lens) {
                     $lens->full_name = $lens->name;
+
                     return $lens;
                 });
         } elseif ($movement->item_type === 'complete_glasses') {
@@ -626,6 +631,7 @@ class OpticsCornerController extends Controller
                 ->get(['id', 'frame_id', 'lens_type_id', 'stock_quantity'])
                 ->map(function ($glass) {
                     $glass->full_name = $glass->full_name;
+
                     return $glass;
                 });
         }
@@ -706,7 +712,7 @@ class OpticsCornerController extends Controller
                 OpticsAccount::adjustAmount(
                     $amountDifference,
                     'expense',
-                    ucfirst(str_replace('_', ' ', $validated['item_type'])) . ' Purchase Adjustment',
+                    ucfirst(str_replace('_', ' ', $validated['item_type'])).' Purchase Adjustment',
                     "Stock adjustment: Additional expense for movement #{$movement->id}"
                 );
             } elseif ($amountDifference < 0) {
@@ -714,7 +720,7 @@ class OpticsCornerController extends Controller
                 OpticsAccount::adjustAmount(
                     abs($amountDifference),
                     'income',
-                    ucfirst(str_replace('_', ' ', $validated['item_type'])) . ' Purchase Adjustment',
+                    ucfirst(str_replace('_', ' ', $validated['item_type'])).' Purchase Adjustment',
                     "Stock adjustment: Refund for movement #{$movement->id}"
                 );
             }
@@ -748,7 +754,7 @@ class OpticsCornerController extends Controller
             OpticsAccount::adjustAmount(
                 $movement->total_amount,
                 'income',
-                ucfirst(str_replace('_', ' ', $movement->item_type)) . ' Purchase Refund',
+                ucfirst(str_replace('_', ' ', $movement->item_type)).' Purchase Refund',
                 "Stock movement deleted: Movement #{$movement->id} refund"
             );
 
@@ -793,6 +799,15 @@ class OpticsCornerController extends Controller
             $query->where('status', request('status'));
         }
 
+        // Due status filter
+        if (request('due_status')) {
+            if (request('due_status') === 'paid') {
+                $query->where('due_amount', '<=', 0);
+            } elseif (request('due_status') === 'due') {
+                $query->where('due_amount', '>', 0);
+            }
+        }
+
         // Check if requesting all records for print/export
         if (request('all') === 'true') {
             $sales = $query->latest()->get();
@@ -811,7 +826,7 @@ class OpticsCornerController extends Controller
             'totalSales' => $totalSales,
             'totalDue' => $totalDue,
             'salesCount' => $salesCount,
-            'filters' => request()->only(['search', 'from_date', 'to_date', 'status']),
+            'filters' => request()->only(['search', 'from_date', 'to_date', 'status', 'due_status']),
         ]);
     }
 
@@ -873,7 +888,7 @@ class OpticsCornerController extends Controller
             $saleDetails = [];
 
             // Process items only if they exist
-            if (!empty($validated['items'])) {
+            if (! empty($validated['items'])) {
                 foreach ($validated['items'] as $item) {
                     $model = match ($item['type']) {
                         'frame' => Glasses::class,
@@ -885,7 +900,7 @@ class OpticsCornerController extends Controller
 
                     if ($product->stock_quantity < $item['quantity']) {
                         throw new \Exception(
-                            "Insufficient stock for " . ($product->name ?? $product->full_name) .
+                            'Insufficient stock for '.($product->name ?? $product->full_name).
                                 ". Available: {$product->stock_quantity}"
                         );
                     }
@@ -908,11 +923,11 @@ class OpticsCornerController extends Controller
                         'new_stock' => $newStock,
                         'unit_price' => $item['price'],
                         'total_amount' => $itemTotal,
-                        'notes' => "Sale - " . ($product->name ?? $product->full_name) . " x{$item['quantity']}",
+                        'notes' => 'Sale - '.($product->name ?? $product->full_name)." x{$item['quantity']}",
                         'user_id' => auth()->id(),
                     ]);
 
-                    $saleDetails[] = ($product->name ?? $product->full_name) . " x{$item['quantity']}";
+                    $saleDetails[] = ($product->name ?? $product->full_name)." x{$item['quantity']}";
                 }
             }
 
@@ -942,11 +957,11 @@ class OpticsCornerController extends Controller
                 'advance_payment' => $validated['advance_payment'],
                 'due_amount' => $dueAmount,
                 'status' => 'pending',
-                'notes' => $validated['notes']
+                'notes' => $validated['notes'],
             ]);
 
             // Save sale items
-            if (!empty($validated['items'])) {
+            if (! empty($validated['items'])) {
                 foreach ($validated['items'] as $item) {
                     $model = match ($item['type']) {
                         'frame' => Glasses::class,
@@ -963,7 +978,7 @@ class OpticsCornerController extends Controller
                         'item_name' => $itemName,
                         'quantity' => $item['quantity'],
                         'unit_price' => $item['price'],
-                        'total_price' => $item['price'] * $item['quantity']
+                        'total_price' => $item['price'] * $item['quantity'],
                     ]);
                 }
             }
@@ -976,7 +991,7 @@ class OpticsCornerController extends Controller
                     'payment_method' => $validated['payment_method'],
                     'transaction_id' => $validated['transaction_id'] ?? null,
                     'notes' => 'Advance Payment',
-                    'received_by' => auth()->id()
+                    'received_by' => auth()->id(),
                 ]);
             }
 
@@ -986,11 +1001,11 @@ class OpticsCornerController extends Controller
                 if ($customerPhone) {
                     $description .= " ({$customerPhone})";
                 }
-                $description .= " | Total Amount: ৳" . number_format($totalAmount, 2);
-                $description .= " | Advance: ৳" . number_format($validated['advance_payment'], 2);
-                $description .= " | Due: ৳" . number_format($dueAmount, 2);
-                if (!empty($saleDetails)) {
-                    $description .= " | Items: " . implode(', ', $saleDetails);
+                $description .= ' | Total Amount: ৳'.number_format($totalAmount, 2);
+                $description .= ' | Advance: ৳'.number_format($validated['advance_payment'], 2);
+                $description .= ' | Due: ৳'.number_format($dueAmount, 2);
+                if (! empty($saleDetails)) {
+                    $description .= ' | Items: '.implode(', ', $saleDetails);
                 }
                 if ($fittingCharge > 0) {
                     $description .= " | Fitting: ৳{$fittingCharge}";
@@ -1024,22 +1039,23 @@ class OpticsCornerController extends Controller
                         ->where('id', $hospitalTransaction->id)
                         ->update([
                             'created_at' => now(),
-                            'updated_at' => now()
+                            'updated_at' => now(),
                         ]);
                 }
             }
 
             DB::commit();
 
-            $responseMessage = "Sale completed successfully! Invoice: {$sale->invoice_number} | Total: ৳" . number_format($totalAmount, 2);
+            $responseMessage = "Sale completed successfully! Invoice: {$sale->invoice_number} | Total: ৳".number_format($totalAmount, 2);
             if ($dueAmount > 0) {
-                $responseMessage .= " | Due: ৳" . number_format($dueAmount, 2);
+                $responseMessage .= ' | Due: ৳'.number_format($dueAmount, 2);
             }
 
             return redirect()->route('optics.sales')->with('success', $responseMessage);
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Sale failed: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Sale failed: '.$e->getMessage());
         }
     }
 
@@ -1097,7 +1113,7 @@ class OpticsCornerController extends Controller
             'sale' => $saleData,
             'frames' => $frames,
             'lensTypes' => $lensTypes,
-            'completeGlasses' => $completeGlasses
+            'completeGlasses' => $completeGlasses,
         ]);
     }
 
@@ -1143,7 +1159,7 @@ class OpticsCornerController extends Controller
                 if ($product) {
                     // Add back the quantity that was sold
                     $product->update([
-                        'stock_quantity' => $product->stock_quantity + $saleItem->quantity
+                        'stock_quantity' => $product->stock_quantity + $saleItem->quantity,
                     ]);
                 }
 
@@ -1193,7 +1209,7 @@ class OpticsCornerController extends Controller
             $itemsTotal = 0;
             $saleDetails = [];
 
-            if (!empty($validated['items'])) {
+            if (! empty($validated['items'])) {
                 foreach ($validated['items'] as $item) {
                     $model = match ($item['type']) {
                         'frame' => Glasses::class,
@@ -1205,7 +1221,7 @@ class OpticsCornerController extends Controller
 
                     if ($product->stock_quantity < $item['quantity']) {
                         throw new \Exception(
-                            "Insufficient stock for " . ($product->name ?? $product->full_name) .
+                            'Insufficient stock for '.($product->name ?? $product->full_name).
                                 ". Available: {$product->stock_quantity}"
                         );
                     }
@@ -1228,11 +1244,11 @@ class OpticsCornerController extends Controller
                         'new_stock' => $newStock,
                         'unit_price' => $item['price'],
                         'total_amount' => $itemTotal,
-                        'notes' => "Updated Sale - " . ($product->name ?? $product->full_name) . " x{$item['quantity']}",
+                        'notes' => 'Updated Sale - '.($product->name ?? $product->full_name)." x{$item['quantity']}",
                         'user_id' => auth()->id(),
                     ]);
 
-                    $saleDetails[] = ($product->name ?? $product->full_name) . " x{$item['quantity']}";
+                    $saleDetails[] = ($product->name ?? $product->full_name)." x{$item['quantity']}";
 
                     // Create new sale item
                     OpticsSaleItem::create([
@@ -1242,7 +1258,7 @@ class OpticsCornerController extends Controller
                         'item_name' => $product->name ?? $product->full_name,
                         'quantity' => $item['quantity'],
                         'unit_price' => $item['price'],
-                        'total_price' => $itemTotal
+                        'total_price' => $itemTotal,
                     ]);
                 }
             }
@@ -1269,7 +1285,7 @@ class OpticsCornerController extends Controller
                 'total_amount' => $totalAmount,
                 'advance_payment' => $validated['advance_payment'],
                 'due_amount' => $dueAmount,
-                'notes' => $validated['notes']
+                'notes' => $validated['notes'],
             ]);
 
             // Step 9: Delete old payment records (will be recreated if payment amount changed)
@@ -1283,7 +1299,7 @@ class OpticsCornerController extends Controller
                     'payment_method' => $validated['payment_method'],
                     'transaction_id' => $validated['transaction_id'] ?? null,
                     'notes' => 'Updated Advance Payment',
-                    'received_by' => auth()->id()
+                    'received_by' => auth()->id(),
                 ]);
             }
 
@@ -1293,15 +1309,16 @@ class OpticsCornerController extends Controller
 
             DB::commit();
 
-            $responseMessage = "Sale updated successfully! Invoice: {$sale->invoice_number} | Total: ৳" . number_format($totalAmount, 2);
+            $responseMessage = "Sale updated successfully! Invoice: {$sale->invoice_number} | Total: ৳".number_format($totalAmount, 2);
             if ($dueAmount > 0) {
-                $responseMessage .= " | Due: ৳" . number_format($dueAmount, 2);
+                $responseMessage .= ' | Due: ৳'.number_format($dueAmount, 2);
             }
 
             return redirect()->route('optics.sales')->with('success', $responseMessage);
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Sale update failed: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Sale update failed: '.$e->getMessage());
         }
     }
 
@@ -1324,7 +1341,7 @@ class OpticsCornerController extends Controller
                 if ($product) {
                     // Add back the quantity that was sold
                     $product->update([
-                        'stock_quantity' => $product->stock_quantity + $saleItem->quantity
+                        'stock_quantity' => $product->stock_quantity + $saleItem->quantity,
                     ]);
                 }
 
@@ -1344,7 +1361,7 @@ class OpticsCornerController extends Controller
                     $totalPayments,
                     'expense',
                     'Sale Deletion',
-                    "Reversed sale - Invoice: {$sale->invoice_number} | Customer: {$sale->customer_name} | Total Refunded: ৳" . number_format($totalPayments, 2)
+                    "Reversed sale - Invoice: {$sale->invoice_number} | Customer: {$sale->customer_name} | Total Refunded: ৳".number_format($totalPayments, 2)
                 );
             }
 
@@ -1360,10 +1377,11 @@ class OpticsCornerController extends Controller
 
             DB::commit();
 
-            return redirect()->route('optics.sales')->with('success', "Sale deleted successfully! Invoice: {$invoiceNumber} | Stock has been restored and ৳" . number_format($totalPayments, 2) . " has been refunded.");
+            return redirect()->route('optics.sales')->with('success', "Sale deleted successfully! Invoice: {$invoiceNumber} | Stock has been restored and ৳".number_format($totalPayments, 2).' has been refunded.');
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Sale deletion failed: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Sale deletion failed: '.$e->getMessage());
         }
     }
 
@@ -1373,8 +1391,8 @@ class OpticsCornerController extends Controller
         $monthlyReport = OpticsAccount::monthlyReport(now()->year, now()->month);
 
         $transactions = OpticsTransaction::with('createdBy', 'expenseCategory')
-            ->when(request('type'), fn($q, $type) => $q->where('type', $type))
-            ->when(request('category'), fn($q, $category) => $q->byCategory($category))
+            ->when(request('type'), fn ($q, $type) => $q->where('type', $type))
+            ->when(request('category'), fn ($q, $category) => $q->byCategory($category))
             ->latest()
             ->paginate(20);
 
@@ -1444,8 +1462,7 @@ class OpticsCornerController extends Controller
         $lensTypes = LensType::active()
             ->when(
                 request('search'),
-                fn($q, $search) =>
-                $q->where('name', 'like', "%{$search}%")
+                fn ($q, $search) => $q->where('name', 'like', "%{$search}%")
                     ->orWhere('type', 'like', "%{$search}%")
                     ->orWhere('material', 'like', "%{$search}%")
             )
@@ -1472,7 +1489,4 @@ class OpticsCornerController extends Controller
 
         return back()->with('success', 'Lens type added successfully!');
     }
-
-
-
 }

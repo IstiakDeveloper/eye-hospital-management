@@ -71,6 +71,18 @@ class OpticsReportController extends Controller
             ->whereNull('deleted_at')
             ->sum('glass_fitting_price');
 
+        // Get due amount for only fitting charge sales
+        $onlyFittingChargeDue = DB::table('optics_sales')
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('optics_sale_items')
+                    ->whereColumn('optics_sale_items.optics_sale_id', 'optics_sales.id');
+            })
+            ->where('glass_fitting_price', '>', 0)
+            ->whereBetween('created_at', [$fromDate.' 00:00:00', $toDate.' 23:59:59'])
+            ->whereNull('deleted_at')
+            ->sum('due_amount');
+
         // Calculate totals - no rounding, sum raw values for continuity
         $totals = [
             'before_stock_qty' => collect($reportData)->sum('before_stock_qty'),
@@ -84,7 +96,7 @@ class OpticsReportController extends Controller
             'sale_discount' => collect($reportData)->sum('sale_discount'),
             'sale_fitting' => collect($reportData)->sum('sale_fitting'),
             'sale_total' => collect($reportData)->sum('sale_total'),
-            'sale_due' => collect($reportData)->sum('sale_due'),
+            'sale_due' => collect($reportData)->sum('sale_due') + $onlyFittingChargeDue,
 
             'available_stock' => collect($reportData)->sum('available_stock'),
             'available_value' => collect($reportData)->sum('available_value'),
@@ -92,6 +104,7 @@ class OpticsReportController extends Controller
             'total_profit' => collect($reportData)->sum('total_profit'),
 
             'only_fitting_charge' => (float) $onlyFittingCharge,
+            'only_fitting_charge_due' => (float) $onlyFittingChargeDue,
         ];
 
         // Calculate optics-only totals (without only_fitting_charge)
@@ -181,6 +194,18 @@ class OpticsReportController extends Controller
             ->whereNull('deleted_at')
             ->sum('glass_fitting_price');
 
+        // Get due amount for only fitting charge sales
+        $onlyFittingChargeDue = DB::table('optics_sales')
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('optics_sale_items')
+                    ->whereColumn('optics_sale_items.optics_sale_id', 'optics_sales.id');
+            })
+            ->where('glass_fitting_price', '>', 0)
+            ->whereBetween('created_at', [$fromDate.' 00:00:00', $toDate.' 23:59:59'])
+            ->whereNull('deleted_at')
+            ->sum('due_amount');
+
         // Calculate totals
         $totals = [
             'before_stock_qty' => collect($reportData)->sum('before_stock_qty'),
@@ -191,11 +216,12 @@ class OpticsReportController extends Controller
             'sale_subtotal' => collect($reportData)->sum('sale_subtotal'),
             'sale_discount' => collect($reportData)->sum('sale_discount'),
             'sale_total' => collect($reportData)->sum('sale_total'),
-            'sale_due' => collect($reportData)->sum('sale_due'),
+            'sale_due' => collect($reportData)->sum('sale_due') + $onlyFittingChargeDue,
             'available_stock' => collect($reportData)->sum('available_stock'),
             'available_value' => collect($reportData)->sum('available_value'),
             'total_profit' => collect($reportData)->sum('total_profit'),
             'only_fitting_charge' => (float) $onlyFittingCharge,
+            'only_fitting_charge_due' => (float) $onlyFittingChargeDue,
         ];
 
         return response()->json([

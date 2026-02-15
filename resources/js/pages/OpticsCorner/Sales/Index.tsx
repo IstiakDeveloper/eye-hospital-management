@@ -41,6 +41,7 @@ interface PageProps {
         from_date?: string;
         to_date?: string;
         status?: string;
+        due_status?: string;
     };
 }
 
@@ -98,6 +99,7 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
     const [fromDate, setFromDate] = useState(filters?.from_date || '');
     const [toDate, setToDate] = useState(filters?.to_date || '');
     const [statusFilter, setStatusFilter] = useState(filters?.status || '');
+    const [dueStatusFilter, setDueStatusFilter] = useState(filters?.due_status || '');
     const [showFilters, setShowFilters] = useState(false);
     const [exportingExcel, setExportingExcel] = useState(false);
     const [deletingSaleId, setDeletingSaleId] = useState<number | null>(null);
@@ -122,6 +124,7 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
         if (fromDate) params.from_date = fromDate;
         if (toDate) params.to_date = toDate;
         if (statusFilter) params.status = statusFilter;
+        if (dueStatusFilter) params.due_status = dueStatusFilter;
 
         router.get(route('optics.sales'), params, {
             preserveState: true,
@@ -135,10 +138,11 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
         setFromDate('');
         setToDate('');
         setStatusFilter('');
+        setDueStatusFilter('');
         router.get(route('optics.sales'), {}, { preserveState: true });
     };
 
-    const hasActiveFilters = search || fromDate || toDate || statusFilter;
+    const hasActiveFilters = search || fromDate || toDate || statusFilter || dueStatusFilter;
 
     const exportToExcel = () => {
         setExportingExcel(true);
@@ -148,6 +152,7 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
         if (fromDate) params.from_date = fromDate;
         if (toDate) params.to_date = toDate;
         if (statusFilter) params.status = statusFilter;
+        if (dueStatusFilter) params.due_status = dueStatusFilter;
 
         router.get(route('optics.sales'), params, {
             preserveState: true,
@@ -273,8 +278,14 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Sales Management</h1>
-                        <p className="text-gray-600">Track all your sales transactions</p>
+                        <h1 className="text-2xl font-bold text-gray-900">Optics Sales</h1>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+                            <span>Total: <span className="font-semibold text-gray-900">{salesCount}</span></span>
+                            <span className="text-gray-300">|</span>
+                            <span>Revenue: <span className="font-semibold text-green-600">{formatCurrency(totalSales || 0)}</span></span>
+                            <span className="text-gray-300">|</span>
+                            <span>Due: <span className="font-semibold text-red-600">{formatCurrency(totalDue || 0)}</span></span>
+                        </div>
                     </div>
                     <div className="flex space-x-3">
                         <Button
@@ -291,59 +302,6 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                                 <span>New Sale</span>
                             </Button>
                         </Link>
-                    </div>
-                </div>
-
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Total Sales</p>
-                                <p className="text-2xl font-bold text-gray-900 mt-2">{salesCount || salesTotal}</p>
-                            </div>
-                            <div className="bg-blue-100 p-3 rounded-lg">
-                                <Calendar className="w-6 h-6 text-blue-600" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                                <p className="text-2xl font-bold text-green-600 mt-2">{formatCurrency(totalSales || 0)}</p>
-                            </div>
-                            <div className="bg-green-100 p-3 rounded-lg">
-                                <FileSpreadsheet className="w-6 h-6 text-green-600" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Total Due</p>
-                                <p className="text-2xl font-bold text-red-600 mt-2">{formatCurrency(totalDue || 0)}</p>
-                            </div>
-                            <div className="bg-red-100 p-3 rounded-lg">
-                                <Clock className="w-6 h-6 text-red-600" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Average Sale</p>
-                                <p className="text-2xl font-bold text-purple-600 mt-2">
-                                    {formatCurrency((totalSales || 0) / (salesCount || 1))}
-                                </p>
-                            </div>
-                            <div className="bg-purple-100 p-3 rounded-lg">
-                                <Printer className="w-6 h-6 text-purple-600" />
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -377,7 +335,7 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                             </div>
 
                             {showFilters && (
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
+                                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-4 border-t">
                                     <Input
                                         type="date"
                                         label="From Date"
@@ -399,6 +357,15 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                                         <option value="pending">Pending</option>
                                         <option value="ready">Ready</option>
                                         <option value="delivered">Delivered</option>
+                                    </Select>
+                                    <Select
+                                        label="Due Status"
+                                        value={dueStatusFilter}
+                                        onChange={(e: any) => setDueStatusFilter(e.target.value)}
+                                    >
+                                        <option value="">All</option>
+                                        <option value="paid">Paid</option>
+                                        <option value="due">Has Due</option>
                                     </Select>
                                     <div className="flex items-end">
                                         <Button onClick={handleSearch} className="w-full">
@@ -433,6 +400,11 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                         {statusFilter && (
                             <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">
                                 Status: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                            </span>
+                        )}
+                        {dueStatusFilter && (
+                            <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm">
+                                Due: {dueStatusFilter === 'paid' ? 'Paid' : 'Has Due'}
                             </span>
                         )}
                     </div>

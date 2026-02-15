@@ -155,9 +155,16 @@ class ReceiptPaymentController extends Controller
 
         // Build receipts array with ALL categories
         foreach ($allCategories as $category) {
+            $categoryName = $category->name;
+
+            // Replace "Income" with "Sale" only for Optics and Medicine
+            if (in_array($category->name, ['Optics Income', 'Medicine Income'])) {
+                $categoryName = str_replace('Income', 'Sale', $category->name);
+            }
+
             $receipts[] = [
                 'serial' => $serialNumber++,
-                'category' => $category->name,
+                'category' => $categoryName,
                 'current_month' => (float) ($currentMonthData[$category->id] ?? 0),
                 'cumulative' => (float) ($cumulativeData[$category->id] ?? 0),
                 'type' => 'income',

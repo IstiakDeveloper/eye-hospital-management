@@ -56,6 +56,7 @@ interface Totals {
     available_value: number;
     total_profit: number;
     only_fitting_charge: number;
+    only_fitting_charge_due: number;
 }
 
 interface OpticsTotals {
@@ -104,9 +105,11 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
         ...rawTotals,
         sale_fitting: rawTotals.sale_fitting + (rawTotals.only_fitting_charge ?? 0),
         sale_total: rawTotals.sale_total + (rawTotals.only_fitting_charge ?? 0),
+        sale_due: rawTotals.sale_due, // Already includes only_fitting_charge_due from backend
         sale_cash: (rawTotals.sale_total + (rawTotals.only_fitting_charge ?? 0)) - rawTotals.sale_due,
         total_profit: rawTotals.total_profit + (rawTotals.only_fitting_charge ?? 0),
         only_fitting_charge: rawTotals.only_fitting_charge ?? 0,
+        only_fitting_charge_due: rawTotals.only_fitting_charge_due ?? 0,
     };
 
     const handleFilter = () => {
@@ -209,10 +212,10 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
             '',
             '',
             '',
-            '',
-            '',
-            '',
-            '',
+            totals.only_fitting_charge.toFixed(2),
+            totals.only_fitting_charge.toFixed(2),
+            (totals.only_fitting_charge - (totals.only_fitting_charge_due ?? 0)).toFixed(2),
+            (totals.only_fitting_charge_due ?? 0).toFixed(2),
             '',
             totals.only_fitting_charge.toFixed(2),
             '',
@@ -646,9 +649,19 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                         <td className="border border-gray-300 bg-orange-100 px-2 py-3 text-right text-sm font-bold text-blue-600">
                                             {totals.only_fitting_charge.toFixed(2)}
                                         </td>
-                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-center text-sm text-gray-500">-</td>
-                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-center text-sm text-gray-500">-</td>
-                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-center text-sm text-gray-500">-</td>
+                                        {/* Total column - show only fitting charge */}
+                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-right text-sm font-semibold text-gray-900">
+                                            {totals.only_fitting_charge.toFixed(2)}
+                                        </td>
+                                        {/* Cash column - show cash received */}
+                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-right text-sm font-semibold text-green-600">
+                                            {(totals.only_fitting_charge - (totals.only_fitting_charge_due ?? 0)).toFixed(2)}
+                                        </td>
+
+                                        {/* Due column - show due amount */}
+                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-right text-sm font-semibold text-red-600">
+                                            {(totals.only_fitting_charge_due ?? 0).toFixed(2)}
+                                        </td>
 
                                         {/* Profit - show only fitting charge as pure profit */}
                                         <td className="border border-gray-300 bg-pink-50 px-2 py-3 text-center text-sm text-gray-500">-</td>

@@ -135,7 +135,7 @@ class LensType extends Model
         return $lensTypes->map(function ($lens) use ($fromDate, $toDate) {
             // Use cumulative method for perfect continuity - calculate till day BEFORE fromDate
             $dayBeforeFrom = date('Y-m-d', strtotime($fromDate.' -1 day'));
-            $beforeStockData = $lensType->getCumulativeStockValue($dayBeforeFrom);
+            $beforeStockData = $lens->getCumulativeStockValue($dayBeforeFrom);
             $beforeStockQty = $beforeStockData['quantity'];
             $beforeStockValue = $beforeStockData['value'];
 

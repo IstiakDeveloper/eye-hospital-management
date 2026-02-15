@@ -104,9 +104,9 @@ class Operation extends Model
     {
         // Get all transaction receipts with patient and operation details
         $query = \DB::table('hospital_transactions')
-            ->join('operation_bookings', 'hospital_transactions.reference_id', '=', 'operation_bookings.id')
-            ->join('patients', 'operation_bookings.patient_id', '=', 'patients.id')
-            ->join('operations', 'operation_bookings.operation_id', '=', 'operations.id')
+            ->leftJoin('operation_bookings', 'hospital_transactions.reference_id', '=', 'operation_bookings.id')
+            ->leftJoin('patients', 'operation_bookings.patient_id', '=', 'patients.id')
+            ->leftJoin('operations', 'operation_bookings.operation_id', '=', 'operations.id')
             ->leftJoin('doctors', 'operation_bookings.doctor_id', '=', 'doctors.id')
             ->leftJoin('users as doctor_users', 'doctors.user_id', '=', 'doctor_users.id')
             ->where('hospital_transactions.type', 'income')
@@ -128,6 +128,7 @@ class Operation extends Model
             'hospital_transactions.transaction_date',
             'hospital_transactions.amount as payment_received',
             'hospital_transactions.transaction_no',
+            'hospital_transactions.description',
             'operation_bookings.id as booking_id',
             'operation_bookings.booking_no',
             'operation_bookings.base_amount',
@@ -167,23 +168,23 @@ class Operation extends Model
                 'transaction_id' => $transaction->transaction_id,
                 'receipt_date' => $transaction->transaction_date,
                 'transaction_no' => $transaction->transaction_no,
-                'booking_no' => $transaction->booking_no,
-                'patient_id' => $transaction->patient_id,
-                'patient_name' => $transaction->patient_name,
+                'booking_no' => $transaction->booking_no ?? 'N/A',
+                'patient_id' => $transaction->patient_id ?? 'N/A',
+                'patient_name' => $transaction->patient_name ?? $transaction->description ?? 'Direct Payment',
                 'patient_age' => $age ?? 0,
-                'patient_gender' => $transaction->patient_gender,
-                'operation_name' => $transaction->operation_name,
-                'operation_code' => $transaction->operation_code,
+                'patient_gender' => $transaction->patient_gender ?? 'N/A',
+                'operation_name' => $transaction->operation_name ?? 'Operation Income',
+                'operation_code' => $transaction->operation_code ?? 'N/A',
                 'operation_type' => $transaction->operation_type ?? 'General',
                 'doctor_name' => $transaction->doctor_name,
-                'scheduled_date' => $transaction->scheduled_date,
-                'base_amount' => round($transaction->base_amount, 2),
-                'discount' => round($transaction->discount_amount, 2),
-                'total_bill' => round($transaction->total_bill, 2),
+                'scheduled_date' => $transaction->scheduled_date ?? $transaction->transaction_date,
+                'base_amount' => round($transaction->base_amount ?? $transaction->payment_received, 2),
+                'discount' => round($transaction->discount_amount ?? 0, 2),
+                'total_bill' => round($transaction->total_bill ?? $transaction->payment_received, 2),
                 'payment_received' => round($transaction->payment_received, 2),
-                'total_paid' => round($transaction->total_paid_so_far, 2),
-                'remaining_due' => round($transaction->remaining_due, 2),
-                'status' => $transaction->status,
+                'total_paid' => round($transaction->total_paid_so_far ?? $transaction->payment_received, 2),
+                'remaining_due' => round($transaction->remaining_due ?? 0, 2),
+                'status' => $transaction->status ?? 'completed',
             ];
         }
 
@@ -196,7 +197,7 @@ class Operation extends Model
     public static function getIncomeReportSummary($fromDate, $toDate)
     {
         $transactions = \DB::table('hospital_transactions')
-            ->join('operation_bookings', 'hospital_transactions.reference_id', '=', 'operation_bookings.id')
+            ->leftJoin('operation_bookings', 'hospital_transactions.reference_id', '=', 'operation_bookings.id')
             ->where('hospital_transactions.type', 'income')
             ->where('hospital_transactions.category', 'Operation Income')
             ->whereBetween('hospital_transactions.transaction_date', [$fromDate, $toDate])
@@ -208,12 +209,25 @@ class Operation extends Model
             )
             ->get();
 
+        // Calculate totals considering null values for transactions without bookings
+        $totalReceived = 0;
+        $totalBase = 0;
+        $totalDiscount = 0;
+        $totalBill = 0;
+
+        foreach ($transactions as $transaction) {
+            $totalReceived += (float) $transaction->payment_received;
+            $totalBase += (float) ($transaction->base_amount ?? $transaction->payment_received);
+            $totalDiscount += (float) ($transaction->discount_amount ?? 0);
+            $totalBill += (float) ($transaction->total_amount ?? $transaction->payment_received);
+        }
+
         return [
             'total_receipts' => $transactions->count(),
-            'total_base_amount' => round($transactions->sum('base_amount'), 2),
-            'total_discount' => round($transactions->sum('discount_amount'), 2),
-            'total_bill' => round($transactions->sum('total_amount'), 2),
-            'total_received' => round($transactions->sum('payment_received'), 2),
+            'total_base_amount' => round($totalBase, 2),
+            'total_discount' => round($totalDiscount, 2),
+            'total_bill' => round($totalBill, 2),
+            'total_received' => round($totalReceived, 2),
         ];
     }
 }

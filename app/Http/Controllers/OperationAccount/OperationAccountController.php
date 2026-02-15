@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\OperationAccount;
 
 use App\Http\Controllers\Controller;
+use App\Models\OperationAccount;
+use App\Models\OperationFundTransaction;
+use App\Models\OperationTransaction;
 use Illuminate\Http\Request;
-use App\Models\{OperationAccount, OperationFundTransaction, OperationTransaction};
-use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class OperationAccountController extends Controller
 {
