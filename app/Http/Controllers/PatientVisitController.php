@@ -2,27 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Patient;
-use App\Models\PatientVisit;
-use App\Models\PatientPayment;
 use App\Models\Doctor;
 use App\Models\HospitalAccount;
 use App\Models\HospitalTransaction;
+use App\Models\Patient;
+use App\Models\PatientPayment;
+use App\Models\PatientVisit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class PatientVisitController extends Controller
 {
-
     public function index(Request $request)
     {
         $query = PatientVisit::with([
             'patient',
             'selectedDoctor.user',
             'payments.paymentMethod',
-            'createdBy'
+            'createdBy',
         ]);
 
         // Filter by patient name or ID
@@ -94,7 +93,7 @@ class PatientVisitController extends Controller
                 'prescription_status',
                 'doctor_id',
                 'date_from',
-                'date_to'
+                'date_to',
             ]),
         ]);
     }
@@ -190,10 +189,9 @@ class PatientVisitController extends Controller
             });
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Visit creation failed: ' . $e->getMessage());
+                ->with('error', 'Visit creation failed: '.$e->getMessage());
         }
     }
-
 
     /**
      * Show visit details
@@ -204,7 +202,7 @@ class PatientVisitController extends Controller
             'patient',
             'selectedDoctor.user',
             'payments.paymentMethod',
-            'payments.receivedBy'
+            'payments.receivedBy',
         ]);
 
         return Inertia::render('Visits/Show', [
@@ -224,7 +222,7 @@ class PatientVisitController extends Controller
             'payments' => function ($query) {
                 $query->with(['paymentMethod', 'receivedBy']) // Load payment methods and who received
                     ->orderBy('payment_date', 'desc'); // Latest payments first
-            }
+            },
         ]);
 
         $latestPayment = $visit->payments->first();
@@ -248,10 +246,10 @@ class PatientVisitController extends Controller
             'payments' => function ($query) {
                 $query->with(['paymentMethod', 'receivedBy'])
                     ->orderBy('payment_date', 'desc');
-            }
+            },
         ])->latest()->first();
 
-        if (!$latestVisit) {
+        if (! $latestVisit) {
             return redirect()->back()->with('error', 'No visits found for this patient.');
         }
 
@@ -309,7 +307,7 @@ class PatientVisitController extends Controller
             'patient',
             'selectedDoctor.user',
             'payments.paymentMethod',
-            'payments.receivedBy'
+            'payments.receivedBy',
         ]);
 
         // Get all doctors for dropdown
@@ -389,7 +387,7 @@ class PatientVisitController extends Controller
                             // Update payment record
                             $payment->update([
                                 'amount' => $newPaymentAmount,
-                                'notes' => 'Updated visit registration payment'
+                                'notes' => 'Updated visit registration payment',
                             ]);
 
                             // Update hospital transaction and main account if linked
@@ -444,8 +442,119 @@ class PatientVisitController extends Controller
             });
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Visit update failed: ' . $e->getMessage())
+                ->with('error', 'Visit update failed: '.$e->getMessage())
                 ->withInput();
+        }
+    }
+
+    /**
+     * Delete a visit and reverse all related financial transactions.
+     * Blocked if the patient has optics sales, operation bookings, or medicine sales.
+     */
+    public function destroy(PatientVisit $visit): \Illuminate\Http\RedirectResponse
+    {
+        $patient = $visit->patient;
+        $patientId = $patient->id;
+        $visitId = $visit->id;
+        $visitNo = $visit->visit_id;
+
+        // ── Blocking checks ──────────────────────────────────────────────────
+        $opticsSalesCount = DB::table('optics_sales')
+            ->where('patient_id', $patientId)
+            ->count();
+
+        $bookingsCount = DB::table('operation_bookings')
+            ->where('patient_id', $patientId)
+            ->count();
+
+        $medicineSalesCount = DB::table('medicine_sales')
+            ->where('patient_id', $patientId)
+            ->count();
+
+        if ($opticsSalesCount > 0 || $bookingsCount > 0 || $medicineSalesCount > 0) {
+            $reasons = [];
+            if ($opticsSalesCount > 0) {
+                $reasons[] = "{$opticsSalesCount} optics sale(s)";
+            }
+            if ($bookingsCount > 0) {
+                $reasons[] = "{$bookingsCount} operation booking(s)";
+            }
+            if ($medicineSalesCount > 0) {
+                $reasons[] = "{$medicineSalesCount} medicine sale(s)";
+            }
+
+            $reason = implode(', ', $reasons);
+
+            \Log::warning('Visit delete blocked', [
+                'visit_id' => $visitId,
+                'visit_no' => $visitNo,
+                'patient_id' => $patientId,
+                'patient_name' => $patient->name,
+                'reason' => $reason,
+            ]);
+
+            return back()->with(
+                'warning',
+                "Cannot delete Visit #{$visitNo} — patient \"$patient->name\" has {$reason}. "
+                .'Please remove or reassign these records first.'
+            );
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
+        try {
+            return DB::transaction(function () use ($visit, $patient, $patientId, $visitId, $visitNo) {
+                // Reverse hospital transactions for OPD payments on this visit
+                foreach ($visit->payments as $payment) {
+                    if ($payment->hospital_transaction_id) {
+                        $tx = HospitalTransaction::find($payment->hospital_transaction_id);
+                        if ($tx) {
+                            HospitalAccount::reversePatientPayment($tx);
+                        }
+                    }
+                }
+
+                // Medical test payments go first (no visit_id, linked via test_group_id)
+                $testGroupIds = DB::table('patient_test_groups')
+                    ->where('visit_id', $visitId)
+                    ->pluck('id');
+                if ($testGroupIds->isNotEmpty()) {
+                    DB::table('patient_medical_test_payments')
+                        ->whereIn('test_group_id', $testGroupIds)
+                        ->delete();
+                }
+
+                // Delete all child records by visit_id
+                DB::table('patient_payments')->where('visit_id', $visitId)->delete();
+                DB::table('vision_tests')->where('visit_id', $visitId)->delete();
+                DB::table('prescriptions')->where('visit_id', $visitId)->delete();
+                DB::table('patient_invoices')->where('visit_id', $visitId)->delete();
+                DB::table('appointments')->where('visit_id', $visitId)->delete();
+                DB::table('patient_medical_tests')->where('visit_id', $visitId)->delete();
+                DB::table('patient_test_groups')->where('visit_id', $visitId)->delete();
+
+                $visit->delete();
+
+                \Log::info('Visit deleted', [
+                    'visit_id' => $visitId,
+                    'visit_no' => $visitNo,
+                    'patient_id' => $patientId,
+                    'patient_name' => $patient->name,
+                ]);
+
+                return redirect()->route('patients.show', $patientId)
+                    ->with('success', "Visit #{$visitNo} deleted and all transactions reversed successfully!");
+            });
+        } catch (\Exception $e) {
+            \Log::error('Visit deletion failed', [
+                'visit_id' => $visitId,
+                'visit_no' => $visitNo,
+                'patient_id' => $patientId,
+                'patient_name' => $patient->name,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()->with('error', 'Visit deletion failed: '.$e->getMessage());
         }
     }
 

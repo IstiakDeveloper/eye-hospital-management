@@ -194,12 +194,10 @@ export default function Show({
     const handleVisitDelete = (visitId: number, visitNumber: string) => {
         if (confirm(`Are you sure you want to delete Visit ${visitNumber}? This will reverse all transactions and cannot be undone.`)) {
             router.delete(route('visits.destroy', visitId), {
-                onSuccess: () => {
-                    // Page will refresh automatically
-                },
                 onError: (errors) => {
-                    console.error('Delete failed:', errors);
-                }
+                    const msg = Object.values(errors).join('\n');
+                    alert(msg || 'Visit deletion failed. Please try again.');
+                },
             });
         }
     };
@@ -289,6 +287,17 @@ export default function Show({
                             <Edit className="h-4 w-4" />
                             Edit
                         </Link>
+                        <button
+                            onClick={() => {
+                                if (confirm(`Delete patient "${patient.name}"? This will permanently delete all visits, payments, and records. This cannot be undone.`)) {
+                                    router.delete(route('patients.destroy', patient.id));
+                                }
+                            }}
+                            className="inline-flex items-center gap-2 px-3 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            Delete Patient
+                        </button>
                         <Link
                             href={route('visits.store')}
                             className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"

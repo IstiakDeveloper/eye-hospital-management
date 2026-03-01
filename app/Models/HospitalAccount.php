@@ -389,6 +389,59 @@ class HospitalAccount extends Model
     }
 
     /**
+     * Reverse a patient payment income transaction.
+     * Decrements hospital account & main account balances and deletes the transaction record.
+     */
+    public static function reversePatientPayment(HospitalTransaction $transaction): void
+    {
+        $amount = $transaction->amount;
+
+        // Reverse hospital account balance
+        $account = self::firstOrCreate([]);
+        $account->decrement('balance', $amount);
+
+        // Determine source_transaction_type the same way as addIncome
+        $referenceType = $transaction->reference_type;
+        $sourceTransactionType = in_array($referenceType, ['other_income', 'bank_interest', 'medicine_sale', 'optics_sale'])
+            ? $referenceType
+            : 'income';
+
+        // Find the linked main account voucher
+        $voucher = MainAccountVoucher::where('source_account', 'hospital')
+            ->where('source_transaction_type', $sourceTransactionType)
+            ->where('source_voucher_no', $transaction->transaction_no)
+            ->first();
+
+        if (! $voucher) {
+            $voucher = MainAccountVoucher::where('source_account', 'hospital')
+                ->where('source_transaction_type', $sourceTransactionType)
+                ->where('source_reference_id', $transaction->id)
+                ->first();
+        }
+
+        if ($voucher) {
+            $mainAccount = MainAccount::firstOrCreate([]);
+            $mainAccount->decrement('balance', $amount);
+
+            // If the voucher only covers this transaction amount, delete it; otherwise decrement
+            $newVoucherAmount = $voucher->amount - $amount;
+            if ($newVoucherAmount <= 0) {
+                $voucher->delete();
+            } else {
+                $voucher->update(['amount' => $newVoucherAmount]);
+            }
+        }
+
+        // Nullify FK in patient_payments before deleting the transaction
+        // to avoid FK constraint violation (patient_payments_hospital_transaction_id_foreign)
+        \Illuminate\Support\Facades\DB::table('patient_payments')
+            ->where('hospital_transaction_id', $transaction->id)
+            ->update(['hospital_transaction_id' => null]);
+
+        $transaction->delete();
+    }
+
+    /**
      * Create a fixed asset purchase record.
      * Deducts initial payment from hospital account if any.
      */

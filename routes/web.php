@@ -436,6 +436,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/medicine/reports/account-statement', [\App\Http\Controllers\MedicineReportController::class, 'accountStatement'])->name('medicine.reports.account-statement')->middleware('permission:medicine.reports.account-statement');
     Route::get('/medicine/reports/account-statement/export', [\App\Http\Controllers\MedicineReportController::class, 'exportAccountStatement'])->name('medicine.reports.account-statement.export')->middleware('permission:medicine.reports.account-statement');
     Route::get('/medicine/reports/buy-sale-stock', [\App\Http\Controllers\MedicineReportController::class, 'buySaleStockReport'])->name('medicine.reports.buy-sale-stock')->middleware('permission:medicine.reports.buy-sale-stock');
+    Route::get('/medicine/reports/company-stock', [\App\Http\Controllers\MedicineReportController::class, 'companyStockReport'])->name('medicine.reports.company-stock')->middleware('permission:medicine.reports.buy-sale-stock');
+    Route::get('/medicine/reports/company-medicine-stock', [\App\Http\Controllers\MedicineReportController::class, 'companyMedicineStockReport'])->name('medicine.reports.company-medicine-stock')->middleware('permission:medicine.reports.buy-sale-stock');
 });
 
 // Medicine Vendor Management Routes - Permission-based

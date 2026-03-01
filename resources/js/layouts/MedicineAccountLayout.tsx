@@ -89,6 +89,18 @@ const MedicineAccountLayout: React.FC<MedicineAccountLayoutProps> = ({
       icon: FileText,
       current: route().current('medicine.reports.buy-sale-stock')
     },
+    {
+      name: 'Company Stock Summary',
+      href: '/medicine/reports/company-stock',
+      icon: FileText,
+      current: route().current('medicine.reports.company-stock')
+    },
+    {
+      name: 'Company Medicine Stock',
+      href: '/medicine/reports/company-medicine-stock',
+      icon: FileText,
+      current: route().current('medicine.reports.company-medicine-stock')
+    },
   ];
 
   return (

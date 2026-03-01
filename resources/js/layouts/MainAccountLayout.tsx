@@ -54,6 +54,20 @@ const MainAccountLayout: React.FC<MainAccountLayoutProps> = ({
       permission: 'medicine.reports.buy-sale-stock'
     },
     {
+      name: 'Company Stock Summary',
+      href: '/medicine/reports/company-stock',
+      icon: Pill,
+      current: route().current('medicine.reports.company-stock'),
+      permission: 'medicine.reports.buy-sale-stock'
+    },
+    {
+      name: 'Company Medicine Stock',
+      href: '/medicine/reports/company-medicine-stock',
+      icon: Pill,
+      current: route().current('medicine.reports.company-medicine-stock'),
+      permission: 'medicine.reports.buy-sale-stock'
+    },
+    {
       name: 'Optics Buy Sale Stock',
       href: '/optics/reports/buy-sale-stock',
       icon: Eye,

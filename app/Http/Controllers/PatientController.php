@@ -2,14 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Patient;
-use App\Models\PatientVisit;
-use App\Models\PatientPayment;
 use App\Models\Doctor;
 use App\Models\HospitalAccount;
+use App\Models\Patient;
+use App\Models\PatientPayment;
+use App\Models\PatientVisit;
 use App\Models\PaymentMethod;
-use App\Models\PatientInvoice;
-use App\Models\InvoiceItem;
 use App\Models\Prescription;
 use App\Models\VisionTest;
 use Illuminate\Http\Request;
@@ -97,7 +95,7 @@ class PatientController extends Controller
                         case 'this_week':
                             $query->whereBetween($dateField, [
                                 $now->startOfWeek()->toDateString(),
-                                $now->endOfWeek()->toDateString()
+                                $now->endOfWeek()->toDateString(),
                             ]);
                             break;
                         case 'last_week':
@@ -105,7 +103,7 @@ class PatientController extends Controller
                             $lastWeekEnd = $now->endOfWeek();
                             $query->whereBetween($dateField, [
                                 $lastWeekStart->toDateString(),
-                                $lastWeekEnd->toDateString()
+                                $lastWeekEnd->toDateString(),
                             ]);
                             break;
                         case 'this_month':
@@ -155,7 +153,7 @@ class PatientController extends Controller
 
             // Get all unique doctors this patient has visited
             $allDoctors = $patient->visits
-                ->filter(fn($v) => $v->selectedDoctor)
+                ->filter(fn ($v) => $v->selectedDoctor)
                 ->pluck('selectedDoctor.name')
                 ->unique()
                 ->values();
@@ -178,7 +176,7 @@ class PatientController extends Controller
                 'specific_date',
                 'start_date',
                 'end_date',
-                'date_preset'
+                'date_preset',
             ]),
             'userRole' => $user->role,
             'isDoctorView' => $user->role->name === 'Doctor',
@@ -213,7 +211,6 @@ class PatientController extends Controller
     /**
      * Store new patient registration or create new visit for existing patient
      */
-
     public function store(Request $request)
     {
         $request->validate([
@@ -271,7 +268,7 @@ class PatientController extends Controller
                         'received_by' => auth()->id(),
                     ]);
 
-                                        // ✅ ADD TO HOSPITAL ACCOUNT with OPD Income category
+                    // ✅ ADD TO HOSPITAL ACCOUNT with OPD Income category
                     $opdCategory = \App\Models\HospitalIncomeCategory::firstOrCreate(
                         ['name' => 'OPD Income'],
                         ['is_active' => true]
@@ -310,7 +307,7 @@ class PatientController extends Controller
                     ->with('success', $message);
             });
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Registration failed: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Registration failed: '.$e->getMessage()]);
         }
     }
 
@@ -338,9 +335,9 @@ class PatientController extends Controller
                         'payments' => function ($paymentQuery) {
                             $paymentQuery->with(['paymentMethod', 'receivedBy'])
                                 ->orderBy('payment_date', 'desc');
-                        }
+                        },
                     ]);
-            }
+            },
         ]);
 
         // Calculate summary statistics
@@ -355,8 +352,6 @@ class PatientController extends Controller
             ->with(['performedBy'])
             ->orderBy('test_date', 'desc')
             ->get();
-
-
 
         // Get all prescriptions for this patient (including those without visit_id)
         $allPrescriptions = Prescription::where('patient_id', $patient->id)
@@ -418,7 +413,7 @@ class PatientController extends Controller
             'selectedDoctor.user',
             'payments' => function ($query) {
                 $query->latest();
-            }
+            },
         ])->latest()->first();
 
         $latestPayment = $latestVisit ? $latestVisit->payments->first() : null;
@@ -440,7 +435,7 @@ class PatientController extends Controller
             'selectedDoctor.user',
             'payments' => function ($query) {
                 $query->latest();
-            }
+            },
         ]);
 
         $latestPayment = $visit->payments->first();
@@ -451,7 +446,6 @@ class PatientController extends Controller
             'payment' => $latestPayment,
         ]);
     }
-
 
     /**
      * Show edit form for patient
@@ -470,8 +464,8 @@ class PatientController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20|unique:patients,phone,' . $patient->id,
-            'nid_card' => 'nullable|string|max:20|unique:patients,nid_card,' . $patient->id,
+            'phone' => 'required|string|max:20|unique:patients,phone,'.$patient->id,
+            'nid_card' => 'nullable|string|max:20|unique:patients,nid_card,'.$patient->id,
             'email' => 'nullable|email|max:255',
             'address' => 'nullable|string|max:500',
             'date_of_birth' => 'nullable|date',
@@ -487,7 +481,7 @@ class PatientController extends Controller
             'address',
             'date_of_birth',
             'gender',
-            'medical_history'
+            'medical_history',
         ]));
 
         return back()->with('success', 'Patient information updated successfully!');
@@ -536,7 +530,7 @@ class PatientController extends Controller
                 return back()->with('success', 'Payment processed successfully!');
             });
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Payment failed: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Payment failed: '.$e->getMessage()]);
         }
     }
 
@@ -582,16 +576,124 @@ class PatientController extends Controller
     }
 
     /**
+     * Delete a patient and all related data, reversing financial transactions.
+     * Blocked if the patient has optics sales, operation bookings, or medicine sales.
+     */
+    public function destroy(Patient $patient): \Illuminate\Http\RedirectResponse
+    {
+        $patientId = $patient->id;
+        $patientName = $patient->name;
+
+        // ── Blocking checks ──────────────────────────────────────────────────
+        $opticsSalesCount = DB::table('optics_sales')
+            ->where('patient_id', $patientId)
+            ->count();
+
+        $bookingsCount = DB::table('operation_bookings')
+            ->where('patient_id', $patientId)
+            ->count();
+
+        $medicineSalesCount = DB::table('medicine_sales')
+            ->where('patient_id', $patientId)
+            ->count();
+
+        if ($opticsSalesCount > 0 || $bookingsCount > 0 || $medicineSalesCount > 0) {
+            $reasons = [];
+            if ($opticsSalesCount > 0) {
+                $reasons[] = "{$opticsSalesCount} optics sale(s)";
+            }
+            if ($bookingsCount > 0) {
+                $reasons[] = "{$bookingsCount} operation booking(s)";
+            }
+            if ($medicineSalesCount > 0) {
+                $reasons[] = "{$medicineSalesCount} medicine sale(s)";
+            }
+
+            $reason = implode(', ', $reasons);
+
+            \Log::warning('Patient delete blocked', [
+                'patient_id' => $patientId,
+                'patient_name' => $patientName,
+                'reason' => $reason,
+            ]);
+
+            return back()->with(
+                'warning',
+                "Cannot delete patient \"$patientName\" — they have {$reason}. "
+                .'Please remove or reassign these records first.'
+            );
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
+        try {
+            return DB::transaction(function () use ($patientId, $patientName) {
+                // Reverse hospital account transactions before deleting payments
+                $payments = DB::table('patient_payments')
+                    ->where('patient_id', $patientId)
+                    ->whereNotNull('hospital_transaction_id')
+                    ->get();
+
+                foreach ($payments as $payment) {
+                    $tx = \App\Models\HospitalTransaction::find($payment->hospital_transaction_id);
+                    if ($tx) {
+                        \App\Models\HospitalAccount::reversePatientPayment($tx);
+                    }
+                }
+
+                // Delete deepest dependents first, then parents
+                DB::table('patient_payments')->where('patient_id', $patientId)->delete();
+                DB::table('vision_tests')->where('patient_id', $patientId)->delete();
+                DB::table('prescriptions')->where('patient_id', $patientId)->delete();
+                DB::table('patient_invoices')->where('patient_id', $patientId)->delete();
+                DB::table('appointments')->where('patient_id', $patientId)->delete();
+
+                // Medical tests (payments must go before test_groups)
+                $testGroupIds = DB::table('patient_test_groups')
+                    ->where('patient_id', $patientId)
+                    ->pluck('id');
+                if ($testGroupIds->isNotEmpty()) {
+                    DB::table('patient_medical_test_payments')
+                        ->whereIn('test_group_id', $testGroupIds)
+                        ->delete();
+                }
+                DB::table('patient_medical_tests')->where('patient_id', $patientId)->delete();
+                DB::table('patient_test_groups')->where('patient_id', $patientId)->delete();
+
+                // Operations (no sales here — already blocked above)
+                DB::table('operation_payments')->where('patient_id', $patientId)->delete();
+
+                // Finally delete visits and the patient row
+                DB::table('patient_visits')->where('patient_id', $patientId)->delete();
+                DB::table('patients')->where('id', $patientId)->delete();
+
+                \Log::info('Patient deleted', ['patient_id' => $patientId, 'patient_name' => $patientName]);
+
+                return redirect()->route('patients.index')
+                    ->with('success', "Patient \"{$patientName}\" and all related records deleted successfully!");
+            });
+        } catch (\Exception $e) {
+            \Log::error('Patient deletion failed', [
+                'patient_id' => $patientId,
+                'patient_name' => $patientName,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()->with('error', 'Patient deletion failed: '.$e->getMessage());
+        }
+    }
+
+    /**
      * Search patients for autocomplete
      */
     public function search(Request $request)
     {
         $request->validate(['term' => 'required|string|min:2']);
 
-        $patients = Patient::where('name', 'like', '%' . $request->term . '%')
-            ->orWhere('phone', 'like', '%' . $request->term . '%')
-            ->orWhere('patient_id', 'like', '%' . $request->term . '%')
-            ->orWhere('nid_card', 'like', '%' . $request->term . '%')
+        $patients = Patient::where('name', 'like', '%'.$request->term.'%')
+            ->orWhere('phone', 'like', '%'.$request->term.'%')
+            ->orWhere('patient_id', 'like', '%'.$request->term.'%')
+            ->orWhere('nid_card', 'like', '%'.$request->term.'%')
             ->with(['visits' => function ($q) {
                 $q->latest()->limit(1);
             }])
@@ -599,6 +701,7 @@ class PatientController extends Controller
             ->get()
             ->map(function ($patient) {
                 $latestVisit = $patient->visits->first();
+
                 return [
                     'id' => $patient->id,
                     'patient_id' => $patient->patient_id,
@@ -660,7 +763,7 @@ class PatientController extends Controller
 
         $visit->update([
             'overall_status' => 'vision_test',
-            'vision_test_status' => 'pending'
+            'vision_test_status' => 'pending',
         ]);
 
         return back()->with('success', 'Visit marked as ready for vision test!');
@@ -778,7 +881,7 @@ class PatientController extends Controller
                     ->with('success', 'Return visit created successfully!');
             });
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Return visit creation failed: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Return visit creation failed: '.$e->getMessage()]);
         }
     }
 
@@ -794,14 +897,13 @@ class PatientController extends Controller
             },
             'visionTests' => function ($query) {
                 $query->orderBy('test_date', 'desc');
-            }
+            },
         ]);
 
         return Inertia::render('Patients/Print', [
             'patient' => $patient,
         ]);
     }
-
 
     /**
      * Mark visit as completed manually (for walk-in/simple cases)
@@ -832,7 +934,7 @@ class PatientController extends Controller
                             'vision_test_status' => 'completed',
                             'vision_test_completed_at' => now(),
                             'overall_status' => $request->skip_prescription ? 'completed' : 'prescription',
-                            'visit_notes' => $notes ? "Manual Vision Test Completion: " . $notes : 'Vision test completed manually by receptionist',
+                            'visit_notes' => $notes ? 'Manual Vision Test Completion: '.$notes : 'Vision test completed manually by receptionist',
                         ]);
                         break;
 
@@ -842,7 +944,7 @@ class PatientController extends Controller
                             'prescription_status' => 'completed',
                             'prescription_completed_at' => now(),
                             'overall_status' => 'completed',
-                            'visit_notes' => $notes ? "Manual Prescription Completion: " . $notes : 'Prescription completed manually by receptionist',
+                            'visit_notes' => $notes ? 'Manual Prescription Completion: '.$notes : 'Prescription completed manually by receptionist',
                         ]);
                         break;
 
@@ -854,7 +956,7 @@ class PatientController extends Controller
                             'prescription_status' => 'completed',
                             'prescription_completed_at' => now(),
                             'overall_status' => 'completed',
-                            'visit_notes' => $notes ? "Manual Complete Visit: " . $notes : 'Vision test and prescription completed manually by receptionist',
+                            'visit_notes' => $notes ? 'Manual Complete Visit: '.$notes : 'Vision test and prescription completed manually by receptionist',
                         ]);
                         break;
 
@@ -866,7 +968,7 @@ class PatientController extends Controller
                             'prescription_status' => 'completed',
                             'prescription_completed_at' => now(),
                             'overall_status' => 'completed',
-                            'visit_notes' => $notes ? "Simple Visit Completion: " . $notes : 'Visit completed manually - simple consultation',
+                            'visit_notes' => $notes ? 'Simple Visit Completion: '.$notes : 'Visit completed manually - simple consultation',
                         ]);
                         break;
                 }
@@ -874,8 +976,9 @@ class PatientController extends Controller
                 return back()->with('success', 'Visit status updated successfully!');
             });
         } catch (\Exception $e) {
-            \Log::error('Visit completion failed: ' . $e->getMessage());
-            return back()->withErrors(['error' => 'Failed to update visit: ' . $e->getMessage()]);
+            \Log::error('Visit completion failed: '.$e->getMessage());
+
+            return back()->withErrors(['error' => 'Failed to update visit: '.$e->getMessage()]);
         }
     }
 
@@ -927,7 +1030,7 @@ class PatientController extends Controller
         $perPage = $request->get('per_page', 20);
         $allowedPerPage = [10, 20, 50, 100];
 
-        if (!in_array($perPage, $allowedPerPage)) {
+        if (! in_array($perPage, $allowedPerPage)) {
             $perPage = 20;
         }
 
@@ -944,7 +1047,7 @@ class PatientController extends Controller
                 'ready_for_vision_test' => PatientVisit::readyForVisionTest()->count(),
                 'ready_for_prescription' => PatientVisit::readyForPrescription()->count(),
                 'payment_pending' => PatientVisit::where('payment_status', '!=', 'paid')->count(),
-            ]
+            ],
         ]);
     }
 
@@ -984,7 +1087,7 @@ class PatientController extends Controller
                     'prescription_status' => 'completed',
                     'prescription_completed_at' => now(),
                     'overall_status' => 'completed',
-                    'visit_notes' => "Bulk completion: " . $notes,
+                    'visit_notes' => 'Bulk completion: '.$notes,
                     'updated_at' => now(),
                 ];
 
@@ -999,11 +1102,12 @@ class PatientController extends Controller
                 return back()->with('success', "{$updatedCount} visits completed successfully!");
             });
         } catch (\Exception $e) {
-            \Log::error('Bulk completion failed: ' . $e->getMessage(), [
+            \Log::error('Bulk completion failed: '.$e->getMessage(), [
                 'visit_ids' => $request->visit_ids,
-                'request_data' => $request->all()
+                'request_data' => $request->all(),
             ]);
-            return back()->withErrors(['error' => 'Bulk completion failed: ' . $e->getMessage()]);
+
+            return back()->withErrors(['error' => 'Bulk completion failed: '.$e->getMessage()]);
         }
     }
 }

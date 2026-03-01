@@ -13,7 +13,8 @@ import {
     Calendar,
     X,
     DollarSign,
-    Stethoscope
+    Stethoscope,
+    Trash2
 } from 'lucide-react';
 
 interface User {
@@ -543,6 +544,22 @@ export default function Index({ patients, filters }: Props) {
                                                 <Edit className="h-3 w-3" />
                                                 Edit
                                             </Link>
+                                            <button
+                                                onClick={() => {
+                                                    if (confirm(`Delete patient "${patient.name}"? This will permanently delete all visits, payments, and records. This cannot be undone.`)) {
+                                                        router.delete(route('patients.destroy', patient.id), {
+                                                            onError: (errors) => {
+                                                                const msg = Object.values(errors).join('\n');
+                                                                alert(msg || 'Patient deletion failed. Please try again.');
+                                                            },
+                                                        });
+                                                    }
+                                                }}
+                                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                                Delete
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>

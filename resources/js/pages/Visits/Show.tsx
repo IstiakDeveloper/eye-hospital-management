@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
 import {
     ArrowLeft,
@@ -9,7 +9,8 @@ import {
     Stethoscope,
     DollarSign,
     Receipt,
-    FileText
+    FileText,
+    Trash2
 } from 'lucide-react';
 
 interface Patient {
@@ -149,6 +150,23 @@ export default function Show({ visit }: Props) {
                             <Receipt className="h-3 w-3" />
                             Print Receipt
                         </Link>
+                        <button
+                            onClick={() => {
+                                if (confirm(`Delete Visit ${visit.visit_id}? This will reverse all transactions and cannot be undone.`)) {
+                                    router.delete(route('visits.destroy', visit.id), {
+                                        onSuccess: () => router.visit(route('visits.index')),
+                                        onError: (errors) => {
+                                            const msg = Object.values(errors).join('\n');
+                                            alert(msg || 'Visit deletion failed. Please try again.');
+                                        },
+                                    });
+                                }
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700"
+                        >
+                            <Trash2 className="h-3 w-3" />
+                            Delete
+                        </button>
                     </div>
                 </div>
 

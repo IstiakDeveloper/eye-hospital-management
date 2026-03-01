@@ -12,7 +12,8 @@ import {
     Users,
     FileText,
     Receipt,
-    Edit as EditIcon
+    Edit as EditIcon,
+    Trash2
 } from 'lucide-react';
 
 interface Patient {
@@ -442,6 +443,22 @@ export default function Index({ visits, doctors, filters }: Props) {
                                                 <Receipt className="h-3 w-3" />
                                                 Receipt
                                             </Link>
+                                            <button
+                                                onClick={() => {
+                                                    if (confirm(`Delete Visit ${visit.visit_id}? This will reverse all transactions and cannot be undone.`)) {
+                                                        router.delete(route('visits.destroy', visit.id), {
+                                                            onError: (errors) => {
+                                                                const msg = Object.values(errors).join('\n');
+                                                                alert(msg || 'Visit deletion failed. Please try again.');
+                                                            },
+                                                        });
+                                                    }
+                                                }}
+                                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                                Delete
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
