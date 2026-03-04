@@ -248,6 +248,7 @@ class Glasses extends Model
             $saleFitting = $salesData['fitting_charge'];
             $saleTotal = $salesData['total'];
             $saleDue = $salesData['due'];
+            $saleCash = $salesData['cash'];
 
             // Calculate available stock = Before Stock + Buy - Sale
             $availableQty = $beforeStockQty + $buyQty - $saleQty;
@@ -283,6 +284,7 @@ class Glasses extends Model
                 'sale_discount' => (float) $saleDiscount,
                 'sale_fitting' => (float) $saleFitting,
                 'sale_total' => (float) $saleTotal,
+                'sale_cash' => (float) $saleCash,
                 'sale_due' => (float) $saleDue,
 
                 // Available information - raw values for continuity (cast to prevent null)
@@ -423,6 +425,8 @@ class Glasses extends Model
         $total = $subtotal - $discount + $fittingCharge;
 
         // Calculate due amount proportionally for this specific item
+        // 'due' = current due_amount (what's still outstanding)
+        // 'cash' = total - due (all cash ever collected: advance + subsequent due payments)
         $due = 0;
         foreach ($uniqueSales as $sale) {
             // Get total of ALL items in this sale
@@ -439,6 +443,8 @@ class Glasses extends Model
             }
         }
 
+        $cash = $total - $due;
+
         return [
             'quantity' => $quantity,
             'unit_price' => $unitPrice,
@@ -447,6 +453,7 @@ class Glasses extends Model
             'fitting_charge' => $fittingCharge,
             'total' => $total,
             'due' => $due,
+            'cash' => $cash,
         ];
     }
 }

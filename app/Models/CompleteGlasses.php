@@ -190,6 +190,7 @@ class CompleteGlasses extends Model
             $saleFitting = $salesData['fitting_charge'];
             $saleTotal = $salesData['total'];
             $saleDue = $salesData['due'];
+            $saleCash = $salesData['cash'];
 
             // Calculate available stock = Before Stock + Buy - Sale
             $availableQty = $beforeStockQty + $buyQty - $saleQty;
@@ -228,6 +229,7 @@ class CompleteGlasses extends Model
                 'sale_discount' => (float) $saleDiscount,
                 'sale_fitting' => (float) $saleFitting,
                 'sale_total' => (float) $saleTotal,
+                'sale_cash' => (float) $saleCash,
                 'sale_due' => (float) $saleDue,
 
                 // Available information - raw values for continuity (cast to prevent null)
@@ -307,6 +309,7 @@ class CompleteGlasses extends Model
                 'optics_sale_items.total_price',
                 'optics_sales.id as sale_id',
                 'optics_sales.total_amount',
+                'optics_sales.advance_payment',
                 'optics_sales.due_amount',
                 'optics_sales.glass_fitting_price'
             )
@@ -353,6 +356,8 @@ class CompleteGlasses extends Model
         $total = $subtotal - $discount + $fittingCharge;
 
         // Calculate due amount proportionally for this specific item
+        // 'due' = current due_amount (what's still outstanding)
+        // 'cash' = total - due (all cash ever collected: advance + subsequent due payments)
         $due = 0;
         foreach ($uniqueSales as $sale) {
             $saleItemsTotal = DB::table('optics_sale_items')
@@ -367,6 +372,8 @@ class CompleteGlasses extends Model
             }
         }
 
+        $cash = $total - $due;
+
         return [
             'quantity' => $quantity,
             'unit_price' => $unitPrice,
@@ -375,6 +382,7 @@ class CompleteGlasses extends Model
             'fitting_charge' => $fittingCharge,
             'total' => $total,
             'due' => $due,
+            'cash' => $cash,
         ];
     }
 }

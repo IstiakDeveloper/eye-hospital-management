@@ -302,7 +302,50 @@ class ReceiptPaymentController extends Controller
             'type' => 'advance_rent',
         ];
 
-        // 4. Get ALL other expense categories (excluding Fixed Asset Purchase and Advance House Rent to avoid duplicates)
+        // 4. Get uncategorized "special" expenses (NULL expense_category_id, not Fixed Asset or Advance House Rent)
+        // These include sale reversals/deletions (e.g. "Medicine Sale Deletion", "Optics Sale Deletion") that
+        // deduct from the hospital account but have no formal expense category.
+        $uncategorizedSpecialExpenses = DB::table('hospital_transactions')
+            ->where('type', 'expense')
+            ->whereNull('expense_category_id')
+            ->whereNotIn('category', ['Fixed Asset Purchase', 'Advance House Rent'])
+            ->select('category', DB::raw('SUM(amount) as amount'))
+            ->groupBy('category')
+            ->get();
+
+        $uncategorizedSpecialCurrent = DB::table('hospital_transactions')
+            ->where('type', 'expense')
+            ->whereNull('expense_category_id')
+            ->whereNotIn('category', ['Fixed Asset Purchase', 'Advance House Rent'])
+            ->whereBetween('transaction_date', [$fromDate, $toDate])
+            ->select('category', DB::raw('SUM(amount) as amount'))
+            ->groupBy('category')
+            ->get()
+            ->keyBy('category');
+
+        $uncategorizedSpecialCumulative = DB::table('hospital_transactions')
+            ->where('type', 'expense')
+            ->whereNull('expense_category_id')
+            ->whereNotIn('category', ['Fixed Asset Purchase', 'Advance House Rent'])
+            ->where('transaction_date', '<=', $toDate)
+            ->select('category', DB::raw('SUM(amount) as amount'))
+            ->groupBy('category')
+            ->get()
+            ->keyBy('category');
+
+        foreach ($uncategorizedSpecialExpenses->pluck('category') as $cat) {
+            $currentAmt = (float) ($uncategorizedSpecialCurrent[$cat]->amount ?? 0);
+            $cumulativeAmt = (float) ($uncategorizedSpecialCumulative[$cat]->amount ?? 0);
+            $payments[] = [
+                'serial' => $serialNumber++,
+                'category' => $cat,
+                'current_month' => $currentAmt,
+                'cumulative' => $cumulativeAmt,
+                'type' => 'sale_deletion',
+            ];
+        }
+
+        // 5. Get ALL other expense categories (excluding Fixed Asset Purchase and Advance House Rent to avoid duplicates)
         $allCategories = HospitalExpenseCategory::whereNotIn('name', ['Fixed Asset Purchase', 'Advance House Rent'])
             ->orderBy('name')
             ->get();

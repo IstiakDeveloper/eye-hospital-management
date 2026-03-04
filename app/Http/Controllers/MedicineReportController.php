@@ -32,7 +32,8 @@ class MedicineReportController extends Controller
                 SUM(subtotal) as total_subtotal,
                 SUM(discount) as total_discount,
                 SUM(total_amount) as total_amount,
-                SUM(due_amount) as total_due
+                SUM(due_amount) as total_due,
+                SUM(total_amount - due_amount) as total_cash_received
             ')
             ->first();
 
@@ -54,6 +55,8 @@ class MedicineReportController extends Controller
             'sale_discount' => (float) $directTotals->total_discount,
             'sale_total' => (float) $directTotals->total_amount,
             'sale_due' => (float) $directTotals->total_due,
+            // Cash actually received = total_amount - due_amount (matches hospital_account/bank)
+            'sale_cash_received' => (float) $directTotals->total_cash_received,
 
             'available_stock' => collect($reportData)->sum('available_stock'),
             // Sum unrounded values for perfect continuity

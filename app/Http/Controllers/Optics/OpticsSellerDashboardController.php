@@ -3,20 +3,20 @@
 namespace App\Http\Controllers\Optics;
 
 use App\Http\Controllers\Controller;
-use App\Models\Glasses;
 use App\Models\CompleteGlasses;
+use App\Models\Glasses;
 use App\Models\LensType;
+use App\Models\OpticsAccount;
 use App\Models\OpticsSale;
 use App\Models\OpticsSaleItem;
 use App\Models\OpticsSalePayment;
-use App\Models\OpticsAccount;
 use App\Models\OpticsTransaction;
-use App\Models\StockMovement;
 use App\Models\Patient;
+use App\Models\StockMovement;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class OpticsSellerDashboardController extends Controller
 {
@@ -56,7 +56,7 @@ class OpticsSellerDashboardController extends Controller
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get()
-            ->map(function($sale) {
+            ->map(function ($sale) {
                 return [
                     'id' => $sale->id,
                     'invoice_number' => $sale->invoice_number,
@@ -65,7 +65,7 @@ class OpticsSellerDashboardController extends Controller
                     'total_amount' => $sale->total_amount,
                     'due_amount' => $sale->due_amount,
                     'status' => $sale->status,
-                    'created_at' => $sale->created_at
+                    'created_at' => $sale->created_at,
                 ];
             });
 
@@ -115,7 +115,7 @@ class OpticsSellerDashboardController extends Controller
                     'type' => $movement->item_type,
                     'total_quantity' => $movement->total_sold,
                     'total_amount' => $movement->total_amount,
-                    'unit' => 'pcs'
+                    'unit' => 'pcs',
                 ];
             });
 
@@ -177,7 +177,7 @@ class OpticsSellerDashboardController extends Controller
                     'email' => $patient->email,
                     'address' => $patient->address,
                     'gender' => $patient->gender,
-                    'display_name' => $patient->name . ' (' . $patient->phone . ')',
+                    'display_name' => $patient->name.' ('.$patient->phone.')',
                     'total_visits' => $patient->total_visits ?? 0,
                 ];
             });
@@ -206,12 +206,12 @@ class OpticsSellerDashboardController extends Controller
                     'age' => $patient->age,
                     'total_visits' => $patient->total_visits,
                     'last_visit_date' => $patient->last_visit_date?->format('d M Y'),
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Customer not found'
+                'message' => 'Customer not found',
             ], 404);
         }
     }
@@ -264,7 +264,7 @@ class OpticsSellerDashboardController extends Controller
                     'name' => $patient->name,
                     'phone' => $patient->phone,
                     'email' => $patient->email,
-                    'display_name' => $patient->name . ' (' . $patient->phone . ')',
+                    'display_name' => $patient->name.' ('.$patient->phone.')',
                     'last_visit' => optional($patient->visits->first())->created_at?->format('d M Y'),
                 ];
             });
@@ -345,50 +345,59 @@ class OpticsSellerDashboardController extends Controller
             $itemsTotal = 0;
             $saleDetails = [];
 
+            // Build sale datetime once from sale_date + current time.
+            // Using Carbon with explicit app timezone ensures the date portion always
+            // matches sale_date even when the server clock is near midnight.
+            $saleDateTime = \Carbon\Carbon::createFromFormat(
+                'Y-m-d H:i:s',
+                $validated['sale_date'].' '.now()->format('H:i:s'),
+                config('app.timezone')
+            );
+
             // Process items only if they exist
-            if (!empty($validated['items'])) {
+            if (! empty($validated['items'])) {
                 foreach ($validated['items'] as $item) {
-                $model = match ($item['type']) {
-                    'frame' => Glasses::class,
-                    'lens' => LensType::class,
-                    'complete_glasses' => CompleteGlasses::class,
-                };
+                    $model = match ($item['type']) {
+                        'frame' => Glasses::class,
+                        'lens' => LensType::class,
+                        'complete_glasses' => CompleteGlasses::class,
+                    };
 
-                $product = $model::findOrFail($item['id']);
+                    $product = $model::findOrFail($item['id']);
 
-                if ($product->stock_quantity < $item['quantity']) {
-                    throw new \Exception(
-                        "Insufficient stock for " . ($product->name ?? $product->full_name) .
-                            ". Available: {$product->stock_quantity}"
-                    );
+                    if ($product->stock_quantity < $item['quantity']) {
+                        throw new \Exception(
+                            'Insufficient stock for '.($product->name ?? $product->full_name).
+                                ". Available: {$product->stock_quantity}"
+                        );
+                    }
+
+                    $itemTotal = $item['price'] * $item['quantity'];
+                    $itemsTotal += $itemTotal;
+
+                    // Update stock
+                    $previousStock = $product->stock_quantity;
+                    $newStock = $previousStock - $item['quantity'];
+                    $product->update(['stock_quantity' => $newStock]);
+
+                    // Record stock movement
+                    StockMovement::create([
+                        'item_type' => $item['type'] === 'frame' ? 'glasses' : ($item['type'] === 'lens' ? 'lens_types' : 'complete_glasses'),
+                        'item_id' => $item['id'],
+                        'movement_type' => 'sale',
+                        'quantity' => -$item['quantity'],
+                        'previous_stock' => $previousStock,
+                        'new_stock' => $newStock,
+                        'unit_price' => $item['price'],
+                        'total_amount' => $itemTotal,
+                        'notes' => 'POS Sale - '.($product->name ?? $product->full_name)." x{$item['quantity']}",
+                        'user_id' => auth()->user()->id,
+                        'created_at' => $saleDateTime,
+                        'updated_at' => $saleDateTime,
+                    ]);
+
+                    $saleDetails[] = ($product->name ?? $product->full_name)." x{$item['quantity']}";
                 }
-
-                $itemTotal = $item['price'] * $item['quantity'];
-                $itemsTotal += $itemTotal;
-
-                // Update stock
-                $previousStock = $product->stock_quantity;
-                $newStock = $previousStock - $item['quantity'];
-                $product->update(['stock_quantity' => $newStock]);
-
-                // Record stock movement
-                StockMovement::create([
-                    'item_type' => $item['type'] === 'frame' ? 'glasses' : ($item['type'] === 'lens' ? 'lens_types' : 'complete_glasses'),
-                    'item_id' => $item['id'],
-                    'movement_type' => 'sale',
-                    'quantity' => -$item['quantity'],
-                    'previous_stock' => $previousStock,
-                    'new_stock' => $newStock,
-                    'unit_price' => $item['price'],
-                    'total_amount' => $itemTotal,
-                    'notes' => "POS Sale - " . ($product->name ?? $product->full_name) . " x{$item['quantity']}",
-                    'user_id' => auth()->user()->id,
-                    'created_at' => $validated['sale_date'] . ' ' . now()->format('H:i:s'),
-                    'updated_at' => $validated['sale_date'] . ' ' . now()->format('H:i:s'),
-                ]);
-
-                $saleDetails[] = ($product->name ?? $product->full_name) . " x{$item['quantity']}";
-            }
             } // End of items processing
 
             // Calculate total amount
@@ -418,8 +427,7 @@ class OpticsSellerDashboardController extends Controller
                 'notes' => $validated['notes'],
             ]);
 
-            // Set timestamps manually based on sale_date
-            $saleDateTime = $validated['sale_date'] . ' ' . now()->format('H:i:s');
+            // Apply the pre-built sale datetime to the model
             $sale->created_at = $saleDateTime;
             $sale->updated_at = $saleDateTime;
 
@@ -429,28 +437,28 @@ class OpticsSellerDashboardController extends Controller
             $sale->timestamps = true; // Re-enable timestamps for future updates
 
             // Save sale items
-            if (!empty($validated['items'])) {
+            if (! empty($validated['items'])) {
                 foreach ($validated['items'] as $item) {
-                $model = match ($item['type']) {
-                    'frame' => Glasses::class,
-                    'lens' => LensType::class,
-                    'complete_glasses' => CompleteGlasses::class,
-                };
-                $product = $model::find($item['id']);
-                $itemName = $product ? ($product->name ?? $product->full_name) : 'Unknown Item';
+                    $model = match ($item['type']) {
+                        'frame' => Glasses::class,
+                        'lens' => LensType::class,
+                        'complete_glasses' => CompleteGlasses::class,
+                    };
+                    $product = $model::find($item['id']);
+                    $itemName = $product ? ($product->name ?? $product->full_name) : 'Unknown Item';
 
-                OpticsSaleItem::create([
-                    'optics_sale_id' => $sale->id,
-                    'item_type' => $item['type'],
-                    'item_id' => $item['id'],
-                    'item_name' => $itemName,
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['price'],
-                    'total_price' => $item['price'] * $item['quantity'],
-                    'created_at' => $validated['sale_date'] . ' ' . now()->format('H:i:s'),
-                    'updated_at' => $validated['sale_date'] . ' ' . now()->format('H:i:s'),
-                ]);
-            }
+                    OpticsSaleItem::create([
+                        'optics_sale_id' => $sale->id,
+                        'item_type' => $item['type'],
+                        'item_id' => $item['id'],
+                        'item_name' => $itemName,
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $item['price'],
+                        'total_price' => $item['price'] * $item['quantity'],
+                        'created_at' => $saleDateTime,
+                        'updated_at' => $saleDateTime,
+                    ]);
+                }
             } // End of saving sale items
 
             // Create payment record if advance payment exists
@@ -462,8 +470,8 @@ class OpticsSellerDashboardController extends Controller
                     'transaction_id' => $validated['transaction_id'] ?? null,
                     'notes' => 'Advance Payment',
                     'received_by' => auth()->user()->id,
-                    'created_at' => $validated['sale_date'] . ' ' . now()->format('H:i:s'),
-                    'updated_at' => $validated['sale_date'] . ' ' . now()->format('H:i:s'),
+                    'created_at' => $saleDateTime,
+                    'updated_at' => $saleDateTime,
                 ]);
             }
 
@@ -473,11 +481,11 @@ class OpticsSellerDashboardController extends Controller
                 if ($customerPhone) {
                     $description .= " ({$customerPhone})";
                 }
-                $description .= " | Total Amount: ৳" . number_format($totalAmount, 2);
-                $description .= " | Advance: ৳" . number_format($validated['advance_payment'], 2);
-                $description .= " | Due: ৳" . number_format($dueAmount, 2);
-                if (!empty($saleDetails)) {
-                    $description .= " | Items: " . implode(', ', $saleDetails);
+                $description .= ' | Total Amount: ৳'.number_format($totalAmount, 2);
+                $description .= ' | Advance: ৳'.number_format($validated['advance_payment'], 2);
+                $description .= ' | Due: ৳'.number_format($dueAmount, 2);
+                if (! empty($saleDetails)) {
+                    $description .= ' | Items: '.implode(', ', $saleDetails);
                 }
                 if ($fittingCharge > 0) {
                     $description .= " | Fitting: ৳{$fittingCharge}";
@@ -512,22 +520,23 @@ class OpticsSellerDashboardController extends Controller
                         ->where('id', $hospitalTransaction->id)
                         ->update([
                             'created_at' => $saleDateTime,
-                            'updated_at' => $saleDateTime
+                            'updated_at' => $saleDateTime,
                         ]);
                 }
             }
 
             DB::commit();
 
-            $responseMessage = "Sale completed successfully! Invoice: {$sale->invoice_number} | Total: ৳" . number_format($totalAmount, 2);
+            $responseMessage = "Sale completed successfully! Invoice: {$sale->invoice_number} | Total: ৳".number_format($totalAmount, 2);
             if ($dueAmount > 0) {
-                $responseMessage .= " | Due: ৳" . number_format($dueAmount, 2);
+                $responseMessage .= ' | Due: ৳'.number_format($dueAmount, 2);
             }
 
             return redirect()->back()->with('success', $responseMessage);
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Sale failed: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Sale failed: '.$e->getMessage());
         }
     }
 
@@ -550,12 +559,12 @@ class OpticsSellerDashboardController extends Controller
         // Search by invoice number or patient name
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('invoice_number', 'LIKE', '%' . $request->search . '%')
-                    ->orWhere('customer_name', 'LIKE', '%' . $request->search . '%')
-                    ->orWhere('customer_phone', 'LIKE', '%' . $request->search . '%')
-                    ->orWhereHas('patient', function($q) use ($request) {
-                        $q->where('name', 'LIKE', '%' . $request->search . '%')
-                          ->orWhere('phone', 'LIKE', '%' . $request->search . '%');
+                $q->where('invoice_number', 'LIKE', '%'.$request->search.'%')
+                    ->orWhere('customer_name', 'LIKE', '%'.$request->search.'%')
+                    ->orWhere('customer_phone', 'LIKE', '%'.$request->search.'%')
+                    ->orWhereHas('patient', function ($q) use ($request) {
+                        $q->where('name', 'LIKE', '%'.$request->search.'%')
+                            ->orWhere('phone', 'LIKE', '%'.$request->search.'%');
                     });
             });
         }
@@ -607,12 +616,12 @@ class OpticsSellerDashboardController extends Controller
         }
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('invoice_number', 'LIKE', '%' . $request->search . '%')
-                    ->orWhere('customer_name', 'LIKE', '%' . $request->search . '%')
-                    ->orWhere('customer_phone', 'LIKE', '%' . $request->search . '%')
-                    ->orWhereHas('patient', function($q) use ($request) {
-                        $q->where('name', 'LIKE', '%' . $request->search . '%')
-                          ->orWhere('phone', 'LIKE', '%' . $request->search . '%');
+                $q->where('invoice_number', 'LIKE', '%'.$request->search.'%')
+                    ->orWhere('customer_name', 'LIKE', '%'.$request->search.'%')
+                    ->orWhere('customer_phone', 'LIKE', '%'.$request->search.'%')
+                    ->orWhereHas('patient', function ($q) use ($request) {
+                        $q->where('name', 'LIKE', '%'.$request->search.'%')
+                            ->orWhere('phone', 'LIKE', '%'.$request->search.'%');
                     });
             });
         }
@@ -646,7 +655,7 @@ class OpticsSellerDashboardController extends Controller
             'dateFrom' => $request->date_from,
             'dateTo' => $request->date_to,
             'totalSales' => $sales->sum('total_amount'),
-            'totalDue' => $sales->sum('due_amount')
+            'totalDue' => $sales->sum('due_amount'),
         ])->render();
 
         return response($html)->header('Content-Type', 'text/html');
@@ -654,14 +663,14 @@ class OpticsSellerDashboardController extends Controller
 
     private function exportToExcel($sales, $request)
     {
-        $filename = 'sales-history-' . date('Y-m-d') . '.csv';
+        $filename = 'sales-history-'.date('Y-m-d').'.csv';
 
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => "attachment; filename=\"$filename\"",
         ];
 
-        $callback = function() use ($sales) {
+        $callback = function () use ($sales) {
             $file = fopen('php://output', 'w');
 
             // CSV Headers
@@ -675,7 +684,7 @@ class OpticsSellerDashboardController extends Controller
                 'Advance Payment',
                 'Due Amount',
                 'Status',
-                'Seller'
+                'Seller',
             ]);
 
             // CSV Data
@@ -685,12 +694,12 @@ class OpticsSellerDashboardController extends Controller
                     $sale->customer_name,
                     $sale->customer_phone ?? ($sale->patient ? $sale->patient->phone : 'N/A'),
                     $sale->created_at->format('d M Y h:i A'),
-                    $sale->items->count() . ' items',
+                    $sale->items->count().' items',
                     number_format($sale->total_amount, 2),
                     number_format($sale->advance_payment, 2),
                     number_format($sale->due_amount, 2),
                     ucfirst($sale->status),
-                    $sale->seller->name ?? 'N/A'
+                    $sale->seller->name ?? 'N/A',
                 ]);
             }
 
@@ -707,7 +716,7 @@ class OpticsSellerDashboardController extends Controller
             'dateFrom' => $request->date_from,
             'dateTo' => $request->date_to,
             'totalSales' => $sales->sum('total_amount'),
-            'totalDue' => $sales->sum('due_amount')
+            'totalDue' => $sales->sum('due_amount'),
         ]);
     }
 
@@ -737,17 +746,17 @@ class OpticsSellerDashboardController extends Controller
                 'status' => $sale->status,
                 'notes' => $sale->notes,
                 'created_at' => $sale->created_at,
-                'items' => $sale->items->map(function($item) {
+                'items' => $sale->items->map(function ($item) {
                     return [
                         'id' => $item->id,
                         'item_name' => $item->item_name,
                         'item_type' => $item->item_type,
                         'quantity' => $item->quantity,
                         'unit_price' => $item->unit_price,
-                        'total_price' => $item->total_price
+                        'total_price' => $item->total_price,
                     ];
                 }),
-                'payments' => $sale->payments->map(function($payment) {
+                'payments' => $sale->payments->map(function ($payment) {
                     return [
                         'id' => $payment->id,
                         'amount' => $payment->amount,
@@ -755,10 +764,10 @@ class OpticsSellerDashboardController extends Controller
                         'transaction_id' => $payment->transaction_id,
                         'notes' => $payment->notes,
                         'received_by' => $payment->receiver->name,
-                        'created_at' => $payment->created_at
+                        'created_at' => $payment->created_at,
                     ];
-                })
-            ]
+                }),
+            ],
         ]);
     }
 
@@ -771,10 +780,10 @@ class OpticsSellerDashboardController extends Controller
         $sale->refresh();
 
         $validated = $request->validate([
-            'amount' => 'required|numeric|min:0|max:' . $sale->due_amount,
+            'amount' => 'required|numeric|min:0|max:'.$sale->due_amount,
             'payment_method' => 'required|in:cash,card,bkash,nagad,rocket',
             'transaction_id' => 'nullable|string|max:255',
-            'notes' => 'nullable|string'
+            'notes' => 'nullable|string',
         ]);
 
         DB::beginTransaction();
@@ -786,13 +795,13 @@ class OpticsSellerDashboardController extends Controller
                 'payment_method' => $validated['payment_method'],
                 'transaction_id' => $validated['transaction_id'] ?? null,
                 'notes' => $validated['notes'] ?? 'Payment',
-                'received_by' => auth()->user()->id
+                'received_by' => auth()->user()->id,
             ]);
 
             // Update sale due amount
             $newDueAmount = $sale->due_amount - $validated['amount'];
             $sale->update([
-                'due_amount' => $newDueAmount
+                'due_amount' => $newDueAmount,
             ]);
 
             // Record income in OpticsAccount
@@ -800,9 +809,9 @@ class OpticsSellerDashboardController extends Controller
             if ($sale->customer_phone) {
                 $description .= " ({$sale->customer_phone})";
             }
-            $description .= " | Payment Amount: ৳" . number_format($validated['amount'], 2);
-            $description .= " | Remaining Due: ৳" . number_format($newDueAmount, 2);
-            $description .= " | Payment Method: " . strtoupper($validated['payment_method']);
+            $description .= ' | Payment Amount: ৳'.number_format($validated['amount'], 2);
+            $description .= ' | Remaining Due: ৳'.number_format($newDueAmount, 2);
+            $description .= ' | Payment Method: '.strtoupper($validated['payment_method']);
             if ($validated['transaction_id']) {
                 $description .= " | TxnID: {$validated['transaction_id']}";
             }
@@ -834,16 +843,17 @@ class OpticsSellerDashboardController extends Controller
                     ->where('id', $hospitalTransaction->id)
                     ->update([
                         'created_at' => now(),
-                        'updated_at' => now()
+                        'updated_at' => now(),
                     ]);
             }
 
             DB::commit();
 
-            return back()->with('success', 'Payment recorded successfully! Remaining due: ৳' . number_format($newDueAmount, 2));
+            return back()->with('success', 'Payment recorded successfully! Remaining due: ৳'.number_format($newDueAmount, 2));
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Failed to record payment: ' . $e->getMessage());
+
+            return back()->with('error', 'Failed to record payment: '.$e->getMessage());
         }
     }
 
@@ -853,19 +863,19 @@ class OpticsSellerDashboardController extends Controller
     public function updateStatus(Request $request, OpticsSale $sale)
     {
         $request->validate([
-            'status' => 'required|in:pending,ready,delivered'
+            'status' => 'required|in:pending,ready,delivered',
         ]);
 
         // If updating to delivered, check if there's any due amount
         if ($request->status === 'delivered' && $sale->due_amount > 0) {
-            return back()->with('error', 'Cannot deliver before full payment. Remaining due: ৳' . number_format($sale->due_amount, 2));
+            return back()->with('error', 'Cannot deliver before full payment. Remaining due: ৳'.number_format($sale->due_amount, 2));
         }
 
         $sale->update([
-            'status' => $request->status
+            'status' => $request->status,
         ]);
 
-        return back()->with('success', 'Status updated successfully to ' . ucfirst($request->status));
+        return back()->with('success', 'Status updated successfully to '.ucfirst($request->status));
     }
 
     /**
@@ -899,7 +909,7 @@ class OpticsSellerDashboardController extends Controller
                         'name' => $item->full_name,
                         'price' => $item->selling_price,
                         'stock' => $item->stock_quantity,
-                        'details' => $item->color . ' | ' . $item->formatted_size
+                        'details' => $item->color.' | '.$item->formatted_size,
                     ];
                 });
             $results = array_merge($results, $frames->toArray());
@@ -922,7 +932,7 @@ class OpticsSellerDashboardController extends Controller
                         'name' => $item->full_name,
                         'price' => $item->selling_price,
                         'stock' => $item->stock_quantity,
-                        'details' => "Power: {$item->sphere_power}"
+                        'details' => "Power: {$item->sphere_power}",
                     ];
                 });
             $results = array_merge($results, $completeGlasses->toArray());
@@ -941,7 +951,7 @@ class OpticsSellerDashboardController extends Controller
                         'name' => $item->name,
                         'price' => $item->price,
                         'stock' => $item->stock_quantity,
-                        'details' => $item->type . ' | ' . $item->material
+                        'details' => $item->type.' | '.$item->material,
                     ];
                 });
             $results = array_merge($results, $lenses->toArray());
@@ -973,7 +983,7 @@ class OpticsSellerDashboardController extends Controller
 
         // Top selling items (from stock movements)
         $topItems = StockMovement::where('movement_type', 'sale')
-            ->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
+            ->whereBetween('created_at', [$dateFrom.' 00:00:00', $dateTo.' 23:59:59'])
             ->selectRaw('item_type, item_id, SUM(ABS(quantity)) as total_sold, SUM(total_amount) as total_amount')
             ->groupBy('item_type', 'item_id')
             ->orderByDesc('total_amount')
@@ -1003,7 +1013,7 @@ class OpticsSellerDashboardController extends Controller
                     'item_type' => $movement->item_type,
                     'total_quantity' => $movement->total_sold,
                     'total_amount' => $movement->total_amount,
-                    'unit' => 'pcs'
+                    'unit' => 'pcs',
                 ];
             });
 
@@ -1022,5 +1032,4 @@ class OpticsSellerDashboardController extends Controller
             'dateTo' => $dateTo,
         ]);
     }
-
 }

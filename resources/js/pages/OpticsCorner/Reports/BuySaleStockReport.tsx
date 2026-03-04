@@ -57,6 +57,7 @@ interface Totals {
     total_profit: number;
     only_fitting_charge: number;
     only_fitting_charge_due: number;
+    previous_due_receive_cash?: number;
 }
 
 interface OpticsTotals {
@@ -94,23 +95,27 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
     const [search, setSearch] = useState(filters.search || '');
     const [itemType, setItemType] = useState(filters.item_type);
 
-    // Calculate sale_cash for each item (sale_cash = sale_total - sale_due)
-    const reportData = rawReportData.map(item => ({
-        ...item,
-        sale_cash: item.sale_total - item.sale_due,
-    }));
+    // sale_cash and sale_due come directly from backend (already correctly calculated)
+    // sale_cash = proportioned advance_payment (actual cash at sale time, matches bank)
+    // sale_due = current due_amount (what's still outstanding)
+    const reportData = rawReportData;
 
-    // Calculate sale_cash for totals and add only_fitting_charge to relevant fields
+    // Add only_fitting_charge and previous due receive to relevant totals fields
+    const previousDueReceiveCash = rawTotals.previous_due_receive_cash ?? 0;
+
     const totals = {
         ...rawTotals,
         sale_fitting: rawTotals.sale_fitting + (rawTotals.only_fitting_charge ?? 0),
         sale_total: rawTotals.sale_total + (rawTotals.only_fitting_charge ?? 0),
+        sale_cash: rawTotals.sale_cash, // Already includes only_fitting_charge_cash from backend
         sale_due: rawTotals.sale_due, // Already includes only_fitting_charge_due from backend
-        sale_cash: (rawTotals.sale_total + (rawTotals.only_fitting_charge ?? 0)) - rawTotals.sale_due,
         total_profit: rawTotals.total_profit + (rawTotals.only_fitting_charge ?? 0),
         only_fitting_charge: rawTotals.only_fitting_charge ?? 0,
         only_fitting_charge_due: rawTotals.only_fitting_charge_due ?? 0,
+        previous_due_receive_cash: previousDueReceiveCash,
     };
+
+    const grandCashThisPeriod = totals.sale_cash + previousDueReceiveCash;
 
     const handleFilter = () => {
         router.get(
@@ -556,7 +561,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                     ))}
 
                                     {/* Optics Total Row */}
-                                    <tr className="bg-indigo-50 font-semibold">
+                                    <tr className="bg-indigo-50 font-semibold text-xs">
                                         <td
                                             colSpan={2}
                                             className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900"
@@ -622,7 +627,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                     </tr>
 
                                     {/* Only Fitting Charge Row */}
-                                    <tr className="bg-orange-50 font-semibold">
+                                    <tr className="bg-orange-50 font-semibold text-xs">
                                         <td
                                             colSpan={2}
                                             className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900"
@@ -675,7 +680,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                     </tr>
 
                                     {/* Totals Row */}
-                                    <tr className="bg-gray-100 font-bold">
+                                    <tr className="bg-gray-100 font-bold text-xs">
                                         <td
                                             colSpan={2}
                                             className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900"
@@ -726,6 +731,154 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                         </td>
                                         <td className="border border-gray-300 bg-yellow-100 px-2 py-3 text-right text-sm font-bold text-green-600">
                                             {totals.sale_cash.toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-100 px-2 py-3 text-right text-sm font-bold text-red-600">
+                                            {totals.sale_due.toFixed(2)}
+                                        </td>
+
+                                        {/* Profit Totals */}
+                                        <td className="border border-gray-300 bg-pink-100 px-2 py-3 text-right text-sm text-gray-900">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-pink-100 px-2 py-3 text-right text-sm font-bold text-green-600">
+                                            {totals.total_profit.toFixed(2)}
+                                        </td>
+
+                                        {/* Available Totals */}
+                                        <td className="border border-gray-300 bg-purple-100 px-1 py-3 text-center text-sm text-gray-900">
+                                            {totals.available_stock}
+                                        </td>
+                                        <td className="border border-gray-300 bg-purple-100 px-2 py-3 text-right text-sm text-gray-900">
+                                            {totals.available_value.toFixed(2)}
+                                        </td>
+                                    </tr>
+
+                                    {/* Previous Due Receive Row */}
+                                    <tr className="bg-teal-50 font-semibold text-xs">
+                                        <td
+                                            colSpan={2}
+                                            className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900"
+                                        >
+                                            PREV. DUE RECEIVE (THIS PERIOD)
+                                        </td>
+
+                                        {/* Before Stock Totals - empty */}
+                                        <td className="border border-gray-300 bg-blue-50 px-2 py-3 text-center text-sm text-gray-500">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-blue-50 px-2 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-blue-50 px-2 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+
+                                        {/* Buy Totals - empty */}
+                                        <td className="border border-gray-300 bg-green-50 px-2 py-3 text-center text-sm text-gray-500">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-green-50 px-2 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-green-50 px-2 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+
+                                        {/* Sale Totals - only CASH column */}
+                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-center text-sm text-gray-500">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-1 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-1 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-1 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-100 px-2 py-3 text-right text-sm font-bold text-green-700">
+                                            {previousDueReceiveCash.toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-50 px-2 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+
+                                        {/* Profit Totals - empty */}
+                                        <td className="border border-gray-300 bg-pink-50 px-2 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-pink-50 px-2 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+
+                                        {/* Available Totals - empty */}
+                                        <td className="border border-gray-300 bg-purple-50 px-1 py-3 text-center text-sm text-gray-500">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-purple-50 px-2 py-3 text-right text-sm text-gray-500">
+                                            -
+                                        </td>
+                                    </tr>
+
+                                    {/* Grand Cash Total Row */}
+                                    <tr className="bg-emerald-100 font-bold text-xs">
+                                        <td
+                                            colSpan={2}
+                                            className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900"
+                                        >
+                                            GRAND CASH TOTAL (THIS PERIOD)
+                                        </td>
+
+                                        {/* Before Stock Totals - repeat overall totals for clarity */}
+                                        <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-center text-sm text-gray-900">
+                                            {totals.before_stock_qty}
+                                        </td>
+                                        <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-right text-sm text-gray-900">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-right text-sm text-gray-900">
+                                            {totals.before_stock_value.toFixed(2)}
+                                        </td>
+
+                                        {/* Buy Totals */}
+                                        <td className="border border-gray-300 bg-green-100 px-2 py-3 text-center text-sm text-gray-900">
+                                            {totals.buy_qty}
+                                        </td>
+                                        <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-gray-900">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-gray-900">
+                                            {totals.buy_total.toFixed(2)}
+                                        </td>
+
+                                        {/* Sale Totals */}
+                                        <td className="border border-gray-300 bg-yellow-100 px-2 py-3 text-center text-sm text-gray-900">
+                                            {totals.sale_qty}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-100 px-2 py-3 text-right text-sm text-gray-900">
+                                            -
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-100 px-1 py-3 text-right text-sm text-gray-900">
+                                            {totals.sale_subtotal.toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-100 px-1 py-3 text-right text-sm text-gray-900">
+                                            {totals.sale_discount.toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-100 px-1 py-3 text-right text-sm text-gray-900">
+                                            {totals.sale_fitting.toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-100 px-2 py-3 text-right text-sm text-gray-900">
+                                            {totals.sale_total.toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-200 px-2 py-3 text-right text-sm font-extrabold text-green-700">
+                                            {grandCashThisPeriod.toFixed(2)}
                                         </td>
                                         <td className="border border-gray-300 bg-yellow-100 px-2 py-3 text-right text-sm font-bold text-red-600">
                                             {totals.sale_due.toFixed(2)}

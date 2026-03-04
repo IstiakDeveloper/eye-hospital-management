@@ -9,7 +9,6 @@ use App\Models\FixedAsset;
 use App\Models\Glasses;
 use App\Models\LensType;
 use App\Models\Medicine;
-use App\Models\MedicineSale;
 use App\Models\OperationBooking;
 use App\Models\OpticsSale;
 use App\Models\OpticsVendor;
@@ -150,8 +149,11 @@ class BalanceSheetController extends Controller
             $totalExpenditure += abs($cumulative);
         }
 
-        // Add House Rent (Adjustment) from Advance Rent Deductions - EXACTLY same as Income & Expenditure
-        $houseRentAdjustment = \App\Models\AdvanceHouseRentDeduction::where('deduction_date', '<=', $toDate)
+        // Add House Rent (Adjustment) from Advance Rent Deductions - by month/year (not deduction_date)
+        $asOnMonth = (int) date('n', strtotime($asOnDate));
+        $asOnYear = (int) date('Y', strtotime($asOnDate));
+        $periodEndCumulative = $asOnYear * 100 + $asOnMonth;
+        $houseRentAdjustment = \App\Models\AdvanceHouseRentDeduction::whereRaw('(year * 100 + month) <= ?', [$periodEndCumulative])
             ->sum('amount');
 
         $totalExpenditure += $houseRentAdjustment;
@@ -234,7 +236,7 @@ class BalanceSheetController extends Controller
             $amount = $rent->advance_amount;
             $deductedUpToDate = DB::table('advance_house_rent_deductions')
                 ->where('advance_house_rent_id', $rent->id)
-                ->where('deduction_date', '<=', $asOnDate)
+                ->whereRaw('(year * 100 + month) <= ?', [$periodEndCumulative])
                 ->sum('amount');
             $remainingAsOfDate = $amount - $deductedUpToDate;
             $advanceHouseRent2And3 += max(0, $remainingAsOfDate);
@@ -251,7 +253,7 @@ class BalanceSheetController extends Controller
             $amount = $rent->advance_amount;
             $deductedUpToDate = DB::table('advance_house_rent_deductions')
                 ->where('advance_house_rent_id', $rent->id)
-                ->where('deduction_date', '<=', $asOnDate)
+                ->whereRaw('(year * 100 + month) <= ?', [$periodEndCumulative])
                 ->sum('amount');
             $remainingAsOfDate = $amount - $deductedUpToDate;
             $advanceHouseRent4 += max(0, $remainingAsOfDate);
@@ -306,10 +308,10 @@ class BalanceSheetController extends Controller
             }
         }
 
-        // Medicine Sale Due
-        $medicineSaleDue = MedicineSale::where('due_amount', '>', 0)
-            ->where('sale_date', '<=', $asOnDate)
-            ->sum('due_amount');
+        // Medicine Sale Due = 0 because hospital_transactions records the full total_amount
+        // at time of sale (not just cash received), so it's already included in bankBalance.
+        // Including it separately would be double-counting.
+        $medicineSaleDue = 0;
 
         // Operation Due - Only for COMPLETED operations (service already provided)
         // Scheduled/Pending operations are not assets yet (advance is unearned revenue)
@@ -435,9 +437,9 @@ class BalanceSheetController extends Controller
             + $medicineVendorDue
             + $assetPurchaseDue;
 
-        // ==================== TOTAL CALCULATION ====================
+        // ==================== TOTAL CALCULATION & RECONCILIATION ====================
 
-        // Calculate actual totals WITHOUT forcing balance
+        // Calculate actual totals first (using full precision)
         $actualTotalAssets = $bankBalance
             + $medicineStockValue
             + $opticsStockValue
@@ -452,11 +454,22 @@ class BalanceSheetController extends Controller
         // Total Liabilities + Fund + Net Profit should equal Total Assets
         $totalLiabilitiesAndFund = $totalLiabilities + $fund + $netProfit;
 
-        // DO NOT force balance - show actual totals
-        $totalAssets = $actualTotalAssets;
-        $reconciliationAdjustment = 0;
+        // Raw difference before any reconciliation (for precise debugging)
+        $rawBalanceDifference = $actualTotalAssets - $totalLiabilitiesAndFund;
 
-        // Calculate the actual difference for debugging
+        // By default, show actual totals
+        $reconciliationAdjustment = 0.0;
+        $totalAssets = $actualTotalAssets;
+
+        // If the gap is only a tiny rounding/float difference (e.g. -0.07),
+        // apply a small reconciliation so the report balances visually.
+        if (abs($rawBalanceDifference) > 0 && abs($rawBalanceDifference) <= 0.10) {
+            // Round the tiny difference to 2 decimals and adjust assets
+            $reconciliationAdjustment = round($rawBalanceDifference, 2);
+            $totalAssets = $actualTotalAssets - $reconciliationAdjustment;
+        }
+
+        // Final difference after any reconciliation
         $balanceDifference = $totalAssets - $totalLiabilitiesAndFund;
 
         // Debug information

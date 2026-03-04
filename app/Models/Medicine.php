@@ -203,12 +203,12 @@ class Medicine extends Model
      */
     public function getCumulativeStockValue($tillDate)
     {
-        // Get all purchases till date
+        // Get all purchases till date (exclusive — does not include $tillDate itself)
         $totalPurchases = \DB::table('stock_transactions')
             ->join('medicine_stocks', 'stock_transactions.medicine_stock_id', '=', 'medicine_stocks.id')
             ->where('medicine_stocks.medicine_id', $this->id)
             ->where('stock_transactions.type', 'purchase')
-            ->where('stock_transactions.created_at', '<', $tillDate)
+            ->whereDate('stock_transactions.created_at', '<', $tillDate)
             ->sum('stock_transactions.total_amount');
 
         // Get all COGS till date
@@ -216,7 +216,7 @@ class Medicine extends Model
             ->join('medicine_sales', 'medicine_sale_items.medicine_sale_id', '=', 'medicine_sales.id')
             ->join('medicine_stocks', 'medicine_sale_items.medicine_stock_id', '=', 'medicine_stocks.id')
             ->where('medicine_stocks.medicine_id', $this->id)
-            ->where('medicine_sales.sale_date', '<', $tillDate)
+            ->whereDate('medicine_sales.sale_date', '<', $tillDate)
             ->sum(\DB::raw('medicine_sale_items.quantity * medicine_sale_items.buy_price'));
 
         // Get quantity
@@ -224,14 +224,14 @@ class Medicine extends Model
             ->join('medicine_stocks', 'stock_transactions.medicine_stock_id', '=', 'medicine_stocks.id')
             ->where('medicine_stocks.medicine_id', $this->id)
             ->where('stock_transactions.type', 'purchase')
-            ->where('stock_transactions.created_at', '<', $tillDate)
+            ->whereDate('stock_transactions.created_at', '<', $tillDate)
             ->sum('stock_transactions.quantity');
 
         $totalSoldQty = \DB::table('medicine_sale_items')
             ->join('medicine_sales', 'medicine_sale_items.medicine_sale_id', '=', 'medicine_sales.id')
             ->join('medicine_stocks', 'medicine_sale_items.medicine_stock_id', '=', 'medicine_stocks.id')
             ->where('medicine_stocks.medicine_id', $this->id)
-            ->where('medicine_sales.sale_date', '<', $tillDate)
+            ->whereDate('medicine_sales.sale_date', '<', $tillDate)
             ->sum('medicine_sale_items.quantity');
 
         return [
@@ -384,11 +384,14 @@ class Medicine extends Model
     public function getPurchasesInDateRange($fromDate, $toDate)
     {
         // Get purchases directly from stock_transactions for accuracy
+        // Use whereDate to correctly capture all transactions on the boundary dates,
+        // regardless of the time component (e.g., 2026-02-28 00:01:52 must not be excluded).
         $transactions = \DB::table('stock_transactions')
             ->join('medicine_stocks', 'stock_transactions.medicine_stock_id', '=', 'medicine_stocks.id')
             ->where('medicine_stocks.medicine_id', $this->id)
             ->where('stock_transactions.type', 'purchase')
-            ->whereBetween('stock_transactions.created_at', [$fromDate, $toDate])
+            ->whereDate('stock_transactions.created_at', '>=', $fromDate)
+            ->whereDate('stock_transactions.created_at', '<=', $toDate)
             ->select('stock_transactions.quantity', 'stock_transactions.total_amount')
             ->get();
 

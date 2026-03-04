@@ -236,16 +236,24 @@ class IncomeExpenditureController extends Controller
         $expenses = [];
         $serial = 1;
 
-        // Add House Rent (Adjustment) from Advance Rent Deductions - SEPARATED BY FLOOR
+        // Add House Rent (Adjustment) from Advance Rent Deductions - by month/year (not deduction_date)
+        $fromMonth = (int) date('n', strtotime($fromDate));
+        $fromYear = (int) date('Y', strtotime($fromDate));
+        $toMonth = (int) date('n', strtotime($toDate));
+        $toYear = (int) date('Y', strtotime($toDate));
+        $periodStart = $fromYear * 100 + $fromMonth;
+        $periodEnd = $toYear * 100 + $toMonth;
+        $periodEndCumulative = $toYear * 100 + $toMonth;
+
         // 2nd & 3rd Floor
         $houseRent2And3Current = \App\Models\AdvanceHouseRentDeduction::join('advance_house_rents', 'advance_house_rent_deductions.advance_house_rent_id', '=', 'advance_house_rents.id')
             ->where('advance_house_rents.floor_type', '2_3_floor')
-            ->whereBetween('advance_house_rent_deductions.deduction_date', [$fromDate, $toDate])
+            ->whereRaw('(advance_house_rent_deductions.year * 100 + advance_house_rent_deductions.month) >= ? and (advance_house_rent_deductions.year * 100 + advance_house_rent_deductions.month) <= ?', [$periodStart, $periodEnd])
             ->sum('advance_house_rent_deductions.amount');
 
         $houseRent2And3Cumulative = \App\Models\AdvanceHouseRentDeduction::join('advance_house_rents', 'advance_house_rent_deductions.advance_house_rent_id', '=', 'advance_house_rents.id')
             ->where('advance_house_rents.floor_type', '2_3_floor')
-            ->where('advance_house_rent_deductions.deduction_date', '<=', $toDate)
+            ->whereRaw('(advance_house_rent_deductions.year * 100 + advance_house_rent_deductions.month) <= ?', [$periodEndCumulative])
             ->sum('advance_house_rent_deductions.amount');
 
         if ($houseRent2And3Current > 0 || $houseRent2And3Cumulative > 0) {
@@ -264,12 +272,12 @@ class IncomeExpenditureController extends Controller
         // 4th Floor
         $houseRent4Current = \App\Models\AdvanceHouseRentDeduction::join('advance_house_rents', 'advance_house_rent_deductions.advance_house_rent_id', '=', 'advance_house_rents.id')
             ->where('advance_house_rents.floor_type', '4_floor')
-            ->whereBetween('advance_house_rent_deductions.deduction_date', [$fromDate, $toDate])
+            ->whereRaw('(advance_house_rent_deductions.year * 100 + advance_house_rent_deductions.month) >= ? and (advance_house_rent_deductions.year * 100 + advance_house_rent_deductions.month) <= ?', [$periodStart, $periodEnd])
             ->sum('advance_house_rent_deductions.amount');
 
         $houseRent4Cumulative = \App\Models\AdvanceHouseRentDeduction::join('advance_house_rents', 'advance_house_rent_deductions.advance_house_rent_id', '=', 'advance_house_rents.id')
             ->where('advance_house_rents.floor_type', '4_floor')
-            ->where('advance_house_rent_deductions.deduction_date', '<=', $toDate)
+            ->whereRaw('(advance_house_rent_deductions.year * 100 + advance_house_rent_deductions.month) <= ?', [$periodEndCumulative])
             ->sum('advance_house_rent_deductions.amount');
 
         if ($houseRent4Current > 0 || $houseRent4Cumulative > 0) {

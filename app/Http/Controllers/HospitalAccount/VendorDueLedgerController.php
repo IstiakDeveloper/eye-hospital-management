@@ -3,18 +3,16 @@
 namespace App\Http\Controllers\HospitalAccount;
 
 use App\Http\Controllers\Controller;
+use App\Models\FixedAsset;
+use App\Models\FixedAssetVendor;
+use App\Models\FixedAssetVendorPayment;
+use App\Models\GlassesPurchase;
+use App\Models\MedicineVendor;
+use App\Models\MedicineVendorPayment;
+use App\Models\MedicineVendorTransaction;
+use App\Models\OpticsVendor;
+use App\Models\OpticsVendorTransaction;
 use Illuminate\Http\Request;
-use App\Models\{
-    FixedAssetVendor,
-    FixedAsset,
-    FixedAssetVendorPayment,
-    MedicineVendor,
-    MedicineVendorTransaction,
-    MedicineVendorPayment,
-    OpticsVendor,
-    GlassesPurchase,
-    OpticsVendorTransaction
-};
 use Inertia\Inertia;
 
 class VendorDueLedgerController extends Controller
@@ -66,7 +64,7 @@ class VendorDueLedgerController extends Controller
             // Only add vendors with transactions
             if ($totalPurchaseDue > 0 || $totalPayment > 0) {
                 $ledgerData[] = [
-                    'id' => 'vendor-' . $vendor->id,
+                    'id' => 'vendor-'.$vendor->id,
                     'date' => now()->toDateString(),
                     'vendor_name' => $vendor->name,
                     'description' => 'Vendor Due Summary',
@@ -126,39 +124,51 @@ class VendorDueLedgerController extends Controller
         $ledgerData = [];
 
         foreach ($selectedVendors as $vendor) {
-            // Get all purchase transactions for this vendor
-            $purchasesQuery = MedicineVendorTransaction::where('vendor_id', $vendor->id)
-                ->where('type', 'purchase');
+            // Opening balance from vendor record
+            $openingDue = ($vendor->balance_type === 'due' && $vendor->opening_balance > 0)
+                ? $vendor->opening_balance
+                : 0;
 
             if ($startDate && $endDate) {
-                $purchasesQuery->whereBetween('transaction_date', [$startDate, $endDate]);
+                // previousDue = opening balance + all purchases before startDate - all payments before startDate
+                $prePurchases = MedicineVendorTransaction::where('vendor_id', $vendor->id)
+                    ->where('type', 'purchase')
+                    ->where('transaction_date', '<', $startDate)
+                    ->sum('amount');
+
+                $prePayments = MedicineVendorPayment::where('vendor_id', $vendor->id)
+                    ->where('payment_date', '<', $startDate)
+                    ->sum('amount');
+
+                $previousDue = $openingDue + $prePurchases - $prePayments;
+
+                // In-period purchases and payments
+                $totalPurchaseDue = MedicineVendorTransaction::where('vendor_id', $vendor->id)
+                    ->where('type', 'purchase')
+                    ->whereBetween('transaction_date', [$startDate, $endDate])
+                    ->sum('amount');
+
+                $totalPayment = MedicineVendorPayment::where('vendor_id', $vendor->id)
+                    ->whereBetween('payment_date', [$startDate, $endDate])
+                    ->sum('amount');
+            } else {
+                // No date filter: show all-time totals
+                $previousDue = $openingDue;
+
+                $totalPurchaseDue = MedicineVendorTransaction::where('vendor_id', $vendor->id)
+                    ->where('type', 'purchase')
+                    ->sum('amount');
+
+                $totalPayment = MedicineVendorPayment::where('vendor_id', $vendor->id)
+                    ->sum('amount');
             }
 
-            // Sum the total amount from all purchases (full purchase value)
-            $totalPurchaseDue = $purchasesQuery->sum('amount');
+            $currentDue = $previousDue + $totalPurchaseDue - $totalPayment;
 
-            // Get all vendor payments for this vendor (all payments)
-            $paymentsQuery = MedicineVendorPayment::where('vendor_id', $vendor->id);
-
-            if ($startDate && $endDate) {
-                $paymentsQuery->whereBetween('payment_date', [$startDate, $endDate]);
-            }
-
-            $totalPayment = $paymentsQuery->sum('amount');
-
-            // Add opening balance if vendor has due type opening balance
-            $openingDue = 0;
-            if ($vendor->balance_type === 'due' && $vendor->opening_balance > 0) {
-                $openingDue = $vendor->opening_balance;
-            }
-
-            $previousDue = $openingDue;
-            $currentDue = $openingDue + $totalPurchaseDue - $totalPayment;
-
-            // Show all vendors with any transaction activity
-            if ($totalPurchaseDue != 0 || $totalPayment > 0 || $openingDue > 0) {
+            // Show vendors who have any due or transaction activity (including those with only previous due)
+            if ($previousDue != 0 || $totalPurchaseDue != 0 || $totalPayment > 0) {
                 $ledgerData[] = [
-                    'id' => 'vendor-' . $vendor->id,
+                    'id' => 'vendor-'.$vendor->id,
                     'date' => now()->toDateString(),
                     'vendor_name' => $vendor->name,
                     'description' => 'Vendor Due Summary',
@@ -247,7 +257,7 @@ class VendorDueLedgerController extends Controller
             // Show vendors with actual due, payments, or opening balance
             if ($totalPurchaseDue > 0 || $totalPayment > 0 || $openingDue > 0) {
                 $ledgerData[] = [
-                    'id' => 'vendor-' . $vendor->id,
+                    'id' => 'vendor-'.$vendor->id,
                     'date' => now()->toDateString(),
                     'vendor_name' => $vendor->name,
                     'description' => 'Vendor Due Summary',

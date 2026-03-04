@@ -261,7 +261,7 @@ Route::middleware(['auth'])->group(function () {
     // User Management Routes
 
     // Create routes (must come before {user} routes)
-    Route::middleware(['permission:users.create'])->group(function () {
+    Route::middleware(['permission:users.create', 'super-admin-only'])->group(function () {
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
     });
@@ -732,8 +732,8 @@ Route::middleware(['permission:hospital-account.view'])->prefix('hospital-accoun
     Route::get('/fixed-asset-vendors/create', [FixedAssetVendorController::class, 'create'])->name('fixed-asset-vendors.create');
     Route::post('/fixed-asset-vendors', [FixedAssetVendorController::class, 'store'])->name('fixed-asset-vendors.store');
     Route::get('/fixed-asset-vendors/{fixedAssetVendor}', [FixedAssetVendorController::class, 'show'])->name('fixed-asset-vendors.show');
-    Route::get('/fixed-asset-vendors/{fixedAssetVendor}/edit', [FixedAssetVendorController::class, 'edit'])->name('fixed-asset-vendors.edit');
-    Route::put('/fixed-asset-vendors/{fixedAssetVendor}', [FixedAssetVendorController::class, 'update'])->name('fixed-asset-vendors.update');
+    Route::get('/fixed-asset-vendors/{fixedAssetVendor}/edit', [FixedAssetVendorController::class, 'edit'])->name('fixed-asset-vendors.edit')->middleware('super-admin-only');
+    Route::put('/fixed-asset-vendors/{fixedAssetVendor}', [FixedAssetVendorController::class, 'update'])->name('fixed-asset-vendors.update')->middleware('super-admin-only');
     Route::delete('/fixed-asset-vendors/{fixedAssetVendor}', [FixedAssetVendorController::class, 'destroy'])->name('fixed-asset-vendors.destroy')->middleware('super-admin-only');
     Route::post('/fixed-asset-vendors/{fixedAssetVendor}/payment', [FixedAssetVendorController::class, 'makePayment'])->name('fixed-asset-vendors.payment');
 

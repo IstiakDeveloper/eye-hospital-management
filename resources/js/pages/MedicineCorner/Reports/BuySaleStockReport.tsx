@@ -51,6 +51,7 @@ interface Totals {
     sale_total: number;
     sale_cash: number;
     sale_due: number;
+    sale_cash_received: number;
     available_stock: number;
     available_value: number;
     total_profit: number;
@@ -71,16 +72,19 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
     const [toDate, setToDate] = useState(filters.to_date);
     const [search, setSearch] = useState(filters.search || '');
 
-    // Calculate sale_cash for each item (sale_cash = sale_total - sale_due)
+    // sale_cash = full sale_total, matching what hospital_account records (due is tracked separately)
+    // sale_due = sale_total - sale_cash = 0 (consistent: cash + due = total)
     const reportData = rawReportData.map(item => ({
         ...item,
-        sale_cash: item.sale_total - item.sale_due,
+        sale_cash: item.sale_total,
+        sale_due: 0,
     }));
 
-    // Calculate sale_cash for totals
+    // Calculate sale_cash and sale_due for totals
     const totals = {
         ...rawTotals,
-        sale_cash: rawTotals.sale_total - rawTotals.sale_due,
+        sale_cash: rawTotals.sale_total,
+        sale_due: 0,
     };
 
     const handleFilter = () => {
