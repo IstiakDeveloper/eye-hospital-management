@@ -1,18 +1,6 @@
-import React from 'react';
 import AdminLayout from '@/layouts/admin-layout';
 import { Head, Link } from '@inertiajs/react';
-import {
-    ChevronLeft,
-    FileText,
-    Calendar,
-    User,
-    Building,
-    Hash,
-    DollarSign,
-    Clock,
-    Receipt,
-    ArrowUpDown
-} from 'lucide-react';
+import { ArrowUpDown, Building, Calendar, ChevronLeft, Clock, DollarSign, FileText, Hash, Receipt, User } from 'lucide-react';
 
 interface VoucherUser {
     id: number;
@@ -75,74 +63,70 @@ export default function Show({ voucher }: Props) {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                        <Link
-                            href="/main-account/vouchers"
-                            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-                        >
-                            <ChevronLeft className="w-4 h-4 mr-1" />
+                        <Link href="/main-account/vouchers" className="flex items-center text-gray-600 transition-colors hover:text-gray-900">
+                            <ChevronLeft className="mr-1 h-4 w-4" />
                             Back to Vouchers
                         </Link>
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">Voucher Details</h1>
-                            <p className="text-gray-600 mt-1">
-                                Voucher #{voucher.voucher_no}
-                            </p>
+                            <p className="mt-1 text-gray-600">Voucher #{voucher.voucher_no}</p>
                         </div>
                     </div>
                     <div className="flex gap-3">
                         <button
                             onClick={() => window.print()}
-                            className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                            className="inline-flex items-center rounded-lg bg-gray-600 px-4 py-2 text-white transition-colors hover:bg-gray-700"
                         >
-                            <FileText className="w-4 h-4 mr-2" />
+                            <FileText className="mr-2 h-4 w-4" />
                             Print
                         </button>
                     </div>
                 </div>
 
                 {/* Main Content */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Voucher Information */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="space-y-6 lg:col-span-2">
                         {/* Basic Details Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <div className="flex items-center justify-between mb-6">
+                        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <div className="mb-6 flex items-center justify-between">
                                 <h2 className="text-xl font-semibold text-gray-900">Voucher Information</h2>
-                                <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${voucher.voucher_type === 'Credit'
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-red-100 text-red-800'
-                                    }`}>
+                                <span
+                                    className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${
+                                        voucher.voucher_type === 'Credit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                    }`}
+                                >
                                     {voucher.voucher_type}
                                 </span>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div className="space-y-4">
                                     <div className="flex items-start space-x-3">
-                                        <Hash className="w-5 h-5 text-gray-400 mt-1" />
+                                        <Hash className="mt-1 h-5 w-5 text-gray-400" />
                                         <div>
                                             <label className="text-sm font-medium text-gray-500">Serial Number</label>
-                                            <p className="text-sm text-gray-900 mt-1">{voucher.sl_no}</p>
+                                            <p className="mt-1 text-sm text-gray-900">{voucher.sl_no}</p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-start space-x-3">
-                                        <Receipt className="w-5 h-5 text-gray-400 mt-1" />
+                                        <Receipt className="mt-1 h-5 w-5 text-gray-400" />
                                         <div>
                                             <label className="text-sm font-medium text-gray-500">Voucher Number</label>
-                                            <p className="text-sm text-gray-900 mt-1 font-mono">{voucher.voucher_no}</p>
+                                            <p className="mt-1 font-mono text-sm text-gray-900">{voucher.voucher_no}</p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-start space-x-3">
-                                        <Calendar className="w-5 h-5 text-gray-400 mt-1" />
+                                        <Calendar className="mt-1 h-5 w-5 text-gray-400" />
                                         <div>
                                             <label className="text-sm font-medium text-gray-500">Date</label>
-                                            <p className="text-sm text-gray-900 mt-1">
+                                            <p className="mt-1 text-sm text-gray-900">
                                                 {new Date(voucher.date).toLocaleDateString('en-GB', {
                                                     year: 'numeric',
                                                     month: 'long',
-                                                    day: 'numeric'
+                                                    day: 'numeric',
                                                 })}
                                             </p>
                                         </div>
@@ -151,32 +135,33 @@ export default function Show({ voucher }: Props) {
 
                                 <div className="space-y-4">
                                     <div className="flex items-start space-x-3">
-                                        <DollarSign className="w-5 h-5 text-gray-400 mt-1" />
+                                        <DollarSign className="mt-1 h-5 w-5 text-gray-400" />
                                         <div>
                                             <label className="text-sm font-medium text-gray-500">Amount</label>
-                                            <p className={`text-lg font-bold mt-1 ${voucher.voucher_type === 'Credit' ? 'text-green-600' : 'text-red-600'
-                                                }`}>
+                                            <p
+                                                className={`mt-1 text-lg font-bold ${
+                                                    voucher.voucher_type === 'Credit' ? 'text-green-600' : 'text-red-600'
+                                                }`}
+                                            >
                                                 {voucher.formatted_amount || formatCurrency(voucher.amount)}
                                             </p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-start space-x-3">
-                                        <ArrowUpDown className="w-5 h-5 text-gray-400 mt-1" />
+                                        <ArrowUpDown className="mt-1 h-5 w-5 text-gray-400" />
                                         <div>
                                             <label className="text-sm font-medium text-gray-500">Running Balance</label>
-                                            <p className="text-sm font-semibold text-gray-900 mt-1">
-                                                {formatCurrency(voucher.running_balance)}
-                                            </p>
+                                            <p className="mt-1 text-sm font-semibold text-gray-900">{formatCurrency(voucher.running_balance)}</p>
                                         </div>
                                     </div>
 
                                     {voucher.source_voucher_no && (
                                         <div className="flex items-start space-x-3">
-                                            <Receipt className="w-5 h-5 text-gray-400 mt-1" />
+                                            <Receipt className="mt-1 h-5 w-5 text-gray-400" />
                                             <div>
                                                 <label className="text-sm font-medium text-gray-500">Source Voucher</label>
-                                                <p className="text-sm text-gray-900 mt-1 font-mono">{voucher.source_voucher_no}</p>
+                                                <p className="mt-1 font-mono text-sm text-gray-900">{voucher.source_voucher_no}</p>
                                             </div>
                                         </div>
                                     )}
@@ -185,34 +170,32 @@ export default function Show({ voucher }: Props) {
                         </div>
 
                         {/* Narration Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Narration</h3>
-                            <div className="bg-gray-50 rounded-lg p-4">
-                                <p className="text-gray-700 text-sm leading-relaxed">
-                                    {voucher.narration || 'No narration provided'}
-                                </p>
+                        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <h3 className="mb-4 text-lg font-semibold text-gray-900">Narration</h3>
+                            <div className="rounded-lg bg-gray-50 p-4">
+                                <p className="text-sm leading-relaxed text-gray-700">{voucher.narration || 'No narration provided'}</p>
                             </div>
                         </div>
 
                         {/* Account Information Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Information</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <h3 className="mb-4 text-lg font-semibold text-gray-900">Account Information</h3>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div className="flex items-start space-x-3">
-                                    <Building className="w-5 h-5 text-gray-400 mt-1" />
+                                    <Building className="mt-1 h-5 w-5 text-gray-400" />
                                     <div>
                                         <label className="text-sm font-medium text-gray-500">Source Account</label>
-                                        <p className="text-sm text-gray-900 mt-1">{voucher.source_account_name}</p>
-                                        <p className="text-xs text-gray-500 mt-1">Code: {voucher.source_account}</p>
+                                        <p className="mt-1 text-sm text-gray-900">{voucher.source_account_name}</p>
+                                        <p className="mt-1 text-xs text-gray-500">Code: {voucher.source_account}</p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-start space-x-3">
-                                    <ArrowUpDown className="w-5 h-5 text-gray-400 mt-1" />
+                                    <ArrowUpDown className="mt-1 h-5 w-5 text-gray-400" />
                                     <div>
                                         <label className="text-sm font-medium text-gray-500">Transaction Type</label>
-                                        <p className="text-sm text-gray-900 mt-1">{voucher.transaction_type_name}</p>
-                                        <p className="text-xs text-gray-500 mt-1">Code: {voucher.source_transaction_type}</p>
+                                        <p className="mt-1 text-sm text-gray-900">{voucher.transaction_type_name}</p>
+                                        <p className="mt-1 text-xs text-gray-500">Code: {voucher.source_transaction_type}</p>
                                     </div>
                                 </div>
                             </div>
@@ -222,39 +205,35 @@ export default function Show({ voucher }: Props) {
                     {/* Sidebar */}
                     <div className="space-y-6">
                         {/* Summary Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Summary</h3>
+                        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <h3 className="mb-4 text-lg font-semibold text-gray-900">Summary</h3>
                             <div className="space-y-3">
-                                <div className="flex justify-between items-center py-2">
+                                <div className="flex items-center justify-between py-2">
                                     <span className="text-sm text-gray-600">Voucher Type</span>
-                                    <span className={`text-sm font-medium ${voucher.voucher_type === 'Credit' ? 'text-green-600' : 'text-red-600'
-                                        }`}>
+                                    <span className={`text-sm font-medium ${voucher.voucher_type === 'Credit' ? 'text-green-600' : 'text-red-600'}`}>
                                         {voucher.voucher_type}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center py-2 border-t border-gray-100">
+                                <div className="flex items-center justify-between border-t border-gray-100 py-2">
                                     <span className="text-sm text-gray-600">Amount</span>
-                                    <span className={`text-sm font-bold ${voucher.voucher_type === 'Credit' ? 'text-green-600' : 'text-red-600'
-                                        }`}>
+                                    <span className={`text-sm font-bold ${voucher.voucher_type === 'Credit' ? 'text-green-600' : 'text-red-600'}`}>
                                         {voucher.formatted_amount || formatCurrency(voucher.amount)}
                                     </span>
                                 </div>
-                                <div className="flex justify-between items-center py-2 border-t border-gray-100">
+                                <div className="flex items-center justify-between border-t border-gray-100 py-2">
                                     <span className="text-sm text-gray-600">Balance After</span>
-                                    <span className="text-sm font-semibold text-gray-900">
-                                        {formatCurrency(voucher.running_balance)}
-                                    </span>
+                                    <span className="text-sm font-semibold text-gray-900">{formatCurrency(voucher.running_balance)}</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* Created By Card */}
                         {voucher.created_by && (
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Created By</h3>
-                                <div className="flex items-center space-x-3 mb-4">
-                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                        <User className="w-5 h-5 text-blue-600" />
+                            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                                <h3 className="mb-4 text-lg font-semibold text-gray-900">Created By</h3>
+                                <div className="mb-4 flex items-center space-x-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                                        <User className="h-5 w-5 text-blue-600" />
                                     </div>
                                     <div>
                                         <p className="text-sm font-medium text-gray-900">{voucher.created_by.name}</p>
@@ -263,11 +242,11 @@ export default function Show({ voucher }: Props) {
                                 </div>
                                 <div className="space-y-2 text-xs text-gray-500">
                                     <div className="flex items-center space-x-2">
-                                        <Clock className="w-3 h-3" />
+                                        <Clock className="h-3 w-3" />
                                         <span>Created: {formatDateTime(voucher.created_at)}</span>
                                     </div>
                                     <div className="flex items-center space-x-2">
-                                        <Clock className="w-3 h-3" />
+                                        <Clock className="h-3 w-3" />
                                         <span>Updated: {formatDateTime(voucher.updated_at)}</span>
                                     </div>
                                 </div>
@@ -275,24 +254,24 @@ export default function Show({ voucher }: Props) {
                         )}
 
                         {/* Actions Card */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
+                        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <h3 className="mb-4 text-lg font-semibold text-gray-900">Actions</h3>
                             <div className="space-y-3">
                                 <Link
                                     href="/main-account/vouchers"
-                                    className="block w-full text-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                                    className="block w-full rounded-lg bg-gray-100 px-4 py-2 text-center text-gray-700 transition-colors hover:bg-gray-200"
                                 >
                                     Back to All Vouchers
                                 </Link>
                                 <Link
                                     href="/main-account"
-                                    className="block w-full text-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                                    className="block w-full rounded-lg bg-blue-100 px-4 py-2 text-center text-blue-700 transition-colors hover:bg-blue-200"
                                 >
                                     Main Account Dashboard
                                 </Link>
                                 <button
                                     onClick={() => window.print()}
-                                    className="block w-full text-center px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                                    className="block w-full rounded-lg bg-green-100 px-4 py-2 text-center text-green-700 transition-colors hover:bg-green-200"
                                 >
                                     Print Voucher
                                 </button>

@@ -1,25 +1,8 @@
-import React from 'react';
+import AdminLayout from '@/layouts/admin-layout';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
-import AdminLayout from '@/layouts/admin-layout';
-import {
-    Eye,
-    User,
-    Calendar,
-    FileText,
-    Activity,
-    Heart,
-    Droplets,
-    AlertCircle,
-    Phone,
-    MapPin,
-    Clock,
-    UserCheck,
-    ArrowLeft,
-    Printer,
-    Edit,
-    QrCode
-} from 'lucide-react';
+import { ArrowLeft, Edit, Eye, Printer, QrCode } from 'lucide-react';
+import React from 'react';
 
 interface VisionTest {
     id: number;
@@ -120,9 +103,12 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
 
     const CheckboxField = ({ label, checked }: { label: string; checked: boolean }) => (
         <div className="flex items-center gap-2">
-            <div className={`w-4 h-4 border-2 border-gray-400 rounded flex items-center justify-center ${checked ? 'bg-black border-black' : 'bg-white'
-                }`}>
-                {checked && <span className="text-white text-xs">✓</span>}
+            <div
+                className={`flex h-4 w-4 items-center justify-center rounded border-2 border-gray-400 ${
+                    checked ? 'border-black bg-black' : 'bg-white'
+                }`}
+            >
+                {checked && <span className="text-xs text-white">✓</span>}
             </div>
             <span className="text-sm font-medium text-gray-900">{label}</span>
         </div>
@@ -133,15 +119,12 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
             <Head title={`Vision Test Report - ${visionTest.patient.name}`} />
 
             {/* Header Actions */}
-            <div className="bg-white shadow-sm border-b mb-6">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="mb-6 border-b bg-white shadow-sm">
+                <div className="mx-auto max-w-5xl px-4 py-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <Link
-                                href="/visiontests"
-                                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-                            >
-                                <ArrowLeft className="w-5 h-5" />
+                            <Link href="/visiontests" className="flex items-center gap-2 text-gray-600 transition-colors hover:text-gray-900">
+                                <ArrowLeft className="h-5 w-5" />
                                 Back to Vision Tests
                             </Link>
                         </div>
@@ -149,17 +132,17 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={handlePrint}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
                             >
-                                <Printer className="w-4 h-4" />
+                                <Printer className="h-4 w-4" />
                                 Print Report
                             </button>
 
                             <Link
                                 href={`/visiontests/${visionTest.id}/edit`}
-                                className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                                className="flex items-center gap-2 rounded-lg bg-gray-600 px-4 py-2 text-white transition-colors hover:bg-gray-700"
                             >
-                                <Edit className="w-4 h-4" />
+                                <Edit className="h-4 w-4" />
                                 Edit
                             </Link>
                         </div>
@@ -169,14 +152,13 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
 
             {/* Vision Test Report */}
             <div className="mx-auto pb-8">
-                <div className="bg-white shadow-lg rounded-lg border">
-
+                <div className="rounded-lg border bg-white shadow-lg">
                     {/* Hospital Header */}
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-lg">
+                    <div className="rounded-t-lg bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-                                    <Eye className="w-8 h-8 text-blue-600" />
+                                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white">
+                                    <Eye className="h-8 w-8 text-blue-600" />
                                 </div>
                                 <div>
                                     <h1 className="text-2xl font-bold">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
@@ -185,26 +167,20 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
                                 </div>
                             </div>
                             <div className="text-right">
-                                <QrCode className="w-16 h-16 text-white" />
+                                <QrCode className="h-16 w-16 text-white" />
                             </div>
                         </div>
                     </div>
 
                     {/* Date and Title */}
-                    <div className="px-6 py-4 border-b bg-gray-50">
+                    <div className="border-b bg-gray-50 px-6 py-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-600">
-                                    {format(new Date(visionTest.test_date), 'dd/MM/yyyy')}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                    {format(new Date(visionTest.test_date), 'hh:mm a')}
-                                </p>
+                                <p className="text-sm text-gray-600">{format(new Date(visionTest.test_date), 'dd/MM/yyyy')}</p>
+                                <p className="text-sm text-gray-600">{format(new Date(visionTest.test_date), 'hh:mm a')}</p>
                             </div>
                             <div className="text-center">
-                                <h2 className="text-xl font-bold text-gray-900 border border-gray-400 px-8 py-2">
-                                    Particulars of Patient
-                                </h2>
+                                <h2 className="border border-gray-400 px-8 py-2 text-xl font-bold text-gray-900">Particulars of Patient</h2>
                             </div>
                             <div></div>
                         </div>
@@ -212,7 +188,7 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
 
                     {/* Patient Information Grid */}
                     <div className="p-6">
-                        <div className="grid grid-cols-2 gap-8 mb-6">
+                        <div className="mb-6 grid grid-cols-2 gap-8">
                             <div className="space-y-4">
                                 <div className="flex">
                                     <label className="w-20 font-semibold text-gray-900">Invoice:</label>
@@ -258,10 +234,8 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
 
                         {/* Complains */}
                         <div className="mb-6">
-                            <label className="font-semibold text-gray-900 mb-2 block">Complains:</label>
-                            <div className="border border-gray-400 p-3 min-h-16 bg-gray-50">
-                                {visionTest.complains || ''}
-                            </div>
+                            <label className="mb-2 block font-semibold text-gray-900">Complains:</label>
+                            <div className="min-h-16 border border-gray-400 bg-gray-50 p-3">{visionTest.complains || ''}</div>
                         </div>
 
                         {/* Eye Examination Table */}
@@ -276,47 +250,47 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Diagnosis</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">Diagnosis</td>
                                         <td className="border border-gray-400 p-2">{visionTest.right_eye_diagnosis || ''}</td>
                                         <td className="border border-gray-400 p-2">{visionTest.left_eye_diagnosis || ''}</td>
                                     </tr>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Lids</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">Lids</td>
                                         <td className="border border-gray-400 p-2">{visionTest.right_eye_lids || ''}</td>
                                         <td className="border border-gray-400 p-2">{visionTest.left_eye_lids || ''}</td>
                                     </tr>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Conjunctiva</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">Conjunctiva</td>
                                         <td className="border border-gray-400 p-2">{visionTest.right_eye_conjunctiva || ''}</td>
                                         <td className="border border-gray-400 p-2">{visionTest.left_eye_conjunctiva || ''}</td>
                                     </tr>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Cornea</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">Cornea</td>
                                         <td className="border border-gray-400 p-2">{visionTest.right_eye_cornea || ''}</td>
                                         <td className="border border-gray-400 p-2">{visionTest.left_eye_cornea || ''}</td>
                                     </tr>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Anterior Chamber</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">Anterior Chamber</td>
                                         <td className="border border-gray-400 p-2">{visionTest.right_eye_anterior_chamber || ''}</td>
                                         <td className="border border-gray-400 p-2">{visionTest.left_eye_anterior_chamber || ''}</td>
                                     </tr>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Iris</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">Iris</td>
                                         <td className="border border-gray-400 p-2">{visionTest.right_eye_iris || ''}</td>
                                         <td className="border border-gray-400 p-2">{visionTest.left_eye_iris || ''}</td>
                                     </tr>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Pupil</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">Pupil</td>
                                         <td className="border border-gray-400 p-2">{visionTest.right_eye_pupil || ''}</td>
                                         <td className="border border-gray-400 p-2">{visionTest.left_eye_pupil || ''}</td>
                                     </tr>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Lens</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">Lens</td>
                                         <td className="border border-gray-400 p-2">{visionTest.right_eye_lens || ''}</td>
                                         <td className="border border-gray-400 p-2">{visionTest.left_eye_lens || ''}</td>
                                     </tr>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Ocular movements</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">Ocular movements</td>
                                         <td className="border border-gray-400 p-2">{visionTest.right_eye_ocular_movements || ''}</td>
                                         <td className="border border-gray-400 p-2">{visionTest.left_eye_ocular_movements || ''}</td>
                                     </tr>
@@ -336,22 +310,26 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Vision Without Glass</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">Vision Without Glass</td>
                                         <td className="border border-gray-400 p-2">{visionTest.right_eye_vision_without_glass || ''}</td>
                                         <td className="border border-gray-400 p-2">{visionTest.left_eye_vision_without_glass || ''}</td>
                                     </tr>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Vision With Glass/pinhole</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">Vision With Glass/pinhole</td>
                                         <td className="border border-gray-400 p-2">{visionTest.right_eye_vision_with_glass || ''}</td>
                                         <td className="border border-gray-400 p-2">{visionTest.left_eye_vision_with_glass || ''}</td>
                                     </tr>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">IOP</td>
-                                        <td className="border border-gray-400 p-2">{visionTest.right_eye_iop ? `${visionTest.right_eye_iop} mmHg` : ''}</td>
-                                        <td className="border border-gray-400 p-2">{visionTest.left_eye_iop ? `${visionTest.left_eye_iop} mmHg` : ''}</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">IOP</td>
+                                        <td className="border border-gray-400 p-2">
+                                            {visionTest.right_eye_iop ? `${visionTest.right_eye_iop} mmHg` : ''}
+                                        </td>
+                                        <td className="border border-gray-400 p-2">
+                                            {visionTest.left_eye_iop ? `${visionTest.left_eye_iop} mmHg` : ''}
+                                        </td>
                                     </tr>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50">Ducts</td>
+                                        <td className="border border-gray-400 bg-gray-50 p-2 font-semibold">Ducts</td>
                                         <td className="border border-gray-400 p-2">{visionTest.right_eye_ducts || ''}</td>
                                         <td className="border border-gray-400 p-2">{visionTest.left_eye_ducts || ''}</td>
                                     </tr>
@@ -364,9 +342,9 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
                             <table className="w-full border-collapse border border-gray-400">
                                 <tbody>
                                     <tr>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50 w-1/3">B.P</td>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50 w-1/3">Urine Sugar</td>
-                                        <td className="border border-gray-400 p-2 font-semibold bg-gray-50 w-1/3">Blood Sugar</td>
+                                        <td className="w-1/3 border border-gray-400 bg-gray-50 p-2 font-semibold">B.P</td>
+                                        <td className="w-1/3 border border-gray-400 bg-gray-50 p-2 font-semibold">Urine Sugar</td>
+                                        <td className="w-1/3 border border-gray-400 bg-gray-50 p-2 font-semibold">Blood Sugar</td>
                                     </tr>
                                     <tr>
                                         <td className="border border-gray-400 p-3">{visionTest.blood_pressure || ''}</td>
@@ -399,16 +377,14 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
 
                         {/* Detailed History */}
                         <div className="mb-6">
-                            <label className="font-semibold text-gray-900 mb-2 block">Detailed History: (Immediate Past and Treatment History)</label>
-                            <div className="border border-gray-400 p-3 min-h-20 bg-gray-50">
-                                {visionTest.detailed_history || ''}
-                            </div>
+                            <label className="mb-2 block font-semibold text-gray-900">Detailed History: (Immediate Past and Treatment History)</label>
+                            <div className="min-h-20 border border-gray-400 bg-gray-50 p-3">{visionTest.detailed_history || ''}</div>
                         </div>
 
                         {/* Drug Used */}
                         <div className="mb-6">
-                            <label className="font-semibold text-gray-900 mb-2 block">Drug Used:</label>
-                            <div className="grid grid-cols-3 gap-6 mb-4">
+                            <label className="mb-2 block font-semibold text-gray-900">Drug Used:</label>
+                            <div className="mb-4 grid grid-cols-3 gap-6">
                                 <div className="space-y-2">
                                     <CheckboxField label="ONE EYED" checked={visionTest.is_one_eyed} />
                                     <CheckboxField label="DIABETIC" checked={visionTest.is_diabetic} />
@@ -423,37 +399,31 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
                                 </div>
                             </div>
 
-                            <div className="flex items-center gap-2 mb-4">
+                            <div className="mb-4 flex items-center gap-2">
                                 <span className="font-semibold text-gray-900">OTHERS:</span>
-                                <div className="flex-1 border-b border-gray-400 pb-1">
-                                    {visionTest.other_conditions || ''}
-                                </div>
+                                <div className="flex-1 border-b border-gray-400 pb-1">{visionTest.other_conditions || ''}</div>
                             </div>
                         </div>
 
                         {/* Current Medications */}
                         <div className="mb-8">
-                            <label className="font-semibold text-gray-900 mb-2 block">Current Medications:</label>
-                            <div className="border border-gray-400 p-3 min-h-16 bg-gray-50">
-                                {visionTest.drugs_used || ''}
-                            </div>
+                            <label className="mb-2 block font-semibold text-gray-900">Current Medications:</label>
+                            <div className="min-h-16 border border-gray-400 bg-gray-50 p-3">{visionTest.drugs_used || ''}</div>
                         </div>
 
                         {/* Signature Section */}
-                        <div className="grid grid-cols-2 gap-8 pt-8 border-t border-gray-300">
+                        <div className="grid grid-cols-2 gap-8 border-t border-gray-300 pt-8">
                             <div className="text-center">
-                                <div className="h-16 border-b border-gray-400 mb-2"></div>
+                                <div className="mb-2 h-16 border-b border-gray-400"></div>
                                 <p className="font-semibold text-gray-900">Patient's Signature</p>
                             </div>
                             <div className="text-center">
-                                <div className="text-right mb-4">
+                                <div className="mb-4 text-right">
                                     <p className="font-semibold text-gray-900">Refractionist</p>
                                     <p className="text-sm text-gray-600">Vision Test Examiner</p>
-                                    <p className="text-sm text-gray-600">
-                                        Date: {format(new Date(visionTest.test_date), 'dd/MM/yyyy')}
-                                    </p>
+                                    <p className="text-sm text-gray-600">Date: {format(new Date(visionTest.test_date), 'dd/MM/yyyy')}</p>
                                 </div>
-                                <div className="h-16 border-b border-gray-400 mb-2"></div>
+                                <div className="mb-2 h-16 border-b border-gray-400"></div>
                                 <p className="font-semibold text-gray-900">Examiner's Signature & Seal</p>
                             </div>
                         </div>

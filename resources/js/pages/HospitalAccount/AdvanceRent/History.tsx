@@ -1,14 +1,7 @@
-import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
-import {
-    History as HistoryIcon,
-    Download,
-    FileText,
-    ArrowLeft,
-    Filter,
-    Calendar
-} from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { ArrowLeft, Download, FileText, Filter, History as HistoryIcon } from 'lucide-react';
+import { useState } from 'react';
 
 interface TransactionDetail {
     description: string;
@@ -48,7 +41,7 @@ const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-BD', {
         day: '2-digit',
         month: 'short',
-        year: 'numeric'
+        year: 'numeric',
     });
 };
 
@@ -79,7 +72,7 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
         const params: any = {
             floor_type: currentFloor,
             year: selectedYear,
-            format
+            format,
         };
         if (selectedMonth) params.month = selectedMonth;
 
@@ -96,23 +89,22 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
 
     return (
         <HospitalAccountLayout title="Advance Rent History">
-            <div className="max-w-7xl mx-auto py-6 space-y-6">
-
+            <div className="mx-auto max-w-7xl space-y-6 py-6">
                 {/* Header */}
-                <div className="bg-white rounded-lg shadow-sm border p-6 print:shadow-none">
-                    <div className="flex justify-between items-start mb-4">
+                <div className="rounded-lg border bg-white p-6 shadow-sm print:shadow-none">
+                    <div className="mb-4 flex items-start justify-between">
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                                <HistoryIcon className="w-7 h-7 text-blue-600" />
+                            <h1 className="flex items-center gap-3 text-2xl font-bold text-gray-900">
+                                <HistoryIcon className="h-7 w-7 text-blue-600" />
                                 Advance House Rent History
                             </h1>
-                            <p className="text-gray-600 mt-1">Complete transaction history with balance tracking</p>
+                            <p className="mt-1 text-gray-600">Complete transaction history with balance tracking</p>
                         </div>
                         <button
                             onClick={() => router.visit(`/hospital-account/advance-rent?floor_type=${currentFloor}`)}
-                            className="flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition print:hidden"
+                            className="flex items-center rounded-lg bg-gray-600 px-4 py-2 text-white transition hover:bg-gray-700 print:hidden"
                         >
-                            <ArrowLeft className="w-4 h-4 mr-2" />
+                            <ArrowLeft className="mr-2 h-4 w-4" />
                             Back
                         </button>
                     </div>
@@ -122,20 +114,20 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
                         <div className="flex gap-2">
                             <button
                                 onClick={() => handleFloorChange('2_3_floor')}
-                                className={`px-6 py-3 font-medium text-sm border-b-2 transition ${
+                                className={`border-b-2 px-6 py-3 text-sm font-medium transition ${
                                     currentFloor === '2_3_floor'
                                         ? 'border-blue-600 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                                 }`}
                             >
                                 2nd & 3rd Floor
                             </button>
                             <button
                                 onClick={() => handleFloorChange('4_floor')}
-                                className={`px-6 py-3 font-medium text-sm border-b-2 transition ${
+                                className={`border-b-2 px-6 py-3 text-sm font-medium transition ${
                                     currentFloor === '4_floor'
                                         ? 'border-blue-600 text-blue-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                                 }`}
                             >
                                 4th Floor
@@ -146,58 +138,59 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
                     {/* Filters */}
                     <div className="flex items-center gap-4 print:hidden">
                         <div className="flex items-center gap-2">
-                            <Filter className="w-5 h-5 text-gray-500" />
+                            <Filter className="h-5 w-5 text-gray-500" />
                             <span className="text-sm font-medium text-gray-700">Filter:</span>
                         </div>
 
                         <select
                             value={selectedYear}
                             onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                            className="border rounded px-3 py-2 focus:ring-2 focus:ring-blue-400"
+                            className="rounded border px-3 py-2 focus:ring-2 focus:ring-blue-400"
                         >
-                            {years.map(year => (
-                                <option key={year} value={year}>{year}</option>
+                            {years.map((year) => (
+                                <option key={year} value={year}>
+                                    {year}
+                                </option>
                             ))}
                         </select>
 
                         <select
                             value={selectedMonth}
                             onChange={(e) => setSelectedMonth(e.target.value ? parseInt(e.target.value) : '')}
-                            className="border rounded px-3 py-2 focus:ring-2 focus:ring-blue-400"
+                            className="rounded border px-3 py-2 focus:ring-2 focus:ring-blue-400"
                         >
                             <option value="">All Months</option>
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(m => (
-                                <option key={m} value={m}>{getMonthName(m)}</option>
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                                <option key={m} value={m}>
+                                    {getMonthName(m)}
+                                </option>
                             ))}
                         </select>
 
-                        <button
-                            onClick={handleFilter}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                        >
+                        <button onClick={handleFilter} className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
                             Apply
                         </button>
 
                         <div className="ml-auto flex gap-2">
                             <button
                                 onClick={handlePrint}
-                                className="flex items-center px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                                className="flex items-center rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200"
                             >
-                                <FileText className="w-4 h-4 mr-1" />
+                                <FileText className="mr-1 h-4 w-4" />
                                 Print
                             </button>
                             <button
                                 onClick={() => handleExport('pdf')}
-                                className="flex items-center px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
+                                className="flex items-center rounded-lg bg-red-100 px-3 py-2 text-red-700 hover:bg-red-200"
                             >
-                                <Download className="w-4 h-4 mr-1" />
+                                <Download className="mr-1 h-4 w-4" />
                                 PDF
                             </button>
                             <button
                                 onClick={() => handleExport('excel')}
-                                className="flex items-center px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200"
+                                className="flex items-center rounded-lg bg-green-100 px-3 py-2 text-green-700 hover:bg-green-200"
                             >
-                                <Download className="w-4 h-4 mr-1" />
+                                <Download className="mr-1 h-4 w-4" />
                                 Excel
                             </button>
                         </div>
@@ -205,9 +198,9 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
                 </div>
 
                 {/* Transaction Table */}
-                <div className="bg-white rounded-lg shadow-sm border print:shadow-none">
+                <div className="rounded-lg border bg-white shadow-sm print:shadow-none">
                     <div className="p-6">
-                        <div className="mb-4 flex justify-between items-center print:mb-6">
+                        <div className="mb-4 flex items-center justify-between print:mb-6">
                             <h2 className="text-lg font-semibold text-gray-900">
                                 {selectedMonth ? `${getMonthName(selectedMonth)} ${selectedYear}` : `Year ${selectedYear}`}
                             </h2>
@@ -219,13 +212,13 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
                         <div className="overflow-x-auto">
                             <table className="w-full border-collapse">
                                 <thead>
-                                    <tr className="bg-gray-50 border-b-2 border-gray-300">
-                                        <th className="text-left p-3 font-semibold text-gray-700">Date</th>
-                                        <th className="text-left p-3 font-semibold text-gray-700">Description</th>
-                                        <th className="text-left p-3 font-semibold text-gray-700">Payment/Deduction No</th>
-                                        <th className="text-right p-3 font-semibold text-green-700">Credit (৳)</th>
-                                        <th className="text-right p-3 font-semibold text-red-700">Debit (৳)</th>
-                                        <th className="text-right p-3 font-semibold text-blue-700">Balance (৳)</th>
+                                    <tr className="border-b-2 border-gray-300 bg-gray-50">
+                                        <th className="p-3 text-left font-semibold text-gray-700">Date</th>
+                                        <th className="p-3 text-left font-semibold text-gray-700">Description</th>
+                                        <th className="p-3 text-left font-semibold text-gray-700">Payment/Deduction No</th>
+                                        <th className="p-3 text-right font-semibold text-green-700">Credit (৳)</th>
+                                        <th className="p-3 text-right font-semibold text-red-700">Debit (৳)</th>
+                                        <th className="p-3 text-right font-semibold text-blue-700">Balance (৳)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -234,33 +227,27 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
                                         <td colSpan={3} className="p-3 font-medium text-gray-700">
                                             Opening Balance
                                         </td>
-                                        <td className="text-right p-3">-</td>
-                                        <td className="text-right p-3">-</td>
-                                        <td className="text-right p-3 font-bold text-blue-700">
-                                            {formatCurrency(previousBalance)}
-                                        </td>
+                                        <td className="p-3 text-right">-</td>
+                                        <td className="p-3 text-right">-</td>
+                                        <td className="p-3 text-right font-bold text-blue-700">{formatCurrency(previousBalance)}</td>
                                     </tr>
 
                                     {transactions.length > 0 ? (
                                         transactions.map((transaction, index) => (
-                                            <tr
-                                                key={index}
-                                                className="border-b hover:bg-gray-50"
-                                            >
-                                                <td className="p-3 text-sm text-gray-700 font-medium">
-                                                    {formatDate(transaction.date)}
-                                                </td>
+                                            <tr key={index} className="border-b hover:bg-gray-50">
+                                                <td className="p-3 text-sm font-medium text-gray-700">{formatDate(transaction.date)}</td>
                                                 <td className="p-3 text-sm text-gray-900">
                                                     {transaction.details.length === 1 ? (
-                                                        <div>
-                                                            {transaction.details[0].description}
-                                                        </div>
+                                                        <div>{transaction.details[0].description}</div>
                                                     ) : (
                                                         <div>
-                                                            <div className="font-medium mb-1">Multiple Transactions:</div>
-                                                            <ul className="text-xs space-y-1">
+                                                            <div className="mb-1 font-medium">Multiple Transactions:</div>
+                                                            <ul className="space-y-1 text-xs">
                                                                 {transaction.details.map((detail, i) => (
-                                                                    <li key={i} className={detail.type === 'advance' ? 'text-green-600' : 'text-red-600'}>
+                                                                    <li
+                                                                        key={i}
+                                                                        className={detail.type === 'advance' ? 'text-green-600' : 'text-red-600'}
+                                                                    >
                                                                         • {detail.description}
                                                                     </li>
                                                                 ))}
@@ -272,27 +259,29 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
                                                     {transaction.details.length === 1 ? (
                                                         <span className="font-mono text-gray-600">{transaction.details[0].payment_number}</span>
                                                     ) : (
-                                                        <div className="text-xs space-y-1">
+                                                        <div className="space-y-1 text-xs">
                                                             {transaction.details.map((detail, i) => (
-                                                                <div key={i} className="font-mono text-gray-600">{detail.payment_number}</div>
+                                                                <div key={i} className="font-mono text-gray-600">
+                                                                    {detail.payment_number}
+                                                                </div>
                                                             ))}
                                                         </div>
                                                     )}
                                                 </td>
-                                                <td className="text-right p-3 text-sm font-semibold text-green-600">
+                                                <td className="p-3 text-right text-sm font-semibold text-green-600">
                                                     {transaction.credit > 0 ? formatCurrency(transaction.credit) : '-'}
                                                 </td>
-                                                <td className="text-right p-3 text-sm font-semibold text-red-600">
+                                                <td className="p-3 text-right text-sm font-semibold text-red-600">
                                                     {transaction.debit > 0 ? formatCurrency(transaction.debit) : '-'}
                                                 </td>
-                                                <td className="text-right p-3 text-sm font-bold text-blue-700">
+                                                <td className="p-3 text-right text-sm font-bold text-blue-700">
                                                     {formatCurrency(transaction.balance)}
                                                 </td>
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={6} className="text-center py-12 text-gray-500">
+                                            <td colSpan={6} className="py-12 text-center text-gray-500">
                                                 No transactions found for this period
                                             </td>
                                         </tr>
@@ -300,19 +289,13 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
 
                                     {/* Totals Row */}
                                     {transactions.length > 0 && (
-                                        <tr className="bg-gray-100 border-t-2 border-gray-300 font-bold">
+                                        <tr className="border-t-2 border-gray-300 bg-gray-100 font-bold">
                                             <td colSpan={3} className="p-3 text-gray-900">
                                                 Total
                                             </td>
-                                            <td className="text-right p-3 text-green-700">
-                                                {formatCurrency(totalCredit)}
-                                            </td>
-                                            <td className="text-right p-3 text-red-700">
-                                                {formatCurrency(totalDebit)}
-                                            </td>
-                                            <td className="text-right p-3 text-blue-700">
-                                                {formatCurrency(finalBalance)}
-                                            </td>
+                                            <td className="p-3 text-right text-green-700">{formatCurrency(totalCredit)}</td>
+                                            <td className="p-3 text-right text-red-700">{formatCurrency(totalDebit)}</td>
+                                            <td className="p-3 text-right text-blue-700">{formatCurrency(finalBalance)}</td>
                                         </tr>
                                     )}
                                 </tbody>
@@ -321,24 +304,23 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
 
                         {/* Summary Cards */}
                         {transactions.length > 0 && (
-                            <div className="grid grid-cols-3 gap-4 mt-6 print:mt-8">
-                                <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
-                                    <p className="text-xs uppercase tracking-wide text-green-600 font-semibold mb-1">Total Advance Paid</p>
+                            <div className="mt-6 grid grid-cols-3 gap-4 print:mt-8">
+                                <div className="rounded-lg border-2 border-green-300 bg-green-50 p-4">
+                                    <p className="mb-1 text-xs font-semibold tracking-wide text-green-600 uppercase">Total Advance Paid</p>
                                     <p className="text-2xl font-bold text-green-700">৳{formatCurrency(totalCredit)}</p>
                                 </div>
-                                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
-                                    <p className="text-xs uppercase tracking-wide text-red-600 font-semibold mb-1">Total Rent Deducted</p>
+                                <div className="rounded-lg border-2 border-red-300 bg-red-50 p-4">
+                                    <p className="mb-1 text-xs font-semibold tracking-wide text-red-600 uppercase">Total Rent Deducted</p>
                                     <p className="text-2xl font-bold text-red-700">৳{formatCurrency(totalDebit)}</p>
                                 </div>
-                                <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
-                                    <p className="text-xs uppercase tracking-wide text-blue-600 font-semibold mb-1">Closing Balance</p>
+                                <div className="rounded-lg border-2 border-blue-300 bg-blue-50 p-4">
+                                    <p className="mb-1 text-xs font-semibold tracking-wide text-blue-600 uppercase">Closing Balance</p>
                                     <p className="text-2xl font-bold text-blue-700">৳{formatCurrency(finalBalance)}</p>
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
-
             </div>
 
             <style>{`

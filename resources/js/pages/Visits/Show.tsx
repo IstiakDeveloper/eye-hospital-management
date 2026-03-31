@@ -1,17 +1,7 @@
-import React from 'react';
-import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import {
-    ArrowLeft,
-    Calendar,
-    User,
-    Phone,
-    Stethoscope,
-    DollarSign,
-    Receipt,
-    FileText,
-    Trash2
-} from 'lucide-react';
+import { formatDhakaDateTime } from '@/utils/dhaka-time';
+import { Head, Link, router } from '@inertiajs/react';
+import { ArrowLeft, Calendar, DollarSign, FileText, Phone, Receipt, Stethoscope, Trash2, User } from 'lucide-react';
 
 interface Patient {
     id: number;
@@ -74,44 +64,41 @@ interface Props {
 export default function Show({ visit }: Props) {
     const formatDate = (dateString: string | null | undefined) => {
         if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        return formatDhakaDateTime(dateString);
     };
 
     const formatCurrency = (amount: number | null | undefined) => {
         if (amount === null || amount === undefined || isNaN(amount)) {
             return '৳0';
         }
-        return '৳' + amount.toLocaleString('en-BD', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        });
+        return (
+            '৳' +
+            amount.toLocaleString('en-BD', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            })
+        );
     };
 
     const getStatusBadge = (status: string | null | undefined) => {
         if (!status) {
-            return <span className="px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700">N/A</span>;
+            return <span className="rounded bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">N/A</span>;
         }
 
         const statusColors: Record<string, string> = {
-            'paid': 'bg-green-100 text-green-700',
-            'partial': 'bg-yellow-100 text-yellow-700',
-            'unpaid': 'bg-red-100 text-red-700',
-            'payment': 'bg-orange-100 text-orange-700',
-            'vision_test': 'bg-blue-100 text-blue-700',
-            'prescription': 'bg-purple-100 text-purple-700',
-            'completed': 'bg-green-100 text-green-700',
-            'pending': 'bg-gray-100 text-gray-700',
-            'in_progress': 'bg-blue-100 text-blue-700',
+            paid: 'bg-green-100 text-green-700',
+            partial: 'bg-yellow-100 text-yellow-700',
+            unpaid: 'bg-red-100 text-red-700',
+            payment: 'bg-orange-100 text-orange-700',
+            vision_test: 'bg-blue-100 text-blue-700',
+            prescription: 'bg-purple-100 text-purple-700',
+            completed: 'bg-green-100 text-green-700',
+            pending: 'bg-gray-100 text-gray-700',
+            in_progress: 'bg-blue-100 text-blue-700',
         };
 
         return (
-            <span className={`px-2 py-1 text-xs font-medium rounded ${statusColors[status] || 'bg-gray-100 text-gray-700'}`}>
+            <span className={`rounded px-2 py-1 text-xs font-medium ${statusColors[status] || 'bg-gray-100 text-gray-700'}`}>
                 {status.replace('_', ' ').toUpperCase()}
             </span>
         );
@@ -122,11 +109,11 @@ export default function Show({ visit }: Props) {
             <Head title={`Visit #${visit.visit_id}`} />
 
             <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Link
                             href="/visits"
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
+                            className="inline-flex items-center gap-1 rounded px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-800"
                         >
                             <ArrowLeft className="h-3 w-3" />
                             Back
@@ -139,13 +126,13 @@ export default function Show({ visit }: Props) {
                     <div className="flex gap-2">
                         <Link
                             href={route('visits.edit', visit.id)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-600 text-white text-xs font-medium rounded hover:bg-gray-700"
+                            className="inline-flex items-center gap-1 rounded bg-gray-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700"
                         >
                             Edit Visit
                         </Link>
                         <Link
                             href={`/visits/${visit.id}/receipt`}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
+                            className="inline-flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
                         >
                             <Receipt className="h-3 w-3" />
                             Print Receipt
@@ -162,7 +149,7 @@ export default function Show({ visit }: Props) {
                                     });
                                 }
                             }}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700"
+                            className="inline-flex items-center gap-1 rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
                         >
                             <Trash2 className="h-3 w-3" />
                             Delete
@@ -170,10 +157,10 @@ export default function Show({ visit }: Props) {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                     {/* Patient Information */}
-                    <div className="bg-white rounded border border-gray-200 p-4">
-                        <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <div className="rounded border border-gray-200 bg-white p-4">
+                        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
                             <User className="h-4 w-4" />
                             Patient Information
                         </h2>
@@ -188,7 +175,7 @@ export default function Show({ visit }: Props) {
                             </div>
                             <div>
                                 <p className="text-xs text-gray-500">Phone</p>
-                                <p className="text-sm font-medium text-gray-900 flex items-center gap-1">
+                                <p className="flex items-center gap-1 text-sm font-medium text-gray-900">
                                     <Phone className="h-3 w-3" />
                                     {visit.patient.phone}
                                 </p>
@@ -203,22 +190,22 @@ export default function Show({ visit }: Props) {
                     </div>
 
                     {/* Visit Information */}
-                    <div className="bg-white rounded border border-gray-200 p-4">
-                        <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <div className="rounded border border-gray-200 bg-white p-4">
+                        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
                             <FileText className="h-4 w-4" />
                             Visit Information
                         </h2>
                         <div className="space-y-2">
                             <div>
                                 <p className="text-xs text-gray-500">Visit Date</p>
-                                <p className="text-sm font-medium text-gray-900 flex items-center gap-1">
+                                <p className="flex items-center gap-1 text-sm font-medium text-gray-900">
                                     <Calendar className="h-3 w-3" />
                                     {formatDate(visit.created_at)}
                                 </p>
                             </div>
                             <div>
                                 <p className="text-xs text-gray-500">Doctor</p>
-                                <p className="text-sm font-medium text-gray-900 flex items-center gap-1">
+                                <p className="flex items-center gap-1 text-sm font-medium text-gray-900">
                                     <Stethoscope className="h-3 w-3" />
                                     {visit.selected_doctor?.user?.name || 'N/A'}
                                 </p>
@@ -231,23 +218,23 @@ export default function Show({ visit }: Props) {
                     </div>
 
                     {/* Status Information */}
-                    <div className="bg-white rounded border border-gray-200 p-4">
-                        <h2 className="text-sm font-semibold text-gray-900 mb-3">Status</h2>
+                    <div className="rounded border border-gray-200 bg-white p-4">
+                        <h2 className="mb-3 text-sm font-semibold text-gray-900">Status</h2>
                         <div className="space-y-2">
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">Payment Status</p>
+                                <p className="mb-1 text-xs text-gray-500">Payment Status</p>
                                 {getStatusBadge(visit.payment_status)}
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">Overall Status</p>
+                                <p className="mb-1 text-xs text-gray-500">Overall Status</p>
                                 {getStatusBadge(visit.overall_status)}
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">Vision Test</p>
+                                <p className="mb-1 text-xs text-gray-500">Vision Test</p>
                                 {getStatusBadge(visit.vision_test_status)}
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 mb-1">Prescription</p>
+                                <p className="mb-1 text-xs text-gray-500">Prescription</p>
                                 {getStatusBadge(visit.prescription_status)}
                             </div>
                         </div>
@@ -255,12 +242,12 @@ export default function Show({ visit }: Props) {
                 </div>
 
                 {/* Payment Summary */}
-                <div className="mt-4 bg-white rounded border border-gray-200 p-4">
-                    <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <div className="mt-4 rounded border border-gray-200 bg-white p-4">
+                    <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
                         <DollarSign className="h-4 w-4" />
                         Payment Summary
                     </h2>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
                         <div>
                             <p className="text-xs text-gray-500">Registration Fee</p>
                             <p className="text-sm font-medium text-gray-900">{formatCurrency(visit.registration_fee)}</p>
@@ -269,7 +256,7 @@ export default function Show({ visit }: Props) {
                             <p className="text-xs text-gray-500">
                                 Doctor Fee
                                 {visit.is_followup && (
-                                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                                    <span className="ml-2 inline-flex items-center rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
                                         Follow-up
                                     </span>
                                 )}
@@ -289,7 +276,7 @@ export default function Show({ visit }: Props) {
                             <p className="text-sm font-semibold text-blue-600">{formatCurrency(visit.final_amount)}</p>
                         </div>
                     </div>
-                    <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="mt-4 grid grid-cols-2 gap-4 border-t border-gray-200 pt-4 md:grid-cols-3">
                         <div>
                             <p className="text-xs text-gray-500">Total Paid</p>
                             <p className="text-sm font-semibold text-green-600">{formatCurrency(visit.total_paid)}</p>
@@ -307,8 +294,8 @@ export default function Show({ visit }: Props) {
 
                 {/* Payment History */}
                 {visit.payments && visit.payments.length > 0 && (
-                    <div className="mt-4 bg-white rounded border border-gray-200 p-4">
-                        <h2 className="text-sm font-semibold text-gray-900 mb-3">Payment History</h2>
+                    <div className="mt-4 rounded border border-gray-200 bg-white p-4">
+                        <h2 className="mb-3 text-sm font-semibold text-gray-900">Payment History</h2>
                         <div className="overflow-x-auto">
                             <table className="min-w-full">
                                 <thead className="bg-gray-50">
@@ -323,21 +310,11 @@ export default function Show({ visit }: Props) {
                                 <tbody className="divide-y divide-gray-200">
                                     {visit.payments.map((payment) => (
                                         <tr key={payment.id}>
-                                            <td className="px-3 py-2 text-xs text-gray-900">
-                                                {formatDate(payment.payment_date)}
-                                            </td>
-                                            <td className="px-3 py-2 text-xs font-medium text-green-600">
-                                                {formatCurrency(payment.amount)}
-                                            </td>
-                                            <td className="px-3 py-2 text-xs text-gray-900">
-                                                {payment.payment_method?.name || 'N/A'}
-                                            </td>
-                                            <td className="px-3 py-2 text-xs text-gray-900">
-                                                {payment.received_by?.name || 'N/A'}
-                                            </td>
-                                            <td className="px-3 py-2 text-xs text-gray-500">
-                                                {payment.notes || '-'}
-                                            </td>
+                                            <td className="px-3 py-2 text-xs text-gray-900">{formatDate(payment.payment_date)}</td>
+                                            <td className="px-3 py-2 text-xs font-medium text-green-600">{formatCurrency(payment.amount)}</td>
+                                            <td className="px-3 py-2 text-xs text-gray-900">{payment.payment_method?.name || 'N/A'}</td>
+                                            <td className="px-3 py-2 text-xs text-gray-900">{payment.received_by?.name || 'N/A'}</td>
+                                            <td className="px-3 py-2 text-xs text-gray-500">{payment.notes || '-'}</td>
                                         </tr>
                                     ))}
                                 </tbody>

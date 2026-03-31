@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { Search, X, User, Calendar, Clock, DollarSign, FileText, CreditCard } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { Calendar, Clock, CreditCard, DollarSign, FileText, Search, User, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface Patient {
     id: number;
@@ -94,7 +94,7 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
 
     const handleOperationChange = (operationId: number) => {
         setSelectedOperationId(operationId);
-        const operation = operations.find(op => op.id === operationId);
+        const operation = operations.find((op) => op.id === operationId);
         if (operation) {
             setTotalAmount(operation.price.toString());
             setAdvancePayment(operation.price.toString());
@@ -104,9 +104,7 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
     // Calculate discount amount
     const baseAmount = parseFloat(totalAmount) || 0;
     const discountVal = parseFloat(discountValue) || 0;
-    const discountAmount = discountType === 'percentage'
-        ? (baseAmount * discountVal) / 100
-        : discountVal;
+    const discountAmount = discountType === 'percentage' ? (baseAmount * discountVal) / 100 : discountVal;
     const total = Math.max(0, baseAmount - discountAmount);
     const advanceAmount = parseFloat(advancePayment) || 0;
     const dueAmount = Math.max(0, total - advanceAmount);
@@ -142,50 +140,50 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
             eye_side: eyeSide,
             lens_type: lensType === 'other' ? customLensType : lensType,
             power: power,
-            surgery_remarks: surgeryRemarks
+            surgery_remarks: surgeryRemarks,
         };
 
         setLoading(true);
         router.post('/operation-bookings', formData, {
-            onFinish: () => setLoading(false)
+            onFinish: () => setLoading(false),
         });
     };
 
     return (
         <AdminLayout>
             <div className="p-6">
-                <div className="max-w-4xl mx-auto">
+                <div className="mx-auto max-w-4xl">
                     <div className="mb-6">
                         <h1 className="text-3xl font-bold text-gray-900">New Operation Booking</h1>
-                        <p className="text-gray-600 mt-1">Schedule a new operation for a patient</p>
+                        <p className="mt-1 text-gray-600">Schedule a new operation for a patient</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Patient Selection */}
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <div className="flex items-center gap-2 mb-4">
-                                <User className="w-5 h-5 text-blue-600" />
+                        <div className="rounded-lg bg-white p-6 shadow">
+                            <div className="mb-4 flex items-center gap-2">
+                                <User className="h-5 w-5 text-blue-600" />
                                 <h2 className="text-xl font-semibold">Patient Information</h2>
                             </div>
 
                             {!selectedPatient ? (
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                    <Search className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
                                     <input
                                         type="text"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         placeholder="Search patient by name, ID, or phone..."
-                                        className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border py-3 pr-4 pl-10 focus:ring-2 focus:ring-blue-500"
                                     />
                                     {searchResults.length > 0 && (
-                                        <div className="absolute z-10 w-full mt-2 bg-white border rounded-lg shadow-lg max-h-96 overflow-y-auto">
+                                        <div className="absolute z-10 mt-2 max-h-96 w-full overflow-y-auto rounded-lg border bg-white shadow-lg">
                                             {searchResults.map((patient) => (
                                                 <button
                                                     key={patient.id}
                                                     type="button"
                                                     onClick={() => handleSelectPatient(patient)}
-                                                    className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b last:border-b-0"
+                                                    className="w-full border-b px-4 py-3 text-left last:border-b-0 hover:bg-gray-50"
                                                 >
                                                     <div className="font-medium">{patient.name}</div>
                                                     <div className="text-sm text-gray-500">
@@ -197,9 +195,9 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                                     )}
                                 </div>
                             ) : (
-                                <div className="bg-blue-50 rounded-lg p-4 flex items-center justify-between">
+                                <div className="flex items-center justify-between rounded-lg bg-blue-50 p-4">
                                     <div>
-                                        <div className="font-semibold text-lg">{selectedPatient.name}</div>
+                                        <div className="text-lg font-semibold">{selectedPatient.name}</div>
                                         <div className="text-sm text-gray-600">
                                             {selectedPatient.patient_id} • {selectedPatient.phone}
                                             {selectedPatient.age && ` • ${selectedPatient.age}y • ${selectedPatient.gender}`}
@@ -208,30 +206,28 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                                     <button
                                         type="button"
                                         onClick={() => setSelectedPatient(null)}
-                                        className="p-2 text-red-600 hover:bg-red-100 rounded-lg"
+                                        className="rounded-lg p-2 text-red-600 hover:bg-red-100"
                                     >
-                                        <X className="w-5 h-5" />
+                                        <X className="h-5 w-5" />
                                     </button>
                                 </div>
                             )}
                         </div>
 
                         {/* Operation Details */}
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <h2 className="text-xl font-semibold mb-4">Operation Details</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="rounded-lg bg-white p-6 shadow">
+                            <h2 className="mb-4 text-xl font-semibold">Operation Details</h2>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Operation Type *
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Operation Type *</label>
                                     <select
                                         value={selectedOperationId}
                                         onChange={(e) => handleOperationChange(Number(e.target.value))}
                                         required
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value="">Select Operation</option>
-                                        {operations.map(op => (
+                                        {operations.map((op) => (
                                             <option key={op.id} value={op.id}>
                                                 {op.name} - {op.type} (৳{op.price})
                                             </option>
@@ -240,17 +236,15 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Doctor *
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Doctor *</label>
                                     <select
                                         value={selectedDoctorId}
                                         onChange={(e) => setSelectedDoctorId(Number(e.target.value))}
                                         required
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value="">Select Doctor</option>
-                                        {doctors.map(doc => (
+                                        {doctors.map((doc) => (
                                             <option key={doc.id} value={doc.id}>
                                                 {doc.user.name} - {doc.specialization}
                                             </option>
@@ -259,34 +253,30 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Scheduled Date *
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Scheduled Date *</label>
                                     <div className="relative">
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <Calendar className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="date"
                                             value={scheduledDate}
                                             onChange={(e) => setScheduledDate(e.target.value)}
                                             min={new Date().toISOString().split('T')[0]}
                                             required
-                                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border py-2 pr-4 pl-10 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Scheduled Time *
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Scheduled Time *</label>
                                     <div className="relative">
-                                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <Clock className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="time"
                                             value={scheduledTime}
                                             onChange={(e) => setScheduledTime(e.target.value)}
                                             required
-                                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border py-2 pr-4 pl-10 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
@@ -295,17 +285,15 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
 
                         {/* Eye Surgery Details */}
                         {selectedPatient && (
-                            <div className="bg-white rounded-lg shadow p-6">
-                                <h2 className="text-xl font-semibold mb-4">Eye Surgery Details</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="rounded-lg bg-white p-6 shadow">
+                                <h2 className="mb-4 text-xl font-semibold">Eye Surgery Details</h2>
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Surgery Type (SICS/Phaco)
-                                        </label>
+                                        <label className="mb-2 block text-sm font-medium text-gray-700">Surgery Type (SICS/Phaco)</label>
                                         <select
                                             value={surgeryType}
                                             onChange={(e) => setSurgeryType(e.target.value)}
-                                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                         >
                                             <option value="">Select Surgery Type</option>
                                             <option value="SICS">SICS</option>
@@ -316,27 +304,23 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
 
                                     {surgeryType === 'other' && (
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Custom Surgery Type
-                                            </label>
+                                            <label className="mb-2 block text-sm font-medium text-gray-700">Custom Surgery Type</label>
                                             <input
                                                 type="text"
                                                 value={customSurgeryType}
                                                 onChange={(e) => setCustomSurgeryType(e.target.value)}
                                                 placeholder="Enter custom surgery type"
-                                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
                                     )}
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Eye Side
-                                        </label>
+                                        <label className="mb-2 block text-sm font-medium text-gray-700">Eye Side</label>
                                         <select
                                             value={eyeSide}
                                             onChange={(e) => setEyeSide(e.target.value as 'left' | 'right' | '')}
-                                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                         >
                                             <option value="">Select Eye</option>
                                             <option value="left">Left Eye</option>
@@ -345,13 +329,11 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Lens Type
-                                        </label>
+                                        <label className="mb-2 block text-sm font-medium text-gray-700">Lens Type</label>
                                         <select
                                             value={lensType}
                                             onChange={(e) => setLensType(e.target.value)}
-                                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                         >
                                             <option value="">Select Lens Type</option>
                                             <option value="Monofocal">Monofocal</option>
@@ -364,42 +346,36 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
 
                                     {lensType === 'other' && (
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Custom Lens Type
-                                            </label>
+                                            <label className="mb-2 block text-sm font-medium text-gray-700">Custom Lens Type</label>
                                             <input
                                                 type="text"
                                                 value={customLensType}
                                                 onChange={(e) => setCustomLensType(e.target.value)}
                                                 placeholder="Enter custom lens type"
-                                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
                                     )}
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Power
-                                        </label>
+                                        <label className="mb-2 block text-sm font-medium text-gray-700">Power</label>
                                         <input
                                             type="text"
                                             value={power}
                                             onChange={(e) => setPower(e.target.value)}
                                             placeholder="e.g., +2.50, -1.75"
-                                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
 
                                     <div className="md:col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Surgery Remarks
-                                        </label>
+                                        <label className="mb-2 block text-sm font-medium text-gray-700">Surgery Remarks</label>
                                         <textarea
                                             value={surgeryRemarks}
                                             onChange={(e) => setSurgeryRemarks(e.target.value)}
                                             rows={2}
                                             placeholder="Any additional notes about the surgery..."
-                                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
@@ -407,19 +383,17 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                         )}
 
                         {/* Payment Information */}
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <div className="flex items-center gap-2 mb-4">
-                                <CreditCard className="w-5 h-5 text-green-600" />
+                        <div className="rounded-lg bg-white p-6 shadow">
+                            <div className="mb-4 flex items-center gap-2">
+                                <CreditCard className="h-5 w-5 text-green-600" />
                                 <h2 className="text-xl font-semibold">Payment Information</h2>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Base Amount *
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Base Amount *</label>
                                     <div className="relative">
-                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <DollarSign className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="number"
                                             value={totalAmount}
@@ -427,19 +401,17 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                                             min="0"
                                             step="0.01"
                                             required
-                                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border py-2 pr-4 pl-10 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Discount Type
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Discount Type</label>
                                     <select
                                         value={discountType}
                                         onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'amount')}
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value="amount">Fixed Amount (৳)</option>
                                         <option value="percentage">Percentage (%)</option>
@@ -447,11 +419,11 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">
                                         Discount {discountType === 'percentage' ? 'Percentage (%)' : 'Amount (৳)'}
                                     </label>
                                     <div className="relative">
-                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <DollarSign className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="number"
                                             value={discountValue}
@@ -460,17 +432,15 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                                             max={discountType === 'percentage' ? '100' : totalAmount}
                                             step="0.01"
                                             placeholder="0"
-                                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border py-2 pr-4 pl-10 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Advance Payment
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Advance Payment</label>
                                     <div className="relative">
-                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <DollarSign className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="number"
                                             value={advancePayment}
@@ -479,7 +449,7 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                                             max={total.toString()}
                                             step="0.01"
                                             placeholder="0"
-                                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border py-2 pr-4 pl-10 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
@@ -487,13 +457,11 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                                 {advanceAmount > 0 && (
                                     <>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Payment Method
-                                            </label>
+                                            <label className="mb-2 block text-sm font-medium text-gray-700">Payment Method</label>
                                             <select
                                                 value={paymentMethod}
                                                 onChange={(e) => setPaymentMethod(e.target.value)}
-                                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                             >
                                                 <option value="cash">Cash</option>
                                                 <option value="card">Card</option>
@@ -503,23 +471,21 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Payment Reference
-                                            </label>
+                                            <label className="mb-2 block text-sm font-medium text-gray-700">Payment Reference</label>
                                             <input
                                                 type="text"
                                                 value={paymentReference}
                                                 onChange={(e) => setPaymentReference(e.target.value)}
                                                 placeholder="Optional"
-                                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
                                     </>
                                 )}
 
                                 <div className="md:col-span-2">
-                                    <div className="bg-gray-50 rounded-lg p-4">
-                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+                                    <div className="rounded-lg bg-gray-50 p-4">
+                                        <div className="grid grid-cols-2 gap-4 text-center md:grid-cols-5">
                                             <div>
                                                 <div className="text-sm text-gray-600">Base Amount</div>
                                                 <div className="text-lg font-bold text-gray-900">৳{baseAmount.toFixed(2)}</div>
@@ -547,10 +513,10 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                         </div>
 
                         {/* Notes */}
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <div className="rounded-lg bg-white p-6 shadow">
+                            <label className="mb-2 block text-sm font-medium text-gray-700">
                                 <div className="flex items-center gap-2">
-                                    <FileText className="w-5 h-5 text-gray-600" />
+                                    <FileText className="h-5 w-5 text-gray-600" />
                                     <span>Notes (Optional)</span>
                                 </div>
                             </label>
@@ -559,7 +525,7 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                                 onChange={(e) => setNotes(e.target.value)}
                                 rows={3}
                                 placeholder="Add any special instructions or notes..."
-                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
 
@@ -568,14 +534,14 @@ export default function OperationBookingCreate({ patient: initialPatient, operat
                             <button
                                 type="button"
                                 onClick={() => router.visit('/operation-bookings')}
-                                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                                className="flex-1 rounded-lg border border-gray-300 px-6 py-3 transition hover:bg-gray-50"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={loading || !selectedPatient}
-                                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
+                                className="flex-1 rounded-lg bg-blue-600 px-6 py-3 text-white transition hover:bg-blue-700 disabled:bg-gray-400"
                             >
                                 {loading ? 'Creating Booking...' : 'Create Booking'}
                             </button>

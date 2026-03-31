@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
 import MainAccountLayout from '@/layouts/MainAccountLayout';
-import { Calendar, Download, Filter, Printer, AlertCircle, CheckCircle } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { AlertCircle, Calendar, CheckCircle, Download, Filter, Printer } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface BalanceSheetProps {
     asOnDate: string;
@@ -88,7 +88,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
     initialCapital,
     retainedEarnings,
     hospital_name,
-    hospital_location
+    hospital_location,
 }) => {
     const [selectedDate, setSelectedDate] = useState(asOnDate);
 
@@ -98,14 +98,14 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
 
     const handleFilter = () => {
         router.get('/main-account/balance-sheet', {
-            date: selectedDate
+            date: selectedDate,
         });
     };
 
     const formatAmount = (amount: number) => {
         return new Intl.NumberFormat('en-BD', {
             minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            maximumFractionDigits: 2,
         }).format(amount);
     };
 
@@ -189,44 +189,47 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
 
             <MainAccountLayout title="Balance Sheet">
                 {/* Filter Section - Hidden in Print */}
-                <div className="bg-white p-4 rounded-lg shadow-sm border mb-6 no-print">
-                    <div className="flex items-center gap-4 flex-wrap">
+                <div className="no-print mb-6 rounded-lg border bg-white p-4 shadow-sm">
+                    <div className="flex flex-wrap items-center gap-4">
                         <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <Calendar className="h-4 w-4 text-gray-500" />
                             <label className="text-sm font-medium">As on Date:</label>
                             <input
                                 type="date"
                                 value={selectedDate}
                                 onChange={(e) => setSelectedDate(e.target.value)}
-                                className="border rounded px-3 py-1 text-sm"
+                                className="rounded border px-3 py-1 text-sm"
                             />
                         </div>
 
-                        <button onClick={handleFilter} className="bg-blue-500 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
-                            <Filter className="w-3 h-3" />Filter
+                        <button onClick={handleFilter} className="flex items-center gap-1 rounded bg-blue-500 px-3 py-1 text-sm text-white">
+                            <Filter className="h-3 w-3" />
+                            Filter
                         </button>
 
-                        <button onClick={handlePrint} className="bg-purple-500 text-white px-3 py-1 rounded text-sm flex items-center gap-1">
-                            <Printer className="w-3 h-3" />Print
+                        <button onClick={handlePrint} className="flex items-center gap-1 rounded bg-purple-500 px-3 py-1 text-sm text-white">
+                            <Printer className="h-3 w-3" />
+                            Print
                         </button>
 
-                        <button className="bg-green-500 text-white px-3 py-1 rounded text-sm flex items-center gap-1 ml-auto">
-                            <Download className="w-3 h-3" />Export
+                        <button className="ml-auto flex items-center gap-1 rounded bg-green-500 px-3 py-1 text-sm text-white">
+                            <Download className="h-3 w-3" />
+                            Export
                         </button>
                     </div>
                 </div>
 
                 {/* Balance Verification Alert */}
-                <div className={`mb-6 p-4 rounded-lg border no-print ${isBalanced ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                <div className={`no-print mb-6 rounded-lg border p-4 ${isBalanced ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
                     <div className="flex items-center gap-2">
                         {isBalanced ? (
                             <>
-                                <CheckCircle className="w-5 h-5 text-green-600" />
+                                <CheckCircle className="h-5 w-5 text-green-600" />
                                 <span className="font-semibold text-green-800">Balance Sheet is Balanced</span>
                             </>
                         ) : (
                             <>
-                                <AlertCircle className="w-5 h-5 text-red-600" />
+                                <AlertCircle className="h-5 w-5 text-red-600" />
                                 <span className="font-semibold text-red-800">Balance Sheet Difference: ৳{formattedBalanceDifference}</span>
                             </>
                         )}
@@ -236,20 +239,20 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                 {/* Print Area - Contains all printable content */}
                 <div className="print-area">
                     {/* Report Header */}
-                    <div className="text-center mb-6 print-header">
+                    <div className="print-header mb-6 text-center">
                         <h1 className="text-2xl font-bold">{hospital_name}</h1>
                         <p className="text-lg">{hospital_location}</p>
-                        <h2 className="text-xl font-bold mt-2">Balance Sheet</h2>
+                        <h2 className="mt-2 text-xl font-bold">Balance Sheet</h2>
                         <p className="text-lg font-semibold">As on {asOnDateFormatted}</p>
                     </div>
 
                     {/* Main Balance Sheet Table */}
-                    <div className="bg-white border border-gray-300 rounded-lg overflow-hidden mb-6">
+                    <div className="mb-6 overflow-hidden rounded-lg border border-gray-300 bg-white">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="bg-blue-600 text-white">
-                                    <th className="border border-gray-400 px-3 py-2 font-bold w-1/2">ASSETS</th>
-                                    <th className="border border-gray-400 px-3 py-2 font-bold w-1/2">LIABILITIES & CAPITAL</th>
+                                    <th className="w-1/2 border border-gray-400 px-3 py-2 font-bold">ASSETS</th>
+                                    <th className="w-1/2 border border-gray-400 px-3 py-2 font-bold">LIABILITIES & CAPITAL</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -302,35 +305,36 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                                 </tr>
 
                                 {/* Fixed Assets and Capital Rows */}
-                                {Math.max(fixedAssets.length, capitalReserves.length) > 0 && Array.from({
-                                    length: Math.max(fixedAssets.length, capitalReserves.length)
-                                }).map((_, index) => {
-                                    const fixedAsset = fixedAssets[index];
-                                    const capital = capitalReserves[index];
+                                {Math.max(fixedAssets.length, capitalReserves.length) > 0 &&
+                                    Array.from({
+                                        length: Math.max(fixedAssets.length, capitalReserves.length),
+                                    }).map((_, index) => {
+                                        const fixedAsset = fixedAssets[index];
+                                        const capital = capitalReserves[index];
 
-                                    return (
-                                        <tr key={`fixed-${index}`} className="bg-white">
-                                            <td className="border border-gray-300 px-3 py-2 pl-6">
-                                                {fixedAsset ? (
-                                                    <div className="flex justify-between">
-                                                        <span>{fixedAsset.account_name}</span>
-                                                        <span className="font-bold">৳{fixedAsset.formatted_amount}</span>
-                                                    </div>
-                                                ) : null}
-                                            </td>
-                                            <td className="border border-gray-300 px-3 py-2 pl-6">
-                                                {capital ? (
-                                                    <div className="flex justify-between">
-                                                        <span>{capital.name}</span>
-                                                        <span className={`font-bold ${capital.amount >= 0 ? 'text-black' : 'text-red-600'}`}>
-                                                            ৳{capital.formatted_amount}
-                                                        </span>
-                                                    </div>
-                                                ) : null}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                        return (
+                                            <tr key={`fixed-${index}`} className="bg-white">
+                                                <td className="border border-gray-300 px-3 py-2 pl-6">
+                                                    {fixedAsset ? (
+                                                        <div className="flex justify-between">
+                                                            <span>{fixedAsset.account_name}</span>
+                                                            <span className="font-bold">৳{fixedAsset.formatted_amount}</span>
+                                                        </div>
+                                                    ) : null}
+                                                </td>
+                                                <td className="border border-gray-300 px-3 py-2 pl-6">
+                                                    {capital ? (
+                                                        <div className="flex justify-between">
+                                                            <span>{capital.name}</span>
+                                                            <span className={`font-bold ${capital.amount >= 0 ? 'text-black' : 'text-red-600'}`}>
+                                                                ৳{capital.formatted_amount}
+                                                            </span>
+                                                        </div>
+                                                    ) : null}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
 
                                 {/* Fixed Assets Total */}
                                 <tr className="bg-blue-50">
@@ -343,22 +347,20 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                                     <td className="border border-gray-300 px-3 py-2 font-bold">
                                         <div className="flex justify-between">
                                             <span>Total Capital & Reserves</span>
-                                            <span className={`${totalCapital >= 0 ? 'text-black' : 'text-red-600'}`}>
-                                                ৳{formattedTotalCapital}
-                                            </span>
+                                            <span className={`${totalCapital >= 0 ? 'text-black' : 'text-red-600'}`}>৳{formattedTotalCapital}</span>
                                         </div>
                                     </td>
                                 </tr>
 
                                 {/* Grand Total Row */}
                                 <tr className="bg-gray-200 font-bold">
-                                    <td className="border border-gray-300 px-3 py-2 bg-blue-200">
+                                    <td className="border border-gray-300 bg-blue-200 px-3 py-2">
                                         <div className="flex justify-between text-lg">
                                             <span>TOTAL ASSETS</span>
                                             <span>৳{formattedTotalAssets}</span>
                                         </div>
                                     </td>
-                                    <td className="border border-gray-300 px-3 py-2 bg-blue-200">
+                                    <td className="border border-gray-300 bg-blue-200 px-3 py-2">
                                         <div className="flex justify-between text-lg">
                                             <span>TOTAL LIABILITIES & CAPITAL</span>
                                             <span>৳{formattedTotalLiabilitiesAndCapital}</span>
@@ -370,11 +372,11 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                     </div>
 
                     {/* Account Balances Summary */}
-                    <div className="bg-white border border-gray-300 rounded-lg overflow-hidden mb-6">
-                        <div className="bg-blue-600 text-white px-4 py-2 font-bold">Individual Account Balances</div>
+                    <div className="mb-6 overflow-hidden rounded-lg border border-gray-300 bg-white">
+                        <div className="bg-blue-600 px-4 py-2 font-bold text-white">Individual Account Balances</div>
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="bg-gray-100 text-gray-800 font-medium">
+                                <tr className="bg-gray-100 font-medium text-gray-800">
                                     <th className="border border-gray-300 px-3 py-2">Account</th>
                                     <th className="border border-gray-300 px-3 py-2">Balance</th>
                                     <th className="border border-gray-300 px-3 py-2">Status</th>
@@ -384,11 +386,15 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                                 {accountBalances.map((account, index) => (
                                     <tr key={index} className="hover:bg-gray-50">
                                         <td className="border border-gray-300 px-3 py-2 font-medium">{account.name}</td>
-                                        <td className={`border border-gray-300 px-3 py-2 text-right font-bold ${account.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        <td
+                                            className={`border border-gray-300 px-3 py-2 text-right font-bold ${account.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                                        >
                                             ৳{account.formatted_balance}
                                         </td>
                                         <td className="border border-gray-300 px-3 py-2 text-center">
-                                            <span className={`px-2 py-1 rounded text-xs font-medium ${account.status === 'asset' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                            <span
+                                                className={`rounded px-2 py-1 text-xs font-medium ${account.status === 'asset' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                                            >
                                                 {account.status === 'asset' ? 'Asset' : 'Liability'}
                                             </span>
                                         </td>
@@ -399,25 +405,23 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                     </div>
 
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div className="bg-green-50 border border-green-200 rounded p-3 text-center">
-                            <div className="text-green-600 text-sm font-medium">Total Assets</div>
+                    <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+                        <div className="rounded border border-green-200 bg-green-50 p-3 text-center">
+                            <div className="text-sm font-medium text-green-600">Total Assets</div>
                             <div className="text-lg font-bold text-green-800">৳{formattedTotalAssets}</div>
                         </div>
-                        <div className="bg-red-50 border border-red-200 rounded p-3 text-center">
-                            <div className="text-red-600 text-sm font-medium">Total Liabilities</div>
+                        <div className="rounded border border-red-200 bg-red-50 p-3 text-center">
+                            <div className="text-sm font-medium text-red-600">Total Liabilities</div>
                             <div className="text-lg font-bold text-red-800">৳{formattedTotalLiabilities}</div>
                         </div>
-                        <div className="bg-blue-50 border border-blue-200 rounded p-3 text-center">
-                            <div className="text-blue-600 text-sm font-medium">Total Capital</div>
+                        <div className="rounded border border-blue-200 bg-blue-50 p-3 text-center">
+                            <div className="text-sm font-medium text-blue-600">Total Capital</div>
                             <div className={`text-lg font-bold ${totalCapital >= 0 ? 'text-blue-800' : 'text-red-800'}`}>
                                 ৳{formattedTotalCapital}
                             </div>
                         </div>
-                        <div className={`border rounded p-3 text-center ${isBalanced ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                            <div className={`text-sm font-medium ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>
-                                Balance Status
-                            </div>
+                        <div className={`rounded border p-3 text-center ${isBalanced ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+                            <div className={`text-sm font-medium ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>Balance Status</div>
                             <div className={`text-lg font-bold ${isBalanced ? 'text-green-800' : 'text-red-800'}`}>
                                 {isBalanced ? 'Balanced' : `Diff: ৳${formattedBalanceDifference}`}
                             </div>
@@ -425,9 +429,9 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                     </div>
 
                     {/* Notes Section */}
-                    <div className="bg-gray-50 p-4 rounded border text-sm">
-                        <h4 className="font-bold mb-2">Notes:</h4>
-                        <ul className="list-disc list-inside space-y-1 text-gray-700">
+                    <div className="rounded border bg-gray-50 p-4 text-sm">
+                        <h4 className="mb-2 font-bold">Notes:</h4>
+                        <ul className="list-inside list-disc space-y-1 text-gray-700">
                             <li>Current Assets represent cash and bank balances in the main account</li>
                             <li>Fixed Assets are calculated from expense transactions marked as "Fixed Asset"</li>
                             <li>Capital Account shows net fund contributions (Fund In - Fund Out)</li>

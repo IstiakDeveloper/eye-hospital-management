@@ -75,8 +75,7 @@ export default function CompanyMedicineStockReport({ reportData, allManufacturer
     };
 
     const expandAll = () => setCollapsedCompanies(new Set());
-    const collapseAll = () =>
-        setCollapsedCompanies(new Set(reportData.map((c) => c.manufacturer)));
+    const collapseAll = () => setCollapsedCompanies(new Set(reportData.map((c) => c.manufacturer)));
 
     const handlePrint = () => {
         // Expand all before printing
@@ -105,9 +104,31 @@ export default function CompanyMedicineStockReport({ reportData, allManufacturer
                 `Available QTY: ${company.available_stock_qty}`,
                 `Available Value: ${company.available_stock_value.toFixed(2)}`,
             ]);
-            excelData.push(['SL', 'MEDICINE NAME', 'GENERIC NAME', 'TYPE', 'UNIT', 'SALE QTY', 'SALE TOTAL', 'PROFIT', 'AVAILABLE QTY', 'AVAILABLE VALUE']);
+            excelData.push([
+                'SL',
+                'MEDICINE NAME',
+                'GENERIC NAME',
+                'TYPE',
+                'UNIT',
+                'SALE QTY',
+                'SALE TOTAL',
+                'PROFIT',
+                'AVAILABLE QTY',
+                'AVAILABLE VALUE',
+            ]);
             company.medicines.forEach((med, idx) => {
-                excelData.push([idx + 1, med.name, med.generic_name, med.type, med.unit, med.sale_qty, med.sale_total.toFixed(2), med.profit.toFixed(2), med.available_stock_qty, med.available_stock_value.toFixed(2)]);
+                excelData.push([
+                    idx + 1,
+                    med.name,
+                    med.generic_name,
+                    med.type,
+                    med.unit,
+                    med.sale_qty,
+                    med.sale_total.toFixed(2),
+                    med.profit.toFixed(2),
+                    med.available_stock_qty,
+                    med.available_stock_value.toFixed(2),
+                ]);
             });
             excelData.push([]);
         });
@@ -156,30 +177,47 @@ export default function CompanyMedicineStockReport({ reportData, allManufacturer
                     <div className="flex flex-wrap items-end gap-3">
                         <div>
                             <label className="block text-xs font-medium text-gray-600">From Date</label>
-                            <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
-                                className="mt-1 block rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+                            <input
+                                type="date"
+                                value={fromDate}
+                                onChange={(e) => setFromDate(e.target.value)}
+                                className="mt-1 block rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-600">To Date</label>
-                            <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
-                                className="mt-1 block rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+                            <input
+                                type="date"
+                                value={toDate}
+                                onChange={(e) => setToDate(e.target.value)}
+                                className="mt-1 block rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            />
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-600">Company</label>
-                            <select value={manufacturer} onChange={(e) => setManufacturer(e.target.value)}
-                                className="mt-1 block rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <select
+                                value={manufacturer}
+                                onChange={(e) => setManufacturer(e.target.value)}
+                                className="mt-1 block rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            >
                                 <option value="">All Companies</option>
                                 {allManufacturers.map((m) => (
-                                    <option key={m} value={m}>{m}</option>
+                                    <option key={m} value={m}>
+                                        {m}
+                                    </option>
                                 ))}
                             </select>
                         </div>
                         <div>
                             <label className="block text-xs font-medium text-gray-600">Search</label>
-                            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleFilter()}
                                 placeholder="Medicine / company..."
-                                className="mt-1 block rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500" />
+                                className="mt-1 block rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                            />
                         </div>
                         <button onClick={handleFilter} className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
                             Filter
@@ -189,10 +227,18 @@ export default function CompanyMedicineStockReport({ reportData, allManufacturer
 
                 {/* Action Buttons */}
                 <div className="mb-3 flex gap-2">
-                    <button onClick={handlePrint} className="rounded-md bg-gray-600 px-3 py-1.5 text-sm text-white hover:bg-gray-700">Print</button>
-                    <button onClick={handleExportExcel} className="rounded-md bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700">Export Excel</button>
-                    <button onClick={expandAll} className="rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200">Expand All</button>
-                    <button onClick={collapseAll} className="rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200">Collapse All</button>
+                    <button onClick={handlePrint} className="rounded-md bg-gray-600 px-3 py-1.5 text-sm text-white hover:bg-gray-700">
+                        Print
+                    </button>
+                    <button onClick={handleExportExcel} className="rounded-md bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700">
+                        Export Excel
+                    </button>
+                    <button onClick={expandAll} className="rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200">
+                        Expand All
+                    </button>
+                    <button onClick={collapseAll} className="rounded-md bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200">
+                        Collapse All
+                    </button>
                 </div>
 
                 {/* Report */}
@@ -201,7 +247,9 @@ export default function CompanyMedicineStockReport({ reportData, allManufacturer
                         <h1 className="text-center text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center - Medicine Corner</h1>
                         <div className="mt-1 flex justify-between text-sm">
                             <span className="font-semibold">Company-wise Medicine Stock Detail</span>
-                            <span>Period: {fromDate} to {toDate}</span>
+                            <span>
+                                Period: {fromDate} to {toDate}
+                            </span>
                         </div>
                     </div>
 
@@ -214,8 +262,10 @@ export default function CompanyMedicineStockReport({ reportData, allManufacturer
                             return (
                                 <div key={company.manufacturer} className="company-block overflow-hidden rounded-lg bg-white shadow">
                                     {/* Company Header Row */}
-                                    <div onClick={() => toggleCompany(company.manufacturer)}
-                                        className="flex cursor-pointer items-center justify-between bg-gray-700 px-4 py-3 text-white hover:bg-gray-800">
+                                    <div
+                                        onClick={() => toggleCompany(company.manufacturer)}
+                                        className="flex cursor-pointer items-center justify-between bg-gray-700 px-4 py-3 text-white hover:bg-gray-800"
+                                    >
                                         <div className="flex items-center gap-3">
                                             <span className="text-sm font-bold">{isCollapsed ? '▶' : '▼'}</span>
                                             <span className="text-sm font-bold">{company.manufacturer}</span>
@@ -243,11 +293,11 @@ export default function CompanyMedicineStockReport({ reportData, allManufacturer
                                                 <div className="font-semibold">{company.total_profit.toFixed(2)}</div>
                                             </div>
                                             <div className="text-center">
-                                                <div className="text-gray-300 font-medium">Available QTY</div>
+                                                <div className="font-medium text-gray-300">Available QTY</div>
                                                 <div className="font-bold text-white">{company.available_stock_qty}</div>
                                             </div>
                                             <div className="text-center">
-                                                <div className="text-gray-300 font-medium">Available Value</div>
+                                                <div className="font-medium text-gray-300">Available Value</div>
                                                 <div className="font-bold text-white">{company.available_stock_value.toFixed(2)}</div>
                                             </div>
                                         </div>
@@ -259,35 +309,83 @@ export default function CompanyMedicineStockReport({ reportData, allManufacturer
                                             <table className="min-w-full divide-y divide-gray-200">
                                                 <thead className="bg-gray-100">
                                                     <tr>
-                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">SL</th>
-                                                        <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">MEDICINE NAME</th>
-                                                        <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">GENERIC NAME</th>
-                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">TYPE</th>
-                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">UNIT</th>
-                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">BUY QTY</th>
-                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">BUY TOTAL</th>
-                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">SALE QTY</th>
-                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">SALE TOTAL</th>
-                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">PROFIT</th>
-                                                        <th className="border border-gray-300 bg-gray-200 px-2 py-2 text-center text-xs font-bold text-gray-800">AVAILABLE QTY</th>
-                                                        <th className="border border-gray-300 bg-gray-200 px-2 py-2 text-center text-xs font-bold text-gray-800">AVAILABLE VALUE</th>
+                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">
+                                                            SL
+                                                        </th>
+                                                        <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">
+                                                            MEDICINE NAME
+                                                        </th>
+                                                        <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">
+                                                            GENERIC NAME
+                                                        </th>
+                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">
+                                                            TYPE
+                                                        </th>
+                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">
+                                                            UNIT
+                                                        </th>
+                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">
+                                                            BUY QTY
+                                                        </th>
+                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">
+                                                            BUY TOTAL
+                                                        </th>
+                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">
+                                                            SALE QTY
+                                                        </th>
+                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">
+                                                            SALE TOTAL
+                                                        </th>
+                                                        <th className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold text-gray-700">
+                                                            PROFIT
+                                                        </th>
+                                                        <th className="border border-gray-300 bg-gray-200 px-2 py-2 text-center text-xs font-bold text-gray-800">
+                                                            AVAILABLE QTY
+                                                        </th>
+                                                        <th className="border border-gray-300 bg-gray-200 px-2 py-2 text-center text-xs font-bold text-gray-800">
+                                                            AVAILABLE VALUE
+                                                        </th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-gray-200 bg-white">
                                                     {company.medicines.map((med, idx) => (
                                                         <tr key={med.id} className="hover:bg-gray-50">
-                                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-600">{idx + 1}</td>
-                                                            <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-900">{med.name}</td>
-                                                            <td className="border border-gray-300 px-3 py-2 text-sm text-gray-600">{med.generic_name}</td>
-                                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-600">{med.type}</td>
-                                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-600">{med.unit}</td>
-                                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-700">{med.buy_qty > 0 ? med.buy_qty : '-'}</td>
-                                                            <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-700">{med.buy_total > 0 ? med.buy_total.toFixed(2) : '-'}</td>
-                                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-700">{med.sale_qty > 0 ? med.sale_qty : '-'}</td>
-                                                            <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-700">{med.sale_total > 0 ? med.sale_total.toFixed(2) : '-'}</td>
-                                                            <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-700">{med.profit > 0 ? med.profit.toFixed(2) : '-'}</td>
-                                                            <td className="border border-gray-300 bg-gray-50 px-2 py-2 text-center text-sm font-bold text-gray-900">{med.available_stock_qty}</td>
-                                                            <td className="border border-gray-300 bg-gray-50 px-2 py-2 text-right text-sm font-bold text-gray-900">{med.available_stock_value.toFixed(2)}</td>
+                                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-600">
+                                                                {idx + 1}
+                                                            </td>
+                                                            <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-900">
+                                                                {med.name}
+                                                            </td>
+                                                            <td className="border border-gray-300 px-3 py-2 text-sm text-gray-600">
+                                                                {med.generic_name}
+                                                            </td>
+                                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-600">
+                                                                {med.type}
+                                                            </td>
+                                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-600">
+                                                                {med.unit}
+                                                            </td>
+                                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-700">
+                                                                {med.buy_qty > 0 ? med.buy_qty : '-'}
+                                                            </td>
+                                                            <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-700">
+                                                                {med.buy_total > 0 ? med.buy_total.toFixed(2) : '-'}
+                                                            </td>
+                                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-700">
+                                                                {med.sale_qty > 0 ? med.sale_qty : '-'}
+                                                            </td>
+                                                            <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-700">
+                                                                {med.sale_total > 0 ? med.sale_total.toFixed(2) : '-'}
+                                                            </td>
+                                                            <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-700">
+                                                                {med.profit > 0 ? med.profit.toFixed(2) : '-'}
+                                                            </td>
+                                                            <td className="border border-gray-300 bg-gray-50 px-2 py-2 text-center text-sm font-bold text-gray-900">
+                                                                {med.available_stock_qty}
+                                                            </td>
+                                                            <td className="border border-gray-300 bg-gray-50 px-2 py-2 text-right text-sm font-bold text-gray-900">
+                                                                {med.available_stock_value.toFixed(2)}
+                                                            </td>
                                                         </tr>
                                                     ))}
 
@@ -296,13 +394,27 @@ export default function CompanyMedicineStockReport({ reportData, allManufacturer
                                                         <td colSpan={5} className="border border-gray-300 px-3 py-2 text-right text-sm text-gray-800">
                                                             SUBTOTAL ({company.manufacturer})
                                                         </td>
-                                                        <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-900">{company.total_buy_qty}</td>
-                                                        <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-900">{company.total_buy_total.toFixed(2)}</td>
-                                                        <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-900">{company.total_sale_qty}</td>
-                                                        <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-900">{company.total_sale_total.toFixed(2)}</td>
-                                                        <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-900">{company.total_profit.toFixed(2)}</td>
-                                                        <td className="border border-gray-300 bg-gray-200 px-2 py-2 text-center text-sm font-bold text-gray-900">{company.available_stock_qty}</td>
-                                                        <td className="border border-gray-300 bg-gray-200 px-2 py-2 text-right text-sm font-bold text-gray-900">{company.available_stock_value.toFixed(2)}</td>
+                                                        <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-900">
+                                                            {company.total_buy_qty}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-900">
+                                                            {company.total_buy_total.toFixed(2)}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-900">
+                                                            {company.total_sale_qty}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-900">
+                                                            {company.total_sale_total.toFixed(2)}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-2 py-2 text-right text-sm text-gray-900">
+                                                            {company.total_profit.toFixed(2)}
+                                                        </td>
+                                                        <td className="border border-gray-300 bg-gray-200 px-2 py-2 text-center text-sm font-bold text-gray-900">
+                                                            {company.available_stock_qty}
+                                                        </td>
+                                                        <td className="border border-gray-300 bg-gray-200 px-2 py-2 text-right text-sm font-bold text-gray-900">
+                                                            {company.available_stock_value.toFixed(2)}
+                                                        </td>
                                                     </tr>
                                                 </tbody>
                                             </table>

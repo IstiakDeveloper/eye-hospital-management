@@ -2,23 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Patient;
-use App\Models\PatientVisit;
-use App\Models\VisionTest;
-use App\Models\Prescription;
-use App\Models\PrescriptionMedicine;
-use App\Models\PrescriptionGlasses;
-use App\Models\Medicine;
-use App\Models\Doctor;
 use App\Models\Appointment;
+use App\Models\Doctor;
+use App\Models\Medicine;
+use App\Models\Patient;
+use App\Models\Prescription;
+use App\Models\PrescriptionGlasses;
+use App\Models\PrescriptionMedicine;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class PrescriptionController extends Controller
 {
@@ -31,7 +28,7 @@ class PrescriptionController extends Controller
             $user = auth()->user();
 
             // Check if user can view all prescriptions
-            if (!in_array($user->role, ['super_admin', 'receptionist'])) {
+            if (! in_array($user->role, ['super_admin', 'receptionist'])) {
                 return redirect()->route('dashboard')
                     ->with('error', 'You are not authorized to view all prescriptions');
             }
@@ -63,7 +60,8 @@ class PrescriptionController extends Controller
                 'filters' => $request->only(['search', 'doctor_id', 'date_from', 'date_to']),
             ]);
         } catch (\Exception $e) {
-            Log::error('Prescription Index Error: ' . $e->getMessage());
+            Log::error('Prescription Index Error: '.$e->getMessage());
+
             return redirect()->route('dashboard')
                 ->with('error', 'Failed to load prescriptions');
         }
@@ -78,15 +76,15 @@ class PrescriptionController extends Controller
             $user = auth()->user();
 
             // Check if user is authenticated
-            if (!$user) {
+            if (! $user) {
                 return redirect()->route('login');
             }
 
             // Ensure the user is a doctor
             $doctor = $user->doctor;
-            if (!$doctor) {
+            if (! $doctor) {
                 $doctor = Doctor::where('user_id', $user->id)->first();
-                if (!$doctor) {
+                if (! $doctor) {
                     return redirect()->route('dashboard')
                         ->with('error', 'Only doctors can create prescriptions. Please contact administrator.');
                 }
@@ -114,11 +112,11 @@ class PrescriptionController extends Controller
                         $query->with('doctor.user')
                             ->orderBy('appointment_date', 'desc')
                             ->limit(3);
-                    }
+                    },
                 ])
                 ->first();
 
-            if (!$patient) {
+            if (! $patient) {
                 return redirect()->route('doctor.dashboard')
                     ->with('error', 'Patient not found');
             }
@@ -130,7 +128,7 @@ class PrescriptionController extends Controller
                     ->where('patient_id', $patientId)
                     ->first();
 
-                if (!$appointment) {
+                if (! $appointment) {
                     return redirect()->route('doctor.view-patient', $patient->id)
                         ->with('error', 'Appointment not found for this patient.');
                 }
@@ -142,7 +140,7 @@ class PrescriptionController extends Controller
 
             // Get today's appointment if no specific appointment provided
             $todaysAppointment = null;
-            if (!$appointment) {
+            if (! $appointment) {
                 $todaysAppointment = Appointment::where('doctor_id', $doctor->id)
                     ->where('patient_id', $patientId)
                     ->whereDate('appointment_date', today())
@@ -261,9 +259,10 @@ class PrescriptionController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            Log::error('Prescription Create Error: ' . $e->getMessage());
+            Log::error('Prescription Create Error: '.$e->getMessage());
+
             return redirect()->route('doctor.dashboard')
-                ->with('error', 'Failed to load prescription form: ' . $e->getMessage());
+                ->with('error', 'Failed to load prescription form: '.$e->getMessage());
         }
     }
 
@@ -276,15 +275,15 @@ class PrescriptionController extends Controller
             $user = auth()->user();
 
             // Check authentication
-            if (!$user) {
+            if (! $user) {
                 return redirect()->route('login');
             }
 
             // Ensure the user is a doctor
             $doctor = $user->doctor;
-            if (!$doctor) {
+            if (! $doctor) {
                 $doctor = Doctor::where('user_id', $user->id)->first();
-                if (!$doctor) {
+                if (! $doctor) {
                     return back()->with('error', 'Only doctors can create prescriptions');
                 }
             }
@@ -434,16 +433,18 @@ class PrescriptionController extends Controller
             DB::rollBack();
             Log::error('Prescription Validation Error', [
                 'errors' => $e->errors(),
-                'request_data' => $request->all()
+                'request_data' => $request->all(),
             ]);
+
             return back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Prescription Store Error: ' . $e->getMessage(), [
+            Log::error('Prescription Store Error: '.$e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all()
+                'request_data' => $request->all(),
             ]);
-            return back()->with('error', 'Failed to create prescription: ' . $e->getMessage())
+
+            return back()->with('error', 'Failed to create prescription: '.$e->getMessage())
                 ->withInput();
         }
     }
@@ -460,7 +461,7 @@ class PrescriptionController extends Controller
                 'appointment',
                 'prescriptionMedicines.medicine',
                 'prescriptionGlasses',
-                'createdBy'
+                'createdBy',
             ])->findOrFail($id);
 
             // Check if user can view this prescription
@@ -475,7 +476,7 @@ class PrescriptionController extends Controller
                 $canView = true; // Staff can view all prescriptions
             }
 
-            if (!$canView) {
+            if (! $canView) {
                 return redirect()->route('dashboard')
                     ->with('error', 'You are not authorized to view this prescription');
             }
@@ -567,10 +568,11 @@ class PrescriptionController extends Controller
             ];
 
             return Inertia::render('Prescriptions/Show', [
-                'prescription' => $formattedPrescription
+                'prescription' => $formattedPrescription,
             ]);
         } catch (\Exception $e) {
-            Log::error('Prescription Show Error: ' . $e->getMessage());
+            Log::error('Prescription Show Error: '.$e->getMessage());
+
             return redirect()->route('dashboard')
                 ->with('error', 'Prescription not found or access denied');
         }
@@ -584,14 +586,14 @@ class PrescriptionController extends Controller
         try {
             $user = auth()->user();
 
-            if (!$user) {
+            if (! $user) {
                 return redirect()->route('login');
             }
 
             $doctor = $user->doctor;
-            if (!$doctor) {
+            if (! $doctor) {
                 $doctor = Doctor::where('user_id', $user->id)->first();
-                if (!$doctor) {
+                if (! $doctor) {
                     return redirect()->route('dashboard')
                         ->with('error', 'Only doctors can edit prescriptions');
                 }
@@ -602,7 +604,7 @@ class PrescriptionController extends Controller
                 'doctor.user',
                 'appointment',
                 'prescriptionMedicines.medicine',
-                'prescriptionGlasses'
+                'prescriptionGlasses',
             ])->findOrFail($id);
 
             // Check if current doctor can edit this prescription
@@ -683,7 +685,8 @@ class PrescriptionController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            Log::error('Prescription Edit Error: ' . $e->getMessage());
+            Log::error('Prescription Edit Error: '.$e->getMessage());
+
             return redirect()->route('dashboard')
                 ->with('error', 'Failed to load prescription for editing');
         }
@@ -697,14 +700,14 @@ class PrescriptionController extends Controller
         try {
             $user = auth()->user();
 
-            if (!$user) {
+            if (! $user) {
                 return redirect()->route('login');
             }
 
             $doctor = $user->doctor;
-            if (!$doctor) {
+            if (! $doctor) {
                 $doctor = Doctor::where('user_id', $user->id)->first();
-                if (!$doctor) {
+                if (! $doctor) {
                     return back()->with('error', 'Only doctors can update prescriptions');
                 }
             }
@@ -815,8 +818,9 @@ class PrescriptionController extends Controller
                 ->with('success', 'Prescription updated successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Prescription Update Error: ' . $e->getMessage());
-            return back()->with('error', 'Failed to update prescription: ' . $e->getMessage())
+            Log::error('Prescription Update Error: '.$e->getMessage());
+
+            return back()->with('error', 'Failed to update prescription: '.$e->getMessage())
                 ->withInput();
         }
     }
@@ -824,7 +828,6 @@ class PrescriptionController extends Controller
     /**
      * Print the prescription - Updated for simplified glasses
      */
-
     public function print($id)
     {
         try {
@@ -833,7 +836,7 @@ class PrescriptionController extends Controller
                 'doctor.user',
                 'appointment',
                 'prescriptionMedicines.medicine',
-                'prescriptionGlasses'
+                'prescriptionGlasses',
             ])->findOrFail($id);
 
             // Check if user can print this prescription
@@ -848,7 +851,7 @@ class PrescriptionController extends Controller
                 $canPrint = true;
             }
 
-            if (!$canPrint) {
+            if (! $canPrint) {
                 return redirect()->route('dashboard')
                     ->with('error', 'You are not authorized to print this prescription');
             }
@@ -919,16 +922,17 @@ class PrescriptionController extends Controller
                     'printed_by' => $user->name,
                     'has_glasses' => $prescription->prescriptionGlasses->count() > 0,
                     'glasses_count' => $prescription->prescriptionGlasses->count(),
-                    'filename' => 'prescription-' . $prescription->patient->patient_id . '-' .
-                        $prescription->created_at->format('Y-m-d') . '.pdf',
+                    'filename' => 'prescription-'.$prescription->patient->patient_id.'-'.
+                        $prescription->created_at->format('Y-m-d').'.pdf',
                 ],
                 'user' => [
                     'name' => $user->name,
                     'role' => $user->role,
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
-            Log::error('Prescription Print Error: ' . $e->getMessage());
+            Log::error('Prescription Print Error: '.$e->getMessage());
+
             return redirect()->back()->with('error', 'Failed to load prescription for printing');
         }
     }
@@ -942,19 +946,8 @@ class PrescriptionController extends Controller
             $user = auth()->user();
 
             // Check authentication
-            if (!$user) {
+            if (! $user) {
                 return redirect()->route('login');
-            }
-
-            // Ensure the user is a doctor
-            $doctor = $user->doctor;
-            if (!$doctor) {
-                $doctor = Doctor::where('user_id', $user->id)->first();
-                if (!$doctor) {
-                    return back()->withErrors([
-                        'error' => 'Only doctors can download prescription forms.'
-                    ]);
-                }
             }
 
             // Get patient
@@ -963,7 +956,6 @@ class PrescriptionController extends Controller
             Log::info('Blank prescription accessed', [
                 'patient_id' => $patient->id,
                 'patient_code' => $patient->patient_id,
-                'doctor_id' => $doctor->id,
                 'accessed_by' => $user->name,
             ]);
 
@@ -981,11 +973,12 @@ class PrescriptionController extends Controller
                         'address' => $patient->address,
                     ],
                     'doctor' => [
-                        'id' => $doctor->id,
-                        'name' => $user->name,
-                        'specialization' => $doctor->specialization,
-                        'bmdc_number' => $doctor->bmdc_number,
-                        'qualification' => $doctor->qualification,
+                        // Intentionally blank: for handwritten blank forms we don't show any doctor info
+                        'id' => null,
+                        'name' => '',
+                        'specialization' => null,
+                        'bmdc_number' => null,
+                        'qualification' => null,
                     ],
                     'appointment' => null,
                     'diagnosis' => '',
@@ -1001,27 +994,26 @@ class PrescriptionController extends Controller
                     'printed_by' => $user->name,
                     'has_glasses' => false,
                     'glasses_count' => 0,
-                    'filename' => 'blank-prescription-' . $patient->patient_id . '.pdf',
+                    'filename' => 'blank-prescription-'.$patient->patient_id.'.pdf',
                     'is_blank_prescription' => true,
                 ],
                 'user' => [
                     'name' => $user->name,
                     'role' => $user->role,
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
-            Log::error('Blank Prescription Error: ' . $e->getMessage(), [
+            Log::error('Blank Prescription Error: '.$e->getMessage(), [
                 'patient_id' => $patientId,
                 'user_id' => auth()->id(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return back()->withErrors([
-                'error' => 'Failed to load blank prescription: ' . $e->getMessage()
+                'error' => 'Failed to load blank prescription: '.$e->getMessage(),
             ]);
         }
     }
-
 
     /**
      * Get prescription history for a patient
@@ -1038,10 +1030,11 @@ class PrescriptionController extends Controller
 
             return response()->json([
                 'success' => true,
-                'prescriptions' => $prescriptions
+                'prescriptions' => $prescriptions,
             ]);
         } catch (\Exception $e) {
-            Log::error('Get Patient Prescriptions Error: ' . $e->getMessage());
+            Log::error('Get Patient Prescriptions Error: '.$e->getMessage());
+
             return response()->json(['error' => 'Failed to get prescriptions'], 500);
         }
     }
@@ -1063,7 +1056,7 @@ class PrescriptionController extends Controller
                 $canComplete = true;
             }
 
-            if (!$canComplete) {
+            if (! $canComplete) {
                 return back()->with('error', 'You are not authorized to complete this follow-up');
             }
 
@@ -1076,7 +1069,8 @@ class PrescriptionController extends Controller
 
             return back()->with('success', 'Follow-up marked as completed');
         } catch (\Exception $e) {
-            Log::error('Complete Followup Error: ' . $e->getMessage());
+            Log::error('Complete Followup Error: '.$e->getMessage());
+
             return back()->with('error', 'Failed to complete follow-up');
         }
     }
@@ -1142,7 +1136,8 @@ class PrescriptionController extends Controller
                 'period' => $period,
             ]);
         } catch (\Exception $e) {
-            Log::error('Get Prescription Stats Error: ' . $e->getMessage());
+            Log::error('Get Prescription Stats Error: '.$e->getMessage());
+
             return response()->json(['error' => 'Failed to get statistics'], 500);
         }
     }
@@ -1155,7 +1150,7 @@ class PrescriptionController extends Controller
         try {
             $request->validate([
                 'term' => 'required|string|min:2|max:100',
-                'limit' => 'sometimes|integer|min:1|max:50'
+                'limit' => 'sometimes|integer|min:1|max:50',
             ]);
 
             $searchTerm = $request->term;
@@ -1191,7 +1186,8 @@ class PrescriptionController extends Controller
                 'total_found' => $prescriptions->count(),
             ]);
         } catch (\Exception $e) {
-            Log::error('Search Prescriptions Error: ' . $e->getMessage());
+            Log::error('Search Prescriptions Error: '.$e->getMessage());
+
             return response()->json(['error' => 'Search failed'], 500);
         }
     }
@@ -1246,7 +1242,8 @@ class PrescriptionController extends Controller
                 'total_count' => $followups->count(),
             ]);
         } catch (\Exception $e) {
-            Log::error('Get Upcoming Followups Error: ' . $e->getMessage());
+            Log::error('Get Upcoming Followups Error: '.$e->getMessage());
+
             return response()->json(['error' => 'Failed to get follow-ups'], 500);
         }
     }
@@ -1260,7 +1257,7 @@ class PrescriptionController extends Controller
             $user = auth()->user();
 
             // Check permissions
-            if (!in_array($user->role, ['super_admin', 'doctor'])) {
+            if (! in_array($user->role, ['super_admin', 'doctor'])) {
                 return back()->with('error', 'You are not authorized to export prescriptions');
             }
 
@@ -1315,7 +1312,8 @@ class PrescriptionController extends Controller
                 'exported_at' => now()->toISOString(),
             ]);
         } catch (\Exception $e) {
-            Log::error('Export Prescriptions Error: ' . $e->getMessage());
+            Log::error('Export Prescriptions Error: '.$e->getMessage());
+
             return response()->json(['error' => 'Export failed'], 500);
         }
     }
@@ -1329,9 +1327,9 @@ class PrescriptionController extends Controller
             $user = auth()->user();
             $doctor = $user->doctor;
 
-            if (!$doctor) {
+            if (! $doctor) {
                 $doctor = Doctor::where('user_id', $user->id)->first();
-                if (!$doctor) {
+                if (! $doctor) {
                     return back()->with('error', 'Only doctors can duplicate prescriptions');
                 }
             }
@@ -1372,7 +1370,8 @@ class PrescriptionController extends Controller
                     })->toArray(),
                 ]);
         } catch (\Exception $e) {
-            Log::error('Duplicate Prescription Error: ' . $e->getMessage());
+            Log::error('Duplicate Prescription Error: '.$e->getMessage());
+
             return back()->with('error', 'Failed to duplicate prescription');
         }
     }
@@ -1411,7 +1410,8 @@ class PrescriptionController extends Controller
             return back()->with('success', 'Prescription deleted successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Prescription Delete Error: ' . $e->getMessage());
+            Log::error('Prescription Delete Error: '.$e->getMessage());
+
             return back()->with('error', 'Failed to delete prescription');
         }
     }
@@ -1425,7 +1425,7 @@ class PrescriptionController extends Controller
             $user = auth()->user();
             $doctor = $user->doctor;
 
-            if (!$doctor) {
+            if (! $doctor) {
                 return response()->json(['error' => 'Doctor profile not found'], 404);
             }
 
@@ -1437,14 +1437,14 @@ class PrescriptionController extends Controller
                     'advice' => 'Take rest, drink plenty of water, avoid cold foods',
                     'medicines' => [
                         ['name' => 'Paracetamol', 'dosage' => '500mg', 'frequency' => '1-1-1', 'duration' => '3 days'],
-                    ]
+                    ],
                 ],
                 'eye_related' => [
                     'diagnosis' => 'Refractive error',
                     'advice' => 'Use prescribed glasses, avoid eye strain, take regular breaks from screen',
                     'medicines' => [
                         ['name' => 'Eye drops', 'dosage' => '1 drop', 'frequency' => '2-3 times daily', 'duration' => '1 week'],
-                    ]
+                    ],
                 ],
             ];
 
@@ -1453,7 +1453,8 @@ class PrescriptionController extends Controller
                 'template' => $templates[$templateType] ?? $templates['common'],
             ]);
         } catch (\Exception $e) {
-            Log::error('Get Prescription Template Error: ' . $e->getMessage());
+            Log::error('Get Prescription Template Error: '.$e->getMessage());
+
             return response()->json(['error' => 'Failed to get template'], 500);
         }
     }
@@ -1466,16 +1467,16 @@ class PrescriptionController extends Controller
         $parts = [];
 
         if ($sphere) {
-            $parts[] = "SPH: " . ($sphere > 0 ? '+' : '') . $sphere;
+            $parts[] = 'SPH: '.($sphere > 0 ? '+' : '').$sphere;
         }
         if ($cylinder) {
-            $parts[] = "CYL: " . ($cylinder > 0 ? '+' : '') . $cylinder;
+            $parts[] = 'CYL: '.($cylinder > 0 ? '+' : '').$cylinder;
         }
         if ($axis) {
-            $parts[] = "AXIS: " . $axis . "°";
+            $parts[] = 'AXIS: '.$axis.'°';
         }
         if ($add) {
-            $parts[] = "ADD: +" . $add;
+            $parts[] = 'ADD: +'.$add;
         }
 
         return implode(' / ', $parts) ?: 'N/A';

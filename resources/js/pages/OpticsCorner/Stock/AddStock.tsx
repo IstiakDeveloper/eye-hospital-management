@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { ChevronLeft, Save, AlertCircle, Search, X } from 'lucide-react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { AlertCircle, ChevronLeft, Save, Search, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface Item {
     id: number;
@@ -31,12 +31,13 @@ interface PageProps {
 }
 
 const Button = ({ children, className = '', variant = 'primary', ...props }: any) => {
-    const baseClasses = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed';
+    const baseClasses =
+        'px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed';
     const variants = {
         primary: 'bg-blue-600 text-white hover:bg-blue-700',
         secondary: 'bg-gray-200 text-gray-700 hover:bg-gray-300',
         success: 'bg-green-600 text-white hover:bg-green-700',
-        danger: 'bg-red-600 text-white hover:bg-red-700'
+        danger: 'bg-red-600 text-white hover:bg-red-700',
     };
 
     return (
@@ -48,34 +49,34 @@ const Button = ({ children, className = '', variant = 'primary', ...props }: any
 
 const Input = ({ label, error, className = '', ...props }: any) => (
     <div className={className}>
-        {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
+        {label && <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>}
         <input
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
                 error ? 'border-red-300' : 'border-gray-300'
             }`}
             {...props}
         />
-        {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
 );
 
 const Select = ({ label, error, children, className = '', ...props }: any) => (
     <div className={className}>
-        {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
+        {label && <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>}
         <select
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
                 error ? 'border-red-300' : 'border-gray-300'
             }`}
             {...props}
         >
             {children}
         </select>
-        {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
 );
 
 // ✅ Searchable Select Component
-const SearchableSelect = ({ label, error, items, value, onChange, getItemLabel, placeholder = "Search...", className = '' }: any) => {
+const SearchableSelect = ({ label, error, items, value, onChange, getItemLabel, placeholder = 'Search...', className = '' }: any) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -86,10 +87,12 @@ const SearchableSelect = ({ label, error, items, value, onChange, getItemLabel, 
     const filteredItems = items.filter((item: any) => {
         const label = getItemLabel(item).toLowerCase();
         const search = searchTerm.toLowerCase();
-        return label.includes(search) ||
-               (item.sku && item.sku.toLowerCase().includes(search)) ||
-               (item.brand && item.brand.toLowerCase().includes(search)) ||
-               (item.model && item.model.toLowerCase().includes(search));
+        return (
+            label.includes(search) ||
+            (item.sku && item.sku.toLowerCase().includes(search)) ||
+            (item.brand && item.brand.toLowerCase().includes(search)) ||
+            (item.model && item.model.toLowerCase().includes(search))
+        );
     });
 
     // Close dropdown when clicking outside
@@ -117,14 +120,14 @@ const SearchableSelect = ({ label, error, items, value, onChange, getItemLabel, 
 
     return (
         <div className={className} ref={dropdownRef}>
-            {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
+            {label && <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>}
 
             <div className="relative">
                 {/* Selected Display / Search Input */}
                 <div
-                    className={`w-full px-3 py-2 border rounded-lg cursor-pointer flex items-center justify-between ${
+                    className={`flex w-full cursor-pointer items-center justify-between rounded-lg border px-3 py-2 ${
                         error ? 'border-red-300' : 'border-gray-300'
-                    } ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
+                    } ${isOpen ? 'border-blue-500 ring-2 ring-blue-500' : ''}`}
                     onClick={() => setIsOpen(!isOpen)}
                 >
                     <span className={selectedItem ? 'text-gray-900' : 'text-gray-400'}>
@@ -140,23 +143,23 @@ const SearchableSelect = ({ label, error, items, value, onChange, getItemLabel, 
                                 }}
                                 className="text-gray-400 hover:text-gray-600"
                             >
-                                <X className="w-4 h-4" />
+                                <X className="h-4 w-4" />
                             </button>
                         )}
-                        <Search className="w-4 h-4 text-gray-400" />
+                        <Search className="h-4 w-4 text-gray-400" />
                     </div>
                 </div>
 
                 {/* Dropdown */}
                 {isOpen && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+                    <div className="absolute z-50 mt-1 max-h-80 w-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-lg">
                         {/* Search Input */}
-                        <div className="p-2 border-b sticky top-0 bg-white">
+                        <div className="sticky top-0 border-b bg-white p-2">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
                                 <input
                                     type="text"
-                                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full rounded-lg border border-gray-300 py-2 pr-3 pl-9 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                     placeholder={placeholder}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -167,24 +170,22 @@ const SearchableSelect = ({ label, error, items, value, onChange, getItemLabel, 
                         </div>
 
                         {/* Items List */}
-                        <div className="overflow-y-auto max-h-64">
+                        <div className="max-h-64 overflow-y-auto">
                             {filteredItems.length > 0 ? (
                                 filteredItems.map((item: any) => (
                                     <div
                                         key={item.id}
-                                        className={`px-4 py-3 cursor-pointer hover:bg-blue-50 border-b border-gray-100 ${
+                                        className={`cursor-pointer border-b border-gray-100 px-4 py-3 hover:bg-blue-50 ${
                                             item.id.toString() === value ? 'bg-blue-100' : ''
                                         }`}
                                         onClick={() => handleSelect(item)}
                                     >
-                                        <div className="flex justify-between items-start">
+                                        <div className="flex items-start justify-between">
                                             <div>
                                                 <p className="font-medium text-gray-900">{getItemLabel(item)}</p>
-                                                {item.sku && (
-                                                    <p className="text-xs text-gray-500 mt-1">SKU: {item.sku}</p>
-                                                )}
+                                                {item.sku && <p className="mt-1 text-xs text-gray-500">SKU: {item.sku}</p>}
                                             </div>
-                                            <div className="text-right ml-4">
+                                            <div className="ml-4 text-right">
                                                 <p className="text-sm text-gray-600">Stock: {item.stock_quantity}</p>
                                                 {item.purchase_price && (
                                                     <p className="text-xs text-amber-600">৳{parseFloat(item.purchase_price.toString()).toFixed(2)}</p>
@@ -203,7 +204,7 @@ const SearchableSelect = ({ label, error, items, value, onChange, getItemLabel, 
                 )}
             </div>
 
-            {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+            {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
         </div>
     );
 };
@@ -247,12 +248,10 @@ export default function AddStock() {
         post('/optics/stock');
     };
 
-    const selectedItem = getItemOptions().find(item => item.id.toString() === data.item_id);
+    const selectedItem = getItemOptions().find((item) => item.id.toString() === data.item_id);
 
     // ✅ Calculate unit price from total price
-    const unitPrice = data.total_price && data.quantity > 0
-        ? Number(data.total_price) / Number(data.quantity)
-        : 0;
+    const unitPrice = data.total_price && data.quantity > 0 ? Number(data.total_price) / Number(data.quantity) : 0;
 
     // Calculate totals
     const totalCost = Number(data.total_price || 0);
@@ -270,7 +269,7 @@ export default function AddStock() {
                 <div className="flex items-center space-x-4">
                     <Link href="/optics/stock">
                         <Button variant="secondary">
-                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="h-4 w-4" />
                             <span>Back</span>
                         </Button>
                     </Link>
@@ -281,11 +280,11 @@ export default function AddStock() {
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="bg-white rounded-xl shadow-sm border p-6">
+                    <div className="rounded-xl border bg-white p-6 shadow-sm">
                         {/* Item Selection Section */}
                         <div className="mb-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Item Details</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-900">Item Details</h2>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <Select
                                     label="Item Type *"
                                     value={data.item_type}
@@ -311,7 +310,7 @@ export default function AddStock() {
                                     onChange={(value: string) => {
                                         setData('item_id', value);
                                         // Auto-fill vendor if item has default vendor
-                                        const item = getItemOptions().find(i => i.id.toString() === value);
+                                        const item = getItemOptions().find((i) => i.id.toString() === value);
                                         if (item?.default_vendor_id && data.item_type === 'glasses') {
                                             setData('vendor_id', item.default_vendor_id.toString());
                                         }
@@ -346,15 +345,11 @@ export default function AddStock() {
 
                                 {/* ✅ Show calculated unit price */}
                                 {data.total_price && data.quantity > 0 && (
-                                    <div className="flex items-center space-x-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div className="flex items-center space-x-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
                                         <div className="text-sm">
-                                            <span className="text-blue-700 font-medium">Unit Price: </span>
-                                            <span className="text-blue-900 font-bold">
-                                                ৳{unitPrice.toFixed(2)}
-                                            </span>
-                                            <span className="text-blue-600 text-xs ml-2">
-                                                (Total ÷ Quantity)
-                                            </span>
+                                            <span className="font-medium text-blue-700">Unit Price: </span>
+                                            <span className="font-bold text-blue-900">৳{unitPrice.toFixed(2)}</span>
+                                            <span className="ml-2 text-xs text-blue-600">(Total ÷ Quantity)</span>
                                         </div>
                                     </div>
                                 )}
@@ -363,30 +358,30 @@ export default function AddStock() {
 
                         {/* ✅ Previous Price & Item Details */}
                         {selectedItem && (
-                            <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-                                <h4 className="font-medium text-blue-900 mb-3 flex items-center">
-                                    <AlertCircle className="w-4 h-4 mr-2" />
+                            <div className="mb-6 rounded-lg border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
+                                <h4 className="mb-3 flex items-center font-medium text-blue-900">
+                                    <AlertCircle className="mr-2 h-4 w-4" />
                                     Selected Item Details
                                 </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                                    <div className="bg-white p-3 rounded border border-blue-100">
-                                        <span className="text-blue-700 font-medium block mb-1">Name:</span>
-                                        <p className="text-blue-900 font-semibold">{getItemName(selectedItem)}</p>
+                                <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2 lg:grid-cols-4">
+                                    <div className="rounded border border-blue-100 bg-white p-3">
+                                        <span className="mb-1 block font-medium text-blue-700">Name:</span>
+                                        <p className="font-semibold text-blue-900">{getItemName(selectedItem)}</p>
                                     </div>
-                                    <div className="bg-white p-3 rounded border border-blue-100">
-                                        <span className="text-blue-700 font-medium block mb-1">Current Stock:</span>
-                                        <p className="text-blue-900 font-semibold">{selectedItem.stock_quantity} pcs</p>
+                                    <div className="rounded border border-blue-100 bg-white p-3">
+                                        <span className="mb-1 block font-medium text-blue-700">Current Stock:</span>
+                                        <p className="font-semibold text-blue-900">{selectedItem.stock_quantity} pcs</p>
                                     </div>
                                     {selectedItem.sku && (
-                                        <div className="bg-white p-3 rounded border border-blue-100">
-                                            <span className="text-blue-700 font-medium block mb-1">SKU:</span>
-                                            <p className="text-blue-900 font-semibold">{selectedItem.sku}</p>
+                                        <div className="rounded border border-blue-100 bg-white p-3">
+                                            <span className="mb-1 block font-medium text-blue-700">SKU:</span>
+                                            <p className="font-semibold text-blue-900">{selectedItem.sku}</p>
                                         </div>
                                     )}
                                     {selectedItem.purchase_price && (
-                                        <div className="bg-amber-50 p-3 rounded border border-amber-200">
-                                            <span className="text-amber-700 font-medium block mb-1">Previous Unit Price:</span>
-                                            <p className="text-amber-900 font-bold text-lg">
+                                        <div className="rounded border border-amber-200 bg-amber-50 p-3">
+                                            <span className="mb-1 block font-medium text-amber-700">Previous Unit Price:</span>
+                                            <p className="text-lg font-bold text-amber-900">
                                                 ৳{parseFloat(selectedItem.purchase_price.toString()).toFixed(2)}
                                             </p>
                                         </div>
@@ -395,26 +390,26 @@ export default function AddStock() {
 
                                 {/* ✅ Show average price calculation preview for glasses */}
                                 {data.item_type === 'glasses' && data.total_price && data.quantity > 0 && selectedItem.purchase_price && (
-                                    <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
-                                        <p className="text-sm text-green-800 font-medium mb-2">
-                                            📊 New Average Purchase Price Calculation:
-                                        </p>
-                                        <div className="text-xs text-green-700 space-y-1">
+                                    <div className="mt-4 rounded border border-green-200 bg-green-50 p-3">
+                                        <p className="mb-2 text-sm font-medium text-green-800">📊 New Average Purchase Price Calculation:</p>
+                                        <div className="space-y-1 text-xs text-green-700">
                                             <p>
-                                                Old: {selectedItem.stock_quantity} pcs × ৳{parseFloat(selectedItem.purchase_price.toString()).toFixed(2)}
-                                                = ৳{(selectedItem.stock_quantity * parseFloat(selectedItem.purchase_price.toString())).toFixed(2)}
+                                                Old: {selectedItem.stock_quantity} pcs × ৳
+                                                {parseFloat(selectedItem.purchase_price.toString()).toFixed(2)}= ৳
+                                                {(selectedItem.stock_quantity * parseFloat(selectedItem.purchase_price.toString())).toFixed(2)}
                                             </p>
                                             <p>
-                                                New: {data.quantity} pcs × ৳{unitPrice.toFixed(2)}
-                                                = ৳{(Number(data.quantity) * unitPrice).toFixed(2)}
+                                                New: {data.quantity} pcs × ৳{unitPrice.toFixed(2)}= ৳{(Number(data.quantity) * unitPrice).toFixed(2)}
                                             </p>
                                             <hr className="border-green-300" />
                                             <p className="font-bold text-green-900">
-                                                Average: ৳{(
-                                                    ((selectedItem.stock_quantity * parseFloat(selectedItem.purchase_price.toString())) +
-                                                    (Number(data.quantity) * unitPrice)) /
+                                                Average: ৳
+                                                {(
+                                                    (selectedItem.stock_quantity * parseFloat(selectedItem.purchase_price.toString()) +
+                                                        Number(data.quantity) * unitPrice) /
                                                     (selectedItem.stock_quantity + Number(data.quantity))
-                                                ).toFixed(2)} per unit
+                                                ).toFixed(2)}{' '}
+                                                per unit
                                             </p>
                                         </div>
                                     </div>
@@ -425,24 +420,26 @@ export default function AddStock() {
                         {/* ✅ Vendor & Payment Section (Only for Glasses) */}
                         {isVendorPurchaseAvailable && (
                             <div className="mb-6">
-                                <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
-                                    Vendor & Payment (Optional)
-                                </h2>
+                                <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-900">Vendor & Payment (Optional)</h2>
 
-                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+                                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
                                     <div className="flex items-start space-x-3">
-                                        <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                                        <AlertCircle className="mt-0.5 h-5 w-5 text-amber-600" />
                                         <div className="text-sm text-amber-800">
-                                            <p className="font-medium mb-1">Purchase Options:</p>
-                                            <ul className="list-disc list-inside space-y-1">
-                                                <li><strong>With Vendor:</strong> Select vendor for credit purchase (due tracking)</li>
-                                                <li><strong>Cash Purchase:</strong> Leave vendor empty for immediate payment</li>
+                                            <p className="mb-1 font-medium">Purchase Options:</p>
+                                            <ul className="list-inside list-disc space-y-1">
+                                                <li>
+                                                    <strong>With Vendor:</strong> Select vendor for credit purchase (due tracking)
+                                                </li>
+                                                <li>
+                                                    <strong>Cash Purchase:</strong> Leave vendor empty for immediate payment
+                                                </li>
                                             </ul>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                     <Select
                                         label="Vendor (Optional - For Glasses Only)"
                                         value={data.vendor_id}
@@ -477,12 +474,12 @@ export default function AddStock() {
 
                         {/* Notes */}
                         <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                            <label className="mb-2 block text-sm font-medium text-gray-700">Notes</label>
                             <textarea
                                 rows={3}
                                 value={data.notes}
                                 onChange={(e: any) => setData('notes', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 placeholder="Additional notes about this stock addition..."
                             />
                         </div>
@@ -491,26 +488,28 @@ export default function AddStock() {
                         {data.quantity && data.total_price && (
                             <div className="mb-6">
                                 {/* Cost Summary */}
-                                <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg mb-4">
-                                    <h3 className="text-sm font-semibold text-gray-700 mb-3">Cost Summary</h3>
+                                <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                    <h3 className="mb-3 text-sm font-semibold text-gray-700">Cost Summary</h3>
                                     <div className="space-y-2">
-                                        <div className="flex justify-between items-center text-sm">
+                                        <div className="flex items-center justify-between text-sm">
                                             <span className="text-gray-600">Quantity:</span>
                                             <span className="font-medium">{data.quantity} pcs</span>
                                         </div>
-                                        <div className="flex justify-between items-center text-sm">
+                                        <div className="flex items-center justify-between text-sm">
                                             <span className="text-gray-600">Unit Price:</span>
-                                            <span className="font-medium">৳{unitPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                            <span className="font-medium">
+                                                ৳{unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </span>
                                         </div>
                                         <hr className="my-2" />
-                                        <div className="flex justify-between items-center">
+                                        <div className="flex items-center justify-between">
                                             <span className="font-medium text-gray-700">Total Cost:</span>
                                             <span className="text-xl font-bold text-blue-600">
-                                                ৳{totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                                ৳{totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </span>
                                         </div>
                                         {selectedItem && (
-                                            <div className="flex justify-between items-center text-sm pt-2 border-t">
+                                            <div className="flex items-center justify-between border-t pt-2 text-sm">
                                                 <span className="text-gray-600">New Stock Level:</span>
                                                 <span className="font-medium text-green-600">
                                                     {selectedItem.stock_quantity + Number(data.quantity)} pcs
@@ -522,37 +521,29 @@ export default function AddStock() {
 
                                 {/* ✅ Payment Summary (for vendor purchase) */}
                                 {data.vendor_id && (
-                                    <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                                        <h3 className="text-sm font-semibold text-orange-900 mb-3">Vendor Payment Summary</h3>
+                                    <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                                        <h3 className="mb-3 text-sm font-semibold text-orange-900">Vendor Payment Summary</h3>
                                         <div className="space-y-2 text-sm">
                                             <div className="flex justify-between">
                                                 <span className="text-orange-700">Total Cost:</span>
-                                                <span className="font-semibold text-orange-900">
-                                                    ৳{totalCost.toFixed(2)}
-                                                </span>
+                                                <span className="font-semibold text-orange-900">৳{totalCost.toFixed(2)}</span>
                                             </div>
                                             {paidAmount > 0 && (
                                                 <>
                                                     <div className="flex justify-between">
                                                         <span className="text-orange-700">Paid Now:</span>
-                                                        <span className="font-semibold text-green-600">
-                                                            ৳{paidAmount.toFixed(2)}
-                                                        </span>
+                                                        <span className="font-semibold text-green-600">৳{paidAmount.toFixed(2)}</span>
                                                     </div>
-                                                    <div className="flex justify-between pt-2 border-t border-orange-300">
-                                                        <span className="text-orange-900 font-medium">Due to Vendor:</span>
-                                                        <span className="font-bold text-red-600">
-                                                            ৳{dueAmount.toFixed(2)}
-                                                        </span>
+                                                    <div className="flex justify-between border-t border-orange-300 pt-2">
+                                                        <span className="font-medium text-orange-900">Due to Vendor:</span>
+                                                        <span className="font-bold text-red-600">৳{dueAmount.toFixed(2)}</span>
                                                     </div>
                                                 </>
                                             )}
                                             {!paidAmount && (
-                                                <div className="flex justify-between pt-2 border-t border-orange-300">
-                                                    <span className="text-orange-900 font-medium">Full Amount Due:</span>
-                                                    <span className="font-bold text-red-600">
-                                                        ৳{totalCost.toFixed(2)}
-                                                    </span>
+                                                <div className="flex justify-between border-t border-orange-300 pt-2">
+                                                    <span className="font-medium text-orange-900">Full Amount Due:</span>
+                                                    <span className="font-bold text-red-600">৳{totalCost.toFixed(2)}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -561,34 +552,29 @@ export default function AddStock() {
 
                                 {/* ✅ Cash Purchase Summary */}
                                 {!data.vendor_id && (
-                                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                                        <h3 className="text-sm font-semibold text-green-900 mb-2">Cash Purchase</h3>
-                                        <div className="flex justify-between items-center">
+                                    <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                                        <h3 className="mb-2 text-sm font-semibold text-green-900">Cash Purchase</h3>
+                                        <div className="flex items-center justify-between">
                                             <span className="text-sm text-green-700">Amount to be paid:</span>
                                             <span className="text-lg font-bold text-green-700">
-                                                ৳{totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                                ৳{totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </span>
                                         </div>
-                                        <p className="text-xs text-green-600 mt-2">
-                                            Will be deducted from Hospital Account immediately
-                                        </p>
+                                        <p className="mt-2 text-xs text-green-600">Will be deducted from Hospital Account immediately</p>
                                     </div>
                                 )}
                             </div>
                         )}
 
                         {/* Submit Buttons */}
-                        <div className="flex justify-end space-x-4 pt-6 border-t">
+                        <div className="flex justify-end space-x-4 border-t pt-6">
                             <Link href="/optics/stock">
                                 <Button variant="secondary" type="button">
                                     Cancel
                                 </Button>
                             </Link>
-                            <Button
-                                type="submit"
-                                disabled={processing || !data.item_id || !data.total_price}
-                            >
-                                <Save className="w-4 h-4" />
+                            <Button type="submit" disabled={processing || !data.item_id || !data.total_price}>
+                                <Save className="h-4 w-4" />
                                 <span>{processing ? 'Adding...' : 'Add Stock'}</span>
                             </Button>
                         </div>

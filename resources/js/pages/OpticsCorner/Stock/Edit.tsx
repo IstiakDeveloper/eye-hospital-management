@@ -1,7 +1,7 @@
-import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
+import { Head, Link, useForm } from '@inertiajs/react';
 import { ChevronLeft, Save } from 'lucide-react';
+import React from 'react';
 
 interface Item {
     id: number;
@@ -38,7 +38,7 @@ const Button = ({ children, className = '', variant = 'primary', ...props }: any
         primary: 'bg-blue-600 text-white hover:bg-blue-700',
         secondary: 'bg-gray-200 text-gray-700 hover:bg-gray-300',
         success: 'bg-green-600 text-white hover:bg-green-700',
-        danger: 'bg-red-600 text-white hover:bg-red-700'
+        danger: 'bg-red-600 text-white hover:bg-red-700',
     };
 
     return (
@@ -50,31 +50,38 @@ const Button = ({ children, className = '', variant = 'primary', ...props }: any
 
 const Input = ({ label, error, className = '', ...props }: any) => (
     <div className={className}>
-        {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
+        {label && <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>}
         <input
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${error ? 'border-red-300' : 'border-gray-300'
-                }`}
+            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
+                error ? 'border-red-300' : 'border-gray-300'
+            }`}
             {...props}
         />
-        {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
 );
 
 const Select = ({ label, error, children, className = '', ...props }: any) => (
     <div className={className}>
-        {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
+        {label && <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>}
         <select
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${error ? 'border-red-300' : 'border-gray-300'
-                }`}
+            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
+                error ? 'border-red-300' : 'border-gray-300'
+            }`}
             {...props}
         >
             {children}
         </select>
-        {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
 );
 
-export default function EditStock({ movement, frames, lensTypes, completeGlasses }: {
+export default function EditStock({
+    movement,
+    frames,
+    lensTypes,
+    completeGlasses,
+}: {
     movement: Movement;
     frames: Item[];
     lensTypes: Item[];
@@ -115,7 +122,7 @@ export default function EditStock({ movement, frames, lensTypes, completeGlasses
         put(`/optics/stock/${movement.id}`);
     };
 
-    const selectedItem = getItemOptions().find(item => item.id.toString() === data.item_id);
+    const selectedItem = getItemOptions().find((item) => item.id.toString() === data.item_id);
 
     return (
         <AdminLayout>
@@ -125,7 +132,7 @@ export default function EditStock({ movement, frames, lensTypes, completeGlasses
                 <div className="flex items-center space-x-4">
                     <Link href="/optics/stock">
                         <Button variant="secondary">
-                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="h-4 w-4" />
                             <span>Back</span>
                         </Button>
                     </Link>
@@ -136,20 +143,19 @@ export default function EditStock({ movement, frames, lensTypes, completeGlasses
                 </div>
 
                 {/* Movement Info */}
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
                     <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                        <div className="h-2 w-2 rounded-full bg-yellow-400"></div>
                         <p className="text-sm text-yellow-800">
-                            <strong>Movement ID:</strong> #{movement.id} | 
-                            <strong> Created:</strong> {new Date(movement.created_at).toLocaleDateString()} | 
-                            <strong> By:</strong> {movement.user?.name || 'Unknown'}
+                            <strong>Movement ID:</strong> #{movement.id} |<strong> Created:</strong>{' '}
+                            {new Date(movement.created_at).toLocaleDateString()} |<strong> By:</strong> {movement.user?.name || 'Unknown'}
                         </p>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-xl shadow-sm border p-6">
+                <div className="rounded-xl border bg-white p-6 shadow-sm">
                     <form onSubmit={handleSubmit}>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <Select
                                 label="Item Type *"
                                 value={data.item_type}
@@ -203,20 +209,20 @@ export default function EditStock({ movement, frames, lensTypes, completeGlasses
 
                         {/* Selected Item Info */}
                         {selectedItem && (
-                            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                                <h4 className="font-medium text-blue-900 mb-2">Selected Item Details:</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div className="mt-6 rounded-lg bg-blue-50 p-4">
+                                <h4 className="mb-2 font-medium text-blue-900">Selected Item Details:</h4>
+                                <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
                                     <div>
-                                        <span className="text-blue-700 font-medium">Name:</span>
+                                        <span className="font-medium text-blue-700">Name:</span>
                                         <p className="text-blue-900">{getItemName(selectedItem)}</p>
                                     </div>
                                     <div>
-                                        <span className="text-blue-700 font-medium">Current Stock:</span>
+                                        <span className="font-medium text-blue-700">Current Stock:</span>
                                         <p className="text-blue-900">{selectedItem.stock_quantity} pcs</p>
                                     </div>
                                     {selectedItem.sku && (
                                         <div>
-                                            <span className="text-blue-700 font-medium">SKU:</span>
+                                            <span className="font-medium text-blue-700">SKU:</span>
                                             <p className="text-blue-900">{selectedItem.sku}</p>
                                         </div>
                                     )}
@@ -225,9 +231,9 @@ export default function EditStock({ movement, frames, lensTypes, completeGlasses
                         )}
 
                         {/* Original vs New Comparison */}
-                        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="p-4 bg-gray-50 rounded-lg">
-                                <h4 className="font-medium text-gray-900 mb-2">Original Values</h4>
+                        <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+                            <div className="rounded-lg bg-gray-50 p-4">
+                                <h4 className="mb-2 font-medium text-gray-900">Original Values</h4>
                                 <div className="space-y-1 text-sm">
                                     <div className="flex justify-between">
                                         <span>Quantity:</span>
@@ -244,8 +250,8 @@ export default function EditStock({ movement, frames, lensTypes, completeGlasses
                                 </div>
                             </div>
 
-                            <div className="p-4 bg-green-50 rounded-lg">
-                                <h4 className="font-medium text-green-900 mb-2">New Values</h4>
+                            <div className="rounded-lg bg-green-50 p-4">
+                                <h4 className="mb-2 font-medium text-green-900">New Values</h4>
                                 <div className="space-y-1 text-sm">
                                     <div className="flex justify-between">
                                         <span>Quantity:</span>
@@ -264,47 +270,50 @@ export default function EditStock({ movement, frames, lensTypes, completeGlasses
                         </div>
 
                         <div className="mt-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                            <label className="mb-2 block text-sm font-medium text-gray-700">Notes</label>
                             <textarea
                                 rows={3}
                                 value={data.notes}
                                 onChange={(e: any) => setData('notes', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 placeholder="Additional notes about this stock movement..."
                             />
                         </div>
 
                         {/* Amount Difference Alert */}
-                        {data.quantity && data.unit_price && (
+                        {data.quantity &&
+                            data.unit_price &&
                             (() => {
                                 const newTotal = parseFloat(data.unit_price) * parseInt(data.quantity.toString());
                                 const difference = newTotal - movement.total_amount;
-                                
+
                                 if (difference !== 0) {
                                     return (
-                                        <div className={`mt-6 p-4 rounded-lg ${difference > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'}`}>
+                                        <div
+                                            className={`mt-6 rounded-lg p-4 ${difference > 0 ? 'border-yellow-200 bg-yellow-50' : 'border-green-200 bg-green-50'}`}
+                                        >
                                             <div className="flex items-center space-x-2">
-                                                <div className={`w-2 h-2 rounded-full ${difference > 0 ? 'bg-yellow-400' : 'bg-green-400'}`}></div>
+                                                <div className={`h-2 w-2 rounded-full ${difference > 0 ? 'bg-yellow-400' : 'bg-green-400'}`}></div>
                                                 <p className={`text-sm font-medium ${difference > 0 ? 'text-yellow-800' : 'text-green-800'}`}>
-                                                    {difference > 0 
+                                                    {difference > 0
                                                         ? `Additional expense: ৳${difference.toLocaleString()}`
-                                                        : `Refund amount: ৳${Math.abs(difference).toLocaleString()}`
-                                                    }
+                                                        : `Refund amount: ৳${Math.abs(difference).toLocaleString()}`}
                                                 </p>
                                             </div>
                                         </div>
                                     );
                                 }
                                 return null;
-                            })()
-                        )}
+                            })()}
 
                         <div className="mt-8 flex justify-end space-x-4">
                             <Link href="/optics/stock">
-                                <Button variant="secondary" type="button">Cancel</Button>
+                                <Button variant="secondary" type="button">
+                                    Cancel
+                                </Button>
                             </Link>
                             <Button type="submit" disabled={processing || !data.item_id || !data.unit_price}>
-                                <Save className="w-4 h-4" />
+                                <Save className="h-4 w-4" />
                                 <span>{processing ? 'Updating...' : 'Update Movement'}</span>
                             </Button>
                         </div>

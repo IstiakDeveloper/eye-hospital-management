@@ -1,12 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
+import { Head, router } from '@inertiajs/react';
 import {
-    Eye, Clock, Users, Activity, Play, CheckCircle,
-    AlertTriangle, RefreshCw, Timer, User, Phone,
-    Stethoscope, Calendar, TrendingUp, BarChart3,
-    FileText, IdCard
+    Activity,
+    AlertTriangle,
+    BarChart3,
+    Calendar,
+    CheckCircle,
+    Clock,
+    Eye,
+    FileText,
+    IdCard,
+    Phone,
+    Play,
+    Stethoscope,
+    Timer,
+    User,
+    Users,
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 // Type definitions (same as before)
 interface Visit {
@@ -57,11 +68,7 @@ interface Props {
     recentCompletedTests: CompletedTest[];
 }
 
-const RefractionistDashboard: React.FC<Props> = ({
-    visitsForVisionTest,
-    todayStats,
-    recentCompletedTests
-}) => {
+const RefractionistDashboard: React.FC<Props> = ({ visitsForVisionTest, todayStats, recentCompletedTests }) => {
     const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
 
     // Simple auto-refresh every 30 seconds - শুধু data load করবে
@@ -78,14 +85,18 @@ const RefractionistDashboard: React.FC<Props> = ({
     }, []);
 
     const startVisionTest = (visit: Visit): void => {
-        router.post(route('refractionist.start-vision-test', visit.id), {}, {
-            onSuccess: () => {
-                console.log('Vision test started for', visit.patient_name);
+        router.post(
+            route('refractionist.start-vision-test', visit.id),
+            {},
+            {
+                onSuccess: () => {
+                    console.log('Vision test started for', visit.patient_name);
+                },
+                onError: (errors) => {
+                    console.error('Failed to start vision test:', errors);
+                },
             },
-            onError: (errors) => {
-                console.error('Failed to start vision test:', errors);
-            },
-        });
+        );
     };
 
     const markAsPriority = (visit: Visit): void => {
@@ -105,9 +116,12 @@ const RefractionistDashboard: React.FC<Props> = ({
 
     const getGenderIcon = (gender?: string): string => {
         switch (gender?.toLowerCase()) {
-            case 'male': return '👨';
-            case 'female': return '👩';
-            default: return '👤';
+            case 'male':
+                return '👨';
+            case 'female':
+                return '👩';
+            default:
+                return '👤';
         }
     };
 
@@ -129,57 +143,56 @@ const RefractionistDashboard: React.FC<Props> = ({
             <Head title="Refractionist Dashboard" />
 
             <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 p-6">
-                <div className="max-w-7xl mx-auto space-y-6">
-
+                <div className="mx-auto max-w-7xl space-y-6">
                     {/* Header */}
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">Vision Test Dashboard</h1>
-                            <p className="text-gray-600 mt-1">Manage patient visit vision tests and queue</p>
+                            <p className="mt-1 text-gray-600">Manage patient visit vision tests and queue</p>
                         </div>
                     </div>
 
                     {/* Stats Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl shadow-lg p-6 text-white">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white shadow-lg">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-blue-100 text-sm">Visits Waiting</p>
+                                    <p className="text-sm text-blue-100">Visits Waiting</p>
                                     <p className="text-3xl font-bold">{todayStats.total_waiting}</p>
-                                    <p className="text-blue-200 text-xs mt-1">In queue for vision test</p>
+                                    <p className="mt-1 text-xs text-blue-200">In queue for vision test</p>
                                 </div>
                                 <Users className="h-12 w-12 text-blue-200" />
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-2xl shadow-lg p-6 text-white">
+                        <div className="rounded-2xl bg-gradient-to-r from-green-600 to-green-700 p-6 text-white shadow-lg">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-green-100 text-sm">Tests Completed Today</p>
+                                    <p className="text-sm text-green-100">Tests Completed Today</p>
                                     <p className="text-3xl font-bold">{todayStats.tests_completed_today}</p>
-                                    <p className="text-green-200 text-xs mt-1">Vision tests done</p>
+                                    <p className="mt-1 text-xs text-green-200">Vision tests done</p>
                                 </div>
                                 <CheckCircle className="h-12 w-12 text-green-200" />
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-r from-yellow-600 to-orange-600 rounded-2xl shadow-lg p-6 text-white">
+                        <div className="rounded-2xl bg-gradient-to-r from-yellow-600 to-orange-600 p-6 text-white shadow-lg">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-yellow-100 text-sm">Tests In Progress</p>
+                                    <p className="text-sm text-yellow-100">Tests In Progress</p>
                                     <p className="text-3xl font-bold">{todayStats.in_progress_tests}</p>
-                                    <p className="text-yellow-200 text-xs mt-1">Currently testing</p>
+                                    <p className="mt-1 text-xs text-yellow-200">Currently testing</p>
                                 </div>
                                 <Activity className="h-12 w-12 text-yellow-200" />
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-2xl shadow-lg p-6 text-white">
+                        <div className="rounded-2xl bg-gradient-to-r from-purple-600 to-purple-700 p-6 text-white shadow-lg">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-purple-100 text-sm">Avg. Waiting Time</p>
+                                    <p className="text-sm text-purple-100">Avg. Waiting Time</p>
                                     <p className="text-3xl font-bold">{todayStats.avg_waiting_time}m</p>
-                                    <p className="text-purple-200 text-xs mt-1">Minutes average</p>
+                                    <p className="mt-1 text-xs text-purple-200">Minutes average</p>
                                 </div>
                                 <Timer className="h-12 w-12 text-purple-200" />
                             </div>
@@ -187,16 +200,15 @@ const RefractionistDashboard: React.FC<Props> = ({
                     </div>
 
                     {/* Main Content Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                         {/* Visit Queue */}
-                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-xl border border-gray-100">
-                            <div className="p-6 border-b border-gray-200">
+                        <div className="rounded-2xl border border-gray-100 bg-white shadow-xl lg:col-span-2">
+                            <div className="border-b border-gray-200 p-6">
                                 <div className="flex items-center justify-between">
-                                    <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                                    <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
                                         <Eye className="h-6 w-6 text-blue-600" />
                                         Vision Test Queue
-                                        <span className="bg-blue-100 text-blue-800 text-sm font-medium px-2 py-1 rounded-full">
+                                        <span className="rounded-full bg-blue-100 px-2 py-1 text-sm font-medium text-blue-800">
                                             {visitsForVisionTest.length}
                                         </span>
                                     </h2>
@@ -205,36 +217,39 @@ const RefractionistDashboard: React.FC<Props> = ({
 
                             <div className="p-6">
                                 {visitsForVisionTest.length > 0 ? (
-                                    <div className="space-y-4 max-h-96 overflow-y-auto">
+                                    <div className="max-h-96 space-y-4 overflow-y-auto">
                                         {visitsForVisionTest.map((visit, index) => (
                                             <div
                                                 key={visit.id}
-                                                className={`p-4 border-2 rounded-xl transition-all duration-200 cursor-pointer ${selectedVisit?.id === visit.id
+                                                className={`cursor-pointer rounded-xl border-2 p-4 transition-all duration-200 ${
+                                                    selectedVisit?.id === visit.id
                                                         ? 'border-blue-500 bg-blue-50'
                                                         : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                                                    }`}
+                                                }`}
                                                 onClick={() => setSelectedVisit(visit)}
                                             >
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-4">
                                                         {/* Queue Position */}
                                                         <div className="flex-shrink-0">
-                                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${getPriorityColor(index)}`}>
+                                                            <div
+                                                                className={`flex h-10 w-10 items-center justify-center rounded-full font-bold text-white ${getPriorityColor(index)}`}
+                                                            >
                                                                 {index + 1}
                                                             </div>
                                                         </div>
 
                                                         {/* Visit & Patient Info */}
                                                         <div className="flex-1">
-                                                            <div className="flex items-center gap-2 mb-1">
+                                                            <div className="mb-1 flex items-center gap-2">
                                                                 <h3 className="font-bold text-gray-900">{visit.patient_name}</h3>
                                                                 <span className="text-lg">{getGenderIcon(visit.gender)}</span>
-                                                                <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full">
+                                                                <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
                                                                     {formatCurrency(visit.total_paid)} Paid
                                                                 </span>
                                                             </div>
 
-                                                            <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-2">
+                                                            <div className="mb-2 grid grid-cols-2 gap-2 text-sm text-gray-600">
                                                                 <span className="flex items-center gap-1">
                                                                     <IdCard className="h-3 w-3" />
                                                                     Visit: {visit.visit_id}
@@ -256,7 +271,9 @@ const RefractionistDashboard: React.FC<Props> = ({
                                                             </div>
 
                                                             <div className="flex items-center gap-4 text-xs text-gray-500">
-                                                                <span className={`flex items-center gap-1 ${getWaitingTimeColor(visit.waiting_time)}`}>
+                                                                <span
+                                                                    className={`flex items-center gap-1 ${getWaitingTimeColor(visit.waiting_time)}`}
+                                                                >
                                                                     <Clock className="h-3 w-3" />
                                                                     Waiting: {visit.waiting_time}
                                                                 </span>
@@ -268,7 +285,7 @@ const RefractionistDashboard: React.FC<Props> = ({
 
                                                             {/* Chief Complaint */}
                                                             {visit.chief_complaint && (
-                                                                <div className="mt-2 p-2 bg-yellow-50 rounded-lg">
+                                                                <div className="mt-2 rounded-lg bg-yellow-50 p-2">
                                                                     <p className="text-xs text-gray-700">
                                                                         <strong>Chief Complaint:</strong> {visit.chief_complaint}
                                                                     </p>
@@ -285,7 +302,7 @@ const RefractionistDashboard: React.FC<Props> = ({
                                                                     e.stopPropagation();
                                                                     markAsPriority(visit);
                                                                 }}
-                                                                className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                                                className="rounded-lg p-2 text-orange-600 transition-colors hover:bg-orange-50"
                                                                 title="Mark as Priority"
                                                             >
                                                                 <AlertTriangle className="h-4 w-4" />
@@ -296,7 +313,7 @@ const RefractionistDashboard: React.FC<Props> = ({
                                                                 e.stopPropagation();
                                                                 startVisionTest(visit);
                                                             }}
-                                                            className="px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-2"
+                                                            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-600 to-green-700 px-4 py-2 font-medium text-white transition-all duration-200 hover:from-green-700 hover:to-green-800"
                                                         >
                                                             <Play className="h-4 w-4" />
                                                             Start Test
@@ -306,7 +323,7 @@ const RefractionistDashboard: React.FC<Props> = ({
 
                                                 {/* Medical History */}
                                                 {visit.medical_history && (
-                                                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                                                    <div className="mt-3 rounded-lg bg-gray-50 p-3">
                                                         <p className="text-xs text-gray-600">
                                                             <strong>Medical History:</strong> {visit.medical_history}
                                                         </p>
@@ -315,7 +332,7 @@ const RefractionistDashboard: React.FC<Props> = ({
 
                                                 {/* Visit Notes */}
                                                 {visit.visit_notes && (
-                                                    <div className="mt-2 p-2 bg-blue-50 rounded-lg">
+                                                    <div className="mt-2 rounded-lg bg-blue-50 p-2">
                                                         <p className="text-xs text-blue-700">
                                                             <strong>Visit Notes:</strong> {visit.visit_notes}
                                                         </p>
@@ -325,22 +342,22 @@ const RefractionistDashboard: React.FC<Props> = ({
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="text-center py-12">
-                                        <Eye className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                                    <div className="py-12 text-center">
+                                        <Eye className="mx-auto mb-4 h-16 w-16 text-gray-400" />
                                         <p className="text-gray-600">No visits waiting for vision test</p>
-                                        <p className="text-gray-500 text-sm mt-1">Queue is empty</p>
+                                        <p className="mt-1 text-sm text-gray-500">Queue is empty</p>
                                     </div>
                                 )}
                             </div>
                         </div>
 
                         {/* Today's Completed Tests */}
-                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
-                            <div className="p-6 border-b border-gray-200">
-                                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                        <div className="rounded-2xl border border-gray-100 bg-white shadow-xl">
+                            <div className="border-b border-gray-200 p-6">
+                                <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
                                     <CheckCircle className="h-6 w-6 text-green-600" />
                                     Today's Completed
-                                    <span className="bg-green-100 text-green-800 text-sm font-medium px-2 py-1 rounded-full">
+                                    <span className="rounded-full bg-green-100 px-2 py-1 text-sm font-medium text-green-800">
                                         {recentCompletedTests.length}
                                     </span>
                                 </h2>
@@ -348,35 +365,34 @@ const RefractionistDashboard: React.FC<Props> = ({
 
                             <div className="p-6">
                                 {recentCompletedTests.length > 0 ? (
-                                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                                    <div className="max-h-96 space-y-3 overflow-y-auto">
                                         {recentCompletedTests.map((test) => (
-                                            <div key={test.id} className="p-3 border border-gray-200 rounded-lg bg-green-50 hover:bg-green-100 transition-colors">
-                                                <div className="flex items-center justify-between mb-2">
+                                            <div
+                                                key={test.id}
+                                                className="rounded-lg border border-gray-200 bg-green-50 p-3 transition-colors hover:bg-green-100"
+                                            >
+                                                <div className="mb-2 flex items-center justify-between">
                                                     <h3 className="font-semibold text-gray-900">{test.patient_name}</h3>
                                                     <CheckCircle className="h-5 w-5 text-green-600" />
                                                 </div>
 
-                                                <div className="space-y-1 text-sm text-gray-600 mb-2">
+                                                <div className="mb-2 space-y-1 text-sm text-gray-600">
                                                     <p>Visit: {test.visit_id}</p>
                                                     <p>Patient: {test.patient_id}</p>
                                                     <p>Phone: {test.patient_phone}</p>
                                                 </div>
 
-                                                <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                                                <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
                                                     <span>Dr. {test.doctor_name}</span>
                                                     <span>{formatTime(test.vision_test_completed_at)}</span>
                                                 </div>
 
-                                                {test.test_duration && (
-                                                    <p className="text-xs text-green-600 mb-2">
-                                                        Duration: {test.test_duration}
-                                                    </p>
-                                                )}
+                                                {test.test_duration && <p className="mb-2 text-xs text-green-600">Duration: {test.test_duration}</p>}
 
                                                 {/* Vision Test Results Preview */}
                                                 {test.vision_test_results && (
-                                                    <div className="text-xs bg-white p-2 rounded border">
-                                                        <p className="font-medium text-gray-700 mb-1">Quick Results:</p>
+                                                    <div className="rounded border bg-white p-2 text-xs">
+                                                        <p className="mb-1 font-medium text-gray-700">Quick Results:</p>
                                                         <div className="grid grid-cols-2 gap-2 text-gray-600">
                                                             <span>R: {test.vision_test_results.right_eye_sphere || 'N/A'}</span>
                                                             <span>L: {test.vision_test_results.left_eye_sphere || 'N/A'}</span>
@@ -387,8 +403,8 @@ const RefractionistDashboard: React.FC<Props> = ({
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="text-center py-8">
-                                        <CheckCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                                    <div className="py-8 text-center">
+                                        <CheckCircle className="mx-auto mb-3 h-12 w-12 text-gray-400" />
                                         <p className="text-gray-600">No tests completed today</p>
                                     </div>
                                 )}
@@ -398,48 +414,72 @@ const RefractionistDashboard: React.FC<Props> = ({
 
                     {/* Selected Visit Details */}
                     {selectedVisit && (
-                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-xl">
+                            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
                                 <FileText className="h-5 w-5 text-blue-600" />
                                 Selected Visit Details
                             </h3>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                                 <div>
-                                    <h4 className="font-medium text-gray-700 mb-2">Patient Information</h4>
+                                    <h4 className="mb-2 font-medium text-gray-700">Patient Information</h4>
                                     <div className="space-y-1 text-sm text-gray-600">
-                                        <p><strong>Name:</strong> {selectedVisit.patient_name}</p>
-                                        <p><strong>Patient ID:</strong> {selectedVisit.patient_id}</p>
-                                        <p><strong>Phone:</strong> {selectedVisit.patient_phone}</p>
-                                        {selectedVisit.age && <p><strong>Age:</strong> {selectedVisit.age}</p>}
-                                        {selectedVisit.gender && <p><strong>Gender:</strong> {selectedVisit.gender}</p>}
+                                        <p>
+                                            <strong>Name:</strong> {selectedVisit.patient_name}
+                                        </p>
+                                        <p>
+                                            <strong>Patient ID:</strong> {selectedVisit.patient_id}
+                                        </p>
+                                        <p>
+                                            <strong>Phone:</strong> {selectedVisit.patient_phone}
+                                        </p>
+                                        {selectedVisit.age && (
+                                            <p>
+                                                <strong>Age:</strong> {selectedVisit.age}
+                                            </p>
+                                        )}
+                                        {selectedVisit.gender && (
+                                            <p>
+                                                <strong>Gender:</strong> {selectedVisit.gender}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h4 className="font-medium text-gray-700 mb-2">Visit Information</h4>
+                                    <h4 className="mb-2 font-medium text-gray-700">Visit Information</h4>
                                     <div className="space-y-1 text-sm text-gray-600">
-                                        <p><strong>Visit ID:</strong> {selectedVisit.visit_id}</p>
-                                        <p><strong>Doctor:</strong> {selectedVisit.doctor_name}</p>
-                                        <p><strong>Total Amount:</strong> {formatCurrency(selectedVisit.total_amount)}</p>
-                                        <p><strong>Total Paid:</strong> {formatCurrency(selectedVisit.total_paid)}</p>
-                                        <p><strong>Waiting Time:</strong> {selectedVisit.waiting_time}</p>
+                                        <p>
+                                            <strong>Visit ID:</strong> {selectedVisit.visit_id}
+                                        </p>
+                                        <p>
+                                            <strong>Doctor:</strong> {selectedVisit.doctor_name}
+                                        </p>
+                                        <p>
+                                            <strong>Total Amount:</strong> {formatCurrency(selectedVisit.total_amount)}
+                                        </p>
+                                        <p>
+                                            <strong>Total Paid:</strong> {formatCurrency(selectedVisit.total_paid)}
+                                        </p>
+                                        <p>
+                                            <strong>Waiting Time:</strong> {selectedVisit.waiting_time}
+                                        </p>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h4 className="font-medium text-gray-700 mb-2">Medical Information</h4>
+                                    <h4 className="mb-2 font-medium text-gray-700">Medical Information</h4>
                                     <div className="space-y-2 text-sm text-gray-600">
                                         {selectedVisit.chief_complaint && (
                                             <div>
                                                 <strong>Chief Complaint:</strong>
-                                                <p className="mt-1 p-2 bg-yellow-50 rounded">{selectedVisit.chief_complaint}</p>
+                                                <p className="mt-1 rounded bg-yellow-50 p-2">{selectedVisit.chief_complaint}</p>
                                             </div>
                                         )}
                                         {selectedVisit.medical_history && (
                                             <div>
                                                 <strong>Medical History:</strong>
-                                                <p className="mt-1 p-2 bg-gray-50 rounded">{selectedVisit.medical_history}</p>
+                                                <p className="mt-1 rounded bg-gray-50 p-2">{selectedVisit.medical_history}</p>
                                             </div>
                                         )}
                                     </div>
@@ -449,7 +489,7 @@ const RefractionistDashboard: React.FC<Props> = ({
                             <div className="mt-4 flex justify-end">
                                 <button
                                     onClick={() => startVisionTest(selectedVisit)}
-                                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-2"
+                                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-600 to-green-700 px-6 py-3 font-medium text-white transition-all duration-200 hover:from-green-700 hover:to-green-800"
                                 >
                                     <Play className="h-5 w-5" />
                                     Start Vision Test for This Visit
@@ -459,11 +499,10 @@ const RefractionistDashboard: React.FC<Props> = ({
                     )}
 
                     {/* Quick Actions */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <button
                             onClick={() => router.visit(route('patients.index'))}
-                            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 rounded-2xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
+                            className="flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 p-6 font-medium text-white shadow-lg transition-all duration-200 hover:from-green-700 hover:to-emerald-700 hover:shadow-xl"
                         >
                             <Users className="h-6 w-6" />
                             All Patients
@@ -471,13 +510,12 @@ const RefractionistDashboard: React.FC<Props> = ({
 
                         <button
                             onClick={() => router.visit(route('refractionist.performance'))}
-                            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-6 rounded-2xl font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
+                            className="flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 p-6 font-medium text-white shadow-lg transition-all duration-200 hover:from-purple-700 hover:to-pink-700 hover:shadow-xl"
                         >
                             <BarChart3 className="h-6 w-6" />
                             Performance Report
                         </button>
                     </div>
-
                 </div>
             </div>
         </AdminLayout>

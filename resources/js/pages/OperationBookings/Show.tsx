@@ -1,10 +1,7 @@
-import { useState } from 'react';
-import { router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import {
-    ArrowLeft, FileText, User, Calendar, DollarSign, CheckCircle,
-    AlertCircle, Clock, CreditCard, Printer, Receipt, X, Check
-} from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { ArrowLeft, Calendar, CheckCircle, Clock, CreditCard, Receipt, User, X } from 'lucide-react';
+import { useState } from 'react';
 
 interface Patient {
     id: number;
@@ -122,15 +119,15 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
 
     const getStatusBadge = (status: string) => {
         const badges: Record<string, { bg: string; text: string; icon: React.ReactElement }> = {
-            scheduled: { bg: 'bg-blue-100 text-blue-800', text: 'Scheduled', icon: <Calendar className="w-3 h-3" /> },
-            confirmed: { bg: 'bg-purple-100 text-purple-800', text: 'Confirmed', icon: <CheckCircle className="w-3 h-3" /> },
-            completed: { bg: 'bg-green-100 text-green-800', text: 'Completed', icon: <CheckCircle className="w-3 h-3" /> },
-            cancelled: { bg: 'bg-red-100 text-red-800', text: 'Cancelled', icon: <X className="w-3 h-3" /> },
-            rescheduled: { bg: 'bg-yellow-100 text-yellow-800', text: 'Rescheduled', icon: <Clock className="w-3 h-3" /> }
+            scheduled: { bg: 'bg-blue-100 text-blue-800', text: 'Scheduled', icon: <Calendar className="h-3 w-3" /> },
+            confirmed: { bg: 'bg-purple-100 text-purple-800', text: 'Confirmed', icon: <CheckCircle className="h-3 w-3" /> },
+            completed: { bg: 'bg-green-100 text-green-800', text: 'Completed', icon: <CheckCircle className="h-3 w-3" /> },
+            cancelled: { bg: 'bg-red-100 text-red-800', text: 'Cancelled', icon: <X className="h-3 w-3" /> },
+            rescheduled: { bg: 'bg-yellow-100 text-yellow-800', text: 'Rescheduled', icon: <Clock className="h-3 w-3" /> },
         };
         const badge = badges[status] || badges.scheduled;
         return (
-            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${badge.bg}`}>
+            <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${badge.bg}`}>
                 {badge.icon} {badge.text}
             </span>
         );
@@ -140,10 +137,10 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
         const badges: Record<string, { bg: string; text: string }> = {
             unpaid: { bg: 'bg-red-100 text-red-800', text: 'Unpaid' },
             partial: { bg: 'bg-yellow-100 text-yellow-800', text: 'Partial' },
-            paid: { bg: 'bg-green-100 text-green-800', text: 'Paid' }
+            paid: { bg: 'bg-green-100 text-green-800', text: 'Paid' },
         };
         const badge = badges[status] || badges.unpaid;
-        return <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${badge.bg}`}>{badge.text}</span>;
+        return <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${badge.bg}`}>{badge.text}</span>;
     };
 
     const handleAddPayment = (e: React.FormEvent) => {
@@ -155,20 +152,24 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
         }
 
         setLoading(true);
-        router.post(`/operation-bookings/${booking.id}/payment`, {
-            amount,
-            payment_method: paymentMethod,
-            payment_reference: paymentReference || undefined,
-            notes: paymentNotes || undefined
-        }, {
-            onFinish: () => {
-                setLoading(false);
-                setShowPaymentModal(false);
-                setPaymentAmount(booking.due_amount.toString());
-                setPaymentReference('');
-                setPaymentNotes('');
-            }
-        });
+        router.post(
+            `/operation-bookings/${booking.id}/payment`,
+            {
+                amount,
+                payment_method: paymentMethod,
+                payment_reference: paymentReference || undefined,
+                notes: paymentNotes || undefined,
+            },
+            {
+                onFinish: () => {
+                    setLoading(false);
+                    setShowPaymentModal(false);
+                    setPaymentAmount(booking.due_amount.toString());
+                    setPaymentReference('');
+                    setPaymentNotes('');
+                },
+            },
+        );
     };
 
     const handleConfirm = () => {
@@ -190,14 +191,18 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
             return;
         }
         setLoading(true);
-        router.patch(`/operation-bookings/${booking.id}/cancel`, {
-            cancellation_reason: cancellationReason
-        }, {
-            onFinish: () => {
-                setLoading(false);
-                setShowCancelModal(false);
-            }
-        });
+        router.patch(
+            `/operation-bookings/${booking.id}/cancel`,
+            {
+                cancellation_reason: cancellationReason,
+            },
+            {
+                onFinish: () => {
+                    setLoading(false);
+                    setShowCancelModal(false);
+                },
+            },
+        );
     };
 
     const handleReschedule = (e: React.FormEvent) => {
@@ -207,77 +212,79 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
             return;
         }
         setLoading(true);
-        router.patch(`/operation-bookings/${booking.id}/reschedule`, {
-            scheduled_date: newDate,
-            scheduled_time: newTime
-        }, {
-            onFinish: () => {
-                setLoading(false);
-                setShowRescheduleModal(false);
-            }
-        });
+        router.patch(
+            `/operation-bookings/${booking.id}/reschedule`,
+            {
+                scheduled_date: newDate,
+                scheduled_time: newTime,
+            },
+            {
+                onFinish: () => {
+                    setLoading(false);
+                    setShowRescheduleModal(false);
+                },
+            },
+        );
     };
 
     return (
         <AdminLayout>
             <div className="p-6">
-                <div className="max-w-7xl mx-auto">
+                <div className="mx-auto max-w-7xl">
                     {/* Header */}
-                    <div className="flex justify-between items-center mb-6">
+                    <div className="mb-6 flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => router.visit('/operation-bookings')}
-                                className="p-2 hover:bg-gray-100 rounded-lg"
-                            >
-                                <ArrowLeft className="w-5 h-5" />
+                            <button onClick={() => router.visit('/operation-bookings')} className="rounded-lg p-2 hover:bg-gray-100">
+                                <ArrowLeft className="h-5 w-5" />
                             </button>
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-900">Booking #{booking.booking_no}</h1>
-                                <p className="text-gray-600 mt-1">View and manage operation booking details</p>
+                                <p className="mt-1 text-gray-600">View and manage operation booking details</p>
                             </div>
                         </div>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => router.visit(`/operation-bookings/${booking.id}/receipt`)}
-                                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                className="flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 hover:bg-gray-50"
                             >
-                                <Receipt className="w-4 h-4" />
+                                <Receipt className="h-4 w-4" />
                                 Receipt
                             </button>
                             {can.payment && booking.payment_status !== 'paid' && booking.status !== 'cancelled' && booking.status !== 'completed' && (
                                 <button
                                     onClick={() => setShowPaymentModal(true)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                    className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
                                 >
-                                    <CreditCard className="w-4 h-4" />
+                                    <CreditCard className="h-4 w-4" />
                                     Add Payment
                                 </button>
                             )}
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                         {/* Main Content */}
-                        <div className="lg:col-span-2 space-y-6">
+                        <div className="space-y-6 lg:col-span-2">
                             {/* Cancelled Booking Alert */}
                             {booking.status === 'cancelled' && (
-                                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                <div className="rounded-lg border border-red-200 bg-red-50 p-4">
                                     <div className="flex items-start gap-3">
-                                        <X className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                        <X className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
                                         <div className="flex-1">
                                             <h3 className="font-semibold text-red-900">Booking Cancelled</h3>
-                                            <p className="text-sm text-red-700 mt-1">
-                                                This booking has been cancelled on {formatDateTime(booking.cancelled_at || '')}.
-                                                No further payments or modifications are allowed.
+                                            <p className="mt-1 text-sm text-red-700">
+                                                This booking has been cancelled on {formatDateTime(booking.cancelled_at || '')}. No further payments
+                                                or modifications are allowed.
                                             </p>
                                             {booking.cancellation_reason && (
-                                                <div className="mt-2 p-2 bg-red-100 rounded text-sm text-red-800">
+                                                <div className="mt-2 rounded bg-red-100 p-2 text-sm text-red-800">
                                                     <span className="font-medium">Reason:</span> {booking.cancellation_reason}
                                                 </div>
                                             )}
                                             {booking.advance_payment > 0 && (
                                                 <div className="mt-2 text-sm text-red-700">
-                                                    <span className="font-medium">Paid Amount:</span> {formatCurrency(booking.advance_payment)} (Refund to be processed manually)
+                                                    <span className="font-medium">Paid Amount:</span> {formatCurrency(booking.advance_payment)}{' '}
+                                                    (Refund to be processed manually)
                                                 </div>
                                             )}
                                         </div>
@@ -287,12 +294,12 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
 
                             {/* Completed Booking Notice */}
                             {booking.status === 'completed' && (
-                                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <div className="rounded-lg border border-green-200 bg-green-50 p-4">
                                     <div className="flex items-start gap-3">
-                                        <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                                        <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
                                         <div className="flex-1">
                                             <h3 className="font-semibold text-green-900">Operation Completed</h3>
-                                            <p className="text-sm text-green-700 mt-1">
+                                            <p className="mt-1 text-sm text-green-700">
                                                 This operation was successfully completed on {formatDateTime(booking.completed_at || '')}.
                                             </p>
                                         </div>
@@ -301,14 +308,14 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                             )}
 
                             {/* Patient & Operation Info */}
-                            <div className="bg-white rounded-lg shadow p-6">
-                                <h2 className="text-xl font-semibold mb-4">Booking Information</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="rounded-lg bg-white p-6 shadow">
+                                <h2 className="mb-4 text-xl font-semibold">Booking Information</h2>
+                                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                     <div>
-                                        <h3 className="text-sm font-medium text-gray-500 mb-2">Patient Details</h3>
+                                        <h3 className="mb-2 text-sm font-medium text-gray-500">Patient Details</h3>
                                         <div className="space-y-2">
                                             <div className="flex items-center gap-2">
-                                                <User className="w-4 h-4 text-gray-400" />
+                                                <User className="h-4 w-4 text-gray-400" />
                                                 <div>
                                                     <div className="font-medium">{booking.patient.name}</div>
                                                     <div className="text-sm text-gray-500">{booking.patient.patient_id}</div>
@@ -316,13 +323,15 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                             </div>
                                             <div className="text-sm text-gray-600">{booking.patient.phone}</div>
                                             {booking.patient.age && (
-                                                <div className="text-sm text-gray-600">{booking.patient.age}y • {booking.patient.gender}</div>
+                                                <div className="text-sm text-gray-600">
+                                                    {booking.patient.age}y • {booking.patient.gender}
+                                                </div>
                                             )}
                                         </div>
                                     </div>
 
                                     <div>
-                                        <h3 className="text-sm font-medium text-gray-500 mb-2">Operation Details</h3>
+                                        <h3 className="mb-2 text-sm font-medium text-gray-500">Operation Details</h3>
                                         <div className="space-y-2">
                                             <div className="font-medium">{booking.operation_name}</div>
                                             <div className="text-sm text-gray-600">{booking.operation.operation_type}</div>
@@ -331,15 +340,15 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                     </div>
 
                                     <div>
-                                        <h3 className="text-sm font-medium text-gray-500 mb-2">Doctor</h3>
+                                        <h3 className="mb-2 text-sm font-medium text-gray-500">Doctor</h3>
                                         <div className="font-medium">{booking.doctor?.user?.name || 'N/A'}</div>
                                         <div className="text-sm text-gray-600">{booking.doctor?.specialization || ''}</div>
                                     </div>
 
                                     <div>
-                                        <h3 className="text-sm font-medium text-gray-500 mb-2">Schedule</h3>
+                                        <h3 className="mb-2 text-sm font-medium text-gray-500">Schedule</h3>
                                         <div className="flex items-center gap-2">
-                                            <Calendar className="w-4 h-4 text-gray-400" />
+                                            <Calendar className="h-4 w-4 text-gray-400" />
                                             <div>
                                                 <div className="font-medium">{formatDate(booking.scheduled_date)}</div>
                                                 <div className="text-sm text-gray-600">{formatTime(booking.scheduled_time)}</div>
@@ -350,8 +359,8 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
 
                                 {/* Eye Surgery Details */}
                                 {(booking.surgery_type || booking.eye_side || booking.lens_type || booking.power || booking.surgery_remarks) && (
-                                    <div className="mt-4 pt-4 border-t">
-                                        <h3 className="text-sm font-medium text-gray-500 mb-3">Eye Surgery Details</h3>
+                                    <div className="mt-4 border-t pt-4">
+                                        <h3 className="mb-3 text-sm font-medium text-gray-500">Eye Surgery Details</h3>
                                         <div className="grid grid-cols-2 gap-4">
                                             {booking.surgery_type && (
                                                 <div>
@@ -390,30 +399,30 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                 )}
 
                                 {booking.notes && (
-                                    <div className="mt-4 pt-4 border-t">
-                                        <h3 className="text-sm font-medium text-gray-500 mb-2">Notes</h3>
+                                    <div className="mt-4 border-t pt-4">
+                                        <h3 className="mb-2 text-sm font-medium text-gray-500">Notes</h3>
                                         <p className="text-sm text-gray-700">{booking.notes}</p>
                                     </div>
                                 )}
 
                                 {booking.cancellation_reason && (
-                                    <div className="mt-4 pt-4 border-t">
-                                        <h3 className="text-sm font-medium text-red-600 mb-2">Cancellation Reason</h3>
+                                    <div className="mt-4 border-t pt-4">
+                                        <h3 className="mb-2 text-sm font-medium text-red-600">Cancellation Reason</h3>
                                         <p className="text-sm text-gray-700">{booking.cancellation_reason}</p>
                                     </div>
                                 )}
                             </div>
 
                             {/* Payment History */}
-                            <div className="bg-white rounded-lg shadow p-6">
-                                <h2 className="text-xl font-semibold mb-4">Payment History</h2>
+                            <div className="rounded-lg bg-white p-6 shadow">
+                                <h2 className="mb-4 text-xl font-semibold">Payment History</h2>
                                 {payments.length === 0 ? (
-                                    <p className="text-center py-8 text-gray-500">No payments recorded</p>
+                                    <p className="py-8 text-center text-gray-500">No payments recorded</p>
                                 ) : (
                                     <div className="space-y-3">
                                         {payments.map((payment) => (
-                                            <div key={payment.id} className="border rounded-lg p-4">
-                                                <div className="flex justify-between items-start">
+                                            <div key={payment.id} className="rounded-lg border p-4">
+                                                <div className="flex items-start justify-between">
                                                     <div>
                                                         <div className="font-medium">{formatCurrency(payment.amount)}</div>
                                                         <div className="text-sm text-gray-500">
@@ -422,9 +431,7 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                                         {payment.payment_reference && (
                                                             <div className="text-xs text-gray-500">Ref: {payment.payment_reference}</div>
                                                         )}
-                                                        {payment.notes && (
-                                                            <div className="text-sm text-gray-600 mt-1">{payment.notes}</div>
-                                                        )}
+                                                        {payment.notes && <div className="mt-1 text-sm text-gray-600">{payment.notes}</div>}
                                                     </div>
                                                     <div className="text-right">
                                                         <div className="text-sm text-gray-600">{formatDate(payment.payment_date)}</div>
@@ -441,23 +448,23 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                         {/* Sidebar */}
                         <div className="space-y-6">
                             {/* Status Card */}
-                            <div className="bg-white rounded-lg shadow p-6">
-                                <h3 className="font-semibold mb-4">Status</h3>
+                            <div className="rounded-lg bg-white p-6 shadow">
+                                <h3 className="mb-4 font-semibold">Status</h3>
                                 <div className="space-y-3">
                                     <div>
-                                        <div className="text-sm text-gray-500 mb-1">Booking Status</div>
+                                        <div className="mb-1 text-sm text-gray-500">Booking Status</div>
                                         {getStatusBadge(booking.status)}
                                     </div>
                                     <div>
-                                        <div className="text-sm text-gray-500 mb-1">Payment Status</div>
+                                        <div className="mb-1 text-sm text-gray-500">Payment Status</div>
                                         {getPaymentStatusBadge(booking.payment_status)}
                                     </div>
                                 </div>
                             </div>
 
                             {/* Payment Summary */}
-                            <div className="bg-white rounded-lg shadow p-6">
-                                <h3 className="font-semibold mb-4">Payment Summary</h3>
+                            <div className="rounded-lg bg-white p-6 shadow">
+                                <h3 className="mb-4 font-semibold">Payment Summary</h3>
                                 <div className="space-y-3">
                                     {booking.base_amount && booking.discount_amount ? (
                                         <>
@@ -470,18 +477,17 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                                     Discount
                                                     {booking.discount_type === 'percentage' && booking.discount_value
                                                         ? ` (${booking.discount_value}%)`
-                                                        : ''
-                                                    }
+                                                        : ''}
                                                 </span>
                                                 <span className="font-semibold text-orange-600">-{formatCurrency(booking.discount_amount)}</span>
                                             </div>
-                                            <div className="flex justify-between pb-3 border-b">
+                                            <div className="flex justify-between border-b pb-3">
                                                 <span className="font-medium">Total Amount</span>
                                                 <span className="font-semibold text-blue-600">{formatCurrency(booking.total_amount)}</span>
                                             </div>
                                         </>
                                     ) : (
-                                        <div className="flex justify-between pb-3 border-b">
+                                        <div className="flex justify-between border-b pb-3">
                                             <span className="text-gray-600">Total Amount</span>
                                             <span className="font-semibold">{formatCurrency(booking.total_amount)}</span>
                                         </div>
@@ -490,7 +496,7 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                         <span className="text-gray-600">Paid Amount</span>
                                         <span className="font-semibold text-green-600">{formatCurrency(booking.advance_payment)}</span>
                                     </div>
-                                    <div className="flex justify-between pt-3 border-t">
+                                    <div className="flex justify-between border-t pt-3">
                                         <span className="font-medium">Due Amount</span>
                                         <span className="font-bold text-red-600">{formatCurrency(booking.due_amount)}</span>
                                     </div>
@@ -498,27 +504,27 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                             </div>
 
                             {/* Actions */}
-                            <div className="bg-white rounded-lg shadow p-6">
-                                <h3 className="font-semibold mb-4">Actions</h3>
+                            <div className="rounded-lg bg-white p-6 shadow">
+                                <h3 className="mb-4 font-semibold">Actions</h3>
 
                                 {/* Show message if booking is cancelled or completed */}
-                                {(booking.status === 'cancelled' || booking.status === 'completed') ? (
-                                    <div className={`text-center py-8 px-4 rounded-lg ${
-                                        booking.status === 'cancelled'
-                                            ? 'bg-red-50 border border-red-200'
-                                            : 'bg-green-50 border border-green-200'
-                                    }`}>
+                                {booking.status === 'cancelled' || booking.status === 'completed' ? (
+                                    <div
+                                        className={`rounded-lg px-4 py-8 text-center ${
+                                            booking.status === 'cancelled' ? 'border border-red-200 bg-red-50' : 'border border-green-200 bg-green-50'
+                                        }`}
+                                    >
                                         {booking.status === 'cancelled' ? (
                                             <>
-                                                <X className="w-12 h-12 text-red-400 mx-auto mb-3" />
-                                                <p className="text-red-700 font-medium">Booking Cancelled</p>
-                                                <p className="text-sm text-red-600 mt-1">No actions available</p>
+                                                <X className="mx-auto mb-3 h-12 w-12 text-red-400" />
+                                                <p className="font-medium text-red-700">Booking Cancelled</p>
+                                                <p className="mt-1 text-sm text-red-600">No actions available</p>
                                             </>
                                         ) : (
                                             <>
-                                                <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
-                                                <p className="text-green-700 font-medium">Operation Completed</p>
-                                                <p className="text-sm text-green-600 mt-1">No further actions needed</p>
+                                                <CheckCircle className="mx-auto mb-3 h-12 w-12 text-green-400" />
+                                                <p className="font-medium text-green-700">Operation Completed</p>
+                                                <p className="mt-1 text-sm text-green-600">No further actions needed</p>
                                             </>
                                         )}
                                     </div>
@@ -527,7 +533,7 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                         {can.confirm && booking.status === 'scheduled' && (
                                             <button
                                                 onClick={handleConfirm}
-                                                className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                                                className="w-full rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
                                             >
                                                 Confirm Booking
                                             </button>
@@ -535,7 +541,7 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                         {can.complete && ['scheduled', 'confirmed'].includes(booking.status) && (
                                             <button
                                                 onClick={handleComplete}
-                                                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                                className="w-full rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
                                             >
                                                 Mark as Completed
                                             </button>
@@ -543,7 +549,7 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                         {can.reschedule && booking.status !== 'completed' && booking.status !== 'cancelled' && (
                                             <button
                                                 onClick={() => setShowRescheduleModal(true)}
-                                                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                                className="w-full rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
                                             >
                                                 Reschedule
                                             </button>
@@ -551,7 +557,7 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                         {can.cancel && booking.status !== 'completed' && booking.status !== 'cancelled' && (
                                             <button
                                                 onClick={() => setShowCancelModal(true)}
-                                                className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                                className="w-full rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
                                             >
                                                 Cancel Booking
                                             </button>
@@ -561,8 +567,8 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                             </div>
 
                             {/* Metadata */}
-                            <div className="bg-white rounded-lg shadow p-6">
-                                <h3 className="font-semibold mb-4">Booking Details</h3>
+                            <div className="rounded-lg bg-white p-6 shadow">
+                                <h3 className="mb-4 font-semibold">Booking Details</h3>
                                 <div className="space-y-2 text-sm">
                                     <div>
                                         <span className="text-gray-500">Booked By:</span>
@@ -591,12 +597,12 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
 
                     {/* Payment Modal */}
                     {showPaymentModal && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                                <h2 className="text-xl font-semibold mb-4">Add Payment</h2>
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                            <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6">
+                                <h2 className="mb-4 text-xl font-semibold">Add Payment</h2>
                                 <form onSubmit={handleAddPayment} className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium mb-2">Amount</label>
+                                        <label className="mb-2 block text-sm font-medium">Amount</label>
                                         <input
                                             type="number"
                                             value={paymentAmount}
@@ -605,16 +611,16 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                             min="0.01"
                                             step="0.01"
                                             required
-                                            className="w-full px-4 py-2 border rounded-lg"
+                                            className="w-full rounded-lg border px-4 py-2"
                                         />
-                                        <p className="text-sm text-gray-500 mt-1">Due: {formatCurrency(booking.due_amount)}</p>
+                                        <p className="mt-1 text-sm text-gray-500">Due: {formatCurrency(booking.due_amount)}</p>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium mb-2">Payment Method</label>
+                                        <label className="mb-2 block text-sm font-medium">Payment Method</label>
                                         <select
                                             value={paymentMethod}
                                             onChange={(e) => setPaymentMethod(e.target.value)}
-                                            className="w-full px-4 py-2 border rounded-lg"
+                                            className="w-full rounded-lg border px-4 py-2"
                                         >
                                             <option value="cash">Cash</option>
                                             <option value="card">Card</option>
@@ -623,35 +629,35 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium mb-2">Reference (Optional)</label>
+                                        <label className="mb-2 block text-sm font-medium">Reference (Optional)</label>
                                         <input
                                             type="text"
                                             value={paymentReference}
                                             onChange={(e) => setPaymentReference(e.target.value)}
-                                            className="w-full px-4 py-2 border rounded-lg"
+                                            className="w-full rounded-lg border px-4 py-2"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium mb-2">Notes (Optional)</label>
+                                        <label className="mb-2 block text-sm font-medium">Notes (Optional)</label>
                                         <textarea
                                             value={paymentNotes}
                                             onChange={(e) => setPaymentNotes(e.target.value)}
                                             rows={2}
-                                            className="w-full px-4 py-2 border rounded-lg"
+                                            className="w-full rounded-lg border px-4 py-2"
                                         />
                                     </div>
                                     <div className="flex gap-3">
                                         <button
                                             type="button"
                                             onClick={() => setShowPaymentModal(false)}
-                                            className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                                            className="flex-1 rounded-lg border px-4 py-2 hover:bg-gray-50"
                                         >
                                             Cancel
                                         </button>
                                         <button
                                             type="submit"
                                             disabled={loading}
-                                            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                            className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
                                         >
                                             {loading ? 'Processing...' : 'Add Payment'}
                                         </button>
@@ -663,32 +669,32 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
 
                     {/* Cancel Modal */}
                     {showCancelModal && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                                <h2 className="text-xl font-semibold mb-4">Cancel Booking</h2>
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                            <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6">
+                                <h2 className="mb-4 text-xl font-semibold">Cancel Booking</h2>
                                 <form onSubmit={handleCancel} className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium mb-2">Cancellation Reason *</label>
+                                        <label className="mb-2 block text-sm font-medium">Cancellation Reason *</label>
                                         <textarea
                                             value={cancellationReason}
                                             onChange={(e) => setCancellationReason(e.target.value)}
                                             rows={3}
                                             required
-                                            className="w-full px-4 py-2 border rounded-lg"
+                                            className="w-full rounded-lg border px-4 py-2"
                                         />
                                     </div>
                                     <div className="flex gap-3">
                                         <button
                                             type="button"
                                             onClick={() => setShowCancelModal(false)}
-                                            className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                                            className="flex-1 rounded-lg border px-4 py-2 hover:bg-gray-50"
                                         >
                                             Close
                                         </button>
                                         <button
                                             type="submit"
                                             disabled={loading}
-                                            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                            className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
                                         >
                                             {loading ? 'Cancelling...' : 'Confirm Cancel'}
                                         </button>
@@ -700,43 +706,43 @@ export default function OperationBookingShow({ booking, payments, can }: Props) 
 
                     {/* Reschedule Modal */}
                     {showRescheduleModal && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-                                <h2 className="text-xl font-semibold mb-4">Reschedule Operation</h2>
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                            <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6">
+                                <h2 className="mb-4 text-xl font-semibold">Reschedule Operation</h2>
                                 <form onSubmit={handleReschedule} className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium mb-2">New Date *</label>
+                                        <label className="mb-2 block text-sm font-medium">New Date *</label>
                                         <input
                                             type="date"
                                             value={newDate}
                                             onChange={(e) => setNewDate(e.target.value)}
                                             min={new Date().toISOString().split('T')[0]}
                                             required
-                                            className="w-full px-4 py-2 border rounded-lg"
+                                            className="w-full rounded-lg border px-4 py-2"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium mb-2">New Time *</label>
+                                        <label className="mb-2 block text-sm font-medium">New Time *</label>
                                         <input
                                             type="time"
                                             value={newTime}
                                             onChange={(e) => setNewTime(e.target.value)}
                                             required
-                                            className="w-full px-4 py-2 border rounded-lg"
+                                            className="w-full rounded-lg border px-4 py-2"
                                         />
                                     </div>
                                     <div className="flex gap-3">
                                         <button
                                             type="button"
                                             onClick={() => setShowRescheduleModal(false)}
-                                            className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                                            className="flex-1 rounded-lg border px-4 py-2 hover:bg-gray-50"
                                         >
                                             Close
                                         </button>
                                         <button
                                             type="submit"
                                             disabled={loading}
-                                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                            className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
                                         >
                                             {loading ? 'Rescheduling...' : 'Confirm Reschedule'}
                                         </button>

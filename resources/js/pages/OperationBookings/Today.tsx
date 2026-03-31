@@ -1,6 +1,6 @@
-import { router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { Calendar, User, CheckCircle, Clock, AlertCircle, Eye, CreditCard, Check, X } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { Calendar, Check, CheckCircle, Clock, CreditCard, Eye } from 'lucide-react';
 
 interface Patient {
     id: number;
@@ -77,13 +77,13 @@ export default function TodayOperations({ bookings, statistics, can }: Props) {
 
     const getStatusBadge = (status: string) => {
         const badges: Record<string, { bg: string; icon: React.ReactElement }> = {
-            scheduled: { bg: 'bg-blue-100 text-blue-800', icon: <Calendar className="w-3 h-3" /> },
-            confirmed: { bg: 'bg-purple-100 text-purple-800', icon: <CheckCircle className="w-3 h-3" /> },
-            completed: { bg: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-3 h-3" /> }
+            scheduled: { bg: 'bg-blue-100 text-blue-800', icon: <Calendar className="h-3 w-3" /> },
+            confirmed: { bg: 'bg-purple-100 text-purple-800', icon: <CheckCircle className="h-3 w-3" /> },
+            completed: { bg: 'bg-green-100 text-green-800', icon: <CheckCircle className="h-3 w-3" /> },
         };
         const badge = badges[status] || badges.scheduled;
         return (
-            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.bg}`}>
+            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.bg}`}>
                 {badge.icon} {status.charAt(0).toUpperCase() + status.slice(1)}
             </span>
         );
@@ -92,60 +92,62 @@ export default function TodayOperations({ bookings, statistics, can }: Props) {
     return (
         <AdminLayout>
             <div className="p-6">
-                <div className="max-w-7xl mx-auto">
+                <div className="mx-auto max-w-7xl">
                     <div className="mb-6">
                         <h1 className="text-3xl font-bold text-gray-900">Today's Operations</h1>
-                        <p className="text-gray-600 mt-1">{new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        <p className="mt-1 text-gray-600">
+                            {new Date().toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        </p>
                     </div>
 
                     {/* Statistics */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow p-6 text-white">
+                    <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+                        <div className="rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-blue-100 text-sm">Total Operations</p>
-                                    <p className="text-3xl font-bold mt-1">{statistics.total}</p>
+                                    <p className="text-sm text-blue-100">Total Operations</p>
+                                    <p className="mt-1 text-3xl font-bold">{statistics.total}</p>
                                 </div>
-                                <Calendar className="w-12 h-12 text-blue-200" />
+                                <Calendar className="h-12 w-12 text-blue-200" />
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow p-6 text-white">
+                        <div className="rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 p-6 text-white shadow">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-purple-100 text-sm">Confirmed</p>
-                                    <p className="text-3xl font-bold mt-1">{statistics.confirmed}</p>
+                                    <p className="text-sm text-purple-100">Confirmed</p>
+                                    <p className="mt-1 text-3xl font-bold">{statistics.confirmed}</p>
                                 </div>
-                                <CheckCircle className="w-12 h-12 text-purple-200" />
+                                <CheckCircle className="h-12 w-12 text-purple-200" />
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow p-6 text-white">
+                        <div className="rounded-lg bg-gradient-to-br from-green-500 to-green-600 p-6 text-white shadow">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-green-100 text-sm">Completed</p>
-                                    <p className="text-3xl font-bold mt-1">{statistics.completed}</p>
+                                    <p className="text-sm text-green-100">Completed</p>
+                                    <p className="mt-1 text-3xl font-bold">{statistics.completed}</p>
                                 </div>
-                                <CheckCircle className="w-12 h-12 text-green-200" />
+                                <CheckCircle className="h-12 w-12 text-green-200" />
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg shadow p-6 text-white">
+                        <div className="rounded-lg bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 text-white shadow">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-yellow-100 text-sm">Pending</p>
-                                    <p className="text-3xl font-bold mt-1">{statistics.pending_confirmation}</p>
+                                    <p className="text-sm text-yellow-100">Pending</p>
+                                    <p className="mt-1 text-3xl font-bold">{statistics.pending_confirmation}</p>
                                 </div>
-                                <Clock className="w-12 h-12 text-yellow-200" />
+                                <Clock className="h-12 w-12 text-yellow-200" />
                             </div>
                         </div>
                     </div>
 
                     {/* Operations List */}
-                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <div className="overflow-hidden rounded-lg bg-white shadow">
                         <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-gray-50 border-b">
+                                <thead className="border-b bg-gray-50">
                                     <tr>
                                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Time</th>
                                         <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Patient</th>
@@ -160,7 +162,7 @@ export default function TodayOperations({ bookings, statistics, can }: Props) {
                                     {bookings.length === 0 ? (
                                         <tr>
                                             <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                                                <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                                                <Calendar className="mx-auto mb-3 h-12 w-12 text-gray-400" />
                                                 <p className="text-lg font-medium">No operations scheduled today</p>
                                             </td>
                                         </tr>
@@ -169,8 +171,8 @@ export default function TodayOperations({ bookings, statistics, can }: Props) {
                                             <tr key={booking.id} className="hover:bg-gray-50">
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-2">
-                                                        <Clock className="w-4 h-4 text-gray-400" />
-                                                        <span className="font-medium text-lg">{formatTime(booking.scheduled_time)}</span>
+                                                        <Clock className="h-4 w-4 text-gray-400" />
+                                                        <span className="text-lg font-medium">{formatTime(booking.scheduled_time)}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -184,9 +186,7 @@ export default function TodayOperations({ bookings, statistics, can }: Props) {
                                                 <td className="px-6 py-4">
                                                     <div className="font-medium">{booking.doctor.user.name}</div>
                                                 </td>
-                                                <td className="px-6 py-4 text-center">
-                                                    {getStatusBadge(booking.status)}
-                                                </td>
+                                                <td className="px-6 py-4 text-center">{getStatusBadge(booking.status)}</td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="font-semibold">{formatCurrency(booking.total_amount)}</div>
                                                     {booking.due_amount > 0 && (
@@ -197,36 +197,36 @@ export default function TodayOperations({ bookings, statistics, can }: Props) {
                                                     <div className="flex items-center justify-center gap-2">
                                                         <button
                                                             onClick={() => router.visit(`/operation-bookings/${booking.id}`)}
-                                                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                                                            className="rounded-lg p-2 text-blue-600 hover:bg-blue-50"
                                                             title="View Details"
                                                         >
-                                                            <Eye className="w-4 h-4" />
+                                                            <Eye className="h-4 w-4" />
                                                         </button>
                                                         {can.confirm && booking.status === 'scheduled' && (
                                                             <button
                                                                 onClick={() => router.patch(`/operation-bookings/${booking.id}/confirm`)}
-                                                                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
+                                                                className="rounded-lg p-2 text-purple-600 hover:bg-purple-50"
                                                                 title="Confirm"
                                                             >
-                                                                <Check className="w-4 h-4" />
+                                                                <Check className="h-4 w-4" />
                                                             </button>
                                                         )}
                                                         {can.complete && ['scheduled', 'confirmed'].includes(booking.status) && (
                                                             <button
                                                                 onClick={() => router.patch(`/operation-bookings/${booking.id}/complete`, {})}
-                                                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                                                                className="rounded-lg p-2 text-green-600 hover:bg-green-50"
                                                                 title="Mark Complete"
                                                             >
-                                                                <CheckCircle className="w-4 h-4" />
+                                                                <CheckCircle className="h-4 w-4" />
                                                             </button>
                                                         )}
                                                         {can.payment && booking.payment_status !== 'paid' && (
                                                             <button
                                                                 onClick={() => router.visit(`/operation-bookings/${booking.id}`)}
-                                                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                                                                className="rounded-lg p-2 text-green-600 hover:bg-green-50"
                                                                 title="Add Payment"
                                                             >
-                                                                <CreditCard className="w-4 h-4" />
+                                                                <CreditCard className="h-4 w-4" />
                                                             </button>
                                                         )}
                                                     </div>

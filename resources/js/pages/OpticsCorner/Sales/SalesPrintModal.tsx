@@ -1,92 +1,89 @@
-import React, { useState, useRef } from 'react';
-import { X, Printer, Calendar, AlertTriangle, FileSpreadsheet } from 'lucide-react';
+import { AlertTriangle, Calendar, FileSpreadsheet, Printer, X } from 'lucide-react';
+import { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 
 interface Sale {
-  id: number;
-  transaction_no: string;
-  amount: number;
-  category: string;
-  description: string;
-  transaction_date: string;
-  created_by: {
-    name: string;
-  };
+    id: number;
+    transaction_no: string;
+    amount: number;
+    category: string;
+    description: string;
+    transaction_date: string;
+    created_by: {
+        name: string;
+    };
 }
 
 interface SalesPrintModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  sales: Sale[];
+    isOpen: boolean;
+    onClose: () => void;
+    sales: Sale[];
 }
 
 const Input = ({ label, error, className = '', ...props }: any) => (
-  <div className={className}>
-    {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
-    <input
-      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-        error ? 'border-red-300' : 'border-gray-300'
-      }`}
-      {...props}
-    />
-    {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
-  </div>
+    <div className={className}>
+        {label && <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>}
+        <input
+            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
+                error ? 'border-red-300' : 'border-gray-300'
+            }`}
+            {...props}
+        />
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+    </div>
 );
 
 const Button = ({ children, className = '', variant = 'primary', disabled = false, ...props }: any) => {
-  const baseClasses = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed';
-  const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 disabled:hover:bg-blue-600',
-    print: 'bg-purple-600 text-white hover:bg-purple-700 disabled:hover:bg-purple-600',
-    success: 'bg-green-600 text-white hover:bg-green-700 disabled:hover:bg-green-600'
-  };
+    const baseClasses =
+        'px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed';
+    const variants = {
+        primary: 'bg-blue-600 text-white hover:bg-blue-700 disabled:hover:bg-blue-600',
+        print: 'bg-purple-600 text-white hover:bg-purple-700 disabled:hover:bg-purple-600',
+        success: 'bg-green-600 text-white hover:bg-green-700 disabled:hover:bg-green-600',
+    };
 
-  return (
-    <button
-      className={`${baseClasses} ${variants[variant as keyof typeof variants]} ${className}`}
-      disabled={disabled}
-      {...props}
-    >
-      {children}
-    </button>
-  );
+    return (
+        <button className={`${baseClasses} ${variants[variant as keyof typeof variants]} ${className}`} disabled={disabled} {...props}>
+            {children}
+        </button>
+    );
 };
 
 export default function SalesPrintModal({ isOpen, onClose, sales }: SalesPrintModalProps) {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [exportingExcel, setExportingExcel] = useState(false);
-  const printRef = useRef<HTMLDivElement>(null);
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [exportingExcel, setExportingExcel] = useState(false);
+    const printRef = useRef<HTMLDivElement>(null);
 
-  if (!isOpen) return null;
+    if (!isOpen) return null;
 
-  const safeSales = Array.isArray(sales) ? sales : [];
+    const safeSales = Array.isArray(sales) ? sales : [];
 
-  const extractCustomerName = (description: string) => {
-    const parts = description.split(' - ');
-    if (parts.length > 1) {
-      const customerPart = parts[1].split(' | ')[0];
-      return customerPart || 'N/A';
-    }
-    return 'N/A';
-  };
+    const extractCustomerName = (description: string) => {
+        const parts = description.split(' - ');
+        if (parts.length > 1) {
+            const customerPart = parts[1].split(' | ')[0];
+            return customerPart || 'N/A';
+        }
+        return 'N/A';
+    };
 
-  const formatCurrency = (amount: number) => {
-    // Handle NaN, undefined, null cases
-    const numAmount = Number(amount) || 0;
-    return `৳${numAmount.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    })}`;
-  };
+    const formatCurrency = (amount: number) => {
+        // Handle NaN, undefined, null cases
+        const numAmount = Number(amount) || 0;
+        return `৳${numAmount.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })}`;
+    };
 
-  const handlePrint = () => {
-    const printContent = printRef.current;
-    if (!printContent) return;
+    const handlePrint = () => {
+        const printContent = printRef.current;
+        if (!printContent) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
 
-    printWindow.document.write(`
+        printWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -229,217 +226,213 @@ export default function SalesPrintModal({ isOpen, onClose, sales }: SalesPrintMo
       </html>
     `);
 
-    printWindow.document.close();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
-  };
+        printWindow.document.close();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 250);
+    };
 
-  const handleExportExcel = () => {
-    if (safeSales.length === 0) {
-      alert('No sales to export!');
-      return;
-    }
+    const handleExportExcel = () => {
+        if (safeSales.length === 0) {
+            alert('No sales to export!');
+            return;
+        }
 
-    setExportingExcel(true);
+        setExportingExcel(true);
 
-    try {
-      const excelData = safeSales.map((sale: Sale, index: number) => ({
-        'SL': index + 1,
-        'Transaction No': sale.transaction_no,
-        'Customer': extractCustomerName(sale.description),
-        'Category': sale.category,
-        'Amount': sale.amount,
-        'Date': new Date(sale.transaction_date).toLocaleDateString(),
-        'Created By': sale.created_by.name
-      }));
+        try {
+            const excelData = safeSales.map((sale: Sale, index: number) => ({
+                SL: index + 1,
+                'Transaction No': sale.transaction_no,
+                Customer: extractCustomerName(sale.description),
+                Category: sale.category,
+                Amount: sale.amount,
+                Date: new Date(sale.transaction_date).toLocaleDateString(),
+                'Created By': sale.created_by.name,
+            }));
 
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(excelData);
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(excelData);
 
-      const colWidths = [
-        { wch: 5 },  // SL
-        { wch: 20 }, // Transaction No
-        { wch: 25 }, // Customer
-        { wch: 15 }, // Category
-        { wch: 15 }, // Amount
-        { wch: 15 }, // Date
-        { wch: 20 }  // Created By
-      ];
-      ws['!cols'] = colWidths;
+            const colWidths = [
+                { wch: 5 }, // SL
+                { wch: 20 }, // Transaction No
+                { wch: 25 }, // Customer
+                { wch: 15 }, // Category
+                { wch: 15 }, // Amount
+                { wch: 15 }, // Date
+                { wch: 20 }, // Created By
+            ];
+            ws['!cols'] = colWidths;
 
-      XLSX.utils.book_append_sheet(wb, ws, 'Optics Sales');
+            XLSX.utils.book_append_sheet(wb, ws, 'Optics Sales');
 
-      const filename = `optics-sales-${selectedDate}.xlsx`;
-      XLSX.writeFile(wb, filename);
+            const filename = `optics-sales-${selectedDate}.xlsx`;
+            XLSX.writeFile(wb, filename);
 
-      setExportingExcel(false);
-    } catch (error) {
-      console.error('Excel export error:', error);
-      alert('Failed to export Excel. Please try again.');
-      setExportingExcel(false);
-    }
-  };
+            setExportingExcel(false);
+        } catch (error) {
+            console.error('Excel export error:', error);
+            alert('Failed to export Excel. Please try again.');
+            setExportingExcel(false);
+        }
+    };
 
-  const totalSales = safeSales.length;
+    const totalSales = safeSales.length;
 
-  // Calculate total revenue - ensure it's a valid number
-  const totalRevenue = safeSales.reduce((sum: number, sale: Sale) => {
-    const amount = Number(sale.amount) || 0;
-    return sum + amount;
-  }, 0);
+    // Calculate total revenue - ensure it's a valid number
+    const totalRevenue = safeSales.reduce((sum: number, sale: Sale) => {
+        const amount = Number(sale.amount) || 0;
+        return sum + amount;
+    }, 0);
 
-  // Calculate average sale
-  const averageSale = totalSales > 0 ? totalRevenue / totalSales : 0;
+    // Calculate average sale
+    const averageSale = totalSales > 0 ? totalRevenue / totalSales : 0;
 
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Modal Header */}
-        <div className="p-6 border-b bg-gradient-to-r from-blue-600 to-blue-700">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-white/20 p-2 rounded-lg">
-                <Printer className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">Print Sales Report</h3>
-                <p className="text-blue-100 text-sm">Professional A4 format report ({totalSales} sales)</p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-white/80 hover:text-white transition-colors"
-            >
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-
-        {/* Date Selection */}
-        <div className="p-6 border-b bg-gray-50">
-          <div className="flex items-center space-x-4">
-            <Calendar className="w-5 h-5 text-gray-600" />
-            <Input
-              type="date"
-              label="Report Date"
-              value={selectedDate}
-              onChange={(e: any) => setSelectedDate(e.target.value)}
-              className="max-w-xs"
-            />
-            <Button
-              variant="success"
-              onClick={handleExportExcel}
-              disabled={totalSales === 0 || exportingExcel}
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>{exportingExcel ? 'Exporting...' : 'Export Excel'}</span>
-            </Button>
-            <Button variant="print" onClick={handlePrint} disabled={totalSales === 0}>
-              <Printer className="w-4 h-4" />
-              <span>Print Report</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Print Preview */}
-        <div className="flex-1 overflow-auto p-6 bg-gray-100">
-          {totalSales === 0 ? (
-            <div className="text-center py-12">
-              <AlertTriangle className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No sales to print</h3>
-              <p className="text-gray-600">Please wait while sales are being loaded...</p>
-            </div>
-          ) : (
-            <div ref={printRef} className="print-container">
-              {/* Header */}
-              <div className="header">
-                <h1>OPTICS SALES REPORT</h1>
-                <p className="date">{new Date(selectedDate).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}</p>
-              </div>
-
-              {/* Summary Cards */}
-              <div className="summary">
-                <div className="summary-card total">
-                  <div className="label">Total Sales</div>
-                  <div className="value">{totalSales}</div>
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="flex max-h-[90vh] w-full max-w-7xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+                {/* Modal Header */}
+                <div className="border-b bg-gradient-to-r from-blue-600 to-blue-700 p-6">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                            <div className="rounded-lg bg-white/20 p-2">
+                                <Printer className="h-6 w-6 text-white" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Print Sales Report</h3>
+                                <p className="text-sm text-blue-100">Professional A4 format report ({totalSales} sales)</p>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="text-white/80 transition-colors hover:text-white">
+                            <X className="h-6 w-6" />
+                        </button>
+                    </div>
                 </div>
-                <div className="summary-card revenue">
-                  <div className="label">Total Revenue</div>
-                  <div className="value">{formatCurrency(totalRevenue)}</div>
-                </div>
-                <div className="summary-card average">
-                  <div className="label">Average Sale</div>
-                  <div className="value">{formatCurrency(averageSale)}</div>
-                </div>
-              </div>
 
-              {/* Table */}
-              <table>
-                <thead>
-                  <tr>
-                    <th className="serial">#</th>
-                    <th>Transaction No</th>
-                    <th>Customer</th>
-                    <th>Category</th>
-                    <th>Amount</th>
-                    <th>Date</th>
-                    <th>Created By</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {safeSales.map((sale: Sale, index: number) => (
-                    <tr key={sale.id}>
-                      <td className="serial">{index + 1}</td>
-                      <td className="transaction">{sale.transaction_no}</td>
-                      <td>{extractCustomerName(sale.description)}</td>
-                      <td>{sale.category}</td>
-                      <td className="amount">{formatCurrency(sale.amount)}</td>
-                      <td>{new Date(sale.transaction_date).toLocaleDateString()}</td>
-                      <td>{sale.created_by.name}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={4} style={{ textAlign: 'right', paddingRight: '10px' }}>
-                      <strong>Total:</strong>
-                    </td>
-                    <td className="amount" style={{ fontSize: '12px' }}>
-                      {formatCurrency(totalRevenue)}
-                    </td>
-                    <td colSpan={2}></td>
-                  </tr>
-                </tfoot>
-              </table>
+                {/* Date Selection */}
+                <div className="border-b bg-gray-50 p-6">
+                    <div className="flex items-center space-x-4">
+                        <Calendar className="h-5 w-5 text-gray-600" />
+                        <Input
+                            type="date"
+                            label="Report Date"
+                            value={selectedDate}
+                            onChange={(e: any) => setSelectedDate(e.target.value)}
+                            className="max-w-xs"
+                        />
+                        <Button variant="success" onClick={handleExportExcel} disabled={totalSales === 0 || exportingExcel}>
+                            <FileSpreadsheet className="h-4 w-4" />
+                            <span>{exportingExcel ? 'Exporting...' : 'Export Excel'}</span>
+                        </Button>
+                        <Button variant="print" onClick={handlePrint} disabled={totalSales === 0}>
+                            <Printer className="h-4 w-4" />
+                            <span>Print Report</span>
+                        </Button>
+                    </div>
+                </div>
 
-              {/* Footer */}
-              <div className="footer">
-                <p>
-                  <span className="footer-value">Total Revenue: {formatCurrency(totalRevenue)}</span>
-                  {' • '}
-                  Total Sales: {totalSales}
-                  {' • '}
-                  Average Sale: {formatCurrency(averageSale)}
-                  {' • '}
-                  Generated: {new Date().toLocaleString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </p>
-              </div>
+                {/* Print Preview */}
+                <div className="flex-1 overflow-auto bg-gray-100 p-6">
+                    {totalSales === 0 ? (
+                        <div className="py-12 text-center">
+                            <AlertTriangle className="mx-auto mb-4 h-16 w-16 text-gray-400" />
+                            <h3 className="mb-2 text-lg font-medium text-gray-900">No sales to print</h3>
+                            <p className="text-gray-600">Please wait while sales are being loaded...</p>
+                        </div>
+                    ) : (
+                        <div ref={printRef} className="print-container">
+                            {/* Header */}
+                            <div className="header">
+                                <h1>OPTICS SALES REPORT</h1>
+                                <p className="date">
+                                    {new Date(selectedDate).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                    })}
+                                </p>
+                            </div>
+
+                            {/* Summary Cards */}
+                            <div className="summary">
+                                <div className="summary-card total">
+                                    <div className="label">Total Sales</div>
+                                    <div className="value">{totalSales}</div>
+                                </div>
+                                <div className="summary-card revenue">
+                                    <div className="label">Total Revenue</div>
+                                    <div className="value">{formatCurrency(totalRevenue)}</div>
+                                </div>
+                                <div className="summary-card average">
+                                    <div className="label">Average Sale</div>
+                                    <div className="value">{formatCurrency(averageSale)}</div>
+                                </div>
+                            </div>
+
+                            {/* Table */}
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th className="serial">#</th>
+                                        <th>Transaction No</th>
+                                        <th>Customer</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Date</th>
+                                        <th>Created By</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {safeSales.map((sale: Sale, index: number) => (
+                                        <tr key={sale.id}>
+                                            <td className="serial">{index + 1}</td>
+                                            <td className="transaction">{sale.transaction_no}</td>
+                                            <td>{extractCustomerName(sale.description)}</td>
+                                            <td>{sale.category}</td>
+                                            <td className="amount">{formatCurrency(sale.amount)}</td>
+                                            <td>{new Date(sale.transaction_date).toLocaleDateString()}</td>
+                                            <td>{sale.created_by.name}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colSpan={4} style={{ textAlign: 'right', paddingRight: '10px' }}>
+                                            <strong>Total:</strong>
+                                        </td>
+                                        <td className="amount" style={{ fontSize: '12px' }}>
+                                            {formatCurrency(totalRevenue)}
+                                        </td>
+                                        <td colSpan={2}></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+
+                            {/* Footer */}
+                            <div className="footer">
+                                <p>
+                                    <span className="footer-value">Total Revenue: {formatCurrency(totalRevenue)}</span>
+                                    {' • '}
+                                    Total Sales: {totalSales}
+                                    {' • '}
+                                    Average Sale: {formatCurrency(averageSale)}
+                                    {' • '}
+                                    Generated:{' '}
+                                    {new Date().toLocaleString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                    })}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
-          )}
         </div>
-      </div>
-    </div>
-  );
+    );
 }

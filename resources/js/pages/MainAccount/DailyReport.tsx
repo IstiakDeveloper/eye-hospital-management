@@ -1,7 +1,7 @@
-import React from 'react';
-import { Head } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { Printer, ArrowLeft } from 'lucide-react';
+import { Head } from '@inertiajs/react';
+import { ArrowLeft, Printer } from 'lucide-react';
+import React from 'react';
 
 interface DailyReportProps {
     date: string;
@@ -17,13 +17,7 @@ interface DailyReportProps {
     amount_in_words: string;
 }
 
-const DailyReport: React.FC<DailyReportProps> = ({
-    date,
-    voucher_type,
-    vouchers,
-    total_amount,
-    amount_in_words
-}) => {
+const DailyReport: React.FC<DailyReportProps> = ({ date, voucher_type, vouchers, total_amount, amount_in_words }) => {
     const handlePrint = () => {
         window.print();
     };
@@ -40,25 +34,22 @@ const DailyReport: React.FC<DailyReportProps> = ({
                     <Head title={`${voucher_type} Voucher Report - ${date}`} />
 
                     {/* Screen Only Controls */}
-                    <div className="flex items-center justify-between mb-6">
-                        <button
-                            onClick={() => window.history.back()}
-                            className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
-                        >
-                            <ArrowLeft className="w-4 h-4" />
+                    <div className="mb-6 flex items-center justify-between">
+                        <button onClick={() => window.history.back()} className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+                            <ArrowLeft className="h-4 w-4" />
                             Back to Reports
                         </button>
                         <button
                             onClick={handlePrint}
-                            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
                         >
-                            <Printer className="w-4 h-4" />
+                            <Printer className="h-4 w-4" />
                             Print Report
                         </button>
                     </div>
 
                     {/* Print Content Preview */}
-                    <div className="bg-white shadow-sm rounded-lg">
+                    <div className="rounded-lg bg-white shadow-sm">
                         <PrintableContent
                             date={date}
                             voucher_type={voucher_type}
@@ -85,8 +76,9 @@ const DailyReport: React.FC<DailyReportProps> = ({
             </div>
 
             {/* Print Styles */}
-            <style dangerouslySetInnerHTML={{
-                __html: `
+            <style
+                dangerouslySetInnerHTML={{
+                    __html: `
                     @media print {
                         * {
                             -webkit-print-color-adjust: exact !important;
@@ -159,8 +151,9 @@ const DailyReport: React.FC<DailyReportProps> = ({
                             background-color: #e9ecef !important;
                         }
                     }
-                `
-            }} />
+                `,
+                }}
+            />
         </div>
     );
 };
@@ -172,28 +165,26 @@ const PrintableContent = ({
     vouchers,
     total_amount,
     amount_in_words,
-    trimNarration
+    trimNarration,
 }: {
     date: string;
     voucher_type: 'Debit' | 'Credit';
-    vouchers: Array<{ sl_no: string; voucher_no: string; date: string; narration: string; amount: string; }>;
+    vouchers: Array<{ sl_no: string; voucher_no: string; date: string; narration: string; amount: string }>;
     total_amount: string;
     amount_in_words: string;
     trimNarration: (text: string, maxLength?: number) => string;
 }) => (
-    <div className="printable-content p-6 max-w-4xl mx-auto border-2 border-black print:max-w-none print:mx-0">
+    <div className="printable-content mx-auto max-w-4xl border-2 border-black p-6 print:mx-0 print:max-w-none">
         {/* Header */}
-        <div className="text-center mb-6">
-            <h1 className="text-xl font-bold text-black mb-2">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
-            <p className="text-base text-black mb-1">সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।</p>
-            <p className="text-sm text-black mb-3">📞 ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০ • ✉️ niehpc@gmail.com</p>
-            <p className="text-base font-semibold text-black">
-                {voucher_type === 'Debit' ? 'Debit/Payment' : 'Credit/Receipt'} Voucher
-            </p>
+        <div className="mb-6 text-center">
+            <h1 className="mb-2 text-xl font-bold text-black">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+            <p className="mb-1 text-base text-black">সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।</p>
+            <p className="mb-3 text-sm text-black">📞 ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০ • ✉️ niehpc@gmail.com</p>
+            <p className="text-base font-semibold text-black">{voucher_type === 'Debit' ? 'Debit/Payment' : 'Credit/Receipt'} Voucher</p>
         </div>
 
         {/* Date */}
-        <div className="flex justify-end mb-4">
+        <div className="mb-4 flex justify-end">
             <div className="border border-black px-2 py-1">
                 <span className="text-sm font-semibold">Date: {date}</span>
             </div>
@@ -204,11 +195,11 @@ const PrintableContent = ({
             <table className="w-full border-collapse">
                 <thead>
                     <tr className="border-b border-black">
-                        <th className="border-r border-black px-2 py-2 text-left font-semibold bg-gray-50 text-sm w-12">SL</th>
-                        <th className="border-r border-black px-2 py-2 text-left font-semibold bg-gray-50 text-sm w-20">Voucher No</th>
-                        <th className="border-r border-black px-2 py-2 text-left font-semibold bg-gray-50 text-sm w-20">Date</th>
-                        <th className="border-r border-black px-2 py-2 text-left font-semibold bg-gray-50 text-sm">Narration</th>
-                        <th className="px-2 py-2 text-right font-semibold bg-gray-50 text-sm w-24">Amount</th>
+                        <th className="w-12 border-r border-black bg-gray-50 px-2 py-2 text-left text-sm font-semibold">SL</th>
+                        <th className="w-20 border-r border-black bg-gray-50 px-2 py-2 text-left text-sm font-semibold">Voucher No</th>
+                        <th className="w-20 border-r border-black bg-gray-50 px-2 py-2 text-left text-sm font-semibold">Date</th>
+                        <th className="border-r border-black bg-gray-50 px-2 py-2 text-left text-sm font-semibold">Narration</th>
+                        <th className="w-24 bg-gray-50 px-2 py-2 text-right text-sm font-semibold">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -235,8 +226,10 @@ const PrintableContent = ({
 
                     {/* Total Row */}
                     <tr className="border-b border-black bg-gray-100">
-                        <td className="border-r border-black px-2 py-2 font-semibold text-sm" colSpan={4}>&nbsp;</td>
-                        <td className="px-2 py-2 text-right font-bold text-base">{total_amount}</td>
+                        <td className="border-r border-black px-2 py-2 text-sm font-semibold" colSpan={4}>
+                            &nbsp;
+                        </td>
+                        <td className="px-2 py-2 text-right text-base font-bold">{total_amount}</td>
                     </tr>
                 </tbody>
             </table>
@@ -250,17 +243,17 @@ const PrintableContent = ({
         </div>
 
         {/* Signature Section */}
-        <div className="grid grid-cols-3 gap-6 mt-8">
+        <div className="mt-8 grid grid-cols-3 gap-6">
             <div className="text-center">
-                <div className="border-b border-black mb-2 pb-8">&nbsp;</div>
+                <div className="mb-2 border-b border-black pb-8">&nbsp;</div>
                 <p className="text-sm font-semibold">Prepared by</p>
             </div>
             <div className="text-center">
-                <div className="border-b border-black mb-2 pb-8">&nbsp;</div>
+                <div className="mb-2 border-b border-black pb-8">&nbsp;</div>
                 <p className="text-sm font-semibold">Checked by</p>
             </div>
             <div className="text-center">
-                <div className="border-b border-black mb-2 pb-8">&nbsp;</div>
+                <div className="mb-2 border-b border-black pb-8">&nbsp;</div>
                 <p className="text-sm font-semibold">Approved by</p>
             </div>
         </div>

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
 import OperationAccountLayout from '@/layouts/OperationAccountLayout';
-import { History, Filter, PlusCircle, MinusCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight, Filter, History, MinusCircle, PlusCircle } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface FundTransaction {
     id: number;
@@ -40,14 +40,14 @@ const FundHistory: React.FC<Props> = ({ fundTransactions, balance }) => {
     const [filters, setFilters] = useState({
         type: '',
         start_date: '',
-        end_date: ''
+        end_date: '',
     });
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short',
-            year: 'numeric'
+            year: 'numeric',
         });
     };
 
@@ -56,14 +56,16 @@ const FundHistory: React.FC<Props> = ({ fundTransactions, balance }) => {
             style: 'currency',
             currency: 'BDT',
             minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(amount).replace('BDT', '৳');
+            maximumFractionDigits: 2,
+        })
+            .format(amount)
+            .replace('BDT', '৳');
     };
 
     const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFilters({
             ...filters,
-            [e.target.name]: e.target.value
+            [e.target.name]: e.target.value,
         });
     };
 
@@ -79,62 +81,51 @@ const FundHistory: React.FC<Props> = ({ fundTransactions, balance }) => {
     return (
         <OperationAccountLayout title="Fund History">
             {/* Balance Card */}
-            <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white rounded-lg p-6 mb-6 shadow-lg">
-                <p className="text-sm opacity-90 mb-1">Current Balance</p>
+            <div className="mb-6 rounded-lg bg-gradient-to-r from-purple-600 to-purple-800 p-6 text-white shadow-lg">
+                <p className="mb-1 text-sm opacity-90">Current Balance</p>
                 <p className="text-3xl font-bold">{formatAmount(balance)}</p>
             </div>
 
             {/* Filters */}
-            <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                    <Filter className="w-5 h-5 text-gray-600" />
+            <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-2">
+                    <Filter className="h-5 w-5 text-gray-600" />
                     <h3 className="text-lg font-semibold">Filters</h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                     <div>
-                        <label className="block text-sm font-medium mb-2">Type</label>
-                        <select
-                            name="type"
-                            value={filters.type}
-                            onChange={handleFilterChange}
-                            className="w-full border rounded-lg px-3 py-2"
-                        >
+                        <label className="mb-2 block text-sm font-medium">Type</label>
+                        <select name="type" value={filters.type} onChange={handleFilterChange} className="w-full rounded-lg border px-3 py-2">
                             <option value="">All Types</option>
                             <option value="fund_in">Fund In</option>
                             <option value="fund_out">Fund Out</option>
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-2">Start Date</label>
+                        <label className="mb-2 block text-sm font-medium">Start Date</label>
                         <input
                             type="date"
                             name="start_date"
                             value={filters.start_date}
                             onChange={handleFilterChange}
-                            className="w-full border rounded-lg px-3 py-2"
+                            className="w-full rounded-lg border px-3 py-2"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-2">End Date</label>
+                        <label className="mb-2 block text-sm font-medium">End Date</label>
                         <input
                             type="date"
                             name="end_date"
                             value={filters.end_date}
                             onChange={handleFilterChange}
-                            className="w-full border rounded-lg px-3 py-2"
+                            className="w-full rounded-lg border px-3 py-2"
                         />
                     </div>
                     <div className="flex items-end gap-2">
-                        <button
-                            onClick={applyFilters}
-                            className="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700"
-                        >
+                        <button onClick={applyFilters} className="flex-1 rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700">
                             Apply
                         </button>
-                        <button
-                            onClick={resetFilters}
-                            className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300"
-                        >
+                        <button onClick={resetFilters} className="flex-1 rounded-lg bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300">
                             Reset
                         </button>
                     </div>
@@ -142,10 +133,10 @@ const FundHistory: React.FC<Props> = ({ fundTransactions, balance }) => {
             </div>
 
             {/* Fund Transactions Table */}
-            <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-gray-50 border-b">
+                        <thead className="border-b bg-gray-50">
                             <tr>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Voucher No</th>
                                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Date</th>
@@ -160,7 +151,7 @@ const FundHistory: React.FC<Props> = ({ fundTransactions, balance }) => {
                             {fundTransactions.data.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                                        <History className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                                        <History className="mx-auto mb-3 h-12 w-12 text-gray-400" />
                                         <p className="text-lg font-medium">No fund transactions found</p>
                                     </td>
                                 </tr>
@@ -170,18 +161,16 @@ const FundHistory: React.FC<Props> = ({ fundTransactions, balance }) => {
                                         <td className="px-6 py-4">
                                             <span className="font-mono text-sm">{fund.voucher_no}</span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
-                                            {formatDate(fund.date)}
-                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-600">{formatDate(fund.date)}</td>
                                         <td className="px-6 py-4">
                                             {fund.type === 'fund_in' ? (
-                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                    <PlusCircle className="w-3 h-3" />
+                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+                                                    <PlusCircle className="h-3 w-3" />
                                                     Fund In
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                    <MinusCircle className="w-3 h-3" />
+                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800">
+                                                    <MinusCircle className="h-3 w-3" />
                                                     Fund Out
                                                 </span>
                                             )}
@@ -190,16 +179,15 @@ const FundHistory: React.FC<Props> = ({ fundTransactions, balance }) => {
                                             <span className="font-medium text-gray-900">{fund.purpose}</span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm text-gray-600 line-clamp-2">{fund.description}</span>
+                                            <span className="line-clamp-2 text-sm text-gray-600">{fund.description}</span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <span className={`font-semibold ${fund.type === 'fund_in' ? 'text-green-600' : 'text-red-600'}`}>
-                                                {fund.type === 'fund_in' ? '+' : '-'}{formatAmount(fund.amount)}
+                                                {fund.type === 'fund_in' ? '+' : '-'}
+                                                {formatAmount(fund.amount)}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
-                                            {fund.added_by.name}
-                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-600">{fund.added_by.name}</td>
                                     </tr>
                                 ))
                             )}
@@ -209,7 +197,7 @@ const FundHistory: React.FC<Props> = ({ fundTransactions, balance }) => {
 
                 {/* Pagination */}
                 {fundTransactions.last_page > 1 && (
-                    <div className="px-6 py-4 border-t bg-gray-50">
+                    <div className="border-t bg-gray-50 px-6 py-4">
                         <div className="flex items-center justify-between">
                             <div className="text-sm text-gray-700">
                                 Showing <span className="font-medium">{fundTransactions.data.length}</span> of{' '}
@@ -223,9 +211,9 @@ const FundHistory: React.FC<Props> = ({ fundTransactions, balance }) => {
                                                 key={index}
                                                 onClick={() => link.url && router.visit(link.url)}
                                                 disabled={!link.url}
-                                                className="px-3 py-1 rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                                                className="rounded-lg border px-3 py-1 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
-                                                <ChevronLeft className="w-4 h-4" />
+                                                <ChevronLeft className="h-4 w-4" />
                                             </button>
                                         );
                                     }
@@ -235,9 +223,9 @@ const FundHistory: React.FC<Props> = ({ fundTransactions, balance }) => {
                                                 key={index}
                                                 onClick={() => link.url && router.visit(link.url)}
                                                 disabled={!link.url}
-                                                className="px-3 py-1 rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                                                className="rounded-lg border px-3 py-1 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
-                                                <ChevronRight className="w-4 h-4" />
+                                                <ChevronRight className="h-4 w-4" />
                                             </button>
                                         );
                                     }
@@ -245,10 +233,8 @@ const FundHistory: React.FC<Props> = ({ fundTransactions, balance }) => {
                                         <button
                                             key={index}
                                             onClick={() => link.url && router.visit(link.url)}
-                                            className={`px-3 py-1 rounded-lg border ${
-                                                link.active
-                                                    ? 'bg-purple-600 text-white border-purple-600'
-                                                    : 'hover:bg-gray-100'
+                                            className={`rounded-lg border px-3 py-1 ${
+                                                link.active ? 'border-purple-600 bg-purple-600 text-white' : 'hover:bg-gray-100'
                                             }`}
                                         >
                                             {link.label}

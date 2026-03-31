@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Patient;
-use App\Models\Doctor;
 use App\Models\Appointment;
-use App\Models\VisionTest;
+use App\Models\Doctor;
+use App\Models\Patient;
 use App\Models\Prescription;
-use App\Models\User;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
+use App\Models\VisionTest;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class ReportController extends Controller
 {
@@ -23,7 +22,7 @@ class ReportController extends Controller
     public function patients(Request $request)
     {
         $query = Patient::with(['registeredBy'])
-            ->select('id', 'patient_id', 'name', 'phone', 'email', 'gender', 'date_of_birth', 'registered_by', 'created_at');
+            ->select('id', 'patient_id', 'name', 'address', 'phone', 'email', 'gender', 'date_of_birth', 'registered_by', 'created_at');
 
         // Date range filter
         if ($request->filled('start_date')) {
@@ -38,11 +37,19 @@ class ReportController extends Controller
             $query->where('gender', $request->gender);
         }
 
-        $patients = $query->orderBy('created_at', 'desc')->get();
+        $perPage = (int) $request->get('per_page', 50);
+        $allowed = [25, 50, 100, 200];
+        if (! in_array($perPage, $allowed, true)) {
+            $perPage = 50;
+        }
+
+        $patients = $query->orderBy('created_at', 'desc')
+            ->paginate($perPage)
+            ->withQueryString();
 
         return Inertia::render('Reports/Patients', [
             'patients' => $patients,
-            'filters' => $request->only(['start_date', 'end_date', 'gender'])
+            'filters' => $request->only(['start_date', 'end_date', 'gender', 'per_page']),
         ]);
     }
 
@@ -53,7 +60,7 @@ class ReportController extends Controller
             ->get();
 
         return Inertia::render('Reports/Doctors', [
-            'doctors' => $doctors
+            'doctors' => $doctors,
         ]);
     }
 
@@ -79,7 +86,7 @@ class ReportController extends Controller
 
         return Inertia::render('Reports/Appointments', [
             'appointments' => $appointments,
-            'filters' => $request->only(['start_date', 'end_date', 'status'])
+            'filters' => $request->only(['start_date', 'end_date', 'status']),
         ]);
     }
 
@@ -100,7 +107,7 @@ class ReportController extends Controller
 
         return Inertia::render('Reports/VisionTests', [
             'visionTests' => $visionTests,
-            'filters' => $request->only(['start_date', 'end_date'])
+            'filters' => $request->only(['start_date', 'end_date']),
         ]);
     }
 
@@ -121,7 +128,7 @@ class ReportController extends Controller
 
         return Inertia::render('Reports/Prescriptions', [
             'prescriptions' => $prescriptions,
-            'filters' => $request->only(['start_date', 'end_date'])
+            'filters' => $request->only(['start_date', 'end_date']),
         ]);
     }
 
@@ -145,18 +152,18 @@ class ReportController extends Controller
         ];
 
         $monthlyPatients = Patient::select(
-                DB::raw('MONTH(created_at) as month'),
-                DB::raw('COUNT(*) as count')
-            )
+            DB::raw('MONTH(created_at) as month'),
+            DB::raw('COUNT(*) as count')
+        )
             ->whereYear('created_at', Carbon::now()->year)
             ->groupBy('month')
             ->orderBy('month')
             ->get();
 
         $weeklyAppointments = Appointment::select(
-                DB::raw('DATE(appointment_date) as date'),
-                DB::raw('COUNT(*) as count')
-            )
+            DB::raw('DATE(appointment_date) as date'),
+            DB::raw('COUNT(*) as count')
+        )
             ->where('appointment_date', '>=', Carbon::now()->subWeek())
             ->groupBy('date')
             ->orderBy('date')
@@ -165,7 +172,7 @@ class ReportController extends Controller
         return Inertia::render('Reports/Dashboard', [
             'stats' => $stats,
             'monthlyPatients' => $monthlyPatients,
-            'weeklyAppointments' => $weeklyAppointments
+            'weeklyAppointments' => $weeklyAppointments,
         ]);
     }
 
@@ -190,7 +197,7 @@ class ReportController extends Controller
         return Inertia::render('Reports/Revenue', [
             'prescriptions' => $prescriptions,
             'totalRevenue' => $totalRevenue,
-            'filters' => $request->only(['start_date', 'end_date'])
+            'filters' => $request->only(['start_date', 'end_date']),
         ]);
     }
 
@@ -221,7 +228,7 @@ class ReportController extends Controller
 
         return Inertia::render('Reports/Medicines', [
             'medicines' => $medicines,
-            'filters' => $request->only(['start_date', 'end_date'])
+            'filters' => $request->only(['start_date', 'end_date']),
         ]);
     }
 }

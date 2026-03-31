@@ -1,10 +1,6 @@
-import React, { useState, useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
-import {
-    X, User, Stethoscope, FileText, DollarSign,
-    Calculator, Percent, Save, CheckCircle,
-    AlertCircle, Clock, Calendar
-} from 'lucide-react';
+import { AlertCircle, Calculator, Calendar, CheckCircle, Clock, DollarSign, FileText, Percent, Save, Stethoscope, User, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 // Type definitions
 interface Doctor {
@@ -48,12 +44,7 @@ interface VisitFormData {
     payment_amount: number;
 }
 
-const NewVisitModal: React.FC<NewVisitModalProps> = ({
-    isOpen,
-    onClose,
-    patient,
-    doctors = []
-}) => {
+const NewVisitModal: React.FC<NewVisitModalProps> = ({ isOpen, onClose, patient, doctors = [] }) => {
     const { data, setData, post, processing, errors, reset } = useForm<VisitFormData>({
         patient_id: 0, // Will be set when modal opens
         chief_complaint: '',
@@ -113,10 +104,10 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
         let doctorFee = 0;
 
         if (data.selected_doctor_id) {
-            const doctor = doctors.find(d => d.id === parseInt(data.selected_doctor_id));
+            const doctor = doctors.find((d) => d.id === parseInt(data.selected_doctor_id));
             if (doctor) {
                 // Use follow_up_fee if this is a follow-up visit, otherwise use consultation_fee
-                doctorFee = data.is_followup ? (doctor.follow_up_fee || 0) : doctor.consultation_fee;
+                doctorFee = data.is_followup ? doctor.follow_up_fee || 0 : doctor.consultation_fee;
                 setSelectedDoctor(doctor);
             }
         } else {
@@ -181,24 +172,21 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-t-2xl">
+                <div className="rounded-t-2xl bg-gradient-to-r from-blue-600 to-purple-600 p-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h2 className="text-2xl font-semibold text-white flex items-center gap-3">
+                            <h2 className="flex items-center gap-3 text-2xl font-semibold text-white">
                                 <Calendar className="h-7 w-7" />
                                 Start New Visit
                             </h2>
-                            <p className="text-blue-100 mt-1">
+                            <p className="mt-1 text-blue-100">
                                 Patient: {patient.name} ({patient.patient_id})
                             </p>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 text-white hover:bg-white/20 rounded-lg transition-colors"
-                        >
+                        <button onClick={onClose} className="rounded-lg p-2 text-white transition-colors hover:bg-white/20">
                             <X className="h-6 w-6" />
                         </button>
                     </div>
@@ -206,33 +194,31 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
 
                 <form onSubmit={handleSubmit}>
                     <div className="p-6">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                             {/* Visit Information */}
-                            <div className="lg:col-span-2 space-y-6">
-
+                            <div className="space-y-6 lg:col-span-2">
                                 {/* Patient Summary */}
-                                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                                    <h3 className="font-semibold text-blue-900 flex items-center gap-2 mb-2">
+                                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                                    <h3 className="mb-2 flex items-center gap-2 font-semibold text-blue-900">
                                         <User className="h-5 w-5" />
                                         Patient Information
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                    <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
                                         <div>
-                                            <span className="text-blue-700 font-medium">Name:</span>
+                                            <span className="font-medium text-blue-700">Name:</span>
                                             <span className="ml-2 text-blue-900">{patient.name}</span>
                                         </div>
                                         <div>
-                                            <span className="text-blue-700 font-medium">Patient ID:</span>
+                                            <span className="font-medium text-blue-700">Patient ID:</span>
                                             <span className="ml-2 text-blue-900">{patient.patient_id}</span>
                                         </div>
                                         <div>
-                                            <span className="text-blue-700 font-medium">Phone:</span>
+                                            <span className="font-medium text-blue-700">Phone:</span>
                                             <span className="ml-2 text-blue-900">{patient.phone}</span>
                                         </div>
                                         {patient.email && (
                                             <div>
-                                                <span className="text-blue-700 font-medium">Email:</span>
+                                                <span className="font-medium text-blue-700">Email:</span>
                                                 <span className="ml-2 text-blue-900">{patient.email}</span>
                                             </div>
                                         )}
@@ -241,17 +227,17 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
 
                                 {/* Chief Complaint */}
                                 <div>
-                                    <label htmlFor="chief_complaint" className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label htmlFor="chief_complaint" className="mb-2 block text-sm font-medium text-gray-700">
                                         Chief Complaint / Reason for Visit *
                                     </label>
                                     <div className="relative">
-                                        <FileText className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                        <FileText className="absolute top-3 left-3 h-5 w-5 text-gray-400" />
                                         <textarea
                                             id="chief_complaint"
                                             rows={4}
                                             value={data.chief_complaint}
                                             onChange={(e) => setData('chief_complaint', e.target.value)}
-                                            className={`w-full pl-11 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 resize-none ${
+                                            className={`w-full resize-none rounded-xl border py-3 pr-4 pl-11 transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
                                                 errors.chief_complaint ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'
                                             }`}
                                             placeholder="Describe the main reason for today's visit..."
@@ -259,12 +245,10 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
                                             required
                                         />
                                     </div>
-                                    <div className="flex justify-between items-center mt-1">
-                                        <div className="text-xs text-gray-500">
-                                            {data.chief_complaint.length}/500 characters
-                                        </div>
+                                    <div className="mt-1 flex items-center justify-between">
+                                        <div className="text-xs text-gray-500">{data.chief_complaint.length}/500 characters</div>
                                         {errors.chief_complaint && (
-                                            <p className="text-sm text-red-600 flex items-center gap-1">
+                                            <p className="flex items-center gap-1 text-sm text-red-600">
                                                 <AlertCircle className="h-4 w-4" />
                                                 {errors.chief_complaint}
                                             </p>
@@ -273,19 +257,17 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
                                 </div>
 
                                 {/* Follow-up Visit Checkbox */}
-                                <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors duration-200">
+                                <div className="flex items-start space-x-3 rounded-xl border border-blue-200 bg-blue-50 p-4 transition-colors duration-200 hover:bg-blue-100">
                                     <input
                                         type="checkbox"
                                         id="is_followup"
                                         checked={data.is_followup}
                                         onChange={(e) => setData('is_followup', e.target.checked)}
-                                        className="mt-1 h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
+                                        className="mt-1 h-5 w-5 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                                     />
                                     <label htmlFor="is_followup" className="flex-1 cursor-pointer">
-                                        <span className="block text-sm font-medium text-blue-900">
-                                            This is a follow-up visit
-                                        </span>
-                                        <span className="block text-xs text-blue-700 mt-1">
+                                        <span className="block text-sm font-medium text-blue-900">This is a follow-up visit</span>
+                                        <span className="mt-1 block text-xs text-blue-700">
                                             Check this if the patient is returning for a follow-up consultation
                                         </span>
                                     </label>
@@ -293,16 +275,16 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
 
                                 {/* Doctor Selection */}
                                 <div>
-                                    <label htmlFor="selected_doctor_id" className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label htmlFor="selected_doctor_id" className="mb-2 block text-sm font-medium text-gray-700">
                                         Select Doctor (Optional)
                                     </label>
                                     <div className="relative">
-                                        <Stethoscope className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                                        <Stethoscope className="absolute top-3 left-3 h-5 w-5 text-gray-400" />
                                         <select
                                             id="selected_doctor_id"
                                             value={data.selected_doctor_id}
                                             onChange={(e) => handleDoctorChange(e.target.value)}
-                                            className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-all duration-200"
+                                            className="w-full rounded-xl border border-gray-300 py-3 pr-4 pl-11 transition-all duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                         >
                                             <option value="">No doctor selected</option>
                                             {doctors.map((doctor) => (
@@ -316,13 +298,14 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
                                         </select>
                                     </div>
                                     {selectedDoctor && (
-                                        <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
                                             <p className="text-sm text-blue-800">
                                                 <strong>Dr. {selectedDoctor.name}</strong> - {selectedDoctor.specialization}
                                                 <br />
                                                 {data.is_followup ? (
                                                     <>
-                                                        <span className="text-emerald-700 font-semibold">Follow-up Fee:</span> {formatCurrency(selectedDoctor.follow_up_fee || 0)}
+                                                        <span className="font-semibold text-emerald-700">Follow-up Fee:</span>{' '}
+                                                        {formatCurrency(selectedDoctor.follow_up_fee || 0)}
                                                         {selectedDoctor.follow_up_fee > 0 && (
                                                             <span className="ml-2 text-xs text-gray-600">
                                                                 (Regular: {formatCurrency(selectedDoctor.consultation_fee)})
@@ -331,7 +314,8 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <span className="text-blue-700 font-semibold">Consultation Fee:</span> {formatCurrency(selectedDoctor.consultation_fee)}
+                                                        <span className="font-semibold text-blue-700">Consultation Fee:</span>{' '}
+                                                        {formatCurrency(selectedDoctor.consultation_fee)}
                                                     </>
                                                 )}
                                             </p>
@@ -342,43 +326,43 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
 
                             {/* Payment Summary */}
                             <div className="lg:col-span-1">
-                                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden sticky top-4">
+                                <div className="sticky top-4 overflow-hidden rounded-xl border border-gray-200 bg-white">
                                     <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-4">
-                                        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                        <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
                                             <Calculator className="h-5 w-5" />
                                             Payment Summary
                                             {isCalculating && (
-                                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent ml-2"></div>
+                                                <div className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                                             )}
                                         </h3>
                                     </div>
 
-                                    <div className="p-4 space-y-4">
+                                    <div className="space-y-4 p-4">
                                         {/* Cost Breakdown */}
                                         <div className="space-y-2">
                                             {costs.registration_fee > 0 && (
-                                                <div className="flex justify-between items-center py-1 border-b border-gray-100">
-                                                    <span className="text-gray-600 text-sm">Registration Fee</span>
-                                                    <span className="font-semibold text-sm">{formatCurrency(costs.registration_fee)}</span>
+                                                <div className="flex items-center justify-between border-b border-gray-100 py-1">
+                                                    <span className="text-sm text-gray-600">Registration Fee</span>
+                                                    <span className="text-sm font-semibold">{formatCurrency(costs.registration_fee)}</span>
                                                 </div>
                                             )}
 
                                             {costs.doctor_fee > 0 && (
-                                                <div className="flex justify-between items-center py-1 border-b border-gray-100">
-                                                    <span className="text-gray-600 text-sm">Doctor Fee</span>
-                                                    <span className="font-semibold text-sm">{formatCurrency(costs.doctor_fee)}</span>
+                                                <div className="flex items-center justify-between border-b border-gray-100 py-1">
+                                                    <span className="text-sm text-gray-600">Doctor Fee</span>
+                                                    <span className="text-sm font-semibold">{formatCurrency(costs.doctor_fee)}</span>
                                                 </div>
                                             )}
 
-                                            <div className="flex justify-between items-center py-1 border-b border-gray-200">
-                                                <span className="text-gray-800 font-medium text-sm">Subtotal</span>
-                                                <span className="font-semibold text-sm">{formatCurrency(costs.total_amount)}</span>
+                                            <div className="flex items-center justify-between border-b border-gray-200 py-1">
+                                                <span className="text-sm font-medium text-gray-800">Subtotal</span>
+                                                <span className="text-sm font-semibold">{formatCurrency(costs.total_amount)}</span>
                                             </div>
                                         </div>
 
                                         {/* Discount Section */}
-                                        <div className="bg-gray-50 rounded-lg p-3 space-y-3">
-                                            <h4 className="font-medium text-gray-800 flex items-center gap-2 text-sm">
+                                        <div className="space-y-3 rounded-lg bg-gray-50 p-3">
+                                            <h4 className="flex items-center gap-2 text-sm font-medium text-gray-800">
                                                 <Percent className="h-4 w-4" />
                                                 Apply Discount
                                             </h4>
@@ -387,7 +371,7 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
                                                 <button
                                                     type="button"
                                                     onClick={() => setData('discount_type', 'percentage')}
-                                                    className={`flex-1 py-1 px-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                                                    className={`flex-1 rounded-md px-2 py-1 text-sm font-medium transition-all duration-200 ${
                                                         data.discount_type === 'percentage'
                                                             ? 'bg-blue-600 text-white shadow-md'
                                                             : 'bg-white text-gray-600 hover:bg-gray-100'
@@ -398,7 +382,7 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
                                                 <button
                                                     type="button"
                                                     onClick={() => setData('discount_type', 'amount')}
-                                                    className={`flex-1 py-1 px-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                                                    className={`flex-1 rounded-md px-2 py-1 text-sm font-medium transition-all duration-200 ${
                                                         data.discount_type === 'amount'
                                                             ? 'bg-blue-600 text-white shadow-md'
                                                             : 'bg-white text-gray-600 hover:bg-gray-100'
@@ -412,7 +396,7 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
                                                 type="number"
                                                 value={data.discount_value}
                                                 onChange={(e) => setData('discount_value', parseFloat(e.target.value) || 0)}
-                                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                                 placeholder={data.discount_type === 'percentage' ? 'Enter %' : 'Enter amount'}
                                                 min="0"
                                                 max={data.discount_type === 'percentage' ? 100 : costs.total_amount}
@@ -421,34 +405,34 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
                                             />
 
                                             {costs.discount_amount > 0 && (
-                                                <div className="flex justify-between items-center text-green-600">
+                                                <div className="flex items-center justify-between text-green-600">
                                                     <span className="text-sm">Discount</span>
-                                                    <span className="font-semibold text-sm">-{formatCurrency(costs.discount_amount)}</span>
+                                                    <span className="text-sm font-semibold">-{formatCurrency(costs.discount_amount)}</span>
                                                 </div>
                                             )}
                                         </div>
 
                                         {/* Final Amount */}
-                                        <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-3 text-white">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-blue-100 text-sm">Total Payable</span>
+                                        <div className="rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 p-3 text-white">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm text-blue-100">Total Payable</span>
                                                 <span className="text-xl font-bold">{formatCurrency(costs.final_amount)}</span>
                                             </div>
                                         </div>
 
                                         {/* Payment Amount */}
                                         <div>
-                                            <label htmlFor="payment_amount" className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label htmlFor="payment_amount" className="mb-2 block text-sm font-medium text-gray-700">
                                                 Payment Amount *
                                             </label>
                                             <div className="relative">
-                                                <DollarSign className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                                                <DollarSign className="absolute top-3 left-3 h-4 w-4 text-gray-400" />
                                                 <input
                                                     id="payment_amount"
                                                     type="number"
                                                     value={data.payment_amount}
                                                     onChange={(e) => setData('payment_amount', parseFloat(e.target.value) || 0)}
-                                                    className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-all duration-200 text-sm ${
+                                                    className={`w-full rounded-lg border py-2 pr-3 pl-10 text-sm transition-all duration-200 hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
                                                         errors.payment_amount ? 'border-red-500 bg-red-50' : 'border-gray-300'
                                                     }`}
                                                     placeholder="Enter amount"
@@ -458,31 +442,31 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
                                                     required
                                                 />
                                             </div>
-                                            <div className="flex gap-1 mt-2">
+                                            <div className="mt-2 flex gap-1">
                                                 <button
                                                     type="button"
                                                     onClick={() => setData('payment_amount', costs.final_amount)}
-                                                    className="flex-1 py-1 px-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                                                    className="flex-1 rounded bg-gray-100 px-1 py-1 text-xs transition-colors hover:bg-gray-200"
                                                 >
                                                     Full
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => setData('payment_amount', Math.round(costs.final_amount / 2))}
-                                                    className="flex-1 py-1 px-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                                                    className="flex-1 rounded bg-gray-100 px-1 py-1 text-xs transition-colors hover:bg-gray-200"
                                                 >
                                                     50%
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => setData('payment_amount', 0)}
-                                                    className="flex-1 py-1 px-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                                                    className="flex-1 rounded bg-gray-100 px-1 py-1 text-xs transition-colors hover:bg-gray-200"
                                                 >
                                                     None
                                                 </button>
                                             </div>
                                             {errors.payment_amount && (
-                                                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
+                                                <p className="mt-1 flex items-center gap-1 text-sm text-red-600">
                                                     <AlertCircle className="h-4 w-4" />
                                                     {errors.payment_amount}
                                                 </p>
@@ -491,38 +475,34 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
 
                                         {/* Payment Status Info */}
                                         {data.payment_amount < costs.final_amount && data.payment_amount > 0 && (
-                                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+                                            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-2">
                                                 <div className="flex items-center gap-2 text-yellow-800">
                                                     <Clock className="h-4 w-4" />
                                                     <span className="text-sm font-medium">Partial Payment</span>
                                                 </div>
-                                                <p className="text-xs text-yellow-700 mt-1">
+                                                <p className="mt-1 text-xs text-yellow-700">
                                                     Remaining: {formatCurrency(costs.final_amount - data.payment_amount)}
                                                 </p>
                                             </div>
                                         )}
 
                                         {data.payment_amount >= costs.final_amount && data.payment_amount > 0 && (
-                                            <div className="bg-green-50 border border-green-200 rounded-lg p-2">
+                                            <div className="rounded-lg border border-green-200 bg-green-50 p-2">
                                                 <div className="flex items-center gap-2 text-green-800">
                                                     <CheckCircle className="h-4 w-4" />
                                                     <span className="text-sm font-medium">Full Payment</span>
                                                 </div>
-                                                <p className="text-xs text-green-700 mt-1">
-                                                    Ready for vision test
-                                                </p>
+                                                <p className="mt-1 text-xs text-green-700">Ready for vision test</p>
                                             </div>
                                         )}
 
                                         {data.payment_amount === 0 && (
-                                            <div className="bg-red-50 border border-red-200 rounded-lg p-2">
+                                            <div className="rounded-lg border border-red-200 bg-red-50 p-2">
                                                 <div className="flex items-center gap-2 text-red-800">
                                                     <AlertCircle className="h-4 w-4" />
                                                     <span className="text-sm font-medium">No Payment</span>
                                                 </div>
-                                                <p className="text-xs text-red-700 mt-1">
-                                                    Payment required before vision test
-                                                </p>
+                                                <p className="mt-1 text-xs text-red-700">Payment required before vision test</p>
                                             </div>
                                         )}
                                     </div>
@@ -533,11 +513,11 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
 
                     {/* Footer Actions */}
                     <div className="border-t border-gray-200 p-6">
-                        <div className="flex justify-end items-center gap-4">
+                        <div className="flex items-center justify-end gap-4">
                             <button
                                 type="button"
                                 onClick={handleCancel}
-                                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:ring-2 focus:ring-gray-500 transition-all duration-200 font-medium"
+                                className="rounded-lg border border-gray-300 bg-white px-6 py-2 font-medium text-gray-700 transition-all duration-200 hover:bg-gray-50 focus:ring-2 focus:ring-gray-500"
                                 disabled={processing}
                             >
                                 Cancel
@@ -546,15 +526,15 @@ const NewVisitModal: React.FC<NewVisitModalProps> = ({
                             <button
                                 type="submit"
                                 disabled={processing || !data.chief_complaint.trim()}
-                                className={`px-6 py-2 rounded-lg text-white font-medium transition-all duration-200 ${
+                                className={`rounded-lg px-6 py-2 font-medium text-white transition-all duration-200 ${
                                     processing || !data.chief_complaint.trim()
-                                        ? 'bg-gray-400 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:ring-2 focus:ring-blue-500 shadow-lg hover:shadow-xl'
+                                        ? 'cursor-not-allowed bg-gray-400'
+                                        : 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg hover:from-blue-700 hover:to-purple-700 hover:shadow-xl focus:ring-2 focus:ring-blue-500'
                                 }`}
                             >
                                 {processing ? (
                                     <div className="flex items-center gap-2">
-                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                                         Creating Visit...
                                     </div>
                                 ) : (

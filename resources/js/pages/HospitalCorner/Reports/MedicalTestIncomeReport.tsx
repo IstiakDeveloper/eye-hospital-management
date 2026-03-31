@@ -1,7 +1,7 @@
 import AdminLayout from '@/layouts/MainAccountLayout';
-import { Head } from '@inertiajs/react';
+import { formatDhakaDate } from '@/utils/dhaka-time';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
 import * as XLSX from 'xlsx';
 
 interface ReportItem {
@@ -60,7 +60,7 @@ export default function MedicalTestIncomeReport({ reportData, totals, filters }:
                 to_date: toDate,
                 search: search || undefined,
             },
-            { preserveState: true }
+            { preserveState: true },
         );
     };
 
@@ -74,9 +74,7 @@ export default function MedicalTestIncomeReport({ reportData, totals, filters }:
 
         // Add title
         excelData.push(['Medical Test Income Report']);
-        excelData.push([
-            `Period: ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}`,
-        ]);
+        excelData.push([`Period: ${formatDhakaDate(fromDate)} to ${formatDhakaDate(toDate)}`]);
         excelData.push([]); // Empty row
 
         // Add headers
@@ -331,9 +329,7 @@ export default function MedicalTestIncomeReport({ reportData, totals, filters }:
                     <div className="mb-6 flex items-center justify-between print:hidden">
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">Medical Test Income Report</h1>
-                            <p className="mt-1 text-sm text-gray-600">
-                                Income and performance report for medical tests
-                            </p>
+                            <p className="mt-1 text-sm text-gray-600">Income and performance report for medical tests</p>
                         </div>
                     </div>
 
@@ -371,7 +367,7 @@ export default function MedicalTestIncomeReport({ reportData, totals, filters }:
                             <div className="flex items-end gap-2">
                                 <button
                                     onClick={handleFilter}
-                                    className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
                                 >
                                     Filter
                                 </button>
@@ -383,13 +379,13 @@ export default function MedicalTestIncomeReport({ reportData, totals, filters }:
                     <div className="mb-4 flex gap-2 print:hidden">
                         <button
                             onClick={handlePrint}
-                            className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                            className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:outline-none"
                         >
                             Print
                         </button>
                         <button
                             onClick={handleExportExcel}
-                            className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                            className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
                         >
                             Export Excel
                         </button>
@@ -397,181 +393,179 @@ export default function MedicalTestIncomeReport({ reportData, totals, filters }:
 
                     {/* Printable Area */}
                     <div id="printable-area">
-                        <div className="overflow-hidden rounded-lg bg-white shadow report-section">
+                        <div className="report-section overflow-hidden rounded-lg bg-white shadow">
                             {/* Print Header */}
                             <div className="print-header mb-3">
-                                <div className="text-center mb-2">
+                                <div className="mb-2 text-center">
                                     <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
-                                    <h2 className="text-sm font-semibold mt-1">Hospital Corner - Medical Test Income Report</h2>
+                                    <h2 className="mt-1 text-sm font-semibold">Hospital Corner - Medical Test Income Report</h2>
                                 </div>
-                                <div className="flex justify-between items-center mt-2">
+                                <div className="mt-2 flex items-center justify-between">
                                     <p className="text-xs font-medium">Period Report</p>
                                     <p className="text-xs">
-                                        {new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        {formatDhakaDate(fromDate, { day: '2-digit', month: 'short', year: 'numeric' })} to{' '}
+                                        {formatDhakaDate(toDate, { day: '2-digit', month: 'short', year: 'numeric' })}
                                     </p>
                                 </div>
                             </div>
 
                             <div className="overflow-x-auto">
                                 <table className="min-w-full table-auto border-collapse">
-                            <thead>
-                                <tr>
-                                    <th
-                                        rowSpan={2}
-                                        className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                    >
-                                        SL
-                                    </th>
-                                    <th
-                                        rowSpan={2}
-                                        className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                    >
-                                        TEST NAME
-                                    </th>
-                                    <th
-                                        rowSpan={2}
-                                        className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                    >
-                                        CATEGORY
-                                    </th>
-                                    <th
-                                        colSpan={3}
-                                        className="border border-gray-300 bg-blue-100 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                    >
-                                        TEST INFORMATION
-                                    </th>
-                                    <th
-                                        colSpan={1}
-                                        className="border border-gray-300 bg-red-100 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                    >
-                                        DISCOUNT
-                                    </th>
-                                    <th
-                                        colSpan={3}
-                                        className="border border-gray-300 bg-green-100 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                    >
-                                        INCOME INFORMATION
-                                    </th>
-                                </tr>
-                                <tr>
-                                    {/* Test Information */}
-                                    <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                        COUNT
-                                    </th>
-                                    <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                        AVG PRICE
-                                    </th>
-                                    <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                        TOTAL PRICE
-                                    </th>
-                                    {/* Discount */}
-                                    <th className="border border-gray-300 bg-red-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                        TOTAL
-                                    </th>
-                                    {/* Income */}
-                                    <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                        TOTAL
-                                    </th>
-                                    <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                        PAID
-                                    </th>
-                                    <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                        DUE
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200 bg-white">
-                                {reportData.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
-                                            No data found for the selected period
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    <>
-                                        {reportData.map((item) => (
-                                            <tr key={item.id} className="hover:bg-gray-50">
-                                                <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-900">
-                                                    {item.sl}
-                                                </td>
-                                                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
-                                                    <span className="font-medium">{item.name}</span>
-                                                    <span className="text-xs text-gray-500"> ({item.code})</span>
-                                                </td>
-                                                <td className="border border-gray-300 px-3 py-2 text-center text-sm text-gray-600">
-                                                    {item.category}
-                                                </td>
-
-                                                {/* Test Information */}
-                                                <td className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-sm text-gray-900">
-                                                    {item.total_tests}
-                                                </td>
-                                                <td className="border border-gray-300 bg-blue-50 px-2 py-2 text-right text-sm text-gray-900">
-                                                    {item.avg_original_price.toFixed(2)}
-                                                </td>
-                                                <td className="border border-gray-300 bg-blue-50 px-2 py-2 text-right text-sm text-gray-900">
-                                                    {item.total_original_price.toFixed(2)}
-                                                </td>
-
-                                                {/* Discount */}
-                                                <td className="border border-gray-300 bg-red-50 px-2 py-2 text-right text-sm text-red-600">
-                                                    {item.total_discount.toFixed(2)}
-                                                </td>
-
-                                                {/* Income */}
-                                                <td className="border border-gray-300 bg-green-50 px-2 py-2 text-right text-sm text-green-600 font-medium">
-                                                    {item.total_income.toFixed(2)}
-                                                </td>
-                                                <td className="border border-gray-300 bg-green-50 px-2 py-2 text-right text-sm text-gray-900">
-                                                    {item.total_paid.toFixed(2)}
-                                                </td>
-                                                <td className="border border-gray-300 bg-green-50 px-2 py-2 text-right text-sm text-orange-600">
-                                                    {item.total_due.toFixed(2)}
+                                    <thead>
+                                        <tr>
+                                            <th
+                                                rowSpan={2}
+                                                className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900"
+                                            >
+                                                SL
+                                            </th>
+                                            <th
+                                                rowSpan={2}
+                                                className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900"
+                                            >
+                                                TEST NAME
+                                            </th>
+                                            <th
+                                                rowSpan={2}
+                                                className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900"
+                                            >
+                                                CATEGORY
+                                            </th>
+                                            <th
+                                                colSpan={3}
+                                                className="border border-gray-300 bg-blue-100 px-3 py-2 text-center text-xs font-semibold text-gray-900"
+                                            >
+                                                TEST INFORMATION
+                                            </th>
+                                            <th
+                                                colSpan={1}
+                                                className="border border-gray-300 bg-red-100 px-3 py-2 text-center text-xs font-semibold text-gray-900"
+                                            >
+                                                DISCOUNT
+                                            </th>
+                                            <th
+                                                colSpan={3}
+                                                className="border border-gray-300 bg-green-100 px-3 py-2 text-center text-xs font-semibold text-gray-900"
+                                            >
+                                                INCOME INFORMATION
+                                            </th>
+                                        </tr>
+                                        <tr>
+                                            {/* Test Information */}
+                                            <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
+                                                COUNT
+                                            </th>
+                                            <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
+                                                AVG PRICE
+                                            </th>
+                                            <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
+                                                TOTAL PRICE
+                                            </th>
+                                            {/* Discount */}
+                                            <th className="border border-gray-300 bg-red-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
+                                                TOTAL
+                                            </th>
+                                            {/* Income */}
+                                            <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
+                                                TOTAL
+                                            </th>
+                                            <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
+                                                PAID
+                                            </th>
+                                            <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
+                                                DUE
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200 bg-white">
+                                        {reportData.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
+                                                    No data found for the selected period
                                                 </td>
                                             </tr>
-                                        ))}
+                                        ) : (
+                                            <>
+                                                {reportData.map((item) => (
+                                                    <tr key={item.id} className="hover:bg-gray-50">
+                                                        <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-900">
+                                                            {item.sl}
+                                                        </td>
+                                                        <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                                                            <span className="font-medium">{item.name}</span>
+                                                            <span className="text-xs text-gray-500"> ({item.code})</span>
+                                                        </td>
+                                                        <td className="border border-gray-300 px-3 py-2 text-center text-sm text-gray-600">
+                                                            {item.category}
+                                                        </td>
 
-                                        {/* Totals Row */}
-                                        <tr className="bg-gray-100 font-bold">
-                                            <td
-                                                colSpan={3}
-                                                className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900"
-                                            >
-                                                TOTAL
-                                            </td>
+                                                        {/* Test Information */}
+                                                        <td className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-sm text-gray-900">
+                                                            {item.total_tests}
+                                                        </td>
+                                                        <td className="border border-gray-300 bg-blue-50 px-2 py-2 text-right text-sm text-gray-900">
+                                                            {item.avg_original_price.toFixed(2)}
+                                                        </td>
+                                                        <td className="border border-gray-300 bg-blue-50 px-2 py-2 text-right text-sm text-gray-900">
+                                                            {item.total_original_price.toFixed(2)}
+                                                        </td>
 
-                                            {/* Test Information Totals */}
-                                            <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-center text-sm text-gray-900">
-                                                {totals.total_tests}
-                                            </td>
-                                            <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-right text-sm text-gray-900">
-                                                -
-                                            </td>
-                                            <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-right text-sm text-gray-900">
-                                                {totals.total_original_price.toFixed(2)}
-                                            </td>
+                                                        {/* Discount */}
+                                                        <td className="border border-gray-300 bg-red-50 px-2 py-2 text-right text-sm text-red-600">
+                                                            {item.total_discount.toFixed(2)}
+                                                        </td>
 
-                                            {/* Discount Total */}
-                                            <td className="border border-gray-300 bg-red-100 px-2 py-3 text-right text-sm text-red-600">
-                                                {totals.total_discount.toFixed(2)}
-                                            </td>
+                                                        {/* Income */}
+                                                        <td className="border border-gray-300 bg-green-50 px-2 py-2 text-right text-sm font-medium text-green-600">
+                                                            {item.total_income.toFixed(2)}
+                                                        </td>
+                                                        <td className="border border-gray-300 bg-green-50 px-2 py-2 text-right text-sm text-gray-900">
+                                                            {item.total_paid.toFixed(2)}
+                                                        </td>
+                                                        <td className="border border-gray-300 bg-green-50 px-2 py-2 text-right text-sm text-orange-600">
+                                                            {item.total_due.toFixed(2)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
 
-                                            {/* Income Totals */}
-                                            <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-green-600">
-                                                {totals.total_income.toFixed(2)}
-                                            </td>
-                                            <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-gray-900">
-                                                {totals.total_paid.toFixed(2)}
-                                            </td>
-                                            <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-orange-600">
-                                                {totals.total_due.toFixed(2)}
-                                            </td>
-                                        </tr>
-                                    </>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                                {/* Totals Row */}
+                                                <tr className="bg-gray-100 font-bold">
+                                                    <td colSpan={3} className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900">
+                                                        TOTAL
+                                                    </td>
+
+                                                    {/* Test Information Totals */}
+                                                    <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-center text-sm text-gray-900">
+                                                        {totals.total_tests}
+                                                    </td>
+                                                    <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-right text-sm text-gray-900">
+                                                        -
+                                                    </td>
+                                                    <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-right text-sm text-gray-900">
+                                                        {totals.total_original_price.toFixed(2)}
+                                                    </td>
+
+                                                    {/* Discount Total */}
+                                                    <td className="border border-gray-300 bg-red-100 px-2 py-3 text-right text-sm text-red-600">
+                                                        {totals.total_discount.toFixed(2)}
+                                                    </td>
+
+                                                    {/* Income Totals */}
+                                                    <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-green-600">
+                                                        {totals.total_income.toFixed(2)}
+                                                    </td>
+                                                    <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-gray-900">
+                                                        {totals.total_paid.toFixed(2)}
+                                                    </td>
+                                                    <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-orange-600">
+                                                        {totals.total_due.toFixed(2)}
+                                                    </td>
+                                                </tr>
+                                            </>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                     {/* End Printable Area */}

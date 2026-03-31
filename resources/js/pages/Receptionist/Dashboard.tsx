@@ -1,15 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import NewVisitModal from '@/components/NewVisitModal';
+import AdminLayout from '@/layouts/admin-layout';
 import { Head, router } from '@inertiajs/react';
 import axios from 'axios';
-import AdminLayout from '@/layouts/admin-layout';
-import NewVisitModal from '@/components/NewVisitModal';
 import {
-    User, Phone, Mail, Search, Plus, Receipt,
-    DollarSign, Users, Clock, CheckCircle,
-    AlertCircle, TrendingUp, Calendar,
-    FileText, Printer, Eye, CreditCard,
-    Activity, BarChart3, RefreshCw, Stethoscope
+    Activity,
+    AlertCircle,
+    CheckCircle,
+    Clock,
+    CreditCard,
+    DollarSign,
+    Eye,
+    Plus,
+    Printer,
+    RefreshCw,
+    Search,
+    Stethoscope,
+    User,
+    Users,
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 // Type definitions
 interface Patient {
@@ -98,13 +107,7 @@ interface Doctor {
     consultation_fee: number;
 }
 
-const ReceptionistDashboard: React.FC<Props> = ({
-    stats,
-    recentVisits,
-    todayPayments,
-    pendingVisits,
-    doctors = []
-}) => {
+const ReceptionistDashboard: React.FC<Props> = ({ stats, recentVisits, todayPayments, pendingVisits, doctors = [] }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<Patient[]>([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -130,7 +133,7 @@ const ReceptionistDashboard: React.FC<Props> = ({
         setIsSearching(true);
         try {
             const response = await axios.post(route('receptionist.quick-search'), {
-                term: searchTerm
+                term: searchTerm,
             });
 
             if (response.data) {
@@ -172,7 +175,7 @@ const ReceptionistDashboard: React.FC<Props> = ({
     };
 
     const handleViewVisit = (patientId: number): void => {
-        router.visit(route('patients.show', patientId));;
+        router.visit(route('patients.show', patientId));
     };
 
     const handleViewVisitDetails = (visitId: number): void => {
@@ -189,7 +192,7 @@ const ReceptionistDashboard: React.FC<Props> = ({
             patient_id: patient.patient_unique_id,
             name: patient.name,
             phone: patient.phone,
-            email: patient.email
+            email: patient.email,
         });
         setShowNewVisitModal(true);
     };
@@ -205,7 +208,7 @@ const ReceptionistDashboard: React.FC<Props> = ({
         setRefreshing(true);
         router.reload({
             only: ['stats', 'recentVisits', 'todayPayments', 'pendingVisits'],
-            onFinish: () => setRefreshing(false)
+            onFinish: () => setRefreshing(false),
         });
     };
 
@@ -226,24 +229,37 @@ const ReceptionistDashboard: React.FC<Props> = ({
 
     const getStatusColor = (status: string): string => {
         switch (status) {
-            case 'paid': return 'text-green-600 bg-green-100';
-            case 'partial': return 'text-yellow-600 bg-yellow-100';
-            case 'pending': return 'text-red-600 bg-red-100';
-            case 'completed': return 'text-blue-600 bg-blue-100';
-            case 'in_progress': return 'text-purple-600 bg-purple-100';
-            case 'no_visit': return 'text-gray-600 bg-gray-100';
-            default: return 'text-gray-600 bg-gray-100';
+            case 'paid':
+                return 'text-green-600 bg-green-100';
+            case 'partial':
+                return 'text-yellow-600 bg-yellow-100';
+            case 'pending':
+                return 'text-red-600 bg-red-100';
+            case 'completed':
+                return 'text-blue-600 bg-blue-100';
+            case 'in_progress':
+                return 'text-purple-600 bg-purple-100';
+            case 'no_visit':
+                return 'text-gray-600 bg-gray-100';
+            default:
+                return 'text-gray-600 bg-gray-100';
         }
     };
 
     const getOverallStatusDisplay = (status: string): string => {
         switch (status) {
-            case 'payment': return 'Payment';
-            case 'vision_test': return 'Vision Test';
-            case 'prescription': return 'Prescription';
-            case 'completed': return 'Completed';
-            case 'no_visit': return 'No Active Visit';
-            default: return status;
+            case 'payment':
+                return 'Payment';
+            case 'vision_test':
+                return 'Vision Test';
+            case 'prescription':
+                return 'Prescription';
+            case 'completed':
+                return 'Completed';
+            case 'no_visit':
+                return 'No Active Visit';
+            default:
+                return status;
         }
     };
 
@@ -252,18 +268,17 @@ const ReceptionistDashboard: React.FC<Props> = ({
             <Head title="Receptionist Dashboard" />
 
             <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
-                <div className="max-w-7xl mx-auto space-y-6">
-
+                <div className="mx-auto max-w-7xl space-y-6">
                     {/* Header */}
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">Receptionist Dashboard</h1>
-                            <p className="text-gray-600 mt-1">Patient registration and visit management</p>
+                            <p className="mt-1 text-gray-600">Patient registration and visit management</p>
                         </div>
                         <button
                             onClick={refreshDashboard}
                             disabled={refreshing}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 transition-colors hover:bg-gray-50"
                         >
                             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
                             Refresh
@@ -271,46 +286,46 @@ const ReceptionistDashboard: React.FC<Props> = ({
                     </div>
 
                     {/* Quick Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl shadow-lg p-6 text-white">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white shadow-lg">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-blue-100 text-sm">Today's Visits</p>
+                                    <p className="text-sm text-blue-100">Today's Visits</p>
                                     <p className="text-3xl font-bold">{stats.today_registrations}</p>
-                                    <p className="text-blue-200 text-xs mt-1">Total this month: {stats.month_registrations}</p>
+                                    <p className="mt-1 text-xs text-blue-200">Total this month: {stats.month_registrations}</p>
                                 </div>
                                 <Users className="h-12 w-12 text-blue-200" />
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-2xl shadow-lg p-6 text-white">
+                        <div className="rounded-2xl bg-gradient-to-r from-green-600 to-green-700 p-6 text-white shadow-lg">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-green-100 text-sm">Today's Revenue</p>
+                                    <p className="text-sm text-green-100">Today's Revenue</p>
                                     <p className="text-3xl font-bold">{formatCurrency(stats.today_revenue)}</p>
-                                    <p className="text-green-200 text-xs mt-1">Monthly: {formatCurrency(stats.month_revenue)}</p>
+                                    <p className="mt-1 text-xs text-green-200">Monthly: {formatCurrency(stats.month_revenue)}</p>
                                 </div>
                                 <DollarSign className="h-12 w-12 text-green-200" />
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-r from-yellow-600 to-orange-600 rounded-2xl shadow-lg p-6 text-white">
+                        <div className="rounded-2xl bg-gradient-to-r from-yellow-600 to-orange-600 p-6 text-white shadow-lg">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-yellow-100 text-sm">Pending Payments</p>
+                                    <p className="text-sm text-yellow-100">Pending Payments</p>
                                     <p className="text-3xl font-bold">{stats.pending_payments_count}</p>
-                                    <p className="text-yellow-200 text-xs mt-1">Amount: {formatCurrency(stats.pending_payments_amount)}</p>
+                                    <p className="mt-1 text-xs text-yellow-200">Amount: {formatCurrency(stats.pending_payments_amount)}</p>
                                 </div>
                                 <AlertCircle className="h-12 w-12 text-yellow-200" />
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-2xl shadow-lg p-6 text-white">
+                        <div className="rounded-2xl bg-gradient-to-r from-purple-600 to-purple-700 p-6 text-white shadow-lg">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-purple-100 text-sm">Ready for Vision Test</p>
+                                    <p className="text-sm text-purple-100">Ready for Vision Test</p>
                                     <p className="text-3xl font-bold">{stats.visits_ready_for_vision_test}</p>
-                                    <p className="text-purple-200 text-xs mt-1">In progress: {stats.visits_in_vision_test}</p>
+                                    <p className="mt-1 text-xs text-purple-200">In progress: {stats.visits_in_vision_test}</p>
                                 </div>
                                 <Eye className="h-12 w-12 text-purple-200" />
                             </div>
@@ -318,29 +333,29 @@ const ReceptionistDashboard: React.FC<Props> = ({
                     </div>
 
                     {/* Workflow Stats */}
-                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-                        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-xl">
+                        <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-gray-900">
                             <Activity className="h-6 w-6 text-blue-600" />
                             Visit Workflow Status
                         </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="text-center p-4 bg-red-50 rounded-xl border border-red-200">
-                                <DollarSign className="h-8 w-8 text-red-600 mx-auto mb-2" />
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-center">
+                                <DollarSign className="mx-auto mb-2 h-8 w-8 text-red-600" />
                                 <p className="text-2xl font-bold text-red-600">{stats.today_pending_payments}</p>
                                 <p className="text-sm text-red-700">Payment Pending</p>
                             </div>
-                            <div className="text-center p-4 bg-purple-50 rounded-xl border border-purple-200">
-                                <Eye className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                            <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 text-center">
+                                <Eye className="mx-auto mb-2 h-8 w-8 text-purple-600" />
                                 <p className="text-2xl font-bold text-purple-600">{stats.visits_ready_for_vision_test}</p>
                                 <p className="text-sm text-purple-700">Vision Test Queue</p>
                             </div>
-                            <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
-                                <Stethoscope className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-center">
+                                <Stethoscope className="mx-auto mb-2 h-8 w-8 text-blue-600" />
                                 <p className="text-2xl font-bold text-blue-600">{stats.visits_ready_for_prescription}</p>
                                 <p className="text-sm text-blue-700">Prescription Queue</p>
                             </div>
-                            <div className="text-center p-4 bg-green-50 rounded-xl border border-green-200">
-                                <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                            <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-center">
+                                <CheckCircle className="mx-auto mb-2 h-8 w-8 text-green-600" />
                                 <p className="text-2xl font-bold text-green-600">{stats.visits_in_vision_test}</p>
                                 <p className="text-sm text-green-700">In Progress</p>
                             </div>
@@ -348,39 +363,43 @@ const ReceptionistDashboard: React.FC<Props> = ({
                     </div>
 
                     {/* Search & Quick Actions */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                         {/* Enhanced Patient Search */}
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-3xl shadow-2xl border-2 border-blue-200 p-8">
-                            <div className="text-center mb-6">
-                                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 rounded-2xl inline-block mb-4">
+                        <div className="rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-100 p-8 shadow-2xl">
+                            <div className="mb-6 text-center">
+                                <div className="mb-4 inline-block rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 p-4">
                                     <Search className="h-8 w-8 text-white" />
                                 </div>
-                                <h2 className="text-2xl font-bold text-gray-900 mb-2">Patient Search</h2>
+                                <h2 className="mb-2 text-2xl font-bold text-gray-900">Patient Search</h2>
                                 <p className="text-gray-600">Search by name, phone, ID, NID or scan QR code</p>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="relative">
-                                    <Search className="absolute left-4 top-4 h-6 w-6 text-gray-400" />
+                                    <Search className="absolute top-4 left-4 h-6 w-6 text-gray-400" />
                                     <input
                                         type="text"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         placeholder="Type patient name, phone, ID, NID or scan QR..."
-                                        className="w-full pl-12 pr-4 py-4 text-lg border-2 border-blue-300 rounded-2xl focus:ring-4 focus:ring-blue-200 focus:border-blue-500 bg-white shadow-lg transition-all duration-200"
+                                        className="w-full rounded-2xl border-2 border-blue-300 bg-white py-4 pr-4 pl-12 text-lg shadow-lg transition-all duration-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-200"
                                     />
                                     {isSearching && (
-                                        <div className="absolute right-4 top-4">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-3 border-blue-600 border-t-transparent"></div>
+                                        <div className="absolute top-4 right-4">
+                                            <div className="h-6 w-6 animate-spin rounded-full border-3 border-blue-600 border-t-transparent"></div>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="flex items-center justify-center gap-4 py-3 px-4 bg-white rounded-xl border border-blue-200">
-                                    <div className="p-2 bg-blue-100 rounded-lg">
+                                <div className="flex items-center justify-center gap-4 rounded-xl border border-blue-200 bg-white px-4 py-3">
+                                    <div className="rounded-lg bg-blue-100 p-2">
                                         <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 16h4.01M12 12h.01M16 16h.01M12 16h.01" />
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 16h4.01M12 12h.01M16 16h.01M12 16h.01"
+                                            />
                                         </svg>
                                     </div>
                                     <span className="text-sm font-medium text-gray-700">QR Code Scanning Enabled</span>
@@ -388,45 +407,54 @@ const ReceptionistDashboard: React.FC<Props> = ({
                             </div>
 
                             {searchResults.length > 0 && (
-                                <div className="mt-6 space-y-3 max-h-80 overflow-y-auto">
+                                <div className="mt-6 max-h-80 space-y-3 overflow-y-auto">
                                     {searchResults.map((patient) => (
-                                        <div key={patient.patient_id} className="p-4 bg-white border-2 border-blue-200 rounded-xl hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 cursor-pointer shadow-md">
+                                        <div
+                                            key={patient.patient_id}
+                                            className="cursor-pointer rounded-xl border-2 border-blue-200 bg-white p-4 shadow-md transition-all duration-200 hover:border-blue-300 hover:bg-blue-50"
+                                        >
                                             <div className="flex items-center justify-between">
                                                 <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <p className="font-bold text-lg text-gray-900">{patient.name}</p>
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(patient.payment_status)}`}>
+                                                    <div className="mb-1 flex items-center gap-2">
+                                                        <p className="text-lg font-bold text-gray-900">{patient.name}</p>
+                                                        <span
+                                                            className={`rounded-full px-3 py-1 text-xs font-bold ${getStatusColor(patient.payment_status)}`}
+                                                        >
                                                             {patient.payment_status.toUpperCase()}
                                                         </span>
                                                     </div>
-                                                    <p className="text-gray-600 font-medium">{patient.patient_unique_id} • {patient.phone}</p>
-                                                    {patient.nid_card && (
-                                                        <p className="text-gray-500 text-sm">NID: {patient.nid_card}</p>
-                                                    )}
-                                                    <div className="flex items-center gap-3 mt-2">
+                                                    <p className="font-medium text-gray-600">
+                                                        {patient.patient_unique_id} • {patient.phone}
+                                                    </p>
+                                                    {patient.nid_card && <p className="text-sm text-gray-500">NID: {patient.nid_card}</p>}
+                                                    <div className="mt-2 flex items-center gap-3">
                                                         {patient.has_active_visit ? (
                                                             <>
-                                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(patient.overall_status || 'pending')}`}>
+                                                                <span
+                                                                    className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(patient.overall_status || 'pending')}`}
+                                                                >
                                                                     {getOverallStatusDisplay(patient.overall_status || 'pending')}
                                                                 </span>
                                                                 {patient.visit_unique_id && (
-                                                                    <span className="text-xs text-blue-600 font-medium">Visit: {patient.visit_unique_id}</span>
+                                                                    <span className="text-xs font-medium text-blue-600">
+                                                                        Visit: {patient.visit_unique_id}
+                                                                    </span>
                                                                 )}
                                                             </>
                                                         ) : (
-                                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                            <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
                                                                 No Active Visit
                                                             </span>
                                                         )}
                                                         {patient.doctor_name && (
-                                                            <span className="text-sm text-indigo-600 font-medium">Dr. {patient.doctor_name}</span>
+                                                            <span className="text-sm font-medium text-indigo-600">Dr. {patient.doctor_name}</span>
                                                         )}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <button
                                                         onClick={() => handleViewPatient(patient.patient_id)}
-                                                        className="p-3 text-blue-600 hover:bg-blue-100 rounded-xl transition-colors shadow-md hover:shadow-lg"
+                                                        className="rounded-xl p-3 text-blue-600 shadow-md transition-colors hover:bg-blue-100 hover:shadow-lg"
                                                         title="View Patient Details"
                                                     >
                                                         <User className="h-5 w-5" />
@@ -435,14 +463,14 @@ const ReceptionistDashboard: React.FC<Props> = ({
                                                         <>
                                                             <button
                                                                 onClick={() => handleViewVisit(patient.patient_id)}
-                                                                className="p-3 text-purple-600 hover:bg-purple-100 rounded-xl transition-colors shadow-md hover:shadow-lg"
+                                                                className="rounded-xl p-3 text-purple-600 shadow-md transition-colors hover:bg-purple-100 hover:shadow-lg"
                                                                 title="View Current Visit"
                                                             >
                                                                 <Eye className="h-5 w-5" />
                                                             </button>
                                                             <button
                                                                 onClick={() => handlePrintReceipt(patient.patient_id)}
-                                                                className="p-3 text-green-600 hover:bg-green-100 rounded-xl transition-colors shadow-md hover:shadow-lg"
+                                                                className="rounded-xl p-3 text-green-600 shadow-md transition-colors hover:bg-green-100 hover:shadow-lg"
                                                                 title="Print Receipt"
                                                             >
                                                                 <Printer className="h-5 w-5" />
@@ -451,7 +479,7 @@ const ReceptionistDashboard: React.FC<Props> = ({
                                                     ) : (
                                                         <button
                                                             onClick={() => handleNewVisit(patient)}
-                                                            className="p-3 text-green-600 hover:bg-green-100 rounded-xl transition-colors shadow-md hover:shadow-lg"
+                                                            className="rounded-xl p-3 text-green-600 shadow-md transition-colors hover:bg-green-100 hover:shadow-lg"
                                                             title="Start New Visit"
                                                         >
                                                             <Plus className="h-5 w-5" />
@@ -466,14 +494,14 @@ const ReceptionistDashboard: React.FC<Props> = ({
                         </div>
 
                         {/* Quick Actions & Today's Activity */}
-                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-                            <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-xl">
+                            <h2 className="mb-6 flex items-center gap-2 text-xl font-semibold text-gray-900">
                                 <Activity className="h-6 w-6 text-purple-600" />
                                 Quick Actions & Today's Activity
                             </h2>
 
-                            <div className="space-y-4 mb-6">
-                                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-200">
+                            <div className="mb-6 space-y-4">
+                                <div className="flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 p-4">
                                     <div className="flex items-center gap-3">
                                         <Users className="h-6 w-6 text-blue-600" />
                                         <span className="font-medium text-gray-700">Today's Visits</span>
@@ -481,7 +509,7 @@ const ReceptionistDashboard: React.FC<Props> = ({
                                     <span className="text-2xl font-bold text-blue-600">{stats.today_registrations}</span>
                                 </div>
 
-                                <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200">
+                                <div className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 p-4">
                                     <div className="flex items-center gap-3">
                                         <DollarSign className="h-6 w-6 text-green-600" />
                                         <span className="font-medium text-gray-700">Today's Payments</span>
@@ -489,7 +517,7 @@ const ReceptionistDashboard: React.FC<Props> = ({
                                     <span className="text-2xl font-bold text-green-600">{todayPayments.total_count}</span>
                                 </div>
 
-                                <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                                <div className="flex items-center justify-between rounded-xl border border-yellow-200 bg-yellow-50 p-4">
                                     <div className="flex items-center gap-3">
                                         <AlertCircle className="h-6 w-6 text-yellow-600" />
                                         <span className="font-medium text-gray-700">Pending Payments</span>
@@ -501,23 +529,21 @@ const ReceptionistDashboard: React.FC<Props> = ({
                             <div className="space-y-3">
                                 <button
                                     onClick={() => router.visit(route('patients.create'))}
-                                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center gap-3 shadow-lg hover:shadow-xl"
+                                    className="flex w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 py-4 text-lg font-bold text-white shadow-lg transition-all duration-200 hover:from-green-700 hover:to-emerald-700 hover:shadow-xl"
                                 >
                                     <Plus className="h-6 w-6" />
                                     Add New Patient
                                 </button>
-
                             </div>
                         </div>
                     </div>
 
                     {/* Recent Visits & Today's Payments */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                         {/* Recent Visits */}
-                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
-                            <div className="p-6 border-b border-gray-200">
-                                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                        <div className="rounded-2xl border border-gray-100 bg-white shadow-xl">
+                            <div className="border-b border-gray-200 p-6">
+                                <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
                                     <Clock className="h-6 w-6 text-blue-600" />
                                     Recent Visits
                                 </h2>
@@ -525,37 +551,48 @@ const ReceptionistDashboard: React.FC<Props> = ({
 
                             <div className="p-6">
                                 {recentVisits.length > 0 ? (
-                                    <div className="space-y-4 max-h-96 overflow-y-auto">
+                                    <div className="max-h-96 space-y-4 overflow-y-auto">
                                         {recentVisits.map((visit) => (
-                                            <div key={visit.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                                            <div
+                                                key={visit.id}
+                                                className="flex items-center justify-between rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
+                                            >
                                                 <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-1">
+                                                    <div className="mb-1 flex items-center gap-2">
                                                         <h3 className="font-semibold text-gray-900">{visit.patient_name}</h3>
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(visit.payment_status)}`}>
+                                                        <span
+                                                            className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(visit.payment_status)}`}
+                                                        >
                                                             {visit.payment_status}
                                                         </span>
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(visit.overall_status)}`}>
+                                                        <span
+                                                            className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(visit.overall_status)}`}
+                                                        >
                                                             {getOverallStatusDisplay(visit.overall_status)}
                                                         </span>
                                                     </div>
-                                                    <p className="text-sm text-gray-600">{visit.patient_id} • {visit.visit_id} • {visit.phone}</p>
-                                                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                                                    <p className="text-sm text-gray-600">
+                                                        {visit.patient_id} • {visit.visit_id} • {visit.phone}
+                                                    </p>
+                                                    <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
                                                         <span>{formatTime(visit.created_at)}</span>
-                                                        <span>{formatCurrency(visit.total_paid)} / {formatCurrency(visit.final_amount)}</span>
+                                                        <span>
+                                                            {formatCurrency(visit.total_paid)} / {formatCurrency(visit.final_amount)}
+                                                        </span>
                                                         {visit.doctor_name && <span>Dr. {visit.doctor_name}</span>}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <button
                                                         onClick={() => handleViewVisitDetails(visit.id)}
-                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        className="rounded-lg p-2 text-blue-600 transition-colors hover:bg-blue-50"
                                                         title="View Visit Details"
                                                     >
                                                         <Eye className="h-4 w-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => handlePrintVisitReceipt(visit.id)}
-                                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                        className="rounded-lg p-2 text-green-600 transition-colors hover:bg-green-50"
                                                         title="Print Receipt"
                                                     >
                                                         <Printer className="h-4 w-4" />
@@ -565,8 +602,8 @@ const ReceptionistDashboard: React.FC<Props> = ({
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="text-center py-8">
-                                        <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                                    <div className="py-8 text-center">
+                                        <Users className="mx-auto mb-4 h-16 w-16 text-gray-400" />
                                         <p className="text-gray-600">No recent visits</p>
                                     </div>
                                 )}
@@ -584,10 +621,10 @@ const ReceptionistDashboard: React.FC<Props> = ({
                         </div>
 
                         {/* Today's Payments */}
-                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
-                            <div className="p-6 border-b border-gray-200">
+                        <div className="rounded-2xl border border-gray-100 bg-white shadow-xl">
+                            <div className="border-b border-gray-200 p-6">
                                 <div className="flex items-center justify-between">
-                                    <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                                    <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
                                         <CreditCard className="h-6 w-6 text-green-600" />
                                         Today's Payments
                                     </h2>
@@ -600,13 +637,15 @@ const ReceptionistDashboard: React.FC<Props> = ({
 
                             <div className="p-6">
                                 {todayPayments.payments.length > 0 ? (
-                                    <div className="space-y-4 max-h-96 overflow-y-auto">
+                                    <div className="max-h-96 space-y-4 overflow-y-auto">
                                         {todayPayments.payments.map((payment) => (
-                                            <div key={payment.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                            <div key={payment.id} className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
                                                 <div className="flex-1">
                                                     <h3 className="font-semibold text-gray-900">{payment.patient_name}</h3>
-                                                    <p className="text-sm text-gray-600">{payment.patient_id} • {payment.visit_id} • {payment.payment_method}</p>
-                                                    <p className="text-xs text-gray-500 mt-1">{formatTime(payment.created_at)}</p>
+                                                    <p className="text-sm text-gray-600">
+                                                        {payment.patient_id} • {payment.visit_id} • {payment.payment_method}
+                                                    </p>
+                                                    <p className="mt-1 text-xs text-gray-500">{formatTime(payment.created_at)}</p>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-lg font-bold text-green-600">{formatCurrency(payment.amount)}</p>
@@ -615,21 +654,21 @@ const ReceptionistDashboard: React.FC<Props> = ({
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="text-center py-8">
-                                        <CreditCard className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                                    <div className="py-8 text-center">
+                                        <CreditCard className="mx-auto mb-4 h-16 w-16 text-gray-400" />
                                         <p className="text-gray-600">No payments today</p>
                                     </div>
                                 )}
 
                                 {todayPayments.total_count > 0 && (
-                                    <div className="mt-4 pt-4 border-t border-gray-200">
+                                    <div className="mt-4 border-t border-gray-200 pt-4">
                                         <div className="grid grid-cols-2 gap-4 text-sm">
-                                            <div className="text-center p-3 bg-green-50 rounded-lg">
-                                                <p className="text-green-600 font-semibold">Average Payment</p>
+                                            <div className="rounded-lg bg-green-50 p-3 text-center">
+                                                <p className="font-semibold text-green-600">Average Payment</p>
                                                 <p className="text-lg font-bold text-green-700">{formatCurrency(todayPayments.average_payment)}</p>
                                             </div>
-                                            <div className="text-center p-3 bg-blue-50 rounded-lg">
-                                                <p className="text-blue-600 font-semibold">Total Count</p>
+                                            <div className="rounded-lg bg-blue-50 p-3 text-center">
+                                                <p className="font-semibold text-blue-600">Total Count</p>
                                                 <p className="text-lg font-bold text-blue-700">{todayPayments.total_count}</p>
                                             </div>
                                         </div>
@@ -641,45 +680,45 @@ const ReceptionistDashboard: React.FC<Props> = ({
 
                     {/* Pending Visits */}
                     {pendingVisits.length > 0 && (
-                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
-                            <div className="p-6 border-b border-gray-200">
-                                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                        <div className="rounded-2xl border border-gray-100 bg-white shadow-xl">
+                            <div className="border-b border-gray-200 p-6">
+                                <h2 className="flex items-center gap-2 text-xl font-semibold text-gray-900">
                                     <AlertCircle className="h-6 w-6 text-yellow-600" />
                                     Pending Payment Visits
-                                    <span className="bg-yellow-100 text-yellow-800 text-sm font-medium px-2 py-1 rounded-full">
+                                    <span className="rounded-full bg-yellow-100 px-2 py-1 text-sm font-medium text-yellow-800">
                                         {pendingVisits.length}
                                     </span>
                                 </h2>
                             </div>
 
                             <div className="p-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     {pendingVisits.map((visit) => (
-                                        <div key={visit.id} className="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
-                                            <div className="flex items-center justify-between mb-2">
+                                        <div key={visit.id} className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                                            <div className="mb-2 flex items-center justify-between">
                                                 <h3 className="font-semibold text-gray-900">{visit.patient_name}</h3>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(visit.payment_status)}`}>
+                                                <span
+                                                    className={`rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(visit.payment_status)}`}
+                                                >
                                                     {visit.payment_status}
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-gray-600 mb-2">{visit.patient_id} • {visit.visit_id} • {visit.phone}</p>
+                                            <p className="mb-2 text-sm text-gray-600">
+                                                {visit.patient_id} • {visit.visit_id} • {visit.phone}
+                                            </p>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-sm font-medium text-red-600">
-                                                    Due: {formatCurrency(visit.total_due)}
-                                                </span>
+                                                <span className="text-sm font-medium text-red-600">Due: {formatCurrency(visit.total_due)}</span>
                                                 <div className="flex items-center gap-2">
                                                     <button
                                                         onClick={() => handleViewVisitDetails(visit.id)}
-                                                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                                                        className="rounded-lg p-2 text-blue-600 transition-colors hover:bg-blue-100"
                                                         title="View & Process Payment"
                                                     >
                                                         <DollarSign className="h-4 w-4" />
                                                     </button>
                                                 </div>
                                             </div>
-                                            <p className="text-xs text-gray-500 mt-2">
-                                                Visit Date: {formatDate(visit.created_at)}
-                                            </p>
+                                            <p className="mt-2 text-xs text-gray-500">Visit Date: {formatDate(visit.created_at)}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -721,18 +760,12 @@ const ReceptionistDashboard: React.FC<Props> = ({
                             Print Reports
                         </button>
                     </div> */}
-
                 </div>
             </div>
 
             {/* New Visit Modal */}
             {showNewVisitModal && selectedPatientForVisit && (
-                <NewVisitModal
-                    isOpen={showNewVisitModal}
-                    onClose={handleCloseNewVisitModal}
-                    patient={selectedPatientForVisit}
-                    doctors={doctors}
-                />
+                <NewVisitModal isOpen={showNewVisitModal} onClose={handleCloseNewVisitModal} patient={selectedPatientForVisit} doctors={doctors} />
             )}
         </AdminLayout>
     );

@@ -1,31 +1,27 @@
-import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
+import { Head, router } from '@inertiajs/react';
 import {
-    Wallet,
-    Users,
-    Calendar,
     Activity,
-    TrendingUp,
-    TrendingDown,
     AlertTriangle,
-    Eye,
-    Pill,
-    Glasses,
-    DollarSign,
-    Clock,
-    CheckCircle,
-    XCircle,
-    PlusCircle,
-    MinusCircle,
-    Package,
-    User,
-    FileText,
-    CreditCard,
-    Filter,
+    Calendar,
     CalendarDays,
-    Scissors
+    Clock,
+    CreditCard,
+    DollarSign,
+    Eye,
+    FileText,
+    Filter,
+    Glasses,
+    Package,
+    Pill,
+    Scissors,
+    TrendingDown,
+    TrendingUp,
+    User,
+    Users,
+    Wallet,
 } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface DashboardProps {
     auth: any;
@@ -111,9 +107,10 @@ const formatCurrency = (amount: number | string, currency: string = 'BDT') => {
         currency: currency,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-    }).format(numAmount).replace(currency, '৳');
+    })
+        .format(numAmount)
+        .replace(currency, '৳');
 };
-
 
 const StatCard = ({
     title,
@@ -121,7 +118,7 @@ const StatCard = ({
     icon: Icon,
     color = 'blue',
     trend = null,
-    subtitle = null
+    subtitle = null,
 }: {
     title: string;
     value: string | number;
@@ -140,31 +137,37 @@ const StatCard = ({
     };
 
     return (
-        <div className="bg-white rounded-lg border shadow-sm p-6 hover:shadow-md transition-shadow">
+        <div className="rounded-lg border bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
             <div className="flex items-center justify-between">
                 <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+                    <p className="mb-1 text-sm font-medium text-gray-600">{title}</p>
                     <div className="flex items-center gap-2">
                         <p className="text-xl font-bold text-gray-900">{value}</p>
                         {trend && (
-                            <span className={`flex items-center text-xs px-2 py-1 rounded-full ${trend.isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                }`}>
-                                {trend.isPositive ? <TrendingUp className="w-3 h-3 mr-1" /> : <TrendingDown className="w-3 h-3 mr-1" />}
+                            <span
+                                className={`flex items-center rounded-full px-2 py-1 text-xs ${
+                                    trend.isPositive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}
+                            >
+                                {trend.isPositive ? <TrendingUp className="mr-1 h-3 w-3" /> : <TrendingDown className="mr-1 h-3 w-3" />}
                                 {Math.abs(trend.value)}%
                             </span>
                         )}
                     </div>
-                    {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+                    {subtitle && <p className="mt-1 text-xs text-gray-500">{subtitle}</p>}
                 </div>
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center border ${colorClasses[color]}`}>
-                    <Icon className="w-6 h-6" />
+                <div className={`flex h-12 w-12 items-center justify-center rounded-lg border ${colorClasses[color]}`}>
+                    <Icon className="h-6 w-6" />
                 </div>
             </div>
         </div>
     );
 };
 
-const DateRangeSelector = ({ currentRange, onRangeChange }: {
+const DateRangeSelector = ({
+    currentRange,
+    onRangeChange,
+}: {
     currentRange: { start: string; end: string; period: string };
     onRangeChange: (period: string, startDate?: string, endDate?: string) => void;
 }) => {
@@ -197,23 +200,24 @@ const DateRangeSelector = ({ currentRange, onRangeChange }: {
     };
 
     return (
-        <div className="bg-white rounded-lg border shadow-sm p-4 mb-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                    <CalendarDays className="w-5 h-5 text-gray-600" />
+                    <CalendarDays className="h-5 w-5 text-gray-600" />
                     <h3 className="font-medium text-gray-900">Date Range Filter</h3>
                 </div>
 
-                <div className="flex items-center gap-3 flex-wrap">
-                    <div className="flex gap-2 flex-wrap">
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex flex-wrap gap-2">
                         {predefinedRanges.map((range) => (
                             <button
                                 key={range.value}
                                 onClick={() => handlePeriodChange(range.value)}
-                                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${currentRange.period === range.value
-                                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-                                    }`}
+                                className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+                                    currentRange.period === range.value
+                                        ? 'border border-blue-300 bg-blue-100 text-blue-700'
+                                        : 'border border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
                             >
                                 {range.label}
                             </button>
@@ -221,23 +225,23 @@ const DateRangeSelector = ({ currentRange, onRangeChange }: {
                     </div>
 
                     {showCustom && (
-                        <div className="flex items-center gap-2 ml-4">
+                        <div className="ml-4 flex items-center gap-2">
                             <input
                                 type="date"
                                 value={customStart}
                                 onChange={(e) => setCustomStart(e.target.value)}
-                                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+                                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
                             />
                             <span className="text-gray-500">to</span>
                             <input
                                 type="date"
                                 value={customEnd}
                                 onChange={(e) => setCustomEnd(e.target.value)}
-                                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm"
+                                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm"
                             />
                             <button
                                 onClick={handleCustomApply}
-                                className="px-4 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors"
+                                className="rounded-md bg-blue-600 px-4 py-1.5 text-sm text-white transition-colors hover:bg-blue-700"
                             >
                                 Apply
                             </button>
@@ -247,7 +251,8 @@ const DateRangeSelector = ({ currentRange, onRangeChange }: {
             </div>
 
             <div className="mt-3 text-sm text-gray-600">
-                <span className="font-medium">Selected Range:</span> {new Date(currentRange.start).toLocaleDateString('en-BD')} - {new Date(currentRange.end).toLocaleDateString('en-BD')}
+                <span className="font-medium">Selected Range:</span> {new Date(currentRange.start).toLocaleDateString('en-BD')} -{' '}
+                {new Date(currentRange.end).toLocaleDateString('en-BD')}
             </div>
         </div>
     );
@@ -256,7 +261,7 @@ const DateRangeSelector = ({ currentRange, onRangeChange }: {
 const AlertCard = ({
     title,
     alerts,
-    color = 'red'
+    color = 'red',
 }: {
     title: string;
     alerts: Array<{ label: string; count: number; color?: string }>;
@@ -267,25 +272,24 @@ const AlertCard = ({
     if (totalAlerts === 0) return null;
 
     return (
-        <div className="bg-white rounded-lg border border-red-200 shadow-sm p-4">
-            <div className="flex items-center gap-3 mb-3">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
+        <div className="rounded-lg border border-red-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
                 <h3 className="font-semibold text-gray-900">{title}</h3>
-                <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full">
+                <span className="rounded-full bg-red-100 px-2 py-1 text-xs text-red-700">
                     {totalAlerts} alert{totalAlerts > 1 ? 's' : ''}
                 </span>
             </div>
             <div className="space-y-2">
-                {alerts.map((alert, index) => (
-                    (alert.count || 0) > 0 && (
-                        <div key={index} className="flex justify-between items-center text-sm">
-                            <span className="text-gray-600">{alert.label}</span>
-                            <span className={`font-medium ${alert.color || 'text-red-600'}`}>
-                                {alert.count || 0}
-                            </span>
-                        </div>
-                    )
-                ))}
+                {alerts.map(
+                    (alert, index) =>
+                        (alert.count || 0) > 0 && (
+                            <div key={index} className="flex items-center justify-between text-sm">
+                                <span className="text-gray-600">{alert.label}</span>
+                                <span className={`font-medium ${alert.color || 'text-red-600'}`}>{alert.count || 0}</span>
+                            </div>
+                        ),
+                )}
             </div>
         </div>
     );
@@ -295,17 +299,17 @@ const RecentActivityCard = ({
     title,
     items,
     icon: Icon,
-    renderItem
+    renderItem,
 }: {
     title: string;
     items: Array<any>;
     icon: any;
     renderItem: (item: any) => React.ReactNode;
 }) => (
-    <div className="bg-white rounded-lg border shadow-sm">
-        <div className="px-6 py-4 border-b">
+    <div className="rounded-lg border bg-white shadow-sm">
+        <div className="border-b px-6 py-4">
             <div className="flex items-center gap-3">
-                <Icon className="w-5 h-5 text-gray-600" />
+                <Icon className="h-5 w-5 text-gray-600" />
                 <h3 className="font-semibold text-gray-900">{title}</h3>
             </div>
         </div>
@@ -313,13 +317,13 @@ const RecentActivityCard = ({
             {items.length > 0 ? (
                 <div className="space-y-3">
                     {items.map((item, index) => (
-                        <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                        <div key={index} className="flex items-center justify-between border-b border-gray-100 py-2 last:border-0">
                             {renderItem(item)}
                         </div>
                     ))}
                 </div>
             ) : (
-                <p className="text-gray-500 text-center py-8">No recent activities in selected period</p>
+                <p className="py-8 text-center text-gray-500">No recent activities in selected period</p>
             )}
         </div>
     </div>
@@ -333,7 +337,7 @@ export default function AdminDashboard({
     opticsStockInfo,
     recentActivities,
     periodReports,
-    dateRange
+    dateRange,
 }: DashboardProps) {
     const handleDateRangeChange = (period: string, startDate?: string, endDate?: string) => {
         const params: any = { period };
@@ -356,24 +360,30 @@ export default function AdminDashboard({
 
     // Safe calculation helpers
     const getTotalIncome = () => {
-        return parseAmount(periodReports.hospital.income) +
+        return (
+            parseAmount(periodReports.hospital.income) +
             parseAmount(periodReports.medicine.income) +
             parseAmount(periodReports.optics.income) +
-            parseAmount(periodReports.operation.income);
+            parseAmount(periodReports.operation.income)
+        );
     };
 
     const getTotalExpense = () => {
-        return parseAmount(periodReports.hospital.expense) +
+        return (
+            parseAmount(periodReports.hospital.expense) +
             parseAmount(periodReports.medicine.expense) +
             parseAmount(periodReports.optics.expense) +
-            parseAmount(periodReports.operation.expense);
+            parseAmount(periodReports.operation.expense)
+        );
     };
 
     const getTotalProfit = () => {
-        return parseAmount(periodReports.hospital.profit) +
+        return (
+            parseAmount(periodReports.hospital.profit) +
             parseAmount(periodReports.medicine.profit) +
             parseAmount(periodReports.optics.profit) +
-            parseAmount(periodReports.operation.profit);
+            parseAmount(periodReports.operation.profit)
+        );
     };
 
     return (
@@ -381,16 +391,12 @@ export default function AdminDashboard({
             <Head title="Super Admin Dashboard" />
 
             <div className="py-6">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-
+                <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
                     {/* Date Range Selector */}
-                    <DateRangeSelector
-                        currentRange={dateRange}
-                        onRangeChange={handleDateRangeChange}
-                    />
+                    <DateRangeSelector currentRange={dateRange} onRangeChange={handleDateRangeChange} />
 
                     {/* Account Balance Section - Hospital Only */}
-                    <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-1">
                         <StatCard
                             title="Hospital Account Balance"
                             value={formatCurrency(accountBalances.hospital.balance)}
@@ -401,146 +407,146 @@ export default function AdminDashboard({
                     </div>
 
                     {/* Period Reports */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="bg-white rounded-lg border shadow-sm p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <Eye className="w-5 h-5 text-blue-600" />
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-lg border bg-white p-6 shadow-sm">
+                            <h3 className="mb-4 flex items-center gap-2 font-semibold text-gray-900">
+                                <Eye className="h-5 w-5 text-blue-600" />
                                 Hospital - Selected Period
                                 {periodReports.hospital.incomeGrowth !== undefined && (
-                                    <span className={`text-xs px-2 py-1 rounded-full ${periodReports.hospital.incomeGrowth >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                        }`}>
-                                        {periodReports.hospital.incomeGrowth >= 0 ? '+' : ''}{periodReports.hospital.incomeGrowth}%
+                                    <span
+                                        className={`rounded-full px-2 py-1 text-xs ${
+                                            periodReports.hospital.incomeGrowth >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                        }`}
+                                    >
+                                        {periodReports.hospital.incomeGrowth >= 0 ? '+' : ''}
+                                        {periodReports.hospital.incomeGrowth}%
                                     </span>
                                 )}
                             </h3>
                             <div className="space-y-3">
-                                <div className="flex justify-between items-center">
+                                <div className="flex items-center justify-between">
                                     <span className="text-gray-600">Total Income</span>
-                                    <span className="font-semibold text-green-600">
-                                        +{formatCurrency(periodReports.hospital.income)}
-                                    </span>
+                                    <span className="font-semibold text-green-600">+{formatCurrency(periodReports.hospital.income)}</span>
                                 </div>
 
                                 {/* OPD Income */}
-                                <div className="flex justify-between items-center pl-4 border-l-2 border-blue-200">
+                                <div className="flex items-center justify-between border-l-2 border-blue-200 pl-4">
                                     <div className="flex flex-col">
                                         <span className="text-sm text-gray-500">OPD Income</span>
                                         {periodReports.hospital.opdIncomeGrowth !== undefined && (
-                                            <span className={`text-xs ${periodReports.hospital.opdIncomeGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {periodReports.hospital.opdIncomeGrowth >= 0 ? '↑' : '↓'} {Math.abs(periodReports.hospital.opdIncomeGrowth)}%
+                                            <span
+                                                className={`text-xs ${periodReports.hospital.opdIncomeGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                                            >
+                                                {periodReports.hospital.opdIncomeGrowth >= 0 ? '↑' : '↓'}{' '}
+                                                {Math.abs(periodReports.hospital.opdIncomeGrowth)}%
                                             </span>
                                         )}
                                     </div>
-                                    <span className="font-medium text-green-600 text-sm">
-                                        +{formatCurrency(periodReports.hospital.opdIncome)}
-                                    </span>
+                                    <span className="text-sm font-medium text-green-600">+{formatCurrency(periodReports.hospital.opdIncome)}</span>
                                 </div>
 
                                 {/* Medical Test Income */}
-                                <div className="flex justify-between items-center pl-4 border-l-2 border-purple-200">
+                                <div className="flex items-center justify-between border-l-2 border-purple-200 pl-4">
                                     <div className="flex flex-col">
                                         <span className="text-sm text-gray-500">Medical Test</span>
                                         {periodReports.hospital.medicalTestIncomeGrowth !== undefined && (
-                                            <span className={`text-xs ${periodReports.hospital.medicalTestIncomeGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {periodReports.hospital.medicalTestIncomeGrowth >= 0 ? '↑' : '↓'} {Math.abs(periodReports.hospital.medicalTestIncomeGrowth)}%
+                                            <span
+                                                className={`text-xs ${periodReports.hospital.medicalTestIncomeGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                                            >
+                                                {periodReports.hospital.medicalTestIncomeGrowth >= 0 ? '↑' : '↓'}{' '}
+                                                {Math.abs(periodReports.hospital.medicalTestIncomeGrowth)}%
                                             </span>
                                         )}
                                     </div>
-                                    <span className="font-medium text-green-600 text-sm">
+                                    <span className="text-sm font-medium text-green-600">
                                         +{formatCurrency(periodReports.hospital.medicalTestIncome)}
                                     </span>
                                 </div>
 
-                                <div className="flex justify-between pt-2 border-t">
+                                <div className="flex justify-between border-t pt-2">
                                     <span className="text-gray-600">Expense</span>
-                                    <span className="font-medium text-red-600">
-                                        -{formatCurrency(periodReports.hospital.expense)}
-                                    </span>
+                                    <span className="font-medium text-red-600">-{formatCurrency(periodReports.hospital.expense)}</span>
                                 </div>
                                 <div className="flex justify-between border-t pt-2">
                                     <span className="font-semibold text-gray-900">Profit</span>
-                                    <span className={`font-bold ${parseAmount(periodReports.hospital.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    <span
+                                        className={`font-bold ${parseAmount(periodReports.hospital.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                                    >
                                         {formatCurrency(periodReports.hospital.profit)}
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-lg border shadow-sm p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <Pill className="w-5 h-5 text-green-600" />
+                        <div className="rounded-lg border bg-white p-6 shadow-sm">
+                            <h3 className="mb-4 flex items-center gap-2 font-semibold text-gray-900">
+                                <Pill className="h-5 w-5 text-green-600" />
                                 Medicine - Selected Period
                             </h3>
                             <div className="space-y-3">
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Income</span>
-                                    <span className="font-medium text-green-600">
-                                        +{formatCurrency(periodReports.medicine.income)}
-                                    </span>
+                                    <span className="font-medium text-green-600">+{formatCurrency(periodReports.medicine.income)}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Expense</span>
-                                    <span className="font-medium text-red-600">
-                                        -{formatCurrency(periodReports.medicine.expense)}
-                                    </span>
+                                    <span className="font-medium text-red-600">-{formatCurrency(periodReports.medicine.expense)}</span>
                                 </div>
                                 <div className="flex justify-between border-t pt-2">
                                     <span className="font-semibold text-gray-900">Profit</span>
-                                    <span className={`font-bold ${parseAmount(periodReports.medicine.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    <span
+                                        className={`font-bold ${parseAmount(periodReports.medicine.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                                    >
                                         {formatCurrency(periodReports.medicine.profit)}
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-lg border shadow-sm p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <Glasses className="w-5 h-5 text-yellow-600" />
+                        <div className="rounded-lg border bg-white p-6 shadow-sm">
+                            <h3 className="mb-4 flex items-center gap-2 font-semibold text-gray-900">
+                                <Glasses className="h-5 w-5 text-yellow-600" />
                                 Optics - Selected Period
                             </h3>
                             <div className="space-y-3">
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Income</span>
-                                    <span className="font-medium text-green-600">
-                                        +{formatCurrency(periodReports.optics.income)}
-                                    </span>
+                                    <span className="font-medium text-green-600">+{formatCurrency(periodReports.optics.income)}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Expense</span>
-                                    <span className="font-medium text-red-600">
-                                        -{formatCurrency(periodReports.optics.expense)}
-                                    </span>
+                                    <span className="font-medium text-red-600">-{formatCurrency(periodReports.optics.expense)}</span>
                                 </div>
                                 <div className="flex justify-between border-t pt-2">
                                     <span className="font-semibold text-gray-900">Profit</span>
-                                    <span className={`font-bold ${parseAmount(periodReports.optics.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    <span
+                                        className={`font-bold ${parseAmount(periodReports.optics.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                                    >
                                         {formatCurrency(periodReports.optics.profit)}
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-lg border shadow-sm p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <Activity className="w-5 h-5 text-purple-600" />
+                        <div className="rounded-lg border bg-white p-6 shadow-sm">
+                            <h3 className="mb-4 flex items-center gap-2 font-semibold text-gray-900">
+                                <Activity className="h-5 w-5 text-purple-600" />
                                 Operation - Selected Period
                             </h3>
                             <div className="space-y-3">
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Income</span>
-                                    <span className="font-medium text-green-600">
-                                        +{formatCurrency(periodReports.operation.income)}
-                                    </span>
+                                    <span className="font-medium text-green-600">+{formatCurrency(periodReports.operation.income)}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Expense</span>
-                                    <span className="font-medium text-red-600">
-                                        -{formatCurrency(periodReports.operation.expense)}
-                                    </span>
+                                    <span className="font-medium text-red-600">-{formatCurrency(periodReports.operation.expense)}</span>
                                 </div>
                                 <div className="flex justify-between border-t pt-2">
                                     <span className="font-semibold text-gray-900">Profit</span>
-                                    <span className={`font-bold ${parseAmount(periodReports.operation.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    <span
+                                        className={`font-bold ${parseAmount(periodReports.operation.profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                                    >
                                         {formatCurrency(periodReports.operation.profit)}
                                     </span>
                                 </div>
@@ -549,15 +555,15 @@ export default function AdminDashboard({
                     </div>
 
                     {/* Hospital Overview */}
-                    <div className="bg-white rounded-lg border shadow-sm">
-                        <div className="px-6 py-4 border-b">
-                            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                <Activity className="w-5 h-5 text-blue-600" />
+                    <div className="rounded-lg border bg-white shadow-sm">
+                        <div className="border-b px-6 py-4">
+                            <h3 className="flex items-center gap-2 font-semibold text-gray-900">
+                                <Activity className="h-5 w-5 text-blue-600" />
                                 Hospital Overview - Selected Period
                             </h3>
                         </div>
                         <div className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
                                 <StatCard
                                     title="Total Patients"
                                     value={(hospitalOverview.patients.total || 0).toLocaleString()}
@@ -602,17 +608,17 @@ export default function AdminDashboard({
                     </div>
 
                     {/* Medicine Stock Information */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                         <div className="lg:col-span-2">
-                            <div className="bg-white rounded-lg border shadow-sm">
-                                <div className="px-6 py-4 border-b">
-                                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                        <Pill className="w-5 h-5 text-green-600" />
+                            <div className="rounded-lg border bg-white shadow-sm">
+                                <div className="border-b px-6 py-4">
+                                    <h3 className="flex items-center gap-2 font-semibold text-gray-900">
+                                        <Pill className="h-5 w-5 text-green-600" />
                                         Medicine Stock Overview
                                     </h3>
                                 </div>
                                 <div className="p-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                    <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
                                         <StatCard
                                             title="Total Medicines"
                                             value={medicineStockInfo.overview.totalMedicines || 0}
@@ -638,24 +644,20 @@ export default function AdminDashboard({
 
                                     {/* Top Selling Medicines */}
                                     <div className="mt-6">
-                                        <h4 className="font-medium text-gray-900 mb-3">Top Selling Medicines (Selected Period)</h4>
+                                        <h4 className="mb-3 font-medium text-gray-900">Top Selling Medicines (Selected Period)</h4>
                                         <div className="space-y-2">
                                             {medicineStockInfo.topSelling.length > 0 ? (
                                                 medicineStockInfo.topSelling.map((medicine, index) => (
-                                                    <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
+                                                    <div key={index} className="flex items-center justify-between border-b border-gray-100 py-2">
                                                         <div>
                                                             <span className="font-medium text-gray-900">{medicine.name}</span>
-                                                            <span className="text-sm text-gray-500 ml-2">
-                                                                {medicine.total_sold} units sold
-                                                            </span>
+                                                            <span className="ml-2 text-sm text-gray-500">{medicine.total_sold} units sold</span>
                                                         </div>
-                                                        <span className="font-medium text-green-600">
-                                                            {formatCurrency(medicine.total_revenue)}
-                                                        </span>
+                                                        <span className="font-medium text-green-600">{formatCurrency(medicine.total_revenue)}</span>
                                                     </div>
                                                 ))
                                             ) : (
-                                                <p className="text-gray-500 text-center py-4">No sales in selected period</p>
+                                                <p className="py-4 text-center text-gray-500">No sales in selected period</p>
                                             )}
                                         </div>
                                     </div>
@@ -676,24 +678,30 @@ export default function AdminDashboard({
                     </div>
 
                     {/* Optics Stock Information */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                         <div className="lg:col-span-2">
-                            <div className="bg-white rounded-lg border shadow-sm">
-                                <div className="px-6 py-4 border-b">
-                                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                        <Glasses className="w-5 h-5 text-yellow-600" />
+                            <div className="rounded-lg border bg-white shadow-sm">
+                                <div className="border-b px-6 py-4">
+                                    <h3 className="flex items-center gap-2 font-semibold text-gray-900">
+                                        <Glasses className="h-5 w-5 text-yellow-600" />
                                         Optics Stock Overview
                                     </h3>
                                 </div>
                                 <div className="p-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                        <div className="bg-gray-50 rounded-lg p-4">
-                                            <h4 className="font-medium text-gray-900 mb-3 flex items-center justify-between">
+                                    <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                                        <div className="rounded-lg bg-gray-50 p-4">
+                                            <h4 className="mb-3 flex items-center justify-between font-medium text-gray-900">
                                                 Frames
                                                 {opticsStockInfo.periodStats.prescriptionGlassesGrowth !== undefined && (
-                                                    <span className={`text-xs px-2 py-1 rounded-full ${opticsStockInfo.periodStats.prescriptionGlassesGrowth >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                                        }`}>
-                                                        {opticsStockInfo.periodStats.prescriptionGlassesGrowth >= 0 ? '+' : ''}{opticsStockInfo.periodStats.prescriptionGlassesGrowth}%
+                                                    <span
+                                                        className={`rounded-full px-2 py-1 text-xs ${
+                                                            opticsStockInfo.periodStats.prescriptionGlassesGrowth >= 0
+                                                                ? 'bg-green-100 text-green-700'
+                                                                : 'bg-red-100 text-red-700'
+                                                        }`}
+                                                    >
+                                                        {opticsStockInfo.periodStats.prescriptionGlassesGrowth >= 0 ? '+' : ''}
+                                                        {opticsStockInfo.periodStats.prescriptionGlassesGrowth}%
                                                     </span>
                                                 )}
                                             </h4>
@@ -717,8 +725,8 @@ export default function AdminDashboard({
                                             </div>
                                         </div>
 
-                                        <div className="bg-gray-50 rounded-lg p-4">
-                                            <h4 className="font-medium text-gray-900 mb-3">Lenses</h4>
+                                        <div className="rounded-lg bg-gray-50 p-4">
+                                            <h4 className="mb-3 font-medium text-gray-900">Lenses</h4>
                                             <div className="space-y-2 text-sm">
                                                 <div className="flex justify-between">
                                                     <span className="text-gray-600">Total:</span>
@@ -739,8 +747,8 @@ export default function AdminDashboard({
                                             </div>
                                         </div>
 
-                                        <div className="bg-gray-50 rounded-lg p-4">
-                                            <h4 className="font-medium text-gray-900 mb-3">Complete Glasses</h4>
+                                        <div className="rounded-lg bg-gray-50 p-4">
+                                            <h4 className="mb-3 font-medium text-gray-900">Complete Glasses</h4>
                                             <div className="space-y-2 text-sm">
                                                 <div className="flex justify-between">
                                                     <span className="text-gray-600">Total:</span>
@@ -763,17 +771,23 @@ export default function AdminDashboard({
                                     </div>
 
                                     {/* Period Stats */}
-                                    <div className="mb-6 bg-blue-50 rounded-lg p-4">
-                                        <h4 className="font-medium text-gray-900 mb-3">Selected Period Statistics</h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="mb-6 rounded-lg bg-blue-50 p-4">
+                                        <h4 className="mb-3 font-medium text-gray-900">Selected Period Statistics</h4>
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                             <div className="flex justify-between">
                                                 <span className="text-gray-600">Prescription Glasses:</span>
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-medium">{opticsStockInfo.periodStats.prescriptionGlasses || 0}</span>
                                                     {opticsStockInfo.periodStats.prescriptionGlassesGrowth !== undefined && (
-                                                        <span className={`text-xs px-2 py-1 rounded-full ${opticsStockInfo.periodStats.prescriptionGlassesGrowth >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                                            }`}>
-                                                            {opticsStockInfo.periodStats.prescriptionGlassesGrowth >= 0 ? '+' : ''}{opticsStockInfo.periodStats.prescriptionGlassesGrowth}%
+                                                        <span
+                                                            className={`rounded-full px-2 py-1 text-xs ${
+                                                                opticsStockInfo.periodStats.prescriptionGlassesGrowth >= 0
+                                                                    ? 'bg-green-100 text-green-700'
+                                                                    : 'bg-red-100 text-red-700'
+                                                            }`}
+                                                        >
+                                                            {opticsStockInfo.periodStats.prescriptionGlassesGrowth >= 0 ? '+' : ''}
+                                                            {opticsStockInfo.periodStats.prescriptionGlassesGrowth}%
                                                         </span>
                                                     )}
                                                 </div>
@@ -783,24 +797,24 @@ export default function AdminDashboard({
 
                                     {/* Top Selling Frames */}
                                     <div className="mt-6">
-                                        <h4 className="font-medium text-gray-900 mb-3">Top Selling Frames (Selected Period)</h4>
+                                        <h4 className="mb-3 font-medium text-gray-900">Top Selling Frames (Selected Period)</h4>
                                         <div className="space-y-2">
                                             {opticsStockInfo.topSellingFrames.length > 0 ? (
                                                 opticsStockInfo.topSellingFrames.map((frame, index) => (
-                                                    <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
+                                                    <div key={index} className="flex items-center justify-between border-b border-gray-100 py-2">
                                                         <div>
-                                                            <span className="font-medium text-gray-900">{frame.brand} {frame.model}</span>
-                                                            <span className="text-sm text-gray-500 ml-2">
+                                                            <span className="font-medium text-gray-900">
+                                                                {frame.brand} {frame.model}
+                                                            </span>
+                                                            <span className="ml-2 text-sm text-gray-500">
                                                                 {frame.prescription_glasses_count || 0} sold
                                                             </span>
                                                         </div>
-                                                        <span className="font-medium text-green-600">
-                                                            {formatCurrency(frame.selling_price)}
-                                                        </span>
+                                                        <span className="font-medium text-green-600">{formatCurrency(frame.selling_price)}</span>
                                                     </div>
                                                 ))
                                             ) : (
-                                                <p className="text-gray-500 text-center py-4">No frame sales in selected period</p>
+                                                <p className="py-4 text-center text-gray-500">No frame sales in selected period</p>
                                             )}
                                         </div>
                                     </div>
@@ -814,26 +828,26 @@ export default function AdminDashboard({
                                 alerts={[
                                     { label: 'Frames Low Stock', count: opticsStockInfo.alerts.framesLowStock || 0, color: 'text-yellow-600' },
                                     { label: 'Lenses Low Stock', count: opticsStockInfo.alerts.lensesLowStock || 0, color: 'text-orange-600' },
-                                    { label: 'Complete Glasses Low Stock', count: opticsStockInfo.alerts.completeGlassesLowStock || 0, color: 'text-red-600' },
+                                    {
+                                        label: 'Complete Glasses Low Stock',
+                                        count: opticsStockInfo.alerts.completeGlassesLowStock || 0,
+                                        color: 'text-red-600',
+                                    },
                                 ]}
                             />
 
-                            <div className="mt-4 bg-white rounded-lg border shadow-sm p-4">
-                                <h4 className="font-medium text-gray-900 mb-3">Total Optics Stock Value</h4>
+                            <div className="mt-4 rounded-lg border bg-white p-4 shadow-sm">
+                                <h4 className="mb-3 font-medium text-gray-900">Total Optics Stock Value</h4>
                                 <div className="text-center">
-                                    <div className="text-3xl font-bold text-yellow-600">
-                                        {formatCurrency(opticsStockInfo.totalStockValue)}
-                                    </div>
-                                    <div className="text-sm text-gray-500 mt-1">
-                                        Combined value of all optics inventory
-                                    </div>
+                                    <div className="text-3xl font-bold text-yellow-600">{formatCurrency(opticsStockInfo.totalStockValue)}</div>
+                                    <div className="mt-1 text-sm text-gray-500">Combined value of all optics inventory</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Recent Activities */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                         <RecentActivityCard
                             title="Recent Patients"
                             items={recentActivities.recentPatients || []}
@@ -842,12 +856,12 @@ export default function AdminDashboard({
                                 <>
                                     <div>
                                         <div className="font-medium text-gray-900">{patient.name}</div>
-                                        <div className="text-sm text-gray-500">ID: {patient.patient_id} • {patient.phone}</div>
+                                        <div className="text-sm text-gray-500">
+                                            ID: {patient.patient_id} • {patient.phone}
+                                        </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-sm text-gray-500">
-                                            {new Date(patient.created_at).toLocaleDateString()}
-                                        </div>
+                                        <div className="text-sm text-gray-500">{new Date(patient.created_at).toLocaleDateString()}</div>
                                     </div>
                                 </>
                             )}
@@ -864,21 +878,23 @@ export default function AdminDashboard({
                                         <div className="text-sm text-gray-500">
                                             {visit.patient?.name} • Dr. {visit.selected_doctor?.user?.name}
                                         </div>
-                                        <span className={`inline-block px-2 py-1 text-xs rounded-full mt-1 ${visit.overall_status === 'completed' ? 'bg-green-100 text-green-700' :
-                                            visit.overall_status === 'prescription' ? 'bg-blue-100 text-blue-700' :
-                                                visit.overall_status === 'vision_test' ? 'bg-yellow-100 text-yellow-700' :
-                                                    'bg-red-100 text-red-700'
-                                            }`}>
+                                        <span
+                                            className={`mt-1 inline-block rounded-full px-2 py-1 text-xs ${
+                                                visit.overall_status === 'completed'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : visit.overall_status === 'prescription'
+                                                      ? 'bg-blue-100 text-blue-700'
+                                                      : visit.overall_status === 'vision_test'
+                                                        ? 'bg-yellow-100 text-yellow-700'
+                                                        : 'bg-red-100 text-red-700'
+                                            }`}
+                                        >
                                             {visit.overall_status}
                                         </span>
                                     </div>
                                     <div className="text-right">
-                                        <div className="font-medium text-gray-900">
-                                            {formatCurrency(visit.final_amount)}
-                                        </div>
-                                        <div className="text-sm text-gray-500">
-                                            {new Date(visit.created_at).toLocaleDateString()}
-                                        </div>
+                                        <div className="font-medium text-gray-900">{formatCurrency(visit.final_amount)}</div>
+                                        <div className="text-sm text-gray-500">{new Date(visit.created_at).toLocaleDateString()}</div>
                                     </div>
                                 </>
                             )}
@@ -892,20 +908,12 @@ export default function AdminDashboard({
                                 <>
                                     <div>
                                         <div className="font-medium text-gray-900">{payment.payment_number}</div>
-                                        <div className="text-sm text-gray-500">
-                                            {payment.patient?.name}
-                                        </div>
-                                        <div className="text-sm text-gray-500">
-                                            By: {payment.received_by?.name}
-                                        </div>
+                                        <div className="text-sm text-gray-500">{payment.patient?.name}</div>
+                                        <div className="text-sm text-gray-500">By: {payment.received_by?.name}</div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="font-medium text-green-600">
-                                            {formatCurrency(payment.amount)}
-                                        </div>
-                                        <div className="text-sm text-gray-500">
-                                            {new Date(payment.payment_date).toLocaleDateString()}
-                                        </div>
+                                        <div className="font-medium text-green-600">{formatCurrency(payment.amount)}</div>
+                                        <div className="text-sm text-gray-500">{new Date(payment.payment_date).toLocaleDateString()}</div>
                                     </div>
                                 </>
                             )}
@@ -913,111 +921,106 @@ export default function AdminDashboard({
                     </div>
 
                     {/* Performance Summary */}
-                    <div className="bg-white rounded-lg border shadow-sm p-6">
-                        <h3 className="font-semibold text-gray-900 mb-6 flex items-center gap-2">
-                            <Activity className="w-5 h-5 text-blue-600" />
+                    <div className="rounded-lg border bg-white p-6 shadow-sm">
+                        <h3 className="mb-6 flex items-center gap-2 font-semibold text-gray-900">
+                            <Activity className="h-5 w-5 text-blue-600" />
                             Performance Summary - Selected Period
                         </h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
                             <div className="text-center">
-                                <div className="text-xl font-bold text-blue-600 mb-2">
-                                    {formatCurrency(getTotalIncome())}
-                                </div>
+                                <div className="mb-2 text-xl font-bold text-blue-600">{formatCurrency(getTotalIncome())}</div>
                                 <div className="text-sm text-gray-600">Total Income</div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                    H: {formatCurrency(periodReports.hospital.income)} |
-                                    M: {formatCurrency(periodReports.medicine.income)} |
-                                    O: {formatCurrency(periodReports.optics.income)} |
-                                    Op: {formatCurrency(periodReports.operation.income)}
+                                <div className="mt-1 text-xs text-gray-500">
+                                    H: {formatCurrency(periodReports.hospital.income)} | M: {formatCurrency(periodReports.medicine.income)} | O:{' '}
+                                    {formatCurrency(periodReports.optics.income)} | Op: {formatCurrency(periodReports.operation.income)}
                                 </div>
                             </div>
 
                             <div className="text-center">
-                                <div className="text-xl font-bold text-red-600 mb-2">
-                                    {formatCurrency(getTotalExpense())}
-                                </div>
+                                <div className="mb-2 text-xl font-bold text-red-600">{formatCurrency(getTotalExpense())}</div>
                                 <div className="text-sm text-gray-600">Total Expense</div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                    H: {formatCurrency(periodReports.hospital.expense)} |
-                                    M: {formatCurrency(periodReports.medicine.expense)} |
-                                    O: {formatCurrency(periodReports.optics.expense)} |
-                                    Op: {formatCurrency(periodReports.operation.expense)}
+                                <div className="mt-1 text-xs text-gray-500">
+                                    H: {formatCurrency(periodReports.hospital.expense)} | M: {formatCurrency(periodReports.medicine.expense)} | O:{' '}
+                                    {formatCurrency(periodReports.optics.expense)} | Op: {formatCurrency(periodReports.operation.expense)}
                                 </div>
                             </div>
 
                             <div className="text-center">
-                                <div className={`text-xl font-bold mb-2 ${getTotalProfit() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                <div className={`mb-2 text-xl font-bold ${getTotalProfit() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                     {formatCurrency(getTotalProfit())}
                                 </div>
                                 <div className="text-sm text-gray-600">Total Profit</div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                    H: {formatCurrency(periodReports.hospital.profit)} |
-                                    M: {formatCurrency(periodReports.medicine.profit)} |
-                                    O: {formatCurrency(periodReports.optics.profit)} |
-                                    Op: {formatCurrency(periodReports.operation.profit)}
+                                <div className="mt-1 text-xs text-gray-500">
+                                    H: {formatCurrency(periodReports.hospital.profit)} | M: {formatCurrency(periodReports.medicine.profit)} | O:{' '}
+                                    {formatCurrency(periodReports.optics.profit)} | Op: {formatCurrency(periodReports.operation.profit)}
                                 </div>
                             </div>
 
                             <div className="text-center">
-                                <div className="text-xl font-bold text-purple-600 mb-2">
-                                    {(hospitalOverview.patients.total || 0) + (hospitalOverview.visits.total || 0) + (hospitalOverview.prescriptions.total || 0)}
+                                <div className="mb-2 text-xl font-bold text-purple-600">
+                                    {(hospitalOverview.patients.total || 0) +
+                                        (hospitalOverview.visits.total || 0) +
+                                        (hospitalOverview.prescriptions.total || 0)}
                                 </div>
                                 <div className="text-sm text-gray-600">Total Activities</div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                    P: {hospitalOverview.patients.total || 0} |
-                                    V: {hospitalOverview.visits.total || 0} |
-                                    Rx: {hospitalOverview.prescriptions.total || 0}
+                                <div className="mt-1 text-xs text-gray-500">
+                                    P: {hospitalOverview.patients.total || 0} | V: {hospitalOverview.visits.total || 0} | Rx:{' '}
+                                    {hospitalOverview.prescriptions.total || 0}
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="bg-white rounded-lg border shadow-sm p-6">
-                        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                            <Filter className="w-5 h-5 text-gray-600" />
+                    <div className="rounded-lg border bg-white p-6 shadow-sm">
+                        <h3 className="mb-4 flex items-center gap-2 font-semibold text-gray-900">
+                            <Filter className="h-5 w-5 text-gray-600" />
                             Quick Actions
                         </h3>
 
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
                             <button
                                 onClick={() => router.visit('/patients')}
-                                className="flex items-center justify-center gap-2 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 text-blue-700 transition-colors">
-                                <Users className="w-5 h-5" />
+                                className="flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-700 transition-colors hover:bg-blue-100"
+                            >
+                                <Users className="h-5 w-5" />
                                 <span className="text-sm font-medium">Patients</span>
                             </button>
 
                             <button
                                 onClick={() => router.visit('/medicine-account')}
-                                className="flex items-center justify-center gap-2 p-4 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 text-green-700 transition-colors">
-                                <Pill className="w-5 h-5" />
+                                className="flex items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 p-4 text-green-700 transition-colors hover:bg-green-100"
+                            >
+                                <Pill className="h-5 w-5" />
                                 <span className="text-sm font-medium">Medicine</span>
                             </button>
 
                             <button
                                 onClick={() => router.visit('/optics-account')}
-                                className="flex items-center justify-center gap-2 p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg border border-yellow-200 text-yellow-700 transition-colors">
-                                <Glasses className="w-5 h-5" />
+                                className="flex items-center justify-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-700 transition-colors hover:bg-yellow-100"
+                            >
+                                <Glasses className="h-5 w-5" />
                                 <span className="text-sm font-medium">Optics</span>
                             </button>
 
                             <button
                                 onClick={() => router.visit('/operation-account')}
-                                className="flex items-center justify-center gap-2 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 text-purple-700 transition-colors">
-                                <Scissors className="w-5 h-5" />
+                                className="flex items-center justify-center gap-2 rounded-lg border border-purple-200 bg-purple-50 p-4 text-purple-700 transition-colors hover:bg-purple-100"
+                            >
+                                <Scissors className="h-5 w-5" />
                                 <span className="text-sm font-medium">Operations</span>
                             </button>
 
                             <button
                                 onClick={() => router.visit('/main-account')}
-                                className="flex items-center justify-center gap-2 p-4 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 text-indigo-700 transition-colors">
-                                <Wallet className="w-5 h-5" />
+                                className="flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 p-4 text-indigo-700 transition-colors hover:bg-indigo-100"
+                            >
+                                <Wallet className="h-5 w-5" />
                                 <span className="text-sm font-medium">Main Account</span>
                             </button>
                         </div>
                     </div>
-
                 </div>
             </div>
         </AdminLayout>

@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\PatientVisit;
-use App\Models\Appointment;
-use App\Models\VisionTest;
 use App\Models\Prescription;
+use App\Models\VisionTest;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class DoctorDashboardController extends Controller
 {
@@ -23,7 +23,7 @@ class DoctorDashboardController extends Controller
     {
         $doctor = auth()->user()->doctor;
 
-        if (!$doctor) {
+        if (! $doctor) {
             return redirect()->route('dashboard')
                 ->withErrors(['error' => 'Doctor profile not found.']);
         }
@@ -40,10 +40,9 @@ class DoctorDashboardController extends Controller
                     ->whereDate('test_date', today())
                     ->exists();
 
-                // Check prescription by patient_id and doctor_id for today
-                $hasPrescription = Prescription::where('patient_id', $visit->patient_id)
+                // Check prescription per visit (not per patient/day).
+                $hasPrescription = Prescription::where('visit_id', $visit->id)
                     ->where('doctor_id', $visit->selected_doctor_id)
-                    ->whereDate('created_at', today())
                     ->exists();
 
                 return [
@@ -86,7 +85,7 @@ class DoctorDashboardController extends Controller
                 ->whereDate('created_at', today())
                 ->where('overall_status', 'prescription')
                 ->where('payment_status', 'paid')
-                ->where('vision_test_status', 'completed')
+                ->whereIn('vision_test_status', ['completed', 'skipped'])
                 ->whereDoesntHave('prescriptions', function ($query) use ($doctor) {
                     $query->where('doctor_id', $doctor->id)
                         ->whereDate('created_at', today());
@@ -142,7 +141,7 @@ class DoctorDashboardController extends Controller
     {
         $doctor = auth()->user()->doctor;
 
-        if (!$doctor) {
+        if (! $doctor) {
             return redirect()->route('doctor.dashboard')
                 ->withErrors(['error' => 'Doctor profile not found.']);
         }
@@ -165,11 +164,11 @@ class DoctorDashboardController extends Controller
                 'appointments' => function ($query) {
                     $query->with('doctor.user')
                         ->orderBy('appointment_date', 'desc');
-                }
+                },
             ])
             ->first();
 
-        if (!$patient) {
+        if (! $patient) {
             return redirect()->route('doctor.dashboard')
                 ->withErrors(['error' => 'Patient not found.']);
         }
@@ -243,16 +242,29 @@ class DoctorDashboardController extends Controller
                 'test_date' => $test->test_date,
                 'formatted_date' => Carbon::parse($test->test_date)->format('M d, Y'),
                 'formatted_time' => Carbon::parse($test->test_date)->format('h:i A'),
-                'right_eye_vision' => $test->right_eye_vision,
-                'left_eye_vision' => $test->left_eye_vision,
-                'right_eye_sphere' => $test->right_eye_sphere,
-                'left_eye_sphere' => $test->left_eye_sphere,
-                'right_eye_cylinder' => $test->right_eye_cylinder,
-                'left_eye_cylinder' => $test->left_eye_cylinder,
-                'right_eye_axis' => $test->right_eye_axis,
-                'left_eye_axis' => $test->left_eye_axis,
-                'pupillary_distance' => $test->pupillary_distance,
-                'additional_notes' => $test->additional_notes,
+                'complains' => $test->complains,
+                'right_eye_vision_without_glass' => $test->right_eye_vision_without_glass,
+                'left_eye_vision_without_glass' => $test->left_eye_vision_without_glass,
+                'right_eye_vision_with_glass' => $test->right_eye_vision_with_glass,
+                'left_eye_vision_with_glass' => $test->left_eye_vision_with_glass,
+                'right_eye_iop' => $test->right_eye_iop,
+                'left_eye_iop' => $test->left_eye_iop,
+                'blood_pressure' => $test->blood_pressure,
+                'blood_sugar' => $test->blood_sugar,
+                'urine_sugar' => $test->urine_sugar,
+                'is_one_eyed' => (bool) $test->is_one_eyed,
+                'is_diabetic' => (bool) $test->is_diabetic,
+                'is_cardiac' => (bool) $test->is_cardiac,
+                'is_asthmatic' => (bool) $test->is_asthmatic,
+                'is_hypertensive' => (bool) $test->is_hypertensive,
+                'is_thyroid' => (bool) $test->is_thyroid,
+                'other_conditions' => $test->other_conditions,
+                'drugs_used' => $test->drugs_used,
+                'detailed_history' => $test->detailed_history,
+                'right_eye_diagnosis' => $test->right_eye_diagnosis,
+                'left_eye_diagnosis' => $test->left_eye_diagnosis,
+                'right_eye_fundus' => $test->right_eye_fundus,
+                'left_eye_fundus' => $test->left_eye_fundus,
                 'performed_by' => [
                     'id' => $test->performedBy ? $test->performedBy->id : null,
                     'name' => $test->performedBy ? $test->performedBy->name : 'Unknown',
@@ -353,16 +365,29 @@ class DoctorDashboardController extends Controller
                 'id' => $latestVisionTest->id,
                 'test_date' => $latestVisionTest->test_date,
                 'formatted_date' => Carbon::parse($latestVisionTest->test_date)->format('M d, Y'),
-                'right_eye_vision' => $latestVisionTest->right_eye_vision,
-                'left_eye_vision' => $latestVisionTest->left_eye_vision,
-                'right_eye_sphere' => $latestVisionTest->right_eye_sphere,
-                'left_eye_sphere' => $latestVisionTest->left_eye_sphere,
-                'right_eye_cylinder' => $latestVisionTest->right_eye_cylinder,
-                'left_eye_cylinder' => $latestVisionTest->left_eye_cylinder,
-                'right_eye_axis' => $latestVisionTest->right_eye_axis,
-                'left_eye_axis' => $latestVisionTest->left_eye_axis,
-                'pupillary_distance' => $latestVisionTest->pupillary_distance,
-                'additional_notes' => $latestVisionTest->additional_notes,
+                'complains' => $latestVisionTest->complains,
+                'right_eye_vision_without_glass' => $latestVisionTest->right_eye_vision_without_glass,
+                'left_eye_vision_without_glass' => $latestVisionTest->left_eye_vision_without_glass,
+                'right_eye_vision_with_glass' => $latestVisionTest->right_eye_vision_with_glass,
+                'left_eye_vision_with_glass' => $latestVisionTest->left_eye_vision_with_glass,
+                'right_eye_iop' => $latestVisionTest->right_eye_iop,
+                'left_eye_iop' => $latestVisionTest->left_eye_iop,
+                'blood_pressure' => $latestVisionTest->blood_pressure,
+                'blood_sugar' => $latestVisionTest->blood_sugar,
+                'urine_sugar' => $latestVisionTest->urine_sugar,
+                'is_one_eyed' => (bool) $latestVisionTest->is_one_eyed,
+                'is_diabetic' => (bool) $latestVisionTest->is_diabetic,
+                'is_cardiac' => (bool) $latestVisionTest->is_cardiac,
+                'is_asthmatic' => (bool) $latestVisionTest->is_asthmatic,
+                'is_hypertensive' => (bool) $latestVisionTest->is_hypertensive,
+                'is_thyroid' => (bool) $latestVisionTest->is_thyroid,
+                'other_conditions' => $latestVisionTest->other_conditions,
+                'drugs_used' => $latestVisionTest->drugs_used,
+                'detailed_history' => $latestVisionTest->detailed_history,
+                'right_eye_diagnosis' => $latestVisionTest->right_eye_diagnosis,
+                'left_eye_diagnosis' => $latestVisionTest->left_eye_diagnosis,
+                'right_eye_fundus' => $latestVisionTest->right_eye_fundus,
+                'left_eye_fundus' => $latestVisionTest->left_eye_fundus,
                 'performed_by' => [
                     'name' => $latestVisionTest->performedBy ? $latestVisionTest->performedBy->name : 'Unknown',
                 ],
@@ -390,7 +415,7 @@ class DoctorDashboardController extends Controller
         try {
             $doctor = auth()->user()->doctor;
 
-            if (!$doctor) {
+            if (! $doctor) {
                 return back()->withErrors(['error' => 'Doctor profile not found.']);
             }
 
@@ -424,7 +449,8 @@ class DoctorDashboardController extends Controller
             return back()->with('success', 'Appointment marked as completed successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => 'Failed to complete appointment: ' . $e->getMessage()]);
+
+            return back()->withErrors(['error' => 'Failed to complete appointment: '.$e->getMessage()]);
         }
     }
 
@@ -436,7 +462,7 @@ class DoctorDashboardController extends Controller
         try {
             $doctor = auth()->user()->doctor;
 
-            if (!$doctor) {
+            if (! $doctor) {
                 return response()->json(['error' => 'Doctor profile not found'], 404);
             }
 
@@ -457,14 +483,42 @@ class DoctorDashboardController extends Controller
                         'patient_id' => $nextAppointment->patient->patient_id,
                         'patient_database_id' => $nextAppointment->patient->id,
                         'appointment_time' => $nextAppointment->appointment_time ?? 'N/A',
-                    ]
+                    ],
                 ]);
             }
 
             return response()->json(['has_next' => false]);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to get next patient: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Failed to get next patient: '.$e->getMessage()], 500);
         }
+    }
+
+    public function skipVisionTest(Request $request, PatientVisit $visit)
+    {
+        $doctor = auth()->user()->doctor;
+        if (! $doctor) {
+            return back()->withErrors(['error' => 'Doctor profile not found.']);
+        }
+
+        if ((int) $visit->selected_doctor_id !== (int) $doctor->id) {
+            return back()->withErrors(['error' => 'Unauthorized action.']);
+        }
+
+        if ($visit->payment_status !== 'paid') {
+            return back()->withErrors(['error' => 'Visit payment is not completed yet.']);
+        }
+
+        if ($visit->overall_status === 'completed') {
+            return back()->withErrors(['error' => 'Visit already completed.']);
+        }
+
+        if ($visit->vision_test_status === 'completed') {
+            return back()->withErrors(['error' => 'Vision test already completed.']);
+        }
+
+        $visit->skipVisionTest(auth()->id());
+
+        return back()->with('success', 'Vision test skipped. You can proceed to prescription.');
     }
 
     /**
@@ -475,7 +529,7 @@ class DoctorDashboardController extends Controller
         try {
             $doctor = auth()->user()->doctor;
 
-            if (!$doctor) {
+            if (! $doctor) {
                 return response()->json(['error' => 'Doctor profile not found'], 404);
             }
 
@@ -525,7 +579,7 @@ class DoctorDashboardController extends Controller
                 'period' => $period,
             ]);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to get performance stats: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Failed to get performance stats: '.$e->getMessage()], 500);
         }
     }
 
@@ -537,17 +591,17 @@ class DoctorDashboardController extends Controller
         try {
             $request->validate([
                 'term' => 'required|string|min:2|max:100',
-                'limit' => 'sometimes|integer|min:1|max:50'
+                'limit' => 'sometimes|integer|min:1|max:50',
             ]);
 
             $searchTerm = $request->term;
             $limit = $request->get('limit', 10);
 
             $patients = Patient::where(function ($query) use ($searchTerm) {
-                $query->where('name', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('phone', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('patient_id', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('email', 'like', '%' . $searchTerm . '%');
+                $query->where('name', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('phone', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('patient_id', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('email', 'like', '%'.$searchTerm.'%');
             })
                 ->with([
                     'visionTests' => function ($query) {
@@ -558,7 +612,7 @@ class DoctorDashboardController extends Controller
                     },
                     'prescriptions' => function ($query) {
                         $query->latest()->limit(1);
-                    }
+                    },
                 ])
                 ->limit($limit)
                 ->get()
@@ -591,7 +645,7 @@ class DoctorDashboardController extends Controller
                 'search_term' => $searchTerm,
             ]);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Search failed: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Search failed: '.$e->getMessage()], 500);
         }
     }
 
@@ -603,7 +657,7 @@ class DoctorDashboardController extends Controller
         try {
             $doctor = auth()->user()->doctor;
 
-            if (!$doctor) {
+            if (! $doctor) {
                 return response()->json(['error' => 'Doctor profile not found'], 404);
             }
 
@@ -613,7 +667,7 @@ class DoctorDashboardController extends Controller
             }
 
             $request->validate([
-                'status' => 'required|in:pending,in_progress,completed,cancelled'
+                'status' => 'required|in:pending,in_progress,completed,cancelled',
             ]);
 
             DB::beginTransaction();
@@ -628,7 +682,7 @@ class DoctorDashboardController extends Controller
             ]);
 
             // Log status change
-            \Log::info("Appointment status updated", [
+            \Log::info('Appointment status updated', [
                 'appointment_id' => $appointment->id,
                 'patient_id' => $appointment->patient_id,
                 'doctor_id' => $doctor->id,
@@ -646,11 +700,12 @@ class DoctorDashboardController extends Controller
                     'id' => $appointment->id,
                     'status' => $appointment->status,
                     'updated_at' => $appointment->updated_at,
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Failed to update appointment status: ' . $e->getMessage()], 500);
+
+            return response()->json(['error' => 'Failed to update appointment status: '.$e->getMessage()], 500);
         }
     }
 
@@ -662,7 +717,7 @@ class DoctorDashboardController extends Controller
         try {
             $doctor = auth()->user()->doctor;
 
-            if (!$doctor) {
+            if (! $doctor) {
                 return response()->json(['error' => 'Doctor profile not found'], 404);
             }
 
@@ -700,14 +755,15 @@ class DoctorDashboardController extends Controller
                         ->where('appointment_date', '>', now())
                         ->orderBy('appointment_date')
                         ->first(),
-                ]
+                ],
             ];
+
             return response()->json([
                 'success' => true,
                 'patient_summary' => $summary,
             ]);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to get patient summary: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Failed to get patient summary: '.$e->getMessage()], 500);
         }
     }
 
@@ -719,7 +775,7 @@ class DoctorDashboardController extends Controller
         try {
             $doctor = auth()->user()->doctor;
 
-            if (!$doctor) {
+            if (! $doctor) {
                 return response()->json(['error' => 'Doctor profile not found'], 404);
             }
 
@@ -774,7 +830,7 @@ class DoctorDashboardController extends Controller
                 'stats' => $schedule_stats,
             ]);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to get daily schedule: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Failed to get daily schedule: '.$e->getMessage()], 500);
         }
     }
 
@@ -786,7 +842,7 @@ class DoctorDashboardController extends Controller
         try {
             $doctor = auth()->user()->doctor;
 
-            if (!$doctor) {
+            if (! $doctor) {
                 return response()->json(['error' => 'Doctor profile not found'], 404);
             }
 
@@ -849,7 +905,7 @@ class DoctorDashboardController extends Controller
                 'period_days' => $days,
             ]);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to get recent activities: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Failed to get recent activities: '.$e->getMessage()], 500);
         }
     }
 
@@ -861,7 +917,7 @@ class DoctorDashboardController extends Controller
         try {
             $doctor = auth()->user()->doctor;
 
-            if (!$doctor) {
+            if (! $doctor) {
                 return response()->json(['error' => 'Doctor profile not found'], 404);
             }
 
@@ -956,17 +1012,17 @@ class DoctorDashboardController extends Controller
             // This is a basic JSON response for now
             return response()->json([
                 'success' => true,
-                'message' => 'Export functionality for ' . $format . ' format will be implemented',
+                'message' => 'Export functionality for '.$format.' format will be implemented',
                 'data_summary' => [
                     'patient_name' => $patient->name,
                     'total_visits' => count($patientData['visits']),
                     'total_vision_tests' => count($patientData['vision_tests']),
                     'total_prescriptions' => count($patientData['prescriptions']),
                     'total_appointments' => count($patientData['appointments']),
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Export failed: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Export failed: '.$e->getMessage()], 500);
         }
     }
 
@@ -978,7 +1034,7 @@ class DoctorDashboardController extends Controller
         try {
             $doctor = auth()->user()->doctor;
 
-            if (!$doctor) {
+            if (! $doctor) {
                 return response()->json(['error' => 'Doctor profile not found'], 404);
             }
 
@@ -997,7 +1053,7 @@ class DoctorDashboardController extends Controller
             // Generate patient ID
             $lastPatient = Patient::latest('id')->first();
             $nextId = $lastPatient ? $lastPatient->id + 1 : 1;
-            $patientId = 'P' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
+            $patientId = 'P'.str_pad($nextId, 6, '0', STR_PAD_LEFT);
 
             // Create patient
             $patient = Patient::create([
@@ -1028,7 +1084,7 @@ class DoctorDashboardController extends Controller
 
             // Create initial visit if chief complaint provided
             if ($request->chief_complaint) {
-                $visitId = 'V' . str_pad(PatientVisit::count() + 1, 8, '0', STR_PAD_LEFT);
+                $visitId = 'V'.str_pad(PatientVisit::count() + 1, 8, '0', STR_PAD_LEFT);
 
                 PatientVisit::create([
                     'visit_id' => $visitId,
@@ -1060,11 +1116,12 @@ class DoctorDashboardController extends Controller
                     'id' => $appointment->id,
                     'serial_number' => $appointment->serial_number,
                     'appointment_time' => $appointment->appointment_time,
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Registration failed: ' . $e->getMessage()], 500);
+
+            return response()->json(['error' => 'Registration failed: '.$e->getMessage()], 500);
         }
     }
 
@@ -1076,7 +1133,7 @@ class DoctorDashboardController extends Controller
         try {
             $doctor = auth()->user()->doctor;
 
-            if (!$doctor) {
+            if (! $doctor) {
                 return response()->json(['error' => 'Doctor profile not found'], 404);
             }
 
@@ -1149,7 +1206,7 @@ class DoctorDashboardController extends Controller
                            SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as completed
                        ')
                         ->first(),
-                ]
+                ],
             ];
 
             // Calculate completion rate percentage
@@ -1164,7 +1221,7 @@ class DoctorDashboardController extends Controller
                 'generated_at' => now()->toISOString(),
             ]);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to generate summary: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Failed to generate summary: '.$e->getMessage()], 500);
         }
     }
 }

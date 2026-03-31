@@ -1,7 +1,7 @@
-import React from 'react';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { ChevronLeft, Save, AlertCircle } from 'lucide-react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { AlertCircle, ChevronLeft, Save } from 'lucide-react';
+import React from 'react';
 
 interface Vendor {
     id: number;
@@ -19,7 +19,7 @@ const Button = ({ children, className = '', variant = 'primary', ...props }: any
         primary: 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-400',
         secondary: 'bg-gray-200 text-gray-700 hover:bg-gray-300',
         success: 'bg-green-600 text-white hover:bg-green-700',
-        danger: 'bg-red-600 text-white hover:bg-red-700'
+        danger: 'bg-red-600 text-white hover:bg-red-700',
     };
 
     return (
@@ -31,29 +31,29 @@ const Button = ({ children, className = '', variant = 'primary', ...props }: any
 
 const Input = ({ label, error, className = '', ...props }: any) => (
     <div className={className}>
-        {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
+        {label && <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>}
         <input
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
                 error ? 'border-red-300' : 'border-gray-300'
             }`}
             {...props}
         />
-        {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
 );
 
 const Select = ({ label, error, children, className = '', ...props }: any) => (
     <div className={className}>
-        {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
+        {label && <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>}
         <select
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
                 error ? 'border-red-300' : 'border-gray-300'
             }`}
             {...props}
         >
             {children}
         </select>
-        {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
 );
 
@@ -102,7 +102,7 @@ export default function FrameCreate() {
                 <div className="flex items-center space-x-4">
                     <Link href="/optics/frames">
                         <Button variant="secondary">
-                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="h-4 w-4" />
                             <span>Back</span>
                         </Button>
                     </Link>
@@ -114,11 +114,11 @@ export default function FrameCreate() {
 
                 {/* Form */}
                 <form onSubmit={handleSubmit}>
-                    <div className="bg-white rounded-xl shadow-sm border p-8">
+                    <div className="rounded-xl border bg-white p-8 shadow-sm">
                         {/* Basic Information Section */}
                         <div className="mb-8">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Basic Information</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-900">Basic Information</h2>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <Input
                                     label="Brand *"
                                     value={data.brand}
@@ -210,8 +210,8 @@ export default function FrameCreate() {
 
                         {/* Measurements Section */}
                         <div className="mb-8">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Measurements</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-900">Measurements</h2>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <Input
                                     label="Lens Width (mm)"
                                     type="number"
@@ -254,8 +254,8 @@ export default function FrameCreate() {
 
                         {/* Pricing & Stock Section */}
                         <div className="mb-8">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Pricing & Stock</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-900">Pricing & Stock</h2>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <Input
                                     label="Purchase Price *"
                                     type="number"
@@ -302,24 +302,27 @@ export default function FrameCreate() {
 
                         {/* ✅ Vendor & Payment Section */}
                         <div className="mb-8">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
-                                Vendor & Payment (Optional)
-                            </h2>
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-900">Vendor & Payment (Optional)</h2>
 
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                            <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
                                 <div className="flex items-start space-x-3">
-                                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                                    <AlertCircle className="mt-0.5 h-5 w-5 text-blue-600" />
                                     <div className="text-sm text-blue-800">
-                                        <p className="font-medium mb-1">Purchase Options:</p>
-                                        <ul className="list-disc list-inside space-y-1">
-                                            <li><strong>With Vendor:</strong> Select vendor and optionally make partial payment (remaining will be due)</li>
-                                            <li><strong>Cash Purchase:</strong> Leave vendor empty for direct cash purchase</li>
+                                        <p className="mb-1 font-medium">Purchase Options:</p>
+                                        <ul className="list-inside list-disc space-y-1">
+                                            <li>
+                                                <strong>With Vendor:</strong> Select vendor and optionally make partial payment (remaining will be
+                                                due)
+                                            </li>
+                                            <li>
+                                                <strong>Cash Purchase:</strong> Leave vendor empty for direct cash purchase
+                                            </li>
                                         </ul>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <Select
                                     label="Vendor (Optional)"
                                     value={data.default_vendor_id}
@@ -350,37 +353,29 @@ export default function FrameCreate() {
 
                             {/* ✅ Payment Summary */}
                             {data.default_vendor_id && totalCost > 0 && (
-                                <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                    <h3 className="text-sm font-semibold text-gray-700 mb-3">Payment Summary</h3>
+                                <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                    <h3 className="mb-3 text-sm font-semibold text-gray-700">Payment Summary</h3>
                                     <div className="space-y-2 text-sm">
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Total Cost:</span>
-                                            <span className="font-semibold text-gray-900">
-                                                ৳{totalCost.toFixed(2)}
-                                            </span>
+                                            <span className="font-semibold text-gray-900">৳{totalCost.toFixed(2)}</span>
                                         </div>
                                         {paidAmount > 0 && (
                                             <>
                                                 <div className="flex justify-between">
                                                     <span className="text-gray-600">Paid Amount:</span>
-                                                    <span className="font-semibold text-green-600">
-                                                        ৳{paidAmount.toFixed(2)}
-                                                    </span>
+                                                    <span className="font-semibold text-green-600">৳{paidAmount.toFixed(2)}</span>
                                                 </div>
-                                                <div className="flex justify-between pt-2 border-t border-gray-300">
-                                                    <span className="text-gray-700 font-medium">Due Amount:</span>
-                                                    <span className="font-bold text-red-600">
-                                                        ৳{dueAmount.toFixed(2)}
-                                                    </span>
+                                                <div className="flex justify-between border-t border-gray-300 pt-2">
+                                                    <span className="font-medium text-gray-700">Due Amount:</span>
+                                                    <span className="font-bold text-red-600">৳{dueAmount.toFixed(2)}</span>
                                                 </div>
                                             </>
                                         )}
                                         {!paidAmount && (
-                                            <div className="flex justify-between pt-2 border-t border-gray-300">
-                                                <span className="text-gray-700 font-medium">Due Amount:</span>
-                                                <span className="font-bold text-red-600">
-                                                    ৳{totalCost.toFixed(2)}
-                                                </span>
+                                            <div className="flex justify-between border-t border-gray-300 pt-2">
+                                                <span className="font-medium text-gray-700">Due Amount:</span>
+                                                <span className="font-bold text-red-600">৳{totalCost.toFixed(2)}</span>
                                             </div>
                                         )}
                                     </div>
@@ -388,42 +383,38 @@ export default function FrameCreate() {
                             )}
 
                             {!data.default_vendor_id && totalCost > 0 && (
-                                <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-sm text-green-700 font-medium">Cash Purchase Total:</span>
-                                        <span className="text-lg font-bold text-green-700">
-                                            ৳{totalCost.toFixed(2)}
-                                        </span>
+                                <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium text-green-700">Cash Purchase Total:</span>
+                                        <span className="text-lg font-bold text-green-700">৳{totalCost.toFixed(2)}</span>
                                     </div>
-                                    <p className="text-xs text-green-600 mt-1">
-                                        This amount will be deducted from Optics Account
-                                    </p>
+                                    <p className="mt-1 text-xs text-green-600">This amount will be deducted from Optics Account</p>
                                 </div>
                             )}
                         </div>
 
                         {/* Description */}
                         <div className="mb-8">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <label className="mb-2 block text-sm font-medium text-gray-700">Description</label>
                             <textarea
                                 rows={3}
                                 value={data.description}
                                 onChange={(e: any) => setData('description', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 placeholder="Additional notes about this frame..."
                             />
-                            {errors.description && <p className="text-red-600 text-sm mt-1">{errors.description}</p>}
+                            {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
                         </div>
 
                         {/* Submit Buttons */}
-                        <div className="flex justify-end space-x-4 pt-6 border-t">
+                        <div className="flex justify-end space-x-4 border-t pt-6">
                             <Link href="/optics/frames">
                                 <Button variant="secondary" type="button">
                                     Cancel
                                 </Button>
                             </Link>
                             <Button type="submit" disabled={processing}>
-                                <Save className="w-4 h-4" />
+                                <Save className="h-4 w-4" />
                                 <span>{processing ? 'Saving...' : 'Add Frame'}</span>
                             </Button>
                         </div>

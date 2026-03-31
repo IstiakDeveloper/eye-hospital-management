@@ -1,6 +1,6 @@
-import React from 'react';
-import { Head } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
+import { Head } from '@inertiajs/react';
+import React from 'react';
 
 interface Doctor {
     id: number;
@@ -37,81 +37,78 @@ const DoctorsReport: React.FC<Props> = ({ doctors }) => {
 
     // Calculate statistics
     const totalDoctors = doctors.length;
-    const availableDoctors = doctors.filter(doctor => doctor.is_available).length;
+    const availableDoctors = doctors.filter((doctor) => doctor.is_available).length;
     const averageFee = totalDoctors > 0 ? doctors.reduce((sum, doctor) => sum + doctor.consultation_fee, 0) / totalDoctors : 0;
-    const specializations = [...new Set(doctors.map(doctor => doctor.specialization).filter(Boolean))];
+    const specializations = [...new Set(doctors.map((doctor) => doctor.specialization).filter(Boolean))];
 
     // Group doctors by specialization
-    const doctorsBySpecialization = doctors.reduce((acc, doctor) => {
-        const spec = doctor.specialization || 'General';
-        if (!acc[spec]) {
-            acc[spec] = [];
-        }
-        acc[spec].push(doctor);
-        return acc;
-    }, {} as Record<string, Doctor[]>);
+    const doctorsBySpecialization = doctors.reduce(
+        (acc, doctor) => {
+            const spec = doctor.specialization || 'General';
+            if (!acc[spec]) {
+                acc[spec] = [];
+            }
+            acc[spec].push(doctor);
+            return acc;
+        },
+        {} as Record<string, Doctor[]>,
+    );
 
     const getStatusBadge = (isAvailable: boolean) => {
-        return isAvailable
-            ? 'bg-green-100 text-green-800'
-            : 'bg-red-100 text-red-800';
+        return isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
     };
 
     const getSpecializationColor = (specialization: string) => {
         const colors: Record<string, string> = {
-            'Ophthalmology': 'bg-blue-100 text-blue-800',
-            'Cardiology': 'bg-red-100 text-red-800',
-            'Neurology': 'bg-purple-100 text-purple-800',
-            'Dermatology': 'bg-green-100 text-green-800',
-            'Orthopedics': 'bg-yellow-100 text-yellow-800',
-            'General': 'bg-gray-100 text-gray-800'
+            Ophthalmology: 'bg-blue-100 text-blue-800',
+            Cardiology: 'bg-red-100 text-red-800',
+            Neurology: 'bg-purple-100 text-purple-800',
+            Dermatology: 'bg-green-100 text-green-800',
+            Orthopedics: 'bg-yellow-100 text-yellow-800',
+            General: 'bg-gray-100 text-gray-800',
         };
         return colors[specialization] || colors['General'];
     };
 
     return (
-        <AdminLayout
-            header={
-                <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                    Doctor Report
-                </h2>
-            }
-        >
+        <AdminLayout header={<h2 className="text-xl leading-tight font-semibold text-gray-800">Doctor Report</h2>}>
             <Head title="Doctor Report" />
 
             <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     {/* Header */}
-                    <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
+                    <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
+                        <div className="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between">
                             <div>
-                                <h1 className="text-3xl font-bold text-gray-900 mb-2">Doctor Report</h1>
+                                <h1 className="mb-2 text-3xl font-bold text-gray-900">Doctor Report</h1>
                                 <p className="text-gray-600">Total Doctors: {totalDoctors}</p>
-                                <p className="text-gray-600">Available: {availableDoctors} | Unavailable: {totalDoctors - availableDoctors}</p>
+                                <p className="text-gray-600">
+                                    Available: {availableDoctors} | Unavailable: {totalDoctors - availableDoctors}
+                                </p>
                             </div>
                             <button
                                 onClick={handleExport}
-                                className="mt-4 lg:mt-0 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+                                className="mt-4 rounded-lg bg-green-600 px-6 py-2 font-medium text-white transition-colors duration-200 hover:bg-green-700 lg:mt-0"
                             >
                                 📊 Export to Excel
                             </button>
                         </div>
 
                         {/* Statistics Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-center">
                                 <div className="text-2xl font-bold text-blue-600">{totalDoctors}</div>
                                 <div className="text-sm text-blue-800">Total Doctors</div>
                             </div>
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center">
                                 <div className="text-2xl font-bold text-green-600">{availableDoctors}</div>
                                 <div className="text-sm text-green-800">Available</div>
                             </div>
-                            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                            <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 text-center">
                                 <div className="text-2xl font-bold text-purple-600">{specializations.length}</div>
                                 <div className="text-sm text-purple-800">Specializations</div>
                             </div>
-                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
+                            <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 text-center">
                                 <div className="text-2xl font-bold text-orange-600">{formatCurrency(Math.round(averageFee))}</div>
                                 <div className="text-sm text-orange-800">Avg. Fee</div>
                             </div>
@@ -119,22 +116,21 @@ const DoctorsReport: React.FC<Props> = ({ doctors }) => {
                     </div>
 
                     {/* Specialization Summary */}
-                    <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-                        <h3 className="text-xl font-bold text-gray-900 mb-4">Doctors by Specialization</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
+                        <h3 className="mb-4 text-xl font-bold text-gray-900">Doctors by Specialization</h3>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                             {Object.entries(doctorsBySpecialization).map(([specialization, specDoctors]) => (
-                                <div key={specialization} className="bg-gray-50 rounded-lg p-4">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className={`px-3 py-1 text-sm font-semibold rounded-full ${getSpecializationColor(specialization)}`}>
+                                <div key={specialization} className="rounded-lg bg-gray-50 p-4">
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <span className={`rounded-full px-3 py-1 text-sm font-semibold ${getSpecializationColor(specialization)}`}>
                                             {specialization}
                                         </span>
                                         <span className="text-lg font-bold text-gray-900">{specDoctors.length}</span>
                                     </div>
+                                    <div className="text-sm text-gray-600">Available: {specDoctors.filter((d) => d.is_available).length}</div>
                                     <div className="text-sm text-gray-600">
-                                        Available: {specDoctors.filter(d => d.is_available).length}
-                                    </div>
-                                    <div className="text-sm text-gray-600">
-                                        Avg Fee: {formatCurrency(Math.round(specDoctors.reduce((sum, d) => sum + d.consultation_fee, 0) / specDoctors.length))}
+                                        Avg Fee:{' '}
+                                        {formatCurrency(Math.round(specDoctors.reduce((sum, d) => sum + d.consultation_fee, 0) / specDoctors.length))}
                                     </div>
                                 </div>
                             ))}
@@ -142,83 +138,83 @@ const DoctorsReport: React.FC<Props> = ({ doctors }) => {
                     </div>
 
                     {/* Table */}
-                    <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+                    <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                                        <th className="border-r border-gray-200 px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                             #
                                         </th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                                        <th className="border-r border-gray-200 px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                             Doctor Name
                                         </th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                                        <th className="border-r border-gray-200 px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                             Email
                                         </th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                                        <th className="border-r border-gray-200 px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                             Phone
                                         </th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                                        <th className="border-r border-gray-200 px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                             Specialization
                                         </th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                                        <th className="border-r border-gray-200 px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                             Qualification
                                         </th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                                        <th className="border-r border-gray-200 px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                             Consultation Fee
                                         </th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                                        <th className="border-r border-gray-200 px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                             Status
                                         </th>
-                                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        <th className="px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                             Joined Date
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
+                                <tbody className="divide-y divide-gray-200 bg-white">
                                     {doctors.map((doctor, index) => (
-                                        <tr key={doctor.id} className="hover:bg-gray-50 transition-colors duration-150">
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
+                                        <tr key={doctor.id} className="transition-colors duration-150 hover:bg-gray-50">
+                                            <td className="border-r border-gray-200 px-6 py-4 text-sm whitespace-nowrap text-gray-900">
                                                 {index + 1}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
+                                            <td className="border-r border-gray-200 px-6 py-4 text-sm whitespace-nowrap text-gray-900">
                                                 <div>
                                                     <div className="font-medium">{doctor.user.name}</div>
-                                                    {!doctor.user.is_active && (
-                                                        <div className="text-xs text-red-500">Inactive User</div>
-                                                    )}
+                                                    {!doctor.user.is_active && <div className="text-xs text-red-500">Inactive User</div>}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
+                                            <td className="border-r border-gray-200 px-6 py-4 text-sm whitespace-nowrap text-gray-900">
                                                 {doctor.user.email}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
+                                            <td className="border-r border-gray-200 px-6 py-4 text-sm whitespace-nowrap text-gray-900">
                                                 {doctor.user.phone || 'N/A'}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
-                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getSpecializationColor(doctor.specialization || 'General')}`}>
+                                            <td className="border-r border-gray-200 px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+                                                <span
+                                                    className={`rounded-full px-2 py-1 text-xs font-semibold ${getSpecializationColor(doctor.specialization || 'General')}`}
+                                                >
                                                     {doctor.specialization || 'General'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-sm text-gray-900 border-r border-gray-200 max-w-xs">
+                                            <td className="max-w-xs border-r border-gray-200 px-6 py-4 text-sm text-gray-900">
                                                 <div className="truncate" title={doctor.qualification || 'N/A'}>
                                                     {doctor.qualification || 'N/A'}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
-                                                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
+                                            <td className="border-r border-gray-200 px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+                                                <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-800">
                                                     {formatCurrency(doctor.consultation_fee)}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
-                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(doctor.is_available)}`}>
+                                            <td className="border-r border-gray-200 px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+                                                <span
+                                                    className={`rounded-full px-2 py-1 text-xs font-semibold ${getStatusBadge(doctor.is_available)}`}
+                                                >
                                                     {doctor.is_available ? 'Available' : 'Unavailable'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {formatDate(doctor.created_at)}
-                                            </td>
+                                            <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-900">{formatDate(doctor.created_at)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -226,9 +222,9 @@ const DoctorsReport: React.FC<Props> = ({ doctors }) => {
                         </div>
 
                         {doctors.length === 0 && (
-                            <div className="text-center py-12">
-                                <div className="text-gray-400 text-6xl mb-4">👨‍⚕️</div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">No doctors found</h3>
+                            <div className="py-12 text-center">
+                                <div className="mb-4 text-6xl text-gray-400">👨‍⚕️</div>
+                                <h3 className="mb-2 text-lg font-medium text-gray-900">No doctors found</h3>
                                 <p className="text-gray-500">No doctors are registered in the system.</p>
                             </div>
                         )}

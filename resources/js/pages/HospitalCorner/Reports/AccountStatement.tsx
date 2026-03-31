@@ -1,4 +1,5 @@
 import AdminLayout from '@/layouts/HospitalAccountLayout';
+import { formatDhakaDate, formatDhakaDateTime } from '@/utils/dhaka-time';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -38,11 +39,7 @@ export default function AccountStatement({ transactions, summary, openingBalance
     const [toDate, setToDate] = useState(filters.to_date);
 
     const handleFilter = () => {
-        router.get(
-            route('reports.account-statement'),
-            { from_date: fromDate, to_date: toDate },
-            { preserveState: true }
-        );
+        router.get(route('reports.account-statement'), { from_date: fromDate, to_date: toDate }, { preserveState: true });
     };
 
     return (
@@ -55,25 +52,51 @@ export default function AccountStatement({ transactions, summary, openingBalance
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
                             <div>
                                 <label className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">From Date</label>
-                                <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                                <input
+                                    type="date"
+                                    value={fromDate}
+                                    onChange={(e) => setFromDate(e.target.value)}
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                />
                             </div>
                             <div>
                                 <label className="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">To Date</label>
-                                <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                                <input
+                                    type="date"
+                                    value={toDate}
+                                    onChange={(e) => setToDate(e.target.value)}
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                />
                             </div>
                             <div className="flex items-end gap-3">
-                                <button onClick={handleFilter} className="flex-1 rounded-lg bg-indigo-600 px-6 py-2 font-semibold text-white shadow-md transition hover:bg-indigo-700 hover:shadow-lg">
+                                <button
+                                    onClick={handleFilter}
+                                    className="flex-1 rounded-lg bg-indigo-600 px-6 py-2 font-semibold text-white shadow-md transition hover:bg-indigo-700 hover:shadow-lg"
+                                >
                                     <span className="flex items-center justify-center gap-2">
                                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                                            />
                                         </svg>
                                         Filter
                                     </span>
                                 </button>
-                                <button onClick={() => window.print()} className="flex-1 rounded-lg bg-gray-700 px-6 py-2 font-semibold text-white shadow-md transition hover:bg-gray-800 hover:shadow-lg">
+                                <button
+                                    onClick={() => window.print()}
+                                    className="flex-1 rounded-lg bg-gray-700 px-6 py-2 font-semibold text-white shadow-md transition hover:bg-gray-800 hover:shadow-lg"
+                                >
                                     <span className="flex items-center justify-center gap-2">
                                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                                            />
                                         </svg>
                                         Print
                                     </span>
@@ -86,7 +109,8 @@ export default function AccountStatement({ transactions, summary, openingBalance
                     <div className="mb-6 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 p-6 shadow-lg">
                         <h1 className="text-center text-3xl font-bold text-white">Hospital Account Statement</h1>
                         <p className="mt-2 text-center text-indigo-100">
-                            Period: {new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            Period: {formatDhakaDate(fromDate, { day: '2-digit', month: 'short', year: 'numeric' })} to{' '}
+                            {formatDhakaDate(toDate, { day: '2-digit', month: 'short', year: 'numeric' })}
                         </p>
                     </div>
 
@@ -95,12 +119,19 @@ export default function AccountStatement({ transactions, summary, openingBalance
                         <div className="group rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-5 shadow-md transition hover:shadow-xl dark:border-blue-800 dark:from-blue-900/30 dark:to-blue-900/20">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">Opening Balance</p>
-                                    <p className="mt-2 text-3xl font-bold text-blue-700 dark:text-blue-300">৳{openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                    <p className="text-sm font-semibold tracking-wide text-blue-600 uppercase dark:text-blue-400">Opening Balance</p>
+                                    <p className="mt-2 text-3xl font-bold text-blue-700 dark:text-blue-300">
+                                        ৳{openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
                                 </div>
                                 <div className="rounded-full bg-blue-200 p-3 dark:bg-blue-800">
                                     <svg className="h-8 w-8 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
                                     </svg>
                                 </div>
                             </div>
@@ -109,8 +140,10 @@ export default function AccountStatement({ transactions, summary, openingBalance
                         <div className="group rounded-xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-5 shadow-md transition hover:shadow-xl dark:border-green-800 dark:from-green-900/30 dark:to-green-900/20">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-semibold uppercase tracking-wide text-green-600 dark:text-green-400">Total Deposit</p>
-                                    <p className="mt-2 text-3xl font-bold text-green-700 dark:text-green-300">৳{summary.total_deposit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                    <p className="text-sm font-semibold tracking-wide text-green-600 uppercase dark:text-green-400">Total Deposit</p>
+                                    <p className="mt-2 text-3xl font-bold text-green-700 dark:text-green-300">
+                                        ৳{summary.total_deposit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
                                     <p className="mt-1 text-xs text-green-600 dark:text-green-500">{summary.transaction_count} transactions</p>
                                 </div>
                                 <div className="rounded-full bg-green-200 p-3 dark:bg-green-800">
@@ -124,8 +157,10 @@ export default function AccountStatement({ transactions, summary, openingBalance
                         <div className="group rounded-xl border-2 border-red-200 bg-gradient-to-br from-red-50 to-red-100 p-5 shadow-md transition hover:shadow-xl dark:border-red-800 dark:from-red-900/30 dark:to-red-900/20">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">Total Withdraw</p>
-                                    <p className="mt-2 text-3xl font-bold text-red-700 dark:text-red-300">৳{summary.total_withdraw.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                    <p className="text-sm font-semibold tracking-wide text-red-600 uppercase dark:text-red-400">Total Withdraw</p>
+                                    <p className="mt-2 text-3xl font-bold text-red-700 dark:text-red-300">
+                                        ৳{summary.total_withdraw.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
                                 </div>
                                 <div className="rounded-full bg-red-200 p-3 dark:bg-red-800">
                                     <svg className="h-8 w-8 text-red-600 dark:text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -138,12 +173,26 @@ export default function AccountStatement({ transactions, summary, openingBalance
                         <div className="group rounded-xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-5 shadow-md transition hover:shadow-xl dark:border-purple-800 dark:from-purple-900/30 dark:to-purple-900/20">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400">Closing Balance</p>
-                                    <p className="mt-2 text-3xl font-bold text-purple-700 dark:text-purple-300">৳{summary.closing_balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                    <p className="text-sm font-semibold tracking-wide text-purple-600 uppercase dark:text-purple-400">
+                                        Closing Balance
+                                    </p>
+                                    <p className="mt-2 text-3xl font-bold text-purple-700 dark:text-purple-300">
+                                        ৳{summary.closing_balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </p>
                                 </div>
                                 <div className="rounded-full bg-purple-200 p-3 dark:bg-purple-800">
-                                    <svg className="h-8 w-8 text-purple-600 dark:text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    <svg
+                                        className="h-8 w-8 text-purple-600 dark:text-purple-300"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
                                     </svg>
                                 </div>
                             </div>
@@ -157,7 +206,10 @@ export default function AccountStatement({ transactions, summary, openingBalance
                             <div className="header-title">
                                 <h1>Naogaon Islamia Eye Hospital and Phaco Center</h1>
                                 <h2>Hospital Account Statement</h2>
-                                <p>Period: {new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                <p>
+                                    Period: {formatDhakaDate(fromDate, { day: '2-digit', month: 'short', year: 'numeric' })} to{' '}
+                                    {formatDhakaDate(toDate, { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </p>
                             </div>
                             {/* Summary Section - Print Only */}
                             <div className="summary-section">
@@ -165,19 +217,41 @@ export default function AccountStatement({ transactions, summary, openingBalance
                                     <tbody>
                                         <tr>
                                             <td className="summary-label">Opening Balance:</td>
-                                            <td className="summary-value">৳{openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                            <td className="summary-value">
+                                                ৳{openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </td>
                                             <td className="summary-label">Total Deposit:</td>
-                                            <td className="summary-value positive">৳{summary.total_deposit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                            <td className="summary-value positive">
+                                                ৳
+                                                {summary.total_deposit.toLocaleString('en-IN', {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                })}
+                                            </td>
                                         </tr>
                                         <tr>
                                             <td className="summary-label">Total Withdraw:</td>
-                                            <td className="summary-value negative">৳{summary.total_withdraw.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                            <td className="summary-value negative">
+                                                ৳
+                                                {summary.total_withdraw.toLocaleString('en-IN', {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                })}
+                                            </td>
                                             <td className="summary-label">Closing Balance:</td>
-                                            <td className="summary-value closing">৳{summary.closing_balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                            <td className="summary-value closing">
+                                                ৳
+                                                {summary.closing_balance.toLocaleString('en-IN', {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                })}
+                                            </td>
                                         </tr>
                                         <tr>
                                             <td className="summary-label">Total Transactions:</td>
-                                            <td className="summary-value" colSpan={3}>{summary.transaction_count}</td>
+                                            <td className="summary-value" colSpan={3}>
+                                                {summary.transaction_count}
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -195,22 +269,48 @@ export default function AccountStatement({ transactions, summary, openingBalance
                             <table className="transaction-table min-w-full">
                                 <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800">
                                     <tr>
-                                        <th className="border-b-2 border-gray-300 px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:border-gray-600 dark:text-gray-300">Date</th>
-                                        <th className="border-b-2 border-gray-300 px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:border-gray-600 dark:text-gray-300">Ref No</th>
-                                        <th className="border-b-2 border-gray-300 px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:border-gray-600 dark:text-gray-300">Description</th>
-                                        <th className="border-b-2 border-gray-300 px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-700 dark:border-gray-600 dark:text-gray-300">Deposit (৳)</th>
-                                        <th className="border-b-2 border-gray-300 px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-700 dark:border-gray-600 dark:text-gray-300">Withdraw (৳)</th>
-                                        <th className="border-b-2 border-gray-300 px-4 py-3 text-right text-xs font-bold uppercase tracking-wider text-gray-700 dark:border-gray-600 dark:text-gray-300">Balance (৳)</th>
-                                        <th className="screen-only border-b-2 border-gray-300 px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:border-gray-600 dark:text-gray-300">Created By</th>
-                                        <th className="screen-only border-b-2 border-gray-300 px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-700 dark:border-gray-600 dark:text-gray-300">Source</th>
+                                        <th className="border-b-2 border-gray-300 px-4 py-3 text-left text-xs font-bold tracking-wider text-gray-700 uppercase dark:border-gray-600 dark:text-gray-300">
+                                            Date
+                                        </th>
+                                        <th className="border-b-2 border-gray-300 px-4 py-3 text-left text-xs font-bold tracking-wider text-gray-700 uppercase dark:border-gray-600 dark:text-gray-300">
+                                            Ref No
+                                        </th>
+                                        <th className="border-b-2 border-gray-300 px-4 py-3 text-left text-xs font-bold tracking-wider text-gray-700 uppercase dark:border-gray-600 dark:text-gray-300">
+                                            Description
+                                        </th>
+                                        <th className="border-b-2 border-gray-300 px-4 py-3 text-right text-xs font-bold tracking-wider text-gray-700 uppercase dark:border-gray-600 dark:text-gray-300">
+                                            Deposit (৳)
+                                        </th>
+                                        <th className="border-b-2 border-gray-300 px-4 py-3 text-right text-xs font-bold tracking-wider text-gray-700 uppercase dark:border-gray-600 dark:text-gray-300">
+                                            Withdraw (৳)
+                                        </th>
+                                        <th className="border-b-2 border-gray-300 px-4 py-3 text-right text-xs font-bold tracking-wider text-gray-700 uppercase dark:border-gray-600 dark:text-gray-300">
+                                            Balance (৳)
+                                        </th>
+                                        <th className="screen-only border-b-2 border-gray-300 px-4 py-3 text-left text-xs font-bold tracking-wider text-gray-700 uppercase dark:border-gray-600 dark:text-gray-300">
+                                            Created By
+                                        </th>
+                                        <th className="screen-only border-b-2 border-gray-300 px-4 py-3 text-left text-xs font-bold tracking-wider text-gray-700 uppercase dark:border-gray-600 dark:text-gray-300">
+                                            Source
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                                     <tr className="bg-gradient-to-r from-blue-50 to-blue-100 font-semibold dark:from-blue-900/20 dark:to-blue-900/30">
                                         <td className="border-b border-gray-200 px-4 py-3 text-sm dark:border-gray-700" colSpan={5}>
                                             <span className="flex items-center gap-2">
-                                                <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                                <svg
+                                                    className="h-5 w-5 text-blue-600 dark:text-blue-400"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                                                    />
                                                 </svg>
                                                 Opening Balance
                                             </span>
@@ -221,12 +321,21 @@ export default function AccountStatement({ transactions, summary, openingBalance
                                         <td className="screen-only border-b border-gray-200 px-4 py-3 dark:border-gray-700" colSpan={2}></td>
                                     </tr>
                                     {transactions.map((tx, index) => (
-                                        <tr key={tx.id} className={`transition hover:bg-blue-50 dark:hover:bg-gray-700/50 ${index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800/50'}`}>
-                                            <td className="border-b border-gray-200 px-4 py-3 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">{new Date(tx.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                        <tr
+                                            key={tx.id}
+                                            className={`transition hover:bg-blue-50 dark:hover:bg-gray-700/50 ${index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800/50'}`}
+                                        >
                                             <td className="border-b border-gray-200 px-4 py-3 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">
-                                                <span className="rounded bg-gray-100 px-2 py-1 font-mono text-xs dark:bg-gray-700">{tx.reference_no}</span>
+                                                {formatDhakaDate(tx.date, { day: '2-digit', month: 'short', year: 'numeric' })}
                                             </td>
-                                            <td className="border-b border-gray-200 px-4 py-3 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">{tx.description}</td>
+                                            <td className="border-b border-gray-200 px-4 py-3 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">
+                                                <span className="rounded bg-gray-100 px-2 py-1 font-mono text-xs dark:bg-gray-700">
+                                                    {tx.reference_no}
+                                                </span>
+                                            </td>
+                                            <td className="border-b border-gray-200 px-4 py-3 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">
+                                                {tx.description}
+                                            </td>
                                             <td className="border-b border-gray-200 px-4 py-3 text-right text-sm font-semibold dark:border-gray-700">
                                                 {tx.deposit > 0 ? (
                                                     <span className="text-green-600 dark:text-green-400">
@@ -248,17 +357,31 @@ export default function AccountStatement({ transactions, summary, openingBalance
                                             <td className="border-b border-gray-200 px-4 py-3 text-right text-sm font-bold text-gray-900 dark:border-gray-700 dark:text-gray-100">
                                                 {tx.balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </td>
-                                            <td className="screen-only border-b border-gray-200 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">{tx.created_by}</td>
+                                            <td className="screen-only border-b border-gray-200 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
+                                                {tx.created_by}
+                                            </td>
                                             <td className="screen-only border-b border-gray-200 px-4 py-3 text-sm dark:border-gray-700">
-                                                <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{tx.source}</span>
+                                                <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                                                    {tx.source}
+                                                </span>
                                             </td>
                                         </tr>
                                     ))}
                                     <tr className="bg-gradient-to-r from-gray-100 to-gray-200 font-bold dark:from-gray-700 dark:to-gray-800">
                                         <td className="border-t-2 border-gray-300 px-4 py-4 text-sm dark:border-gray-600" colSpan={3}>
                                             <span className="flex items-center gap-2">
-                                                <svg className="h-5 w-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                                <svg
+                                                    className="h-5 w-5 text-gray-700 dark:text-gray-300"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                                                    />
                                                 </svg>
                                                 Total Transactions
                                             </span>
@@ -276,7 +399,12 @@ export default function AccountStatement({ transactions, summary, openingBalance
                                         <td className="border-t-2 border-purple-300 px-4 py-4 text-sm dark:border-purple-700" colSpan={5}>
                                             <span className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
                                                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                    />
                                                 </svg>
                                                 Closing Balance
                                             </span>
@@ -295,17 +423,29 @@ export default function AccountStatement({ transactions, summary, openingBalance
                             <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
                                 <div className="flex items-center gap-2">
                                     <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                        />
                                     </svg>
                                     <span className="font-medium">Report Generated:</span>
-                                    <span>{new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span>{formatDhakaDateTime(new Date())}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                        />
                                     </svg>
                                     <span className="font-medium">Total Records:</span>
-                                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{summary.transaction_count}</span>
+                                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-bold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                                        {summary.transaction_count}
+                                    </span>
                                 </div>
                             </div>
                         </div>

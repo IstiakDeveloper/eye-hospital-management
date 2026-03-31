@@ -1,4 +1,5 @@
 import AdminLayout from '@/layouts/HospitalAccountLayout';
+import { formatDhakaDate, formatDhakaDateTime } from '@/utils/dhaka-time';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -60,11 +61,7 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
     const [toDate, setToDate] = useState(filters.to_date);
 
     const handleFilter = () => {
-        router.get(
-            route('reports.daily-statement'),
-            { from_date: fromDate, to_date: toDate },
-            { preserveState: true }
-        );
+        router.get(route('reports.daily-statement'), { from_date: fromDate, to_date: toDate }, { preserveState: true });
     };
 
     return (
@@ -76,117 +73,262 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">From Date</label>
-                                <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                                <input
+                                    type="date"
+                                    value={fromDate}
+                                    onChange={(e) => setFromDate(e.target.value)}
+                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                />
                             </div>
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">To Date</label>
-                                <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                                <input
+                                    type="date"
+                                    value={toDate}
+                                    onChange={(e) => setToDate(e.target.value)}
+                                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                />
                             </div>
                             <div className="flex items-end gap-2">
-                                <button onClick={handleFilter} className="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">Filter</button>
-                                <button onClick={() => window.print()} className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 print:hidden">Print</button>
+                                <button onClick={handleFilter} className="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
+                                    Filter
+                                </button>
+                                <button
+                                    onClick={() => window.print()}
+                                    className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 print:hidden"
+                                >
+                                    Print
+                                </button>
                             </div>
                         </div>
                     </div>
-                    <div className="print-area bg-white p-8 rounded-lg shadow-lg dark:bg-gray-900 print:shadow-none print:p-0 report-section">
+                    <div className="print-area report-section rounded-lg bg-white p-8 shadow-lg dark:bg-gray-900 print:p-0 print:shadow-none">
                         {/* Print Header - Hidden on screen, visible on print */}
                         <div className="print-header-new mb-3">
-                            <div className="text-center mb-1">
+                            <div className="mb-1 text-center">
                                 <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
                             </div>
-                            <div className="flex justify-between items-center mt-2">
+                            <div className="mt-2 flex items-center justify-between">
                                 <h2 className="text-sm font-bold">Hospital Daily Statement</h2>
                                 <p className="text-xs">
-                                    Date: {new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                    Date: {formatDhakaDate(fromDate, { day: '2-digit', month: 'short', year: 'numeric' })} to{' '}
+                                    {formatDhakaDate(toDate, { day: '2-digit', month: 'short', year: 'numeric' })}
                                 </p>
                             </div>
                         </div>
 
                         {/* Screen Header - Hidden on print */}
-                        <div className="print-header mb-6 border-b pb-4 text-center print:border-none screen-only">
+                        <div className="print-header screen-only mb-6 border-b pb-4 text-center print:border-none">
                             <h1 className="text-3xl font-bold text-gray-900 dark:text-white print:text-2xl">Hospital Daily Statement</h1>
-                            <p className="mt-2 text-lg text-gray-700 dark:text-gray-300 print:text-base">Period: {new Date(fromDate).toLocaleDateString()} to {new Date(toDate).toLocaleDateString()}</p>
-                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 print:text-xs">Printed on: {new Date().toLocaleString()}</p>
+                            <p className="mt-2 text-lg text-gray-700 dark:text-gray-300 print:text-base">
+                                Period: {formatDhakaDate(fromDate)} to {formatDhakaDate(toDate)}
+                            </p>
+                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 print:text-xs">
+                                Printed on: {formatDhakaDateTime(new Date())}
+                            </p>
                         </div>
                         <div className="overflow-x-auto print:overflow-visible">
-                            <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600 print:text-xs print:border-black">
+                            <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600 print:border-black print:text-xs">
                                 <thead>
                                     <tr className="bg-gray-100 dark:bg-gray-700 print:bg-white">
-                                        <th rowSpan={2} className="border border-gray-300 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:text-gray-300 print:border-black print:py-1">Date</th>
-                                        <th colSpan={8} className="border border-gray-300 bg-green-100 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:bg-green-900/30 dark:text-gray-300 print:bg-white print:border-black print:py-1">Credit</th>
-                                        <th colSpan={7} className="border border-gray-300 bg-red-100 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:bg-red-900/30 dark:text-gray-300 print:bg-white print:border-black print:py-1">Debit</th>
-                                        <th rowSpan={2} className="border border-gray-300 bg-blue-100 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:bg-blue-900/30 dark:text-gray-300 print:bg-white print:border-black print:py-1">Balance</th>
+                                        <th
+                                            rowSpan={2}
+                                            className="border border-gray-300 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:text-gray-300 print:border-black print:py-1"
+                                        >
+                                            Date
+                                        </th>
+                                        <th
+                                            colSpan={8}
+                                            className="border border-gray-300 bg-green-100 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:bg-green-900/30 dark:text-gray-300 print:border-black print:bg-white print:py-1"
+                                        >
+                                            Credit
+                                        </th>
+                                        <th
+                                            colSpan={7}
+                                            className="border border-gray-300 bg-red-100 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:bg-red-900/30 dark:text-gray-300 print:border-black print:bg-white print:py-1"
+                                        >
+                                            Debit
+                                        </th>
+                                        <th
+                                            rowSpan={2}
+                                            className="border border-gray-300 bg-blue-100 px-4 py-2 text-center text-sm font-bold text-gray-700 dark:border-gray-600 dark:bg-blue-900/30 dark:text-gray-300 print:border-black print:bg-white print:py-1"
+                                        >
+                                            Balance
+                                        </th>
                                     </tr>
                                     <tr className="bg-gray-50 dark:bg-gray-800 print:bg-white">
                                         {/* Credit columns */}
-                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">Fund In</th>
-                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">Medicine Income</th>
-                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">Optics Income</th>
-                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">Medical Test</th>
-                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">OPD Income</th>
-                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">Operation</th>
-                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:bg-white print:border-black">Others</th>
-                                        <th className="border border-gray-300 bg-green-100 px-2 py-1 text-center text-xs font-bold text-gray-700 dark:border-gray-600 dark:bg-green-900/30 dark:text-gray-300 print:bg-white print:border-black">Total</th>
+                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            Fund In
+                                        </th>
+                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            Medicine Income
+                                        </th>
+                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            Optics Income
+                                        </th>
+                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            Medical Test
+                                        </th>
+                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            OPD Income
+                                        </th>
+                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            Operation
+                                        </th>
+                                        <th className="border border-gray-300 bg-green-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            Others
+                                        </th>
+                                        <th className="border border-gray-300 bg-green-100 px-2 py-1 text-center text-xs font-bold text-gray-700 dark:border-gray-600 dark:bg-green-900/30 dark:text-gray-300 print:border-black print:bg-white">
+                                            Total
+                                        </th>
                                         {/* Debit columns */}
-                                        <th className="border border-gray-300 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-gray-300 print:bg-white print:border-black">Fund Out</th>
-                                        <th className="border border-gray-300 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-gray-300 print:bg-white print:border-black">Advance Rent</th>
-                                        <th className="border border-gray-300 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-gray-300 print:bg-white print:border-black">Medicine Purchase</th>
-                                        <th className="border border-gray-300 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-gray-300 print:bg-white print:border-black">Optics Purchase</th>
-                                        <th className="border border-gray-300 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-gray-300 print:bg-white print:border-black">Fixed Assets</th>
-                                        <th className="border border-gray-300 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-gray-300 print:bg-white print:border-black">Others</th>
-                                        <th className="border border-gray-300 bg-red-100 px-2 py-1 text-center text-xs font-bold text-gray-700 dark:border-gray-600 dark:bg-red-900/30 dark:text-gray-300 print:bg-white print:border-black">Total</th>
+                                        <th className="border border-gray-300 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            Fund Out
+                                        </th>
+                                        <th className="border border-gray-300 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            Advance Rent
+                                        </th>
+                                        <th className="border border-gray-300 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            Medicine Purchase
+                                        </th>
+                                        <th className="border border-gray-300 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            Optics Purchase
+                                        </th>
+                                        <th className="border border-gray-300 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            Fixed Assets
+                                        </th>
+                                        <th className="border border-gray-300 bg-red-50 px-2 py-1 text-center text-xs font-semibold text-gray-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-gray-300 print:border-black print:bg-white">
+                                            Others
+                                        </th>
+                                        <th className="border border-gray-300 bg-red-100 px-2 py-1 text-center text-xs font-bold text-gray-700 dark:border-gray-600 dark:bg-red-900/30 dark:text-gray-300 print:border-black print:bg-white">
+                                            Total
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr className="bg-blue-50 font-semibold dark:bg-blue-900/20 print:bg-white">
-                                        <td className="border border-gray-300 px-4 py-2 text-center dark:border-gray-600 print:border-black print:py-1" colSpan={16}>Opening Balance</td>
-                                        <td className="border border-gray-300 px-4 py-2 text-right dark:border-gray-600 print:border-black print:py-1">৳{(openingBalance || 0).toFixed(2)}</td>
+                                        <td
+                                            className="border border-gray-300 px-4 py-2 text-center dark:border-gray-600 print:border-black print:py-1"
+                                            colSpan={16}
+                                        >
+                                            Opening Balance
+                                        </td>
+                                        <td className="border border-gray-300 px-4 py-2 text-right dark:border-gray-600 print:border-black print:py-1">
+                                            ৳{(openingBalance || 0).toFixed(2)}
+                                        </td>
                                     </tr>
                                     {rows.map((row, idx) => (
                                         <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700 print:bg-white">
-                                            <td className="border border-gray-300 px-2 py-1 text-center text-xs dark:border-gray-600 dark:text-gray-300 print:border-black">{new Date(row.date).toLocaleDateString()}</td>
+                                            <td className="border border-gray-300 px-2 py-1 text-center text-xs dark:border-gray-600 dark:text-gray-300 print:border-black">
+                                                {formatDhakaDate(row.date)}
+                                            </td>
                                             {/* Credit columns */}
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{(row.fund_in || 0) > 0 ? `৳${(row.fund_in || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{(row.medicine_income || 0) > 0 ? `৳${(row.medicine_income || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{(row.optics_income || 0) > 0 ? `৳${(row.optics_income || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{(row.medical_test_income || 0) > 0 ? `৳${(row.medical_test_income || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{(row.opd_income || 0) > 0 ? `৳${(row.opd_income || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{(row.operation_income || 0) > 0 ? `৳${(row.operation_income || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">{(row.other_income || 0) > 0 ? `৳${(row.other_income || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 bg-green-50 px-2 py-1 text-right text-xs font-semibold text-green-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-green-400 print:bg-white print:border-black">{(row.total_credit || 0) > 0 ? `৳${(row.total_credit || 0).toFixed(2)}` : '-'}</td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                                {(row.fund_in || 0) > 0 ? `৳${(row.fund_in || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                                {(row.medicine_income || 0) > 0 ? `৳${(row.medicine_income || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                                {(row.optics_income || 0) > 0 ? `৳${(row.optics_income || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                                {(row.medical_test_income || 0) > 0 ? `৳${(row.medical_test_income || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                                {(row.opd_income || 0) > 0 ? `৳${(row.opd_income || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                                {(row.operation_income || 0) > 0 ? `৳${(row.operation_income || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                                {(row.other_income || 0) > 0 ? `৳${(row.other_income || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 bg-green-50 px-2 py-1 text-right text-xs font-semibold text-green-700 dark:border-gray-600 dark:bg-green-900/20 dark:text-green-400 print:border-black print:bg-white">
+                                                {(row.total_credit || 0) > 0 ? `৳${(row.total_credit || 0).toFixed(2)}` : '-'}
+                                            </td>
                                             {/* Debit columns */}
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">{(row.fund_out || 0) > 0 ? `৳${(row.fund_out || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">{(row.advance_house_rent || 0) > 0 ? `৳${(row.advance_house_rent || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">{(row.medicine_purchase || 0) > 0 ? `৳${(row.medicine_purchase || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">{(row.optics_purchase || 0) > 0 ? `৳${(row.optics_purchase || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">{(row.fixed_assets || 0) > 0 ? `৳${(row.fixed_assets || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">{(row.other_expenses || 0) > 0 ? `৳${(row.other_expenses || 0).toFixed(2)}` : '-'}</td>
-                                            <td className="border border-gray-300 bg-red-50 px-2 py-1 text-right text-xs font-semibold text-red-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-red-400 print:bg-white print:border-black">{(row.total_debit || 0) > 0 ? `৳${(row.total_debit || 0).toFixed(2)}` : '-'}</td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">
+                                                {(row.fund_out || 0) > 0 ? `৳${(row.fund_out || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">
+                                                {(row.advance_house_rent || 0) > 0 ? `৳${(row.advance_house_rent || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">
+                                                {(row.medicine_purchase || 0) > 0 ? `৳${(row.medicine_purchase || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">
+                                                {(row.optics_purchase || 0) > 0 ? `৳${(row.optics_purchase || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">
+                                                {(row.fixed_assets || 0) > 0 ? `৳${(row.fixed_assets || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 px-2 py-1 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">
+                                                {(row.other_expenses || 0) > 0 ? `৳${(row.other_expenses || 0).toFixed(2)}` : '-'}
+                                            </td>
+                                            <td className="border border-gray-300 bg-red-50 px-2 py-1 text-right text-xs font-semibold text-red-700 dark:border-gray-600 dark:bg-red-900/20 dark:text-red-400 print:border-black print:bg-white">
+                                                {(row.total_debit || 0) > 0 ? `৳${(row.total_debit || 0).toFixed(2)}` : '-'}
+                                            </td>
                                             {/* Balance */}
-                                            <td className="border border-gray-300 bg-blue-50 px-2 py-1 text-right text-xs font-bold text-blue-700 dark:border-gray-600 dark:bg-blue-900/20 dark:text-blue-400 print:bg-white print:border-black">৳{(row.balance || 0).toFixed(2)}</td>
+                                            <td className="border border-gray-300 bg-blue-50 px-2 py-1 text-right text-xs font-bold text-blue-700 dark:border-gray-600 dark:bg-blue-900/20 dark:text-blue-400 print:border-black print:bg-white">
+                                                ৳{(row.balance || 0).toFixed(2)}
+                                            </td>
                                         </tr>
                                     ))}
                                     <tr className="bg-gray-200 font-bold dark:bg-gray-700 print:bg-white">
-                                        <td className="border border-gray-300 px-2 py-2 text-center text-xs dark:border-gray-600 print:border-black">TOTAL</td>
+                                        <td className="border border-gray-300 px-2 py-2 text-center text-xs dark:border-gray-600 print:border-black">
+                                            TOTAL
+                                        </td>
                                         {/* Credit totals */}
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{(totals.fund_in || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{(totals.medicine_income || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{(totals.optics_income || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{(totals.medical_test_income || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{(totals.opd_income || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{(totals.operation_income || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">৳{(totals.other_income || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 bg-green-100 px-2 py-2 text-right text-xs text-green-700 dark:border-gray-600 dark:bg-green-900/30 dark:text-green-400 print:bg-white print:border-black">৳{(totals.total_credit || 0).toFixed(2)}</td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                            ৳{(totals.fund_in || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                            ৳{(totals.medicine_income || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                            ৳{(totals.optics_income || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                            ৳{(totals.medical_test_income || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                            ৳{(totals.opd_income || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                            ৳{(totals.operation_income || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-green-600 dark:border-gray-600 dark:text-green-400 print:border-black">
+                                            ৳{(totals.other_income || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-green-100 px-2 py-2 text-right text-xs text-green-700 dark:border-gray-600 dark:bg-green-900/30 dark:text-green-400 print:border-black print:bg-white">
+                                            ৳{(totals.total_credit || 0).toFixed(2)}
+                                        </td>
                                         {/* Debit totals */}
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">৳{(totals.fund_out || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">৳{(totals.advance_house_rent || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">৳{(totals.medicine_purchase || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">৳{(totals.optics_purchase || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">৳{(totals.fixed_assets || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">৳{(totals.other_expenses || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 bg-red-100 px-2 py-2 text-right text-xs text-red-700 dark:border-gray-600 dark:bg-red-900/30 dark:text-red-400 print:bg-white print:border-black">৳{(totals.total_debit || 0).toFixed(2)}</td>
-                                        <td className="border border-gray-300 bg-blue-100 px-2 py-2 text-right text-xs font-bold text-blue-700 dark:border-gray-600 dark:bg-blue-900/30 dark:text-blue-400 print:bg-white print:border-black">
-                                            ৳{rows.length > 0 ? ((rows[rows.length - 1]?.balance) || 0).toFixed(2) : (openingBalance || 0).toFixed(2)}
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">
+                                            ৳{(totals.fund_out || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">
+                                            ৳{(totals.advance_house_rent || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">
+                                            ৳{(totals.medicine_purchase || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">
+                                            ৳{(totals.optics_purchase || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">
+                                            ৳{(totals.fixed_assets || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 px-2 py-2 text-right text-xs text-red-600 dark:border-gray-600 dark:text-red-400 print:border-black">
+                                            ৳{(totals.other_expenses || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-red-100 px-2 py-2 text-right text-xs text-red-700 dark:border-gray-600 dark:bg-red-900/30 dark:text-red-400 print:border-black print:bg-white">
+                                            ৳{(totals.total_debit || 0).toFixed(2)}
+                                        </td>
+                                        <td className="border border-gray-300 bg-blue-100 px-2 py-2 text-right text-xs font-bold text-blue-700 dark:border-gray-600 dark:bg-blue-900/30 dark:text-blue-400 print:border-black print:bg-white">
+                                            ৳{rows.length > 0 ? (rows[rows.length - 1]?.balance || 0).toFixed(2) : (openingBalance || 0).toFixed(2)}
                                         </td>
                                     </tr>
                                 </tbody>

@@ -1,10 +1,11 @@
-import React from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { ChevronLeft, Save, AlertCircle } from 'lucide-react';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { AlertCircle, ChevronLeft, Save } from 'lucide-react';
+import React from 'react';
 
 const Button = ({ children, className = '', variant = 'primary', ...props }: any) => {
-    const baseClasses = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed';
+    const baseClasses =
+        'px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed';
     const variants = {
         primary: 'bg-blue-600 text-white hover:bg-blue-700',
         secondary: 'bg-gray-200 text-gray-700 hover:bg-gray-300',
@@ -20,36 +21,36 @@ const Button = ({ children, className = '', variant = 'primary', ...props }: any
 const Input = ({ label, error, required, className = '', ...props }: any) => (
     <div className={className}>
         {label && (
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
                 {label} {required && <span className="text-red-500">*</span>}
             </label>
         )}
         <input
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
                 error ? 'border-red-300' : 'border-gray-300'
             }`}
             {...props}
         />
-        {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
 );
 
 const Select = ({ label, error, required, children, className = '', ...props }: any) => (
     <div className={className}>
         {label && (
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
                 {label} {required && <span className="text-red-500">*</span>}
             </label>
         )}
         <select
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
                 error ? 'border-red-300' : 'border-gray-300'
             }`}
             {...props}
         >
             {children}
         </select>
-        {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
 );
 
@@ -83,7 +84,7 @@ export default function CreateVendor() {
                 <div className="flex items-center space-x-4">
                     <Link href={route('optics.vendors.index')}>
                         <Button variant="secondary">
-                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="h-4 w-4" />
                             <span>Back</span>
                         </Button>
                     </Link>
@@ -95,24 +96,25 @@ export default function CreateVendor() {
 
                 {/* Form */}
                 <form onSubmit={handleSubmit}>
-                    <div className="bg-white rounded-xl shadow-sm border p-8">
+                    <div className="rounded-xl border bg-white p-8 shadow-sm">
                         {/* Info Alert */}
-                        <div className="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="mb-8 rounded-lg border border-blue-200 bg-blue-50 p-4">
                             <div className="flex items-start space-x-3">
-                                <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                                <AlertCircle className="mt-0.5 h-5 w-5 text-blue-600" />
                                 <div className="text-sm text-blue-800">
-                                    <p className="font-medium mb-1">Vendor Information</p>
-                                    <p>Add vendor details to track purchases, payments, and due amounts. Opening balance helps maintain accurate records from the start.</p>
+                                    <p className="mb-1 font-medium">Vendor Information</p>
+                                    <p>
+                                        Add vendor details to track purchases, payments, and due amounts. Opening balance helps maintain accurate
+                                        records from the start.
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
                         {/* Basic Information */}
                         <div className="mb-8">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
-                                Basic Information
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-900">Basic Information</h2>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <Input
                                     label="Vendor Name"
                                     value={data.name}
@@ -168,25 +170,21 @@ export default function CreateVendor() {
 
                         {/* Address */}
                         <div className="mb-8">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
-                                Address
-                            </h2>
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-900">Address</h2>
                             <textarea
                                 value={data.address}
                                 onChange={(e: any) => setData('address', e.target.value)}
                                 rows={3}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 placeholder="Enter complete address..."
                             />
-                            {errors.address && <p className="text-red-600 text-sm mt-1">{errors.address}</p>}
+                            {errors.address && <p className="mt-1 text-sm text-red-600">{errors.address}</p>}
                         </div>
 
                         {/* Financial Information */}
                         <div className="mb-8">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
-                                Financial Information
-                            </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-900">Financial Information</h2>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <Input
                                     label="Opening Balance"
                                     type="number"
@@ -232,20 +230,16 @@ export default function CreateVendor() {
                             </div>
 
                             {/* Balance Info */}
-                            <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                            <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm font-medium text-gray-700">Opening Balance Summary</p>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            {data.balance_type === 'due'
-                                                ? 'Amount you owe to this vendor'
-                                                : 'Amount vendor owes to you'}
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            {data.balance_type === 'due' ? 'Amount you owe to this vendor' : 'Amount vendor owes to you'}
                                         </p>
                                     </div>
                                     <div className="text-right">
-                                        <p className={`text-2xl font-bold ${
-                                            data.balance_type === 'due' ? 'text-red-600' : 'text-blue-600'
-                                        }`}>
+                                        <p className={`text-2xl font-bold ${data.balance_type === 'due' ? 'text-red-600' : 'text-blue-600'}`}>
                                             ৳{data.opening_balance.toLocaleString()}
                                         </p>
                                     </div>
@@ -255,28 +249,26 @@ export default function CreateVendor() {
 
                         {/* Notes */}
                         <div className="mb-8">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">
-                                Additional Notes
-                            </h2>
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-900">Additional Notes</h2>
                             <textarea
                                 value={data.notes}
                                 onChange={(e: any) => setData('notes', e.target.value)}
                                 rows={3}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 placeholder="Any additional information about this vendor..."
                             />
-                            {errors.notes && <p className="text-red-600 text-sm mt-1">{errors.notes}</p>}
+                            {errors.notes && <p className="mt-1 text-sm text-red-600">{errors.notes}</p>}
                         </div>
 
                         {/* Submit Buttons */}
-                        <div className="flex justify-end space-x-4 pt-6 border-t">
+                        <div className="flex justify-end space-x-4 border-t pt-6">
                             <Link href={route('optics.vendors.index')}>
                                 <Button variant="secondary" type="button">
                                     Cancel
                                 </Button>
                             </Link>
                             <Button type="submit" disabled={processing}>
-                                <Save className="w-4 h-4" />
+                                <Save className="h-4 w-4" />
                                 <span>{processing ? 'Saving...' : 'Save Vendor'}</span>
                             </Button>
                         </div>

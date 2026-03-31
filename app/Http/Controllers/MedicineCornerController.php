@@ -102,12 +102,49 @@ class MedicineCornerController extends Controller
     /**
      * Stock Management Page
      */
-    public function stock()
+    public function stock(Request $request)
     {
-        $stocks = MedicineStock::with(['medicine', 'vendor', 'addedBy'])
+        $search = $request->get('search');
+        $dateType = $request->get('date_type', 'expiry'); // expiry | purchase
+        $fromDate = $request->get('from_date');
+        $toDate = $request->get('to_date');
+        $companyName = $request->get('company_name'); // vendor.company_name
+
+        $dateColumn = $dateType === 'purchase' ? 'purchase_date' : 'expiry_date';
+
+        $filteredStocksQuery = MedicineStock::query()
             ->where('available_quantity', '>', 0)
-            ->orderBy('expiry_date', 'asc')
-            ->paginate(20);
+            ->when($fromDate, function ($q) use ($dateColumn, $fromDate) {
+                $q->whereDate($dateColumn, '>=', $fromDate);
+            })
+            ->when($toDate, function ($q) use ($dateColumn, $toDate) {
+                $q->whereDate($dateColumn, '<=', $toDate);
+            })
+            ->when($companyName, function ($q) use ($companyName) {
+                $q->whereHas('vendor', function ($vq) use ($companyName) {
+                    $vq->where('company_name', $companyName);
+                });
+            })
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($sq) use ($search) {
+                    $sq->whereHas('medicine', function ($mq) use ($search) {
+                        $mq->where('name', 'like', "%{$search}%")
+                            ->orWhere('generic_name', 'like', "%{$search}%");
+                    })
+                        ->orWhere('batch_number', 'like', "%{$search}%")
+                        ->orWhereHas('vendor', function ($vq) use ($search) {
+                            $vq->where('name', 'like', "%{$search}%")
+                                ->orWhere('company_name', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->orderBy($dateColumn, 'asc')
+            ->orderBy('expiry_date', 'asc');
+
+        $stocks = $filteredStocksQuery
+            ->with(['medicine', 'vendor', 'addedBy'])
+            ->paginate(20)
+            ->withQueryString();
 
         $lowStockMedicines = Medicine::with('stockAlert')
             ->whereHas('stockAlert', function ($query) {
@@ -124,19 +161,41 @@ class MedicineCornerController extends Controller
             ->limit(10)
             ->get();
 
-        $totalStockValue = MedicineStock::where('available_quantity', '>', 0)
-            ->get()
-            ->sum(function ($stock) {
-                return $stock->available_quantity * $stock->buy_price;
-            });
+        $totalStockValue = (clone $filteredStocksQuery)
+            ->selectRaw('SUM(available_quantity * buy_price) as total')
+            ->value('total') ?? 0;
 
         // Pending payments to vendors
-        $pendingVendorPayments = MedicineStock::with(['vendor', 'medicine'])
+        $pendingVendorPaymentsQuery = MedicineStock::with(['vendor', 'medicine'])
             ->where('payment_status', '!=', 'paid')
             ->where('due_amount', '>', 0)
             ->orderBy('purchase_date', 'asc')
-            ->limit(10)
-            ->get();
+            ->limit(10);
+
+        if ($companyName) {
+            $pendingVendorPaymentsQuery->whereHas('vendor', function ($vq) use ($companyName) {
+                $vq->where('company_name', $companyName);
+            });
+        }
+
+        // If the user is filtering by purchase date, keep pending payments aligned to the same range.
+        if ($dateType === 'purchase' && ($fromDate || $toDate)) {
+            $pendingVendorPaymentsQuery->when($fromDate, function ($q) use ($fromDate) {
+                $q->whereDate('purchase_date', '>=', $fromDate);
+            })->when($toDate, function ($q) use ($toDate) {
+                $q->whereDate('purchase_date', '<=', $toDate);
+            });
+        }
+
+        $pendingVendorPayments = $pendingVendorPaymentsQuery->get();
+
+        // Company filter values (vendor.company_name)
+        $companyNames = MedicineVendor::active()
+            ->whereNotNull('company_name')
+            ->orderBy('company_name')
+            ->distinct()
+            ->pluck('company_name')
+            ->values();
 
         return Inertia::render('MedicineCorner/Stock', [
             'stocks' => $stocks,
@@ -144,6 +203,7 @@ class MedicineCornerController extends Controller
             'expiringStock' => $expiringStock,
             'totalStockValue' => $totalStockValue,
             'pendingVendorPayments' => $pendingVendorPayments,
+            'companyNames' => $companyNames,
         ]);
     }
 
@@ -236,16 +296,8 @@ class MedicineCornerController extends Controller
 
         $medicines = $query->paginate(20)->withQueryString();
 
-        // Transform medicine data to include actual sale price from stock
+        // Transform medicine data for the UI (avoid extra derived fields)
         $medicines->getCollection()->transform(function ($medicine) {
-            $actualSalePrice = $medicine->standard_sale_price;
-
-            // Get the lowest sale price from available stock
-            if ($medicine->stocks->isNotEmpty()) {
-                $actualSalePrice = $medicine->stocks->first()->sale_price;
-            }
-
-            $medicine->actual_sale_price = $actualSalePrice;
             $medicine->has_stock = $medicine->total_stock > 0;
             $medicine->average_buy_price = $medicine->average_buy_price ?? 0; // ✅ Include average purchase price
 
@@ -593,7 +645,6 @@ class MedicineCornerController extends Controller
             'expiry_date' => 'nullable|date|after:today', // ✅ Optional
             'quantity' => 'required|integer|min:1',
             'total_price' => 'required|numeric|min:0',
-            'sale_price' => 'required|numeric|min:0',
             'paid_amount' => 'nullable|numeric|min:0',
             'payment_method' => 'nullable|string|in:cash,bank_transfer,cheque,credit',
             'cheque_no' => 'nullable|string|max:255',
@@ -658,7 +709,8 @@ class MedicineCornerController extends Controller
                 'quantity' => $request->quantity,
                 'available_quantity' => $request->quantity,
                 'buy_price' => $unitPrice, // ✅ Use calculated unit price
-                'sale_price' => $request->sale_price,
+                // Always keep stock sale price in sync with medicine's standard sale price.
+                'sale_price' => $medicine->standard_sale_price,
                 'purchase_date' => now()->toDateString(),
                 'notes' => $request->notes,
                 'added_by' => auth()->id(),
@@ -911,6 +963,59 @@ class MedicineCornerController extends Controller
                 'message' => 'Failed to update medicine: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Update medicine sale price (standard_sale_price)
+     * and keep existing medicine_stocks.sale_price in sync.
+     */
+    public function updateSalePrice(Request $request, Medicine $medicine)
+    {
+        $validator = Validator::make($request->all(), [
+            'standard_sale_price' => 'required|numeric|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        DB::beginTransaction();
+        try {
+            $medicine->update([
+                'standard_sale_price' => $request->standard_sale_price,
+            ]);
+
+            // Keep all existing batch sale prices aligned with the medicine sale price.
+            $affected = MedicineStock::where('medicine_id', $medicine->id)->update([
+                'sale_price' => $request->standard_sale_price,
+            ]);
+
+            DB::commit();
+
+            return redirect()->back()->with(
+                'success',
+                "Sale price updated successfully. Synced {$affected} stock batch sale price(s)."
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return redirect()->back()->with('error', 'Failed to update sale price: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Sync all medicine stock sale prices with medicine standard sale price.
+     * This is a safety button for UI.
+     */
+    public function syncStockSalePrices()
+    {
+        DB::table('medicine_stocks')
+            ->join('medicines', 'medicine_stocks.medicine_id', '=', 'medicines.id')
+            ->update([
+                'medicine_stocks.sale_price' => DB::raw('medicines.standard_sale_price'),
+            ]);
+
+        return redirect()->back()->with('success', 'Sale prices synced successfully');
     }
 
     /**
@@ -1928,8 +2033,8 @@ class MedicineCornerController extends Controller
             'batch_number' => 'required|string|max:255',
             'expiry_date' => 'required|date|after:today',
             'quantity' => 'required|integer|min:1',
-            'buy_price' => 'required|numeric|min:0',
-            'sale_price' => 'required|numeric|min:0',
+            // Edit uses the same input style as addStock: quantity + total_price (not unit price).
+            'total_price' => 'required|numeric|min:0',
             'paid_amount' => 'nullable|numeric|min:0',
             'payment_method' => 'nullable|string|in:cash,bank_transfer,cheque,credit',
             'cheque_no' => 'nullable|string|max:255',
@@ -1965,7 +2070,8 @@ class MedicineCornerController extends Controller
             // Calculate new values
             $newVendor = MedicineVendor::findOrFail($request->vendor_id);
             $newMedicine = Medicine::findOrFail($request->medicine_id);
-            $newTotalAmount = $request->quantity * $request->buy_price;
+            $newTotalAmount = (float) $request->total_price;
+            $unitPrice = $newTotalAmount / (float) $request->quantity;
             $newPaidAmount = $request->paid_amount ?? 0;
             $newDueAmount = $newTotalAmount - $newPaidAmount;
 
@@ -2045,8 +2151,9 @@ class MedicineCornerController extends Controller
                 'expiry_date' => $request->expiry_date,
                 'quantity' => $request->quantity,
                 'available_quantity' => $stock->available_quantity + $quantityDifference,
-                'buy_price' => $request->buy_price,
-                'sale_price' => $request->sale_price,
+                'buy_price' => $unitPrice,
+                // Always keep stock sale price in sync with medicine's standard sale price.
+                'sale_price' => $newMedicine->standard_sale_price,
                 'notes' => $request->notes,
                 'updated_by' => auth()->id(),
             ]);
@@ -2056,7 +2163,7 @@ class MedicineCornerController extends Controller
                 'medicine_stock_id' => $stock->id,
                 'type' => 'adjustment',
                 'quantity' => $request->quantity,
-                'unit_price' => $request->buy_price,
+                'unit_price' => $unitPrice,
                 'total_amount' => $newTotalAmount,
                 'vendor_transaction_id' => $vendorTransaction->id,
                 'reason' => 'Stock purchase updated - Batch: '.$request->batch_number,
@@ -2093,8 +2200,57 @@ class MedicineCornerController extends Controller
                         now()->toDateString()
                     );
                 } else {
-                    // Payment was reduced - No refund to Medicine Account, just log
-                    // The reduced payment stays with vendor transaction only
+                    // Payment was reduced => refund back to Hospital Account
+                    // and reduce the allocated vendor payment record(s) to keep balances aligned.
+                    $refundAmount = abs($paymentDifference);
+
+                    // 1) Reduce allocated vendor payment(s) for this vendor transaction
+                    $refundRemaining = $refundAmount;
+                    $allocatedPayments = MedicineVendorPayment::whereJsonContains(
+                        'allocated_transactions',
+                        $vendorTransaction->id
+                    )
+                        ->orderBy('payment_date', 'desc')
+                        ->orderBy('id', 'desc')
+                        ->get();
+
+                    foreach ($allocatedPayments as $payment) {
+                        if ($refundRemaining <= 0) {
+                            break;
+                        }
+
+                        $paymentAmount = (float) $payment->amount;
+                        if ($paymentAmount <= 0) {
+                            continue;
+                        }
+
+                        $reduction = min($paymentAmount, $refundRemaining);
+                        $newPaymentAmount = $paymentAmount - $reduction;
+
+                        if ($newPaymentAmount <= 0) {
+                            $payment->delete();
+                        } else {
+                            $payment->update(['amount' => $newPaymentAmount]);
+                        }
+
+                        $refundRemaining -= $reduction;
+                    }
+
+                    // 2) Add refund to Hospital Account
+                    $incomeCategory = \App\Models\HospitalIncomeCategory::firstOrCreate(
+                        ['name' => 'Medicine Purchase Refund'],
+                        ['is_active' => true]
+                    );
+
+                    HospitalAccount::addIncome(
+                        $refundAmount,
+                        'Medicine Purchase Refund',
+                        "Refund for stock update - {$newMedicine->name} (Batch: {$request->batch_number})",
+                        'medicine_purchase',
+                        $vendorTransaction->id,
+                        now()->toDateString(),
+                        $incomeCategory->id
+                    );
                 }
             }
 
@@ -2129,6 +2285,116 @@ class MedicineCornerController extends Controller
             DB::rollback();
 
             return redirect()->back()->with('error', 'Failed to update stock: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Delete Stock Entry (Purchase)
+     * Safe rules:
+     * - Only allow delete if no units were sold from this batch.
+     * - Reverse allocated vendor payments (reduce/delete) for the linked vendor transaction.
+     * - Add refund income back to HospitalAccount for any paid amount.
+     */
+    public function deleteStock($id)
+    {
+        DB::beginTransaction();
+        try {
+            $stock = MedicineStock::with(['medicine', 'vendor', 'vendorTransaction'])->findOrFail($id);
+
+            if ($stock->available_quantity !== $stock->quantity) {
+                throw new \Exception('Cannot delete this stock batch because some units were already sold.');
+            }
+
+            $vendor = $stock->vendor;
+            $medicine = $stock->medicine;
+
+            // Find existing vendor transaction (fallback if relation not loaded/defined)
+            $vendorTransaction = $stock->vendorTransaction ?: MedicineVendorTransaction::where([
+                'reference_type' => 'medicine_purchase',
+                'reference_id' => $stock->id,
+            ])->first();
+
+            $paidAmount = $vendorTransaction ? (float) $vendorTransaction->paid_amount : 0.0;
+
+            // 1) Reduce allocated vendor payment(s) for this vendor transaction (if any)
+            if ($vendorTransaction && $paidAmount > 0) {
+                $refundRemaining = $paidAmount;
+                $allocatedPayments = MedicineVendorPayment::whereJsonContains(
+                    'allocated_transactions',
+                    $vendorTransaction->id
+                )
+                    ->orderBy('payment_date', 'desc')
+                    ->orderBy('id', 'desc')
+                    ->get();
+
+                foreach ($allocatedPayments as $payment) {
+                    if ($refundRemaining <= 0) {
+                        break;
+                    }
+
+                    $paymentAmount = (float) $payment->amount;
+                    if ($paymentAmount <= 0) {
+                        continue;
+                    }
+
+                    $reduction = min($paymentAmount, $refundRemaining);
+                    $newPaymentAmount = $paymentAmount - $reduction;
+
+                    if ($newPaymentAmount <= 0) {
+                        $payment->delete();
+                    } else {
+                        $payment->update(['amount' => $newPaymentAmount]);
+                    }
+
+                    $refundRemaining -= $reduction;
+                }
+
+                // 2) Add refund back to Hospital Account
+                $incomeCategory = \App\Models\HospitalIncomeCategory::firstOrCreate(
+                    ['name' => 'Medicine Purchase Refund'],
+                    ['is_active' => true]
+                );
+
+                HospitalAccount::addIncome(
+                    $paidAmount,
+                    'Medicine Purchase Refund',
+                    "Refund for deleted stock entry - {$medicine->name} (Batch: {$stock->batch_number})",
+                    'medicine_purchase',
+                    $vendorTransaction->id,
+                    now()->toDateString(),
+                    $incomeCategory->id
+                );
+            }
+
+            // 3) Delete stock transactions linked to this stock batch (purchase/adjustments)
+            StockTransaction::where('medicine_stock_id', $stock->id)->delete();
+
+            // 4) Delete vendor transaction (after payments adjusted)
+            if ($vendorTransaction) {
+                $vendorTransaction->delete();
+            }
+
+            // 5) Delete stock batch
+            $stock->delete();
+
+            // 6) Recalculate balances/totals
+            if ($vendor) {
+                $vendor->updateBalance();
+            }
+            if ($medicine) {
+                $medicine->updateTotalStock();
+                $medicine->updateAverageBuyPrice();
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->route('medicine-corner.stock')
+                ->with('success', '✅ Stock entry deleted successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return redirect()->back()->with('error', 'Failed to delete stock: '.$e->getMessage());
         }
     }
 

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
-import { Printer, Filter } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { Filter, Printer } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface LedgerData {
     id: string;
@@ -48,7 +48,7 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
         return new Date(dateString).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short',
-            year: 'numeric'
+            year: 'numeric',
         });
     };
 
@@ -57,8 +57,10 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
             style: 'currency',
             currency: 'BDT',
             minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(amount).replace('BDT', '৳');
+            maximumFractionDigits: 2,
+        })
+            .format(amount)
+            .replace('BDT', '৳');
     };
 
     const handleFilter = () => {
@@ -78,41 +80,41 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
         window.print();
     };
 
-    const selectedVendorName = vendors.find(v => v.id.toString() === vendorId)?.name || 'All Vendors';
+    const selectedVendorName = vendors.find((v) => v.id.toString() === vendorId)?.name || 'All Vendors';
 
     return (
         <HospitalAccountLayout title="Fixed Asset Vendor Due Ledger">
             {/* Filter Section */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border mb-6 no-print">
-                <div className="flex items-center gap-2 mb-4">
-                    <Filter className="w-5 h-5 text-gray-600" />
+            <div className="no-print mb-6 rounded-lg border bg-white p-6 shadow-sm">
+                <div className="mb-4 flex items-center gap-2">
+                    <Filter className="h-5 w-5 text-gray-600" />
                     <h3 className="text-lg font-semibold">Filter Transactions</h3>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                     <div>
-                        <label className="block text-sm font-medium mb-2">Start Date</label>
+                        <label className="mb-2 block text-sm font-medium">Start Date</label>
                         <input
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-2">End Date</label>
+                        <label className="mb-2 block text-sm font-medium">End Date</label>
                         <input
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-2">Vendor</label>
+                        <label className="mb-2 block text-sm font-medium">Vendor</label>
                         <select
                             value={vendorId}
                             onChange={(e) => setVendorId(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">All Vendors</option>
                             {vendors.map((vendor) => (
@@ -123,10 +125,7 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
                         </select>
                     </div>
                     <div className="flex items-end gap-2">
-                        <button
-                            onClick={handleFilter}
-                            className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                        >
+                        <button onClick={handleFilter} className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
                             Apply Filter
                         </button>
                     </div>
@@ -134,29 +133,24 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4 mb-6">
-                <button
-                    onClick={handlePrint}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                    <Printer className="w-4 h-4 mr-2" />
+            <div className="mb-6 flex gap-4">
+                <button onClick={handlePrint} className="flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+                    <Printer className="mr-2 h-4 w-4" />
                     Print
                 </button>
             </div>
 
             {/* Table */}
-            <div className="bg-white rounded-lg shadow-sm border report-section">
+            <div className="report-section rounded-lg border bg-white shadow-sm">
                 {/* Print Header */}
                 <div className="print-header mb-3 p-4">
-                    <div className="text-center mb-1">
+                    <div className="mb-1 text-center">
                         <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
                     </div>
-                    <div className="flex justify-between items-center mt-2">
+                    <div className="mt-2 flex items-center justify-between">
                         <h2 className="text-sm font-bold">Fixed Asset Vendor Due Ledger</h2>
                         <p className="text-xs">
-                            {startDate && endDate
-                                ? `Period: ${formatDate(startDate)} to ${formatDate(endDate)}`
-                                : 'All Transactions'}
+                            {startDate && endDate ? `Period: ${formatDate(startDate)} to ${formatDate(endDate)}` : 'All Transactions'}
                             {vendorId && ` - Vendor: ${selectedVendorName}`}
                         </p>
                     </div>
@@ -165,30 +159,16 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Date
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Vendor Name
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Description
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Previous Due
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Purchase Due
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Payment
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Current Due
-                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Date</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Vendor Name</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Description</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Previous Due</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Purchase Due</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Payment</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Current Due</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="divide-y divide-gray-200 bg-white">
                             {ledgerData.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
@@ -198,25 +178,19 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
                             ) : (
                                 ledgerData.map((item) => (
                                     <tr key={item.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            {formatDate(item.date)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            {item.vendor_name}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
-                                            {item.description}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                                        <td className="px-6 py-4 text-sm whitespace-nowrap">{formatDate(item.date)}</td>
+                                        <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">{item.vendor_name}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-600">{item.description}</td>
+                                        <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
                                             {formatAmount(item.previous_due)}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600 font-medium">
+                                        <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap text-red-600">
                                             {item.purchase_due > 0 ? formatAmount(item.purchase_due) : '-'}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-medium">
+                                        <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap text-green-600">
                                             {item.payment > 0 ? formatAmount(item.payment) : '-'}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                                        <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
                                             {formatAmount(item.current_due)}
                                         </td>
                                     </tr>
@@ -229,18 +203,10 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
                                     <td colSpan={3} className="px-6 py-4 text-sm">
                                         Total
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-right">
-                                        {formatAmount(totals.previous_due)}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-right text-red-600">
-                                        {formatAmount(totals.purchase_due)}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-right text-green-600">
-                                        {formatAmount(totals.payment)}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-right">
-                                        {formatAmount(totals.current_due)}
-                                    </td>
+                                    <td className="px-6 py-4 text-right text-sm">{formatAmount(totals.previous_due)}</td>
+                                    <td className="px-6 py-4 text-right text-sm text-red-600">{formatAmount(totals.purchase_due)}</td>
+                                    <td className="px-6 py-4 text-right text-sm text-green-600">{formatAmount(totals.payment)}</td>
+                                    <td className="px-6 py-4 text-right text-sm">{formatAmount(totals.current_due)}</td>
                                 </tr>
                             </tfoot>
                         )}

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { ArrowLeft, Save, Calendar, Clock, DollarSign, User, FileText, CreditCard } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { ArrowLeft, Calendar, Clock, CreditCard, DollarSign, FileText, Save, User } from 'lucide-react';
+import { useState } from 'react';
 
 interface Patient {
     id: number;
@@ -86,7 +86,7 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
 
     const handleOperationChange = (operationId: number) => {
         setSelectedOperationId(operationId);
-        const operation = operations.find(op => op.id === operationId);
+        const operation = operations.find((op) => op.id === operationId);
         if (operation) {
             setBaseAmount(operation.price.toString());
         }
@@ -95,9 +95,7 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
     // Calculate discount amount and totals
     const baseAmt = parseFloat(baseAmount) || 0;
     const discountVal = parseFloat(discountValue) || 0;
-    const discountAmount = discountType === 'percentage'
-        ? (baseAmt * discountVal) / 100
-        : discountVal;
+    const discountAmount = discountType === 'percentage' ? (baseAmt * discountVal) / 100 : discountVal;
     const totalAmount = Math.max(0, baseAmt - discountAmount);
     const advancePayment = parseFloat(advancePaymentInput) || 0;
     const dueAmount = Math.max(0, totalAmount - advancePayment);
@@ -122,61 +120,70 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
             eye_side: eyeSide,
             lens_type: lensType === 'other' ? customLensType : lensType,
             power: power,
-            surgery_remarks: surgeryRemarks
+            surgery_remarks: surgeryRemarks,
         };
 
         setLoading(true);
         router.put(`/operation-bookings/${booking.id}`, formData, {
-            onFinish: () => setLoading(false)
+            onFinish: () => setLoading(false),
         });
     };
 
     return (
         <AdminLayout>
             <div className="p-6">
-                <div className="max-w-4xl mx-auto">
+                <div className="mx-auto max-w-4xl">
                     <div className="mb-6 flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">Edit Operation Booking</h1>
-                            <p className="text-gray-600 mt-1">Booking No: {booking.booking_no}</p>
+                            <p className="mt-1 text-gray-600">Booking No: {booking.booking_no}</p>
                         </div>
                         <button
                             type="button"
                             onClick={() => router.visit(`/operation-bookings/${booking.id}`)}
-                            className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border rounded-lg hover:bg-gray-50"
+                            className="flex items-center gap-2 rounded-lg border bg-white px-4 py-2 text-gray-700 hover:bg-gray-50"
                         >
-                            <ArrowLeft className="w-4 h-4" />
+                            <ArrowLeft className="h-4 w-4" />
                             Back to Details
                         </button>
                     </div>
 
                     {/* Status Badge */}
                     <div className="mb-6">
-                        <span className={`inline-flex px-4 py-2 rounded-full text-sm font-semibold ${
-                            booking.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            booking.status === 'confirmed' ? 'bg-purple-100 text-purple-800' :
-                            booking.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span
+                            className={`inline-flex rounded-full px-4 py-2 text-sm font-semibold ${
+                                booking.status === 'completed'
+                                    ? 'bg-green-100 text-green-800'
+                                    : booking.status === 'confirmed'
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : booking.status === 'scheduled'
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : 'bg-gray-100 text-gray-800'
+                            }`}
+                        >
                             Status: {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                         </span>
-                        <span className={`inline-flex ml-3 px-4 py-2 rounded-full text-sm font-semibold ${
-                            booking.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
-                            booking.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                        }`}>
+                        <span
+                            className={`ml-3 inline-flex rounded-full px-4 py-2 text-sm font-semibold ${
+                                booking.payment_status === 'paid'
+                                    ? 'bg-green-100 text-green-800'
+                                    : booking.payment_status === 'partial'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-red-100 text-red-800'
+                            }`}
+                        >
                             Payment: {booking.payment_status.charAt(0).toUpperCase() + booking.payment_status.slice(1)}
                         </span>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Patient Information - Read Only */}
-                        <div className="bg-blue-50 rounded-lg shadow p-6">
-                            <div className="flex items-center gap-2 mb-4">
-                                <User className="w-5 h-5 text-blue-600" />
+                        <div className="rounded-lg bg-blue-50 p-6 shadow">
+                            <div className="mb-4 flex items-center gap-2">
+                                <User className="h-5 w-5 text-blue-600" />
                                 <h2 className="text-xl font-semibold">Patient Information (Read Only)</h2>
                             </div>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                                 <div>
                                     <div className="text-sm text-gray-600">Patient ID</div>
                                     <div className="font-semibold">{booking.patient.patient_id}</div>
@@ -191,51 +198,50 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
                                 </div>
                                 <div>
                                     <div className="text-sm text-gray-600">Age / Gender</div>
-                                    <div className="font-semibold">{booking.patient.age || 'N/A'} / {booking.patient.gender || 'N/A'}</div>
+                                    <div className="font-semibold">
+                                        {booking.patient.age || 'N/A'} / {booking.patient.gender || 'N/A'}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Operation Details */}
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <h2 className="text-xl font-semibold mb-4">Operation Details</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="rounded-lg bg-white p-6 shadow">
+                            <h2 className="mb-4 text-xl font-semibold">Operation Details</h2>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Operation Type *
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Operation Type *</label>
                                     <select
                                         value={selectedOperationId}
                                         onChange={(e) => handleOperationChange(Number(e.target.value))}
                                         required
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value="">Select Operation</option>
-                                        {operations.map(op => (
+                                        {operations.map((op) => (
                                             <option key={op.id} value={op.id}>
                                                 {op.name} - {op.type} (Base: ৳{op.price})
                                             </option>
                                         ))}
                                     </select>
                                     {selectedOperationId && (
-                                        <p className="text-sm text-blue-600 mt-1">
-                                            💡 Selected operation base price: ৳{(Number(operations.find(op => op.id === selectedOperationId)?.price) || 0).toFixed(2)}
+                                        <p className="mt-1 text-sm text-blue-600">
+                                            💡 Selected operation base price: ৳
+                                            {(Number(operations.find((op) => op.id === selectedOperationId)?.price) || 0).toFixed(2)}
                                         </p>
                                     )}
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Doctor *
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Doctor *</label>
                                     <select
                                         value={selectedDoctorId}
                                         onChange={(e) => setSelectedDoctorId(Number(e.target.value))}
                                         required
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value="">Select Doctor</option>
-                                        {doctors.map(doc => (
+                                        {doctors.map((doc) => (
                                             <option key={doc.id} value={doc.id}>
                                                 {doc.user.name} - {doc.specialization}
                                             </option>
@@ -244,33 +250,29 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Scheduled Date *
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Scheduled Date *</label>
                                     <div className="relative">
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <Calendar className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="date"
                                             value={scheduledDate}
                                             onChange={(e) => setScheduledDate(e.target.value)}
                                             required
-                                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border py-2 pr-4 pl-10 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Scheduled Time *
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Scheduled Time *</label>
                                     <div className="relative">
-                                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <Clock className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="time"
                                             value={scheduledTime}
                                             onChange={(e) => setScheduledTime(e.target.value)}
                                             required
-                                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border py-2 pr-4 pl-10 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
@@ -278,17 +280,15 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
                         </div>
 
                         {/* Eye Surgery Details */}
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <h2 className="text-xl font-semibold mb-4">Eye Surgery Details</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="rounded-lg bg-white p-6 shadow">
+                            <h2 className="mb-4 text-xl font-semibold">Eye Surgery Details</h2>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Surgery Type (SICS/Phaco)
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Surgery Type (SICS/Phaco)</label>
                                     <select
                                         value={surgeryType}
                                         onChange={(e) => setSurgeryType(e.target.value)}
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value="">Select Surgery Type</option>
                                         <option value="SICS">SICS</option>
@@ -299,27 +299,23 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
 
                                 {surgeryType === 'other' && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Custom Surgery Type
-                                        </label>
+                                        <label className="mb-2 block text-sm font-medium text-gray-700">Custom Surgery Type</label>
                                         <input
                                             type="text"
                                             value={customSurgeryType}
                                             onChange={(e) => setCustomSurgeryType(e.target.value)}
                                             placeholder="Enter custom surgery type"
-                                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 )}
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Eye Side
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Eye Side</label>
                                     <select
                                         value={eyeSide}
                                         onChange={(e) => setEyeSide(e.target.value as 'left' | 'right' | '')}
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value="">Select Eye</option>
                                         <option value="left">Left Eye</option>
@@ -328,13 +324,11 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Lens Type
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Lens Type</label>
                                     <select
                                         value={lensType}
                                         onChange={(e) => setLensType(e.target.value)}
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value="">Select Lens Type</option>
                                         <option value="Monofocal">Monofocal</option>
@@ -347,61 +341,53 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
 
                                 {lensType === 'other' && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Custom Lens Type
-                                        </label>
+                                        <label className="mb-2 block text-sm font-medium text-gray-700">Custom Lens Type</label>
                                         <input
                                             type="text"
                                             value={customLensType}
                                             onChange={(e) => setCustomLensType(e.target.value)}
                                             placeholder="Enter custom lens type"
-                                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 )}
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Power
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Power</label>
                                     <input
                                         type="text"
                                         value={power}
                                         onChange={(e) => setPower(e.target.value)}
                                         placeholder="e.g., +2.50, -1.75"
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Surgery Remarks
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Surgery Remarks</label>
                                     <textarea
                                         value={surgeryRemarks}
                                         onChange={(e) => setSurgeryRemarks(e.target.value)}
                                         rows={2}
                                         placeholder="Any additional notes about the surgery..."
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
                             </div>
                         </div>
 
                         {/* Payment Information */}
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <div className="flex items-center gap-2 mb-4">
-                                <CreditCard className="w-5 h-5 text-green-600" />
+                        <div className="rounded-lg bg-white p-6 shadow">
+                            <div className="mb-4 flex items-center gap-2">
+                                <CreditCard className="h-5 w-5 text-green-600" />
                                 <h2 className="text-xl font-semibold">Payment Information</h2>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Base Amount *
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Base Amount *</label>
                                     <div className="relative">
-                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <DollarSign className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="number"
                                             value={baseAmount}
@@ -409,19 +395,17 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
                                             min="0"
                                             step="0.01"
                                             required
-                                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border py-2 pr-4 pl-10 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Discount Type
-                                    </label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Discount Type</label>
                                     <select
                                         value={discountType}
                                         onChange={(e) => setDiscountType(e.target.value as 'percentage' | 'amount')}
-                                        className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value="amount">Fixed Amount (৳)</option>
                                         <option value="percentage">Percentage (%)</option>
@@ -429,11 +413,11 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">
                                         Discount {discountType === 'percentage' ? 'Percentage (%)' : 'Amount (৳)'}
                                     </label>
                                     <div className="relative">
-                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <DollarSign className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="number"
                                             value={discountValue}
@@ -442,20 +426,22 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
                                             max={discountType === 'percentage' ? '100' : baseAmount}
                                             step="0.01"
                                             placeholder="0"
-                                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            className="w-full rounded-lg border py-2 pr-4 pl-10 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">
                                         <span className="flex items-center gap-2">
                                             Advance Payment (৳) - Editable
-                                            <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">⚠️ Hospital Account will adjust</span>
+                                            <span className="rounded bg-orange-50 px-2 py-1 text-xs text-orange-600">
+                                                ⚠️ Hospital Account will adjust
+                                            </span>
                                         </span>
                                     </label>
                                     <div className="relative">
-                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                        <DollarSign className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400" />
                                         <input
                                             type="number"
                                             value={advancePaymentInput}
@@ -464,22 +450,23 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
                                             max={totalAmount}
                                             step="0.01"
                                             placeholder="0"
-                                            className="w-full pl-10 pr-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-blue-50"
+                                            className="w-full rounded-lg border border-blue-300 bg-blue-50 py-2 pr-4 pl-10 focus:ring-2 focus:ring-blue-500"
                                         />
                                     </div>
-                                    <p className="text-xs text-blue-600 mt-1">
+                                    <p className="mt-1 text-xs text-blue-600">
                                         💡 Old: ৳{parseFloat(booking.advance_payment?.toString() || '0').toFixed(2)}
                                         {advancePayment !== parseFloat(booking.advance_payment?.toString() || '0') && (
                                             <span className="ml-2 font-semibold text-orange-600">
-                                                → Change: {advancePayment > parseFloat(booking.advance_payment?.toString() || '0') ? '+' : ''}৳{(advancePayment - parseFloat(booking.advance_payment?.toString() || '0')).toFixed(2)}
+                                                → Change: {advancePayment > parseFloat(booking.advance_payment?.toString() || '0') ? '+' : ''}৳
+                                                {(advancePayment - parseFloat(booking.advance_payment?.toString() || '0')).toFixed(2)}
                                             </span>
                                         )}
                                     </p>
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <div className="bg-gray-50 rounded-lg p-4">
-                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+                                    <div className="rounded-lg bg-gray-50 p-4">
+                                        <div className="grid grid-cols-2 gap-4 text-center md:grid-cols-5">
                                             <div>
                                                 <div className="text-sm text-gray-600">Base Amount</div>
                                                 <div className="text-lg font-bold text-gray-900">৳{baseAmt.toFixed(2)}</div>
@@ -502,7 +489,7 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
                                             </div>
                                         </div>
                                     </div>
-                                    <p className="text-sm text-orange-600 mt-2 font-medium">
+                                    <p className="mt-2 text-sm font-medium text-orange-600">
                                         ⚠️ Editing payment will automatically adjust Hospital Account & Transaction records.
                                     </p>
                                 </div>
@@ -510,10 +497,10 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
                         </div>
 
                         {/* Notes */}
-                        <div className="bg-white rounded-lg shadow p-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <div className="rounded-lg bg-white p-6 shadow">
+                            <label className="mb-2 block text-sm font-medium text-gray-700">
                                 <div className="flex items-center gap-2">
-                                    <FileText className="w-5 h-5 text-gray-600" />
+                                    <FileText className="h-5 w-5 text-gray-600" />
                                     <span>Notes (Optional)</span>
                                 </div>
                             </label>
@@ -522,7 +509,7 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
                                 onChange={(e) => setNotes(e.target.value)}
                                 rows={3}
                                 placeholder="Add any special instructions or notes..."
-                                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
 
@@ -531,16 +518,16 @@ export default function EditOperationBooking({ booking, operations, doctors }: P
                             <button
                                 type="button"
                                 onClick={() => router.visit(`/operation-bookings/${booking.id}`)}
-                                className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                                className="flex-1 rounded-lg border border-gray-300 px-6 py-3 transition hover:bg-gray-50"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 flex items-center justify-center gap-2"
+                                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white transition hover:bg-blue-700 disabled:bg-gray-400"
                             >
-                                <Save className="w-5 h-5" />
+                                <Save className="h-5 w-5" />
                                 {loading ? 'Saving Changes...' : 'Save Changes'}
                             </button>
                         </div>

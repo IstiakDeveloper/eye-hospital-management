@@ -1,47 +1,31 @@
 // resources/js/Pages/Appointments/Today.tsx
-import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/admin-layout';
-import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from '@/Components/ui/table';
-import {
-    Card,
-    CardHeader,
-    CardTitle,
-    CardContent
-} from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
+import AdminLayout from '@/Layouts/admin-layout';
 import { formatTime } from '@/lib/utils';
+import { Head, Link, router } from '@inertiajs/react';
 import {
-    Calendar,
-    Clock,
-    User,
-    FileText,
-    Check,
-    X as XIcon,
-    Filter,
-    RefreshCw,
-    Printer,
-    Stethoscope,
-    Phone,
-    TrendingUp,
     Activity,
-    AlertCircle,
-    CheckCircle,
-    Timer,
-    Users,
-    Plus,
-    Eye,
+    Calendar,
     CalendarPlus,
-    BarChart3
+    Check,
+    CheckCircle,
+    Clock,
+    Eye,
+    FileText,
+    Filter,
+    Phone,
+    Printer,
+    RefreshCw,
+    Stethoscope,
+    Timer,
+    TrendingUp,
+    Users,
+    X as XIcon,
 } from 'lucide-react';
+import { useState } from 'react';
 
 interface Patient {
     id: number;
@@ -78,7 +62,7 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    const filteredAppointments = appointments.filter(appointment => {
+    const filteredAppointments = appointments.filter((appointment) => {
         const matchesDoctor = selectedDoctor === 'all' || appointment.doctor.id.toString() === selectedDoctor;
         const matchesStatus = statusFilter === 'all' || appointment.status === statusFilter;
         return matchesDoctor && matchesStatus;
@@ -89,14 +73,18 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
     });
 
     const handleStatusChange = (appointmentId: number, newStatus: string) => {
-        router.put(route('appointments.status', appointmentId), {
-            status: newStatus
-        }, {
-            preserveScroll: true,
-            onSuccess: () => {
-                // Status updated successfully
-            }
-        });
+        router.put(
+            route('appointments.status', appointmentId),
+            {
+                status: newStatus,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Status updated successfully
+                },
+            },
+        );
     };
 
     const refreshAppointments = async () => {
@@ -115,31 +103,31 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
 
     // Stats for the day
     const totalAppointments = appointments.length;
-    const completedAppointments = appointments.filter(a => a.status === 'completed').length;
-    const pendingAppointments = appointments.filter(a => a.status === 'pending').length;
-    const cancelledAppointments = appointments.filter(a => a.status === 'cancelled').length;
+    const completedAppointments = appointments.filter((a) => a.status === 'completed').length;
+    const pendingAppointments = appointments.filter((a) => a.status === 'pending').length;
+    const cancelledAppointments = appointments.filter((a) => a.status === 'cancelled').length;
     const completionRate = totalAppointments > 0 ? Math.round((completedAppointments / totalAppointments) * 100) : 0;
 
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'completed':
                 return (
-                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-medium">
-                        <CheckCircle className="h-3 w-3 mr-1" />
+                    <Badge className="border-emerald-200 bg-emerald-50 font-medium text-emerald-700">
+                        <CheckCircle className="mr-1 h-3 w-3" />
                         Completed
                     </Badge>
                 );
             case 'pending':
                 return (
-                    <Badge className="bg-amber-50 text-amber-700 border-amber-200 font-medium">
-                        <Timer className="h-3 w-3 mr-1" />
+                    <Badge className="border-amber-200 bg-amber-50 font-medium text-amber-700">
+                        <Timer className="mr-1 h-3 w-3" />
                         Pending
                     </Badge>
                 );
             case 'cancelled':
                 return (
-                    <Badge className="bg-red-50 text-red-700 border-red-200 font-medium">
-                        <XIcon className="h-3 w-3 mr-1" />
+                    <Badge className="border-red-200 bg-red-50 font-medium text-red-700">
+                        <XIcon className="mr-1 h-3 w-3" />
                         Cancelled
                     </Badge>
                 );
@@ -153,10 +141,9 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
             weekday: 'long',
             year: 'numeric',
             month: 'long',
-            day: 'numeric'
+            day: 'numeric',
         });
     };
-
 
     const handleDownload = (appointmentId) => {
         // Create download link
@@ -173,17 +160,16 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
         document.body.removeChild(link);
     };
 
-
     return (
         <AdminLayout title="Today's Appointments">
             <Head title="Today's Appointments" />
 
             {/* Header Section */}
             <div className="mb-8">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Today's Appointments</h1>
-                        <p className="text-gray-600 flex items-center space-x-2">
+                        <h1 className="mb-2 text-3xl font-bold text-gray-900">Today's Appointments</h1>
+                        <p className="flex items-center space-x-2 text-gray-600">
                             <Calendar className="h-4 w-4" />
                             <span>{getCurrentTime()}</span>
                         </p>
@@ -198,11 +184,7 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                         >
                             Refresh
                         </Button>
-                        <Button
-                            href={route('appointments.create')}
-                            leftIcon={<CalendarPlus className="h-4 w-4" />}
-                            size="lg"
-                        >
+                        <Button href={route('appointments.create')} leftIcon={<CalendarPlus className="h-4 w-4" />} size="lg">
                             New Appointment
                         </Button>
                     </div>
@@ -210,71 +192,71 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
             </div>
 
             {/* Statistics Dashboard */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-                <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-shadow duration-300">
+            <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
+                <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 transition-shadow duration-300 hover:shadow-lg">
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-blue-600 mb-1">Total Appointments</p>
+                                <p className="mb-1 text-sm font-medium text-blue-600">Total Appointments</p>
                                 <p className="text-3xl font-bold text-blue-900">{totalAppointments}</p>
                             </div>
-                            <div className="p-3 bg-blue-500 rounded-xl">
+                            <div className="rounded-xl bg-blue-500 p-3">
                                 <Calendar className="h-6 w-6 text-white" />
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-lg transition-shadow duration-300">
+                <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 transition-shadow duration-300 hover:shadow-lg">
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-amber-600 mb-1">Pending</p>
+                                <p className="mb-1 text-sm font-medium text-amber-600">Pending</p>
                                 <p className="text-3xl font-bold text-amber-900">{pendingAppointments}</p>
                             </div>
-                            <div className="p-3 bg-amber-500 rounded-xl">
+                            <div className="rounded-xl bg-amber-500 p-3">
                                 <Clock className="h-6 w-6 text-white" />
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover:shadow-lg transition-shadow duration-300">
+                <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 transition-shadow duration-300 hover:shadow-lg">
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-emerald-600 mb-1">Completed</p>
+                                <p className="mb-1 text-sm font-medium text-emerald-600">Completed</p>
                                 <p className="text-3xl font-bold text-emerald-900">{completedAppointments}</p>
                             </div>
-                            <div className="p-3 bg-emerald-500 rounded-xl">
+                            <div className="rounded-xl bg-emerald-500 p-3">
                                 <Check className="h-6 w-6 text-white" />
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover:shadow-lg transition-shadow duration-300">
+                <Card className="border-red-200 bg-gradient-to-br from-red-50 to-red-100 transition-shadow duration-300 hover:shadow-lg">
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-red-600 mb-1">Cancelled</p>
+                                <p className="mb-1 text-sm font-medium text-red-600">Cancelled</p>
                                 <p className="text-3xl font-bold text-red-900">{cancelledAppointments}</p>
                             </div>
-                            <div className="p-3 bg-red-500 rounded-xl">
+                            <div className="rounded-xl bg-red-500 p-3">
                                 <XIcon className="h-6 w-6 text-white" />
                             </div>
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-shadow duration-300">
+                <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 transition-shadow duration-300 hover:shadow-lg">
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-purple-600 mb-1">Completion Rate</p>
+                                <p className="mb-1 text-sm font-medium text-purple-600">Completion Rate</p>
                                 <p className="text-3xl font-bold text-purple-900">{completionRate}%</p>
                             </div>
-                            <div className="p-3 bg-purple-500 rounded-xl">
+                            <div className="rounded-xl bg-purple-500 p-3">
                                 <TrendingUp className="h-6 w-6 text-white" />
                             </div>
                         </div>
@@ -284,28 +266,28 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
 
             {/* Filters Section */}
             <Card className="mb-8 shadow-lg">
-                <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
+                <CardHeader className="border-b bg-gradient-to-r from-gray-50 to-blue-50">
                     <CardTitle className="flex items-center space-x-2">
                         <Filter className="h-5 w-5 text-gray-600" />
                         <span>Filters & Options</span>
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
                         <div className="flex items-center space-x-2">
                             <Filter className="h-4 w-4 text-gray-500" />
                             <span className="text-sm font-medium text-gray-700">Filter by:</span>
                         </div>
 
                         {!userIsDoctor && doctors.length > 0 && (
-                            <div className="flex-1 max-w-xs">
+                            <div className="max-w-xs flex-1">
                                 <select
                                     value={selectedDoctor}
                                     onChange={(e) => setSelectedDoctor(e.target.value)}
-                                    className="flex h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 shadow-sm transition-all duration-200 hover:border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                                    className="flex h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 shadow-sm transition-all duration-200 hover:border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none"
                                 >
                                     <option value="all">All Doctors</option>
-                                    {doctors.map(doctor => (
+                                    {doctors.map((doctor) => (
                                         <option key={doctor.id} value={doctor.id.toString()}>
                                             Dr. {doctor.user.name}
                                         </option>
@@ -314,11 +296,11 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                             </div>
                         )}
 
-                        <div className="flex-1 max-w-xs">
+                        <div className="max-w-xs flex-1">
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="flex h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 shadow-sm transition-all duration-200 hover:border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                                className="flex h-11 w-full appearance-none rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-900 shadow-sm transition-all duration-200 hover:border-gray-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none"
                             >
                                 <option value="all">All Status</option>
                                 <option value="pending">Pending</option>
@@ -337,16 +319,17 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
             </Card>
 
             {/* Appointments Table */}
-            <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-                <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50 border-b">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <Card className="shadow-lg transition-shadow duration-300 hover:shadow-xl">
+                <CardHeader className="border-b bg-gradient-to-r from-gray-50 to-blue-50">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <CardTitle className="flex items-center space-x-2">
                             <Users className="h-5 w-5 text-gray-600" />
                             <span>Appointment Schedule</span>
                         </CardTitle>
                         <div className="flex items-center space-x-4">
-                            <p className="text-sm text-gray-600 bg-white px-3 py-1 rounded-lg border">
-                                Showing <span className="font-semibold">{sortedAppointments.length}</span> of <span className="font-semibold">{totalAppointments}</span> appointments
+                            <p className="rounded-lg border bg-white px-3 py-1 text-sm text-gray-600">
+                                Showing <span className="font-semibold">{sortedAppointments.length}</span> of{' '}
+                                <span className="font-semibold">{totalAppointments}</span> appointments
                             </p>
                         </div>
                     </div>
@@ -358,7 +341,7 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-gray-50 hover:bg-gray-50">
-                                        <TableHead className="font-bold text-gray-800 py-4">
+                                        <TableHead className="py-4 font-bold text-gray-800">
                                             <div className="flex items-center space-x-2">
                                                 <Activity className="h-4 w-4" />
                                                 <span>Serial No.</span>
@@ -378,13 +361,10 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                                 </TableHeader>
                                 <TableBody>
                                     {sortedAppointments.map((appointment, index) => (
-                                        <TableRow
-                                            key={appointment.id}
-                                            className="hover:bg-blue-50 transition-colors duration-200 group"
-                                        >
-                                            <TableCell className="font-medium py-4">
+                                        <TableRow key={appointment.id} className="group transition-colors duration-200 hover:bg-blue-50">
+                                            <TableCell className="py-4 font-medium">
                                                 <div className="flex items-center space-x-3">
-                                                    <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-sm font-bold text-white">
                                                         {appointment.serial_number}
                                                     </div>
                                                     <div>
@@ -394,7 +374,7 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                                             </TableCell>
 
                                             <TableCell>
-                                                <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg">
+                                                <div className="flex items-center space-x-2 rounded-lg bg-gray-50 p-2">
                                                     <Clock className="h-4 w-4 text-gray-400" />
                                                     <span className="font-semibold text-gray-900">{formatTime(appointment.appointment_time)}</span>
                                                 </div>
@@ -404,7 +384,7 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                                                 <div className="space-y-1">
                                                     <Link
                                                         href={route('patients.show', appointment.patient.id)}
-                                                        className="text-blue-600 hover:text-blue-800 font-semibold transition-colors duration-200"
+                                                        className="font-semibold text-blue-600 transition-colors duration-200 hover:text-blue-800"
                                                     >
                                                         {appointment.patient.name}
                                                     </Link>
@@ -420,8 +400,8 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
 
                                             {!userIsDoctor && (
                                                 <TableCell>
-                                                    <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg">
-                                                        <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
+                                                    <div className="flex items-center space-x-3 rounded-lg bg-gray-50 p-2">
+                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-green-400 to-green-600">
                                                             <Stethoscope className="h-4 w-4 text-white" />
                                                         </div>
                                                         <div>
@@ -432,9 +412,7 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                                                 </TableCell>
                                             )}
 
-                                            <TableCell>
-                                                {getStatusBadge(appointment.status)}
-                                            </TableCell>
+                                            <TableCell>{getStatusBadge(appointment.status)}</TableCell>
 
                                             <TableCell className="text-right">
                                                 <div className="flex justify-end space-x-1">
@@ -442,7 +420,7 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                                                         size="sm"
                                                         variant="ghost"
                                                         href={route('patients.show', appointment.patient.id)}
-                                                        className="hover:bg-blue-100 transition-all duration-300 group-hover:scale-110"
+                                                        className="transition-all duration-300 group-hover:scale-110 hover:bg-blue-100"
                                                     >
                                                         <Eye className="h-4 w-4" />
                                                     </Button>
@@ -451,8 +429,11 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                                                         <Button
                                                             size="sm"
                                                             variant="ghost"
-                                                            href={route('prescriptions.create.patient', [appointment.patient.id, { appointment_id: appointment.id }])}
-                                                            className="hover:bg-purple-100 transition-all duration-300 group-hover:scale-110"
+                                                            href={route('prescriptions.create.patient', [
+                                                                appointment.patient.id,
+                                                                { appointment_id: appointment.id },
+                                                            ])}
+                                                            className="transition-all duration-300 group-hover:scale-110 hover:bg-purple-100"
                                                         >
                                                             <FileText className="h-4 w-4" />
                                                         </Button>
@@ -462,7 +443,7 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                                                         size="sm"
                                                         variant="ghost"
                                                         onClick={() => handleDownload(appointment.id)}
-                                                        className="hover:bg-gray-100 transition-all duration-300 group-hover:scale-110"
+                                                        className="transition-all duration-300 group-hover:scale-110 hover:bg-gray-100"
                                                     >
                                                         <Printer className="h-4 w-4" />
                                                     </Button>
@@ -472,7 +453,7 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                className="text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 transition-all duration-300 group-hover:scale-110"
+                                                                className="text-emerald-600 transition-all duration-300 group-hover:scale-110 hover:bg-emerald-100 hover:text-emerald-800"
                                                                 onClick={() => handleStatusChange(appointment.id, 'completed')}
                                                             >
                                                                 <Check className="h-4 w-4" />
@@ -481,7 +462,7 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                className="text-red-600 hover:text-red-800 hover:bg-red-100 transition-all duration-300 group-hover:scale-110"
+                                                                className="text-red-600 transition-all duration-300 group-hover:scale-110 hover:bg-red-100 hover:text-red-800"
                                                                 onClick={() => handleStatusChange(appointment.id, 'cancelled')}
                                                             >
                                                                 <XIcon className="h-4 w-4" />
@@ -496,16 +477,15 @@ export default function AppointmentsToday({ appointments, doctors = [], userIsDo
                             </Table>
                         </div>
                     ) : (
-                        <div className="text-center py-16">
-                            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <div className="py-16 text-center">
+                            <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gray-100">
                                 <Calendar className="h-12 w-12 text-gray-400" />
                             </div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">No appointments found</h3>
-                            <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                            <h3 className="mb-2 text-xl font-semibold text-gray-900">No appointments found</h3>
+                            <p className="mx-auto mb-6 max-w-md text-gray-500">
                                 {statusFilter !== 'all' || selectedDoctor !== 'all'
-                                    ? "No appointments match your current filters for today."
-                                    : "No appointments are scheduled for today."
-                                }
+                                    ? 'No appointments match your current filters for today.'
+                                    : 'No appointments are scheduled for today.'}
                             </p>
                             <div className="flex justify-center space-x-3">
                                 {(statusFilter !== 'all' || selectedDoctor !== 'all') && (

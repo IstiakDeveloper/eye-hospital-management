@@ -136,6 +136,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('patients/calculate-costs', [PatientController::class, 'calculateCosts'])->name('patients.calculate-costs')->middleware('permission:patients.create');
     Route::get('patients/{patient}/receipt', [PatientController::class, 'receipt'])->name('patients.receipt')->middleware('permission:patients.receipt');
+    Route::get('patients/{patient}/download-blank-prescription', [PatientController::class, 'downloadBlankPrescription'])
+        ->name('patients.download-blank-prescription')
+        ->middleware('permission:patients.view');
 
     Route::get('/patients/{patient}/visits/{visit}/receipt', [PatientController::class, 'visitReceipt'])->name('patients.visit.receipt')->middleware('permission:visits.receipt');
 
@@ -172,6 +175,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [DoctorDashboardController::class, 'index'])->name('dashboard');
         Route::get('/patients/{patient}', [DoctorDashboardController::class, 'viewPatient'])->name('view-patient');
         Route::post('/appointments/{appointment}/complete', [DoctorDashboardController::class, 'completeAppointment'])->name('complete-appointment');
+        Route::post('/visits/{visit}/vision-test/skip', [DoctorDashboardController::class, 'skipVisionTest'])->name('visits.vision-test.skip');
         Route::get('/next-patient', [DoctorDashboardController::class, 'getNextPatient'])->name('next-patient');
         Route::get('/performance-stats', [DoctorDashboardController::class, 'getPerformanceStats'])->name('performance-stats');
         Route::get('/search-patients', [DoctorDashboardController::class, 'searchPatients'])->name('search-patients');
@@ -179,6 +183,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/vision-tests', [VisionTestController::class, 'index'])->name('vision-tests.index');
         Route::get('/vision-tests/{visiontest}', [VisionTestController::class, 'show'])->name('vision-tests.show');
         Route::get('/vision-tests/{visiontest}/print', [VisionTestController::class, 'print'])->name('vision-tests.print');
+
+        // Doctor can also fill vision test if needed
+        Route::get('/patients/{patient}/vision-tests/create', [VisionTestController::class, 'create'])->name('vision-tests.create');
+        Route::post('/patients/{patient}/vision-tests', [VisionTestController::class, 'store'])->name('vision-tests.store');
     });
 
     // Appointments - Permission-based
@@ -394,6 +402,7 @@ Route::prefix('medicine-corner')->middleware(['auth'])->name('medicine-corner.')
     // Stock Edit Routes (Fixed paths - remove duplicate prefix)
     Route::get('/stock/{id}/edit', [MedicineCornerController::class, 'editStock'])->name('edit-stock')->middleware('super-admin-only');
     Route::put('/stock/{id}', [MedicineCornerController::class, 'updateStock'])->name('update-stock')->middleware('super-admin-only');
+    Route::delete('/stock/{id}', [MedicineCornerController::class, 'deleteStock'])->name('delete-stock')->middleware('super-admin-only');
     Route::get('/stock/{id}/edit-data', [MedicineCornerController::class, 'getStockForEdit'])->name('stock.edit-data');
 
     // Medicine & Stock Management
@@ -401,7 +410,9 @@ Route::prefix('medicine-corner')->middleware(['auth'])->name('medicine-corner.')
     Route::post('/add-stock', [MedicineCornerController::class, 'addStock'])->name('add-stock');
     Route::post('/adjust-stock', [MedicineCornerController::class, 'adjustStock'])->name('adjust-stock');
     Route::put('/medicines/{medicine}', [MedicineCornerController::class, 'updateMedicine'])->name('update-medicine')->middleware('super-admin-only');
+    Route::put('/medicines/{medicine}/sale-price', [MedicineCornerController::class, 'updateSalePrice'])->name('update-sale-price')->middleware('super-admin-only');
     Route::put('/medicines/{medicine}/stock-alert', [MedicineCornerController::class, 'updateStockAlert'])->name('update-stock-alert')->middleware('super-admin-only');
+    Route::post('/stock/sync-sale-prices', [MedicineCornerController::class, 'syncStockSalePrices'])->name('sync-sale-prices')->middleware('permission:medicine-corner.stock');
 
     // Fixed route for medicine details
     Route::get('/medicines/{id}/details', [MedicineCornerController::class, 'getMedicineDetails'])->name('medicine-details');
@@ -951,7 +962,7 @@ Route::middleware(['auth'])->prefix('optics')->name('optics.')->group(function (
 Route::prefix('medical-tests')->name('medical-tests.')->middleware(['auth', 'permission:medical-tests.view'])->group(function () {
 
     // Test Master Management - Permission-based
-    Route::middleware(['permission:medical-tests.manage-tests', 'super-admin-only'])->group(function () {
+    Route::middleware(['permission:medical-tests.manage-tests'])->group(function () {
         Route::get('/tests', [MedicalTestController::class, 'testIndex'])->name('tests.index');
         Route::post('/tests', [MedicalTestController::class, 'storeTest'])->name('tests.store');
         Route::put('/tests/{test}', [MedicalTestController::class, 'updateTest'])->name('tests.update');

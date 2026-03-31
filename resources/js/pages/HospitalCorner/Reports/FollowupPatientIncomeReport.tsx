@@ -1,7 +1,7 @@
 import AdminLayout from '@/layouts/MainAccountLayout';
-import { Head } from '@inertiajs/react';
+import { formatDhakaDate } from '@/utils/dhaka-time';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
 import * as XLSX from 'xlsx';
 
 interface ReportItem {
@@ -55,7 +55,7 @@ export default function FollowupPatientIncomeReport({ reportData = [], totals, f
                 to_date: toDate,
                 search: search || undefined,
             },
-            { preserveState: true }
+            { preserveState: true },
         );
     };
 
@@ -67,9 +67,7 @@ export default function FollowupPatientIncomeReport({ reportData = [], totals, f
         const excelData = [];
 
         excelData.push(['Followup Patient Income Report']);
-        excelData.push([
-            `Period: ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}`,
-        ]);
+        excelData.push([`Period: ${formatDhakaDate(fromDate)} to ${formatDhakaDate(toDate)}`]);
         excelData.push([]);
 
         excelData.push([
@@ -136,9 +134,7 @@ export default function FollowupPatientIncomeReport({ reportData = [], totals, f
                 <div className="mb-6 flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Followup Patient Income Report</h1>
-                        <p className="mt-1 text-sm text-gray-600">
-                            Income report for followup patient visits (OPD)
-                        </p>
+                        <p className="mt-1 text-sm text-gray-600">Income report for followup patient visits (OPD)</p>
                     </div>
                 </div>
 
@@ -176,7 +172,7 @@ export default function FollowupPatientIncomeReport({ reportData = [], totals, f
                         <div className="flex items-end gap-2">
                             <button
                                 onClick={handleFilter}
-                                className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
                             >
                                 Filter
                             </button>
@@ -188,58 +184,59 @@ export default function FollowupPatientIncomeReport({ reportData = [], totals, f
                 <div className="mb-4 flex gap-2">
                     <button
                         onClick={handlePrint}
-                        className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                        className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:outline-none"
                     >
                         Print
                     </button>
                     <button
                         onClick={handleExportExcel}
-                        className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                        className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
                     >
                         Export Excel
                     </button>
                 </div>
 
                 {/* Report Table */}
-                <div className="overflow-x-auto rounded-lg bg-white shadow report-section">
+                <div className="report-section max-h-[70vh] overflow-auto rounded-lg bg-white shadow print:max-h-none print:overflow-visible">
                     {/* Print Header */}
                     <div className="print-header mb-3">
-                        <div className="text-center mb-1">
+                        <div className="mb-1 text-center">
                             <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
                         </div>
-                        <div className="flex justify-between items-center mt-2">
+                        <div className="mt-2 flex items-center justify-between">
                             <h2 className="text-sm font-bold">Followup Patient Income Report</h2>
                             <p className="text-xs">
-                                Date: {new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                Date: {formatDhakaDate(fromDate, { day: '2-digit', month: 'short', year: 'numeric' })} to{' '}
+                                {formatDhakaDate(toDate, { day: '2-digit', month: 'short', year: 'numeric' })}
                             </p>
                         </div>
                     </div>
 
-                    <table className="min-w-full table-auto border-collapse">
+                    <table className="report-table min-w-full table-auto border-separate border-spacing-0 print:border-collapse">
                         <thead className="bg-gray-50">
                             <tr className="bg-purple-100">
-                                <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
+                                <th className="sticky top-0 z-10 border border-gray-300 bg-purple-100 px-3 py-2 text-center text-xs font-semibold text-gray-900 print:static">
                                     SL
                                 </th>
-                                <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
+                                <th className="sticky top-0 z-10 border border-gray-300 bg-purple-100 px-3 py-2 text-center text-xs font-semibold text-gray-900 print:static">
                                     DATE
                                 </th>
-                                <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
+                                <th className="sticky top-0 z-10 border border-gray-300 bg-purple-100 px-3 py-2 text-center text-xs font-semibold text-gray-900 print:static">
                                     PATIENT NAME
                                 </th>
-                                <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
+                                <th className="sticky top-0 z-10 border border-gray-300 bg-purple-100 px-3 py-2 text-center text-xs font-semibold text-gray-900 print:static">
                                     DOCTOR NAME
                                 </th>
-                                <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
+                                <th className="sticky top-0 z-10 border border-gray-300 bg-purple-100 px-3 py-2 text-center text-xs font-semibold text-gray-900 print:static">
                                     FEE
                                 </th>
-                                <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
+                                <th className="sticky top-0 z-10 border border-gray-300 bg-purple-100 px-3 py-2 text-center text-xs font-semibold text-gray-900 print:static">
                                     DISCOUNT
                                 </th>
-                                <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
+                                <th className="sticky top-0 z-10 border border-gray-300 bg-purple-100 px-3 py-2 text-center text-xs font-semibold text-gray-900 print:static">
                                     CASH
                                 </th>
-                                <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
+                                <th className="sticky top-0 z-10 border border-gray-300 bg-purple-100 px-3 py-2 text-center text-xs font-semibold text-gray-900 print:static">
                                     DUE
                                 </th>
                             </tr>
@@ -255,18 +252,14 @@ export default function FollowupPatientIncomeReport({ reportData = [], totals, f
                                 <>
                                     {safeReportData.map((item) => (
                                         <tr key={item.id} className="hover:bg-gray-50">
-                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-900">
-                                                {item.sl}
-                                            </td>
+                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-900">{item.sl}</td>
                                             <td className="border border-gray-300 px-3 py-2 text-center text-sm text-gray-900">
                                                 <div>{item.visit_date}</div>
                                             </td>
                                             <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
                                                 <div className="font-medium">{item.patient_name}</div>
                                             </td>
-                                            <td className="border border-gray-300 px-3 py-2 text-center text-sm text-gray-900">
-                                                {item.doctor_name}
-                                            </td>
+                                            <td className="border border-gray-300 px-3 py-2 text-center text-sm text-gray-900">{item.doctor_name}</td>
                                             <td className="border border-gray-300 bg-purple-50 px-2 py-2 text-right text-sm text-gray-900">
                                                 {item.followup_fee.toFixed(2)}
                                             </td>
@@ -284,10 +277,7 @@ export default function FollowupPatientIncomeReport({ reportData = [], totals, f
 
                                     {/* Totals Row */}
                                     <tr className="bg-gray-100 font-bold">
-                                        <td
-                                            colSpan={4}
-                                            className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900"
-                                        >
+                                        <td colSpan={4} className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900">
                                             TOTAL ({totals.total_visits} Followups)
                                         </td>
                                         <td className="border border-gray-300 bg-purple-100 px-2 py-3 text-right text-sm text-gray-900">

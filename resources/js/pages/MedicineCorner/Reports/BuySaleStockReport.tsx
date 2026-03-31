@@ -1,7 +1,6 @@
 import AdminLayout from '@/layouts/MainAccountLayout';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
 import * as XLSX from 'xlsx';
 
 interface ReportItem {
@@ -74,7 +73,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
 
     // sale_cash = full sale_total, matching what hospital_account records (due is tracked separately)
     // sale_due = sale_total - sale_cash = 0 (consistent: cash + due = total)
-    const reportData = rawReportData.map(item => ({
+    const reportData = rawReportData.map((item) => ({
         ...item,
         sale_cash: item.sale_total,
         sale_due: 0,
@@ -95,7 +94,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                 to_date: toDate,
                 search: search || undefined,
             },
-            { preserveState: true }
+            { preserveState: true },
         );
     };
 
@@ -109,9 +108,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
 
         // Add title
         excelData.push(['Medicine Buy-Sale-Stock Report']);
-        excelData.push([
-            `Period: ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}`,
-        ]);
+        excelData.push([`Period: ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}`]);
         excelData.push([]); // Empty row
 
         // Add headers
@@ -214,9 +211,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                 <div className="mb-6 flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Medicine Buy-Sale-Stock Report</h1>
-                        <p className="mt-1 text-sm text-gray-600">
-                            Detailed stock movement report with purchases, sales, and inventory
-                        </p>
+                        <p className="mt-1 text-sm text-gray-600">Detailed stock movement report with purchases, sales, and inventory</p>
                     </div>
                 </div>
 
@@ -254,7 +249,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                         <div className="flex items-end gap-2">
                             <button
                                 onClick={handleFilter}
-                                className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
                             >
                                 Filter
                             </button>
@@ -266,45 +261,40 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                 <div className="mb-4 flex gap-2">
                     <button
                         onClick={handlePrint}
-                        className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                        className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:outline-none"
                     >
                         Print
                     </button>
                     <button
                         onClick={handleExportExcel}
-                        className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                        className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
                     >
                         Export Excel
                     </button>
                 </div>
 
                 {/* Report Table */}
-                <div className="overflow-x-auto rounded-lg bg-white shadow report-section max-h-[calc(100vh-300px)]">
+                <div className="report-section max-h-[calc(100vh-300px)] overflow-x-auto rounded-lg bg-white shadow">
                     {/* Print Header */}
                     <div className="print-header mb-3">
-                        <div className="text-center mb-1">
+                        <div className="mb-1 text-center">
                             <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center - Medicine Corner</h1>
                         </div>
-                        <div className="flex justify-between items-center mt-2">
+                        <div className="mt-2 flex items-center justify-between">
                             <h2 className="text-sm font-bold">Buy-Sale-Stock Report</h2>
                             <p className="text-xs">
-                                Date: {new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                Date: {new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} to{' '}
+                                {new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </p>
                         </div>
                     </div>
                     <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50 sticky top-0 z-10">
+                        <thead className="sticky top-0 z-10 bg-gray-50">
                             <tr>
-                                <th
-                                    rowSpan={2}
-                                    className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                >
+                                <th rowSpan={2} className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
                                     SL
                                 </th>
-                                <th
-                                    rowSpan={2}
-                                    className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900"
-                                >
+                                <th rowSpan={2} className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
                                     MEDICINE NAME
                                 </th>
                                 <th
@@ -340,65 +330,35 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                             </tr>
                             <tr>
                                 {/* Before Stock */}
-                                <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                    QTY
-                                </th>
-                                <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                    PRICE
-                                </th>
-                                <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                    VALUE
-                                </th>
+                                <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">QTY</th>
+                                <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">PRICE</th>
+                                <th className="border border-gray-300 bg-blue-50 px-2 py-2 text-center text-xs font-medium text-gray-700">VALUE</th>
 
                                 {/* Buy */}
-                                <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                    QTY
-                                </th>
-                                <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                    PRICE
-                                </th>
-                                <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                    TOTAL
-                                </th>
+                                <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">QTY</th>
+                                <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">PRICE</th>
+                                <th className="border border-gray-300 bg-green-50 px-2 py-2 text-center text-xs font-medium text-gray-700">TOTAL</th>
 
                                 {/* Sale */}
-                                <th className="border border-gray-300 bg-yellow-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                    QTY
-                                </th>
-                                <th className="border border-gray-300 bg-yellow-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                    PRICE
-                                </th>
+                                <th className="border border-gray-300 bg-yellow-50 px-2 py-2 text-center text-xs font-medium text-gray-700">QTY</th>
+                                <th className="border border-gray-300 bg-yellow-50 px-2 py-2 text-center text-xs font-medium text-gray-700">PRICE</th>
                                 <th className="border border-gray-300 bg-yellow-50 px-1 py-2 text-center text-xs font-medium text-gray-700">
                                     SUBTOTAL
                                 </th>
                                 <th className="border border-gray-300 bg-yellow-50 px-1 py-2 text-center text-xs font-medium text-gray-700">
                                     DISCOUNT
                                 </th>
-                                <th className="border border-gray-300 bg-yellow-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                    TOTAL
-                                </th>
-                                <th className="border border-gray-300 bg-yellow-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                    CASH
-                                </th>
-                                <th className="border border-gray-300 bg-yellow-50 px-2 py-2 text-center text-xs font-medium text-gray-700">
-                                    DUE
-                                </th>
+                                <th className="border border-gray-300 bg-yellow-50 px-2 py-2 text-center text-xs font-medium text-gray-700">TOTAL</th>
+                                <th className="border border-gray-300 bg-yellow-50 px-2 py-2 text-center text-xs font-medium text-gray-700">CASH</th>
+                                <th className="border border-gray-300 bg-yellow-50 px-2 py-2 text-center text-xs font-medium text-gray-700">DUE</th>
 
                                 {/* Profit */}
-                                <th className="border border-gray-300 bg-pink-50 py-2 text-center text-xs font-medium text-gray-700">
-                                    PER UNIT
-                                </th>
-                                <th className="border border-gray-300 bg-pink-50 py-2 text-center text-xs font-medium text-gray-700">
-                                    TOTAL
-                                </th>
+                                <th className="border border-gray-300 bg-pink-50 py-2 text-center text-xs font-medium text-gray-700">PER UNIT</th>
+                                <th className="border border-gray-300 bg-pink-50 py-2 text-center text-xs font-medium text-gray-700">TOTAL</th>
 
                                 {/* Available */}
-                                <th className="border border-gray-300 bg-purple-50 px-1 py-2 text-center text-xs font-medium text-gray-700">
-                                    STOCK
-                                </th>
-                                <th className="border border-gray-300 bg-purple-50 px-1 py-2 text-center text-xs font-medium text-gray-700">
-                                    VALUE
-                                </th>
+                                <th className="border border-gray-300 bg-purple-50 px-1 py-2 text-center text-xs font-medium text-gray-700">STOCK</th>
+                                <th className="border border-gray-300 bg-purple-50 px-1 py-2 text-center text-xs font-medium text-gray-700">VALUE</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 bg-white">
@@ -412,12 +372,10 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                 <>
                                     {reportData.map((item) => (
                                         <tr key={item.id} className="hover:bg-gray-50">
-                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-900">
-                                                {item.sl}
-                                            </td>
+                                            <td className="border border-gray-300 px-2 py-2 text-center text-sm text-gray-900">{item.sl}</td>
                                             <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
                                                 <div className="font-medium">{item.name}</div>
-                                                <div className="text-xs text-gray-500 mt-0.5">
+                                                <div className="mt-0.5 text-xs text-gray-500">
                                                     {item.manufacturer} • {item.unit}
                                                 </div>
                                             </td>
@@ -463,7 +421,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                             <td className="border border-gray-300 bg-yellow-50 px-2 py-2 text-right text-sm font-medium text-green-600">
                                                 {item.sale_cash > 0 ? item.sale_cash.toFixed(2) : '-'}
                                             </td>
-                                            <td className="border border-gray-300 bg-yellow-50 px-2 py-2 text-right text-sm text-red-600 font-medium">
+                                            <td className="border border-gray-300 bg-yellow-50 px-2 py-2 text-right text-sm font-medium text-red-600">
                                                 {item.sale_due > 0 ? item.sale_due.toFixed(2) : '-'}
                                             </td>
 
@@ -487,10 +445,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
 
                                     {/* Totals Row */}
                                     <tr className="bg-gray-100 font-bold">
-                                        <td
-                                            colSpan={2}
-                                            className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900"
-                                        >
+                                        <td colSpan={2} className="border border-gray-300 px-3 py-3 text-center text-sm text-gray-900">
                                             TOTAL
                                         </td>
 
@@ -498,9 +453,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                         <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-center text-sm text-gray-900">
                                             {totals.before_stock_qty}
                                         </td>
-                                        <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-right text-sm text-gray-900">
-                                            -
-                                        </td>
+                                        <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-right text-sm text-gray-900">-</td>
                                         <td className="border border-gray-300 bg-blue-100 px-2 py-3 text-right text-sm text-gray-900">
                                             {totals.before_stock_value.toFixed(2)}
                                         </td>
@@ -509,9 +462,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                         <td className="border border-gray-300 bg-green-100 px-2 py-3 text-center text-sm text-gray-900">
                                             {totals.buy_qty}
                                         </td>
-                                        <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-gray-900">
-                                            -
-                                        </td>
+                                        <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-gray-900">-</td>
                                         <td className="border border-gray-300 bg-green-100 px-2 py-3 text-right text-sm text-gray-900">
                                             {totals.buy_total.toFixed(2)}
                                         </td>
@@ -520,9 +471,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                         <td className="border border-gray-300 bg-yellow-100 px-2 py-3 text-center text-sm text-gray-900">
                                             {totals.sale_qty}
                                         </td>
-                                        <td className="border border-gray-300 bg-yellow-100 px-2 py-3 text-right text-sm text-gray-900">
-                                            -
-                                        </td>
+                                        <td className="border border-gray-300 bg-yellow-100 px-2 py-3 text-right text-sm text-gray-900">-</td>
                                         <td className="border border-gray-300 bg-yellow-100 px-1 py-3 text-right text-sm text-gray-900">
                                             {totals.sale_subtotal.toFixed(2)}
                                         </td>
@@ -540,9 +489,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                         </td>
 
                                         {/* Profit Totals */}
-                                        <td className="border border-gray-300 bg-pink-100 px-2 py-3 text-right text-sm text-gray-900">
-                                            -
-                                        </td>
+                                        <td className="border border-gray-300 bg-pink-100 px-2 py-3 text-right text-sm text-gray-900">-</td>
                                         <td className="border border-gray-300 bg-pink-100 px-2 py-3 text-right text-sm font-bold text-green-600">
                                             {totals.total_profit.toFixed(2)}
                                         </td>

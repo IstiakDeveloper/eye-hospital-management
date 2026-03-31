@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Appointment;
+use App\Models\Doctor;
 use App\Models\Patient;
 use App\Models\PatientVisit;
 use App\Models\VisionTest;
-use App\Models\Doctor;
-use App\Models\Appointment;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class VisionTestController extends Controller
 {
@@ -32,9 +31,9 @@ class VisionTestController extends Controller
         // Search functionality
         if ($searchTerm) {
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('patients.name', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('patients.phone', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('patients.patient_id', 'like', '%' . $searchTerm . '%');
+                $q->where('patients.name', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('patients.phone', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('patients.patient_id', 'like', '%'.$searchTerm.'%');
             });
         }
 
@@ -97,23 +96,23 @@ class VisionTestController extends Controller
             ->latest()
             ->first();
 
-        if (!$visit) {
+        if (! $visit) {
             return redirect()->route('refractionist.dashboard')->withErrors([
-                'error' => 'No active visit found for vision test.'
+                'error' => 'No active visit found for vision test.',
             ]);
         }
 
         // Check if visit payment is completed
         if ($visit->payment_status !== 'paid') {
             return redirect()->route('refractionist.dashboard')->withErrors([
-                'error' => 'Visit payment is not completed yet.'
+                'error' => 'Visit payment is not completed yet.',
             ]);
         }
 
         // Check if vision test already completed for this visit
         if ($visit->vision_test_status === 'completed') {
             return redirect()->route('refractionist.dashboard')->withErrors([
-                'error' => 'Vision test already completed for this visit.'
+                'error' => 'Vision test already completed for this visit.',
             ]);
         }
 
@@ -157,23 +156,23 @@ class VisionTestController extends Controller
             ->latest()
             ->first();
 
-        if (!$visit) {
+        if (! $visit) {
             return back()->withErrors([
-                'error' => 'No active visit found for vision test.'
+                'error' => 'No active visit found for vision test.',
             ]);
         }
 
         // Verify visit belongs to patient
         if ($visit->patient_id !== $patient->id) {
             return back()->withErrors([
-                'error' => 'Visit does not belong to this patient.'
+                'error' => 'Visit does not belong to this patient.',
             ]);
         }
 
         // Check if visit payment is completed
         if ($visit->payment_status !== 'paid') {
             return back()->withErrors([
-                'error' => 'Visit payment is not completed yet.'
+                'error' => 'Visit payment is not completed yet.',
             ]);
         }
 
@@ -184,7 +183,7 @@ class VisionTestController extends Controller
 
         if ($existingVisionTest) {
             return back()->withErrors([
-                'error' => 'Vision test already exists for this visit. Please create a new visit or edit the existing test.'
+                'error' => 'Vision test already exists for this visit. Please create a new visit or edit the existing test.',
             ]);
         }
 
@@ -307,15 +306,19 @@ class VisionTestController extends Controller
 
             $message = 'New vision test created successfully!';
             if ($appointment) {
-                $message .= ' Appointment has been automatically scheduled with Dr. ' . $appointment->doctor->user->name . ' (Serial: ' . $appointment->serial_number . ')';
+                $message .= ' Appointment has been automatically scheduled with Dr. '.$appointment->doctor->user->name.' (Serial: '.$appointment->serial_number.')';
             } else {
                 $message .= ' Patient is ready for doctor consultation.';
             }
 
             DB::commit();
 
-            return redirect()->route('refractionist.dashboard')
-                ->with('success', $message);
+            $shouldRedirectToDoctor = $request->routeIs('doctor.*')
+                || (auth()->user()?->role?->name === 'Doctor');
+
+            $redirectRoute = $shouldRedirectToDoctor ? 'doctor.dashboard' : 'refractionist.dashboard';
+
+            return redirect()->route($redirectRoute)->with('success', $message);
         } catch (\Exception $e) {
             DB::rollback();
 
@@ -327,7 +330,7 @@ class VisionTestController extends Controller
             ]);
 
             return back()->withErrors([
-                'error' => 'Failed to create vision test: ' . $e->getMessage()
+                'error' => 'Failed to create vision test: '.$e->getMessage(),
             ]);
         }
     }
@@ -339,23 +342,25 @@ class VisionTestController extends Controller
     {
         try {
             // Only create appointment if doctor was selected for this visit
-            if (!$visit->selected_doctor_id) {
+            if (! $visit->selected_doctor_id) {
                 Log::info('No doctor selected for this visit', [
                     'visit_id' => $visit->id,
-                    'patient_id' => $patient->id
+                    'patient_id' => $patient->id,
                 ]);
+
                 return null;
             }
 
             // Load the doctor relationship to verify it exists
             $doctor = Doctor::with('user')->find($visit->selected_doctor_id);
 
-            if (!$doctor) {
+            if (! $doctor) {
                 Log::warning('Selected doctor not found', [
                     'visit_id' => $visit->id,
                     'patient_id' => $patient->id,
-                    'selected_doctor_id' => $visit->selected_doctor_id
+                    'selected_doctor_id' => $visit->selected_doctor_id,
                 ]);
+
                 return null;
             }
 
@@ -373,6 +378,7 @@ class VisionTestController extends Controller
             $appointmentData = [
                 'patient_id' => $patient->id,
                 'doctor_id' => $visit->selected_doctor_id,
+                'visit_id' => $visit->id,
                 'appointment_date' => $today,
                 'appointment_time' => now()->format('H:i'),
                 'serial_number' => $serialNumberFormatted,
@@ -381,7 +387,14 @@ class VisionTestController extends Controller
             ];
 
             // Create appointment
-            $appointment = Appointment::create($appointmentData);
+            $appointment = Appointment::where('visit_id', $visit->id)
+                ->where('doctor_id', $visit->selected_doctor_id)
+                ->whereDate('appointment_date', $today)
+                ->first();
+
+            if (! $appointment) {
+                $appointment = Appointment::create($appointmentData);
+            }
 
             if ($appointment) {
                 Log::info('Appointment created successfully', [
@@ -393,6 +406,7 @@ class VisionTestController extends Controller
 
                 // Load the doctor relationship for return
                 $appointment->load('doctor.user');
+
                 return $appointment;
             }
 
@@ -404,6 +418,7 @@ class VisionTestController extends Controller
                 'visit_id' => $visit->id,
                 'selected_doctor_id' => $visit->selected_doctor_id,
             ]);
+
             return null;
         }
     }
@@ -440,13 +455,13 @@ class VisionTestController extends Controller
         // Check if user can edit this test (same day or admin)
         $canEdit = $visionTest->test_date->isToday() || auth()->user()->hasRole('admin');
 
-        if (!$canEdit) {
+        if (! $canEdit) {
             return redirect()->route('visiontests.show', $id)
                 ->withErrors(['error' => 'Vision tests can only be edited on the same day.']);
         }
 
         return Inertia::render('VisionTests/Edit', [
-            'visionTest' => $visionTest
+            'visionTest' => $visionTest,
         ]);
     }
 
@@ -460,9 +475,9 @@ class VisionTestController extends Controller
         // Check if user can edit this test
         $canEdit = $visionTest->test_date->isToday() || auth()->user()->hasRole('admin');
 
-        if (!$canEdit) {
+        if (! $canEdit) {
             return back()->withErrors([
-                'error' => 'Vision tests can only be edited on the same day.'
+                'error' => 'Vision tests can only be edited on the same day.',
             ]);
         }
 
@@ -574,7 +589,7 @@ class VisionTestController extends Controller
         // Prepare QR code base64 for frontend
         $qrCodeBase64 = null;
         if ($visionTest->patient->qr_code_image_path) {
-            $qrImagePath = storage_path('app/public/' . $visionTest->patient->qr_code_image_path);
+            $qrImagePath = storage_path('app/public/'.$visionTest->patient->qr_code_image_path);
 
             if (file_exists($qrImagePath)) {
                 $imageData = file_get_contents($qrImagePath);
@@ -643,14 +658,14 @@ class VisionTestController extends Controller
                 ],
                 'performedBy' => [
                     'name' => $visionTest->performedBy->name ?? 'N/A',
-                ]
+                ],
             ],
             'qrCodeBase64' => $qrCodeBase64,
             'hospitalInfo' => [
                 'name' => 'নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার',
                 'address' => 'সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।',
-                'contact' => 'মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gmail.com'
-            ]
+                'contact' => 'মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gmail.com',
+            ],
 
         ]);
     }
@@ -674,16 +689,16 @@ class VisionTestController extends Controller
             ->latest()
             ->first();
 
-        if (!$visit) {
+        if (! $visit) {
             return back()->withErrors([
-                'error' => 'No active visit found for this patient.'
+                'error' => 'No active visit found for this patient.',
             ]);
         }
 
         // Prepare QR code base64 for frontend
         $qrCodeBase64 = null;
         if ($patient->qr_code_image_path) {
-            $qrImagePath = storage_path('app/public/' . $patient->qr_code_image_path);
+            $qrImagePath = storage_path('app/public/'.$patient->qr_code_image_path);
             if (file_exists($qrImagePath)) {
                 $imageData = file_get_contents($qrImagePath);
                 if ($imageData) {
@@ -751,19 +766,18 @@ class VisionTestController extends Controller
                 ],
                 'performedBy' => [
                     'name' => auth()->user()->name ?? 'N/A',
-                ]
+                ],
             ],
             'qrCodeBase64' => $qrCodeBase64,
             'isBlankReport' => true,
             'hospitalInfo' => [
                 'name' => 'নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার',
                 'address' => 'সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।',
-                'contact' => 'মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gmail.com'
-            ]
+                'contact' => 'মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gmail.com',
+            ],
 
         ]);
     }
-
 
     /**
      * Get vision test history for a patient
@@ -829,9 +843,9 @@ class VisionTestController extends Controller
 
         $visionTests = VisionTest::with(['patient', 'performedBy'])
             ->whereHas('patient', function ($query) use ($searchTerm) {
-                $query->where('name', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('phone', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('patient_id', 'like', '%' . $searchTerm . '%');
+                $query->where('name', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('phone', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('patient_id', 'like', '%'.$searchTerm.'%');
             })
             ->orderBy('test_date', 'desc')
             ->limit(10)
@@ -862,11 +876,11 @@ class VisionTestController extends Controller
             ->orderBy('test_date', 'desc')
             ->get();
 
-        $filename = 'vision-tests-' . now()->format('Y-m-d-H-i-s') . '.csv';
+        $filename = 'vision-tests-'.now()->format('Y-m-d-H-i-s').'.csv';
 
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
         $callback = function () use ($visionTests) {
@@ -887,7 +901,7 @@ class VisionTestController extends Controller
                 'Left Eye IOP',
                 'Blood Pressure',
                 'Performed By',
-                'Diagnosis'
+                'Diagnosis',
             ]);
 
             // CSV Data
@@ -906,7 +920,7 @@ class VisionTestController extends Controller
                     $test->left_eye_iop,
                     $test->blood_pressure,
                     $test->performedBy->name ?? 'Unknown',
-                    $test->right_eye_diagnosis . ' | ' . $test->left_eye_diagnosis,
+                    $test->right_eye_diagnosis.' | '.$test->left_eye_diagnosis,
                 ]);
             }
 

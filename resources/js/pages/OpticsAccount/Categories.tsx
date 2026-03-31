@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
 import OpticsAccountLayout from '@/layouts/OpticsAccountLayout';
-import { Plus, Edit, ToggleLeft, ToggleRight } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { Edit, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface Category {
     id: number;
@@ -20,7 +20,7 @@ const Categories: React.FC<CategoriesProps> = ({ categories }) => {
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [formData, setFormData] = useState({
         name: '',
-        is_active: true
+        is_active: true,
     });
 
     // Format amount helper
@@ -29,8 +29,10 @@ const Categories: React.FC<CategoriesProps> = ({ categories }) => {
             style: 'currency',
             currency: 'BDT',
             minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        }).format(amount).replace('BDT', '৳');
+            maximumFractionDigits: 0,
+        })
+            .format(amount)
+            .replace('BDT', '৳');
     };
 
     const handleSubmit = () => {
@@ -40,14 +42,14 @@ const Categories: React.FC<CategoriesProps> = ({ categories }) => {
                     setShowModal(false);
                     setEditingCategory(null);
                     setFormData({ name: '', is_active: true });
-                }
+                },
             });
         } else {
             router.post('/optics-account/categories', formData, {
                 onSuccess: () => {
                     setShowModal(false);
                     setFormData({ name: '', is_active: true });
-                }
+                },
             });
         }
     };
@@ -61,14 +63,14 @@ const Categories: React.FC<CategoriesProps> = ({ categories }) => {
     const toggleStatus = (category: Category) => {
         router.put(`/optics-account/categories/${category.id}`, {
             name: category.name,
-            is_active: !category.is_active
+            is_active: !category.is_active,
         });
     };
 
     return (
         <OpticsAccountLayout title="Expense Categories">
             {/* Header */}
-            <div className="flex justify-between items-center mb-6">
+            <div className="mb-6 flex items-center justify-between">
                 <div>
                     <h2 className="text-xl font-semibold text-gray-900">Optics Expense Categories</h2>
                     <p className="text-gray-600">Manage your optical business expense categories</p>
@@ -79,40 +81,31 @@ const Categories: React.FC<CategoriesProps> = ({ categories }) => {
                         setFormData({ name: '', is_active: true });
                         setShowModal(true);
                     }}
-                    className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                    className="flex items-center rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
                 >
-                    <Plus className="w-4 h-4 mr-2" />
+                    <Plus className="mr-2 h-4 w-4" />
                     Add Category
                 </button>
             </div>
 
             {/* Categories Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {categories.map((category) => (
-                    <div key={category.id} className="bg-white rounded-lg shadow-sm border p-6">
-                        <div className="flex justify-between items-start mb-4">
+                    <div key={category.id} className="rounded-lg border bg-white p-6 shadow-sm">
+                        <div className="mb-4 flex items-start justify-between">
                             <div>
                                 <h3 className="text-lg font-semibold text-gray-900">{category.name}</h3>
-                                <p className="text-sm text-gray-600">
-                                    {category.transactions_count} transactions
-                                </p>
+                                <p className="text-sm text-gray-600">{category.transactions_count} transactions</p>
                             </div>
                             <div className="flex items-center space-x-2">
-                                <button
-                                    onClick={() => handleEdit(category)}
-                                    className="p-1 text-gray-400 hover:text-purple-600"
-                                >
-                                    <Edit className="w-4 h-4" />
+                                <button onClick={() => handleEdit(category)} className="p-1 text-gray-400 hover:text-purple-600">
+                                    <Edit className="h-4 w-4" />
                                 </button>
                                 <button
                                     onClick={() => toggleStatus(category)}
                                     className={`p-1 ${category.is_active ? 'text-purple-600' : 'text-gray-400'}`}
                                 >
-                                    {category.is_active ? (
-                                        <ToggleRight className="w-5 h-5" />
-                                    ) : (
-                                        <ToggleLeft className="w-5 h-5" />
-                                    )}
+                                    {category.is_active ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
                                 </button>
                             </div>
                         </div>
@@ -120,8 +113,7 @@ const Categories: React.FC<CategoriesProps> = ({ categories }) => {
                         <div className="space-y-2">
                             <div className="flex justify-between">
                                 <span className="text-sm text-gray-600">Status:</span>
-                                <span className={`text-sm font-medium ${category.is_active ? 'text-purple-600' : 'text-red-600'
-                                    }`}>
+                                <span className={`text-sm font-medium ${category.is_active ? 'text-purple-600' : 'text-red-600'}`}>
                                     {category.is_active ? 'Active' : 'Inactive'}
                                 </span>
                             </div>
@@ -129,9 +121,7 @@ const Categories: React.FC<CategoriesProps> = ({ categories }) => {
                             {category.total_spent !== undefined && (
                                 <div className="flex justify-between">
                                     <span className="text-sm text-gray-600">Total Spent:</span>
-                                    <span className="text-sm font-medium text-gray-900">
-                                        {formatAmount(category.total_spent)}
-                                    </span>
+                                    <span className="text-sm font-medium text-gray-900">{formatAmount(category.total_spent)}</span>
                                 </div>
                             )}
                         </div>
@@ -141,19 +131,19 @@ const Categories: React.FC<CategoriesProps> = ({ categories }) => {
 
             {/* Empty State */}
             {categories.length === 0 && (
-                <div className="text-center py-12">
-                    <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                        <Plus className="w-12 h-12 text-gray-400" />
+                <div className="py-12 text-center">
+                    <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gray-100">
+                        <Plus className="h-12 w-12 text-gray-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No categories found</h3>
-                    <p className="text-gray-600 mb-4">Get started by creating your first optics expense category</p>
+                    <h3 className="mb-2 text-lg font-semibold text-gray-900">No categories found</h3>
+                    <p className="mb-4 text-gray-600">Get started by creating your first optics expense category</p>
                     <button
                         onClick={() => {
                             setEditingCategory(null);
                             setFormData({ name: '', is_active: true });
                             setShowModal(true);
                         }}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                        className="rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
                     >
                         Add Category
                     </button>
@@ -162,19 +152,17 @@ const Categories: React.FC<CategoriesProps> = ({ categories }) => {
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
-                    <div className="bg-white rounded-lg p-6 w-96 max-w-lg mx-4">
-                        <h3 className="text-lg font-semibold mb-4">
-                            {editingCategory ? 'Edit Category' : 'Add New Category'}
-                        </h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
+                    <div className="mx-4 w-96 max-w-lg rounded-lg bg-white p-6">
+                        <h3 className="mb-4 text-lg font-semibold">{editingCategory ? 'Edit Category' : 'Add New Category'}</h3>
 
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Category Name *</label>
+                            <label className="mb-2 block text-sm font-medium">Category Name *</label>
                             <input
                                 type="text"
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-purple-500 focus:ring-2 focus:ring-purple-500"
                                 placeholder="e.g., Equipment Cost, Maintenance, Transport"
                             />
                         </div>
@@ -195,7 +183,7 @@ const Categories: React.FC<CategoriesProps> = ({ categories }) => {
                             <button
                                 onClick={handleSubmit}
                                 disabled={!formData.name.trim()}
-                                className="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 disabled:bg-gray-300"
+                                className="flex-1 rounded-lg bg-purple-600 py-2 text-white hover:bg-purple-700 disabled:bg-gray-300"
                             >
                                 {editingCategory ? 'Update' : 'Create'}
                             </button>
@@ -205,7 +193,7 @@ const Categories: React.FC<CategoriesProps> = ({ categories }) => {
                                     setEditingCategory(null);
                                     setFormData({ name: '', is_active: true });
                                 }}
-                                className="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600"
+                                className="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600"
                             >
                                 Cancel
                             </button>

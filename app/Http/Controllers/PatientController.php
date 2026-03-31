@@ -62,22 +62,153 @@ class PatientController extends Controller
             $dateFilterType = $request->get('date_filter_type');
             $dateField = $request->get('date_field', 'created_at');
 
+            $applyRegistrationDateFilter = function ($query) use ($dateFilterType, $request): void {
+                // Registration Date in Patients index should match the displayed date:
+                // - If the patient has any OPD payments: filter by payments.payment_date
+                // - Otherwise: filter by patients.created_at
+
+                $applyDateRange = function ($dateQuery, string $field, ?string $start, ?string $end): void {
+                    if ($start) {
+                        $dateQuery->whereDate($field, '>=', $start);
+                    }
+                    if ($end) {
+                        $dateQuery->whereDate($field, '<=', $end);
+                    }
+                };
+
+                $applyExactDate = function ($dateQuery, string $field, string $date): void {
+                    $dateQuery->whereDate($field, $date);
+                };
+
+                if ($dateFilterType === 'specific' && $request->filled('specific_date')) {
+                    $specificDate = $request->get('specific_date');
+
+                    $query->where(function ($q) use ($specificDate, $applyExactDate) {
+                        $q->whereHas('visits.payments', function ($paymentQuery) use ($specificDate, $applyExactDate) {
+                            $applyExactDate($paymentQuery, 'payment_date', $specificDate);
+                        })->orWhere(function ($q2) use ($specificDate, $applyExactDate) {
+                            $q2->whereDoesntHave('visits.payments');
+                            $applyExactDate($q2, 'created_at', $specificDate);
+                        });
+                    });
+
+                    return;
+                }
+
+                if ($dateFilterType === 'range' && ($request->filled('start_date') || $request->filled('end_date'))) {
+                    $startDate = $request->get('start_date');
+                    $endDate = $request->get('end_date');
+
+                    $query->where(function ($q) use ($startDate, $endDate, $applyDateRange) {
+                        $q->whereHas('visits.payments', function ($paymentQuery) use ($startDate, $endDate, $applyDateRange) {
+                            $applyDateRange($paymentQuery, 'payment_date', $startDate, $endDate);
+                        })->orWhere(function ($q2) use ($startDate, $endDate, $applyDateRange) {
+                            $q2->whereDoesntHave('visits.payments');
+                            $applyDateRange($q2, 'created_at', $startDate, $endDate);
+                        });
+                    });
+
+                    return;
+                }
+
+                if ($dateFilterType === 'preset' && $request->filled('date_preset')) {
+                    $preset = $request->get('date_preset');
+                    $now = now();
+
+                    $rangeStart = null;
+                    $rangeEnd = null;
+                    $dateExact = null;
+
+                    switch ($preset) {
+                        case 'today':
+                            $dateExact = $now->toDateString();
+                            break;
+                        case 'yesterday':
+                            $dateExact = $now->copy()->subDay()->toDateString();
+                            break;
+                        case 'this_week':
+                            $rangeStart = $now->copy()->startOfWeek()->toDateString();
+                            $rangeEnd = $now->copy()->endOfWeek()->toDateString();
+                            break;
+                        case 'last_week':
+                            $rangeStart = $now->copy()->subWeek()->startOfWeek()->toDateString();
+                            $rangeEnd = $now->copy()->subWeek()->endOfWeek()->toDateString();
+                            break;
+                        case 'this_month':
+                            $rangeStart = $now->copy()->startOfMonth()->toDateString();
+                            $rangeEnd = $now->copy()->endOfMonth()->toDateString();
+                            break;
+                        case 'last_month':
+                            $rangeStart = $now->copy()->subMonth()->startOfMonth()->toDateString();
+                            $rangeEnd = $now->copy()->subMonth()->endOfMonth()->toDateString();
+                            break;
+                        case 'this_year':
+                            $rangeStart = $now->copy()->startOfYear()->toDateString();
+                            $rangeEnd = $now->copy()->endOfYear()->toDateString();
+                            break;
+                        case 'last_7_days':
+                            $rangeStart = $now->copy()->subDays(7)->toDateString();
+                            $rangeEnd = $now->copy()->toDateString();
+                            break;
+                        case 'last_30_days':
+                            $rangeStart = $now->copy()->subDays(30)->toDateString();
+                            $rangeEnd = $now->copy()->toDateString();
+                            break;
+                        case 'last_90_days':
+                            $rangeStart = $now->copy()->subDays(90)->toDateString();
+                            $rangeEnd = $now->copy()->toDateString();
+                            break;
+                    }
+
+                    if ($dateExact) {
+                        $query->where(function ($q) use ($dateExact, $applyExactDate) {
+                            $q->whereHas('visits.payments', function ($paymentQuery) use ($dateExact, $applyExactDate) {
+                                $applyExactDate($paymentQuery, 'payment_date', $dateExact);
+                            })->orWhere(function ($q2) use ($dateExact, $applyExactDate) {
+                                $q2->whereDoesntHave('visits.payments');
+                                $applyExactDate($q2, 'created_at', $dateExact);
+                            });
+                        });
+                    } elseif ($rangeStart && $rangeEnd) {
+                        $query->where(function ($q) use ($rangeStart, $rangeEnd, $applyDateRange) {
+                            $q->whereHas('visits.payments', function ($paymentQuery) use ($rangeStart, $rangeEnd, $applyDateRange) {
+                                $applyDateRange($paymentQuery, 'payment_date', $rangeStart, $rangeEnd);
+                            })->orWhere(function ($q2) use ($rangeStart, $rangeEnd, $applyDateRange) {
+                                $q2->whereDoesntHave('visits.payments');
+                                $applyDateRange($q2, 'created_at', $rangeStart, $rangeEnd);
+                            });
+                        });
+                    }
+                }
+            };
+
             switch ($dateFilterType) {
                 case 'specific':
                     if ($request->filled('specific_date')) {
                         $specificDate = $request->get('specific_date');
-                        $query->whereDate($dateField, $specificDate);
+                        if ($dateField === 'created_at') {
+                            $applyRegistrationDateFilter($query);
+                        } else {
+                            $query->whereDate($dateField, $specificDate);
+                        }
                     }
                     break;
 
                 case 'range':
-                    if ($request->filled('start_date')) {
+                    if ($request->filled('start_date') || $request->filled('end_date')) {
                         $startDate = $request->get('start_date');
-                        $query->whereDate($dateField, '>=', $startDate);
-                    }
-                    if ($request->filled('end_date')) {
                         $endDate = $request->get('end_date');
-                        $query->whereDate($dateField, '<=', $endDate);
+
+                        if ($dateField === 'created_at') {
+                            $applyRegistrationDateFilter($query);
+                        } else {
+                            if ($startDate) {
+                                $query->whereDate($dateField, '>=', $startDate);
+                            }
+                            if ($endDate) {
+                                $query->whereDate($dateField, '<=', $endDate);
+                            }
+                        }
                     }
                     break;
 
@@ -87,45 +218,85 @@ class PatientController extends Controller
 
                     switch ($preset) {
                         case 'today':
-                            $query->whereDate($dateField, $now->toDateString());
+                            if ($dateField === 'created_at') {
+                                $applyRegistrationDateFilter($query);
+                            } else {
+                                $query->whereDate($dateField, $now->toDateString());
+                            }
                             break;
                         case 'yesterday':
-                            $query->whereDate($dateField, $now->subDay()->toDateString());
+                            if ($dateField === 'created_at') {
+                                $applyRegistrationDateFilter($query);
+                            } else {
+                                $query->whereDate($dateField, $now->subDay()->toDateString());
+                            }
                             break;
                         case 'this_week':
-                            $query->whereBetween($dateField, [
-                                $now->startOfWeek()->toDateString(),
-                                $now->endOfWeek()->toDateString(),
-                            ]);
+                            if ($dateField === 'created_at') {
+                                $applyRegistrationDateFilter($query);
+                            } else {
+                                $query->whereBetween($dateField, [
+                                    $now->startOfWeek()->toDateString(),
+                                    $now->endOfWeek()->toDateString(),
+                                ]);
+                            }
                             break;
                         case 'last_week':
                             $lastWeekStart = $now->subWeek()->startOfWeek();
                             $lastWeekEnd = $now->endOfWeek();
-                            $query->whereBetween($dateField, [
-                                $lastWeekStart->toDateString(),
-                                $lastWeekEnd->toDateString(),
-                            ]);
+                            if ($dateField === 'created_at') {
+                                $applyRegistrationDateFilter($query);
+                            } else {
+                                $query->whereBetween($dateField, [
+                                    $lastWeekStart->toDateString(),
+                                    $lastWeekEnd->toDateString(),
+                                ]);
+                            }
                             break;
                         case 'this_month':
-                            $query->whereMonth($dateField, $now->month)
-                                ->whereYear($dateField, $now->year);
+                            if ($dateField === 'created_at') {
+                                $applyRegistrationDateFilter($query);
+                            } else {
+                                $query->whereMonth($dateField, $now->month)
+                                    ->whereYear($dateField, $now->year);
+                            }
                             break;
                         case 'last_month':
                             $lastMonth = $now->subMonth();
-                            $query->whereMonth($dateField, $lastMonth->month)
-                                ->whereYear($dateField, $lastMonth->year);
+                            if ($dateField === 'created_at') {
+                                $applyRegistrationDateFilter($query);
+                            } else {
+                                $query->whereMonth($dateField, $lastMonth->month)
+                                    ->whereYear($dateField, $lastMonth->year);
+                            }
                             break;
                         case 'this_year':
-                            $query->whereYear($dateField, $now->year);
+                            if ($dateField === 'created_at') {
+                                $applyRegistrationDateFilter($query);
+                            } else {
+                                $query->whereYear($dateField, $now->year);
+                            }
                             break;
                         case 'last_7_days':
-                            $query->whereDate($dateField, '>=', $now->subDays(7)->toDateString());
+                            if ($dateField === 'created_at') {
+                                $applyRegistrationDateFilter($query);
+                            } else {
+                                $query->whereDate($dateField, '>=', $now->subDays(7)->toDateString());
+                            }
                             break;
                         case 'last_30_days':
-                            $query->whereDate($dateField, '>=', $now->subDays(30)->toDateString());
+                            if ($dateField === 'created_at') {
+                                $applyRegistrationDateFilter($query);
+                            } else {
+                                $query->whereDate($dateField, '>=', $now->subDays(30)->toDateString());
+                            }
                             break;
                         case 'last_90_days':
-                            $query->whereDate($dateField, '>=', $now->subDays(90)->toDateString());
+                            if ($dateField === 'created_at') {
+                                $applyRegistrationDateFilter($query);
+                            } else {
+                                $query->whereDate($dateField, '>=', $now->subDays(90)->toDateString());
+                            }
                             break;
                     }
                     break;
@@ -151,6 +322,11 @@ class PatientController extends Controller
                 ? $latestVisit->selectedDoctor->name
                 : null;
 
+            $latestPaymentDate = $latestVisit?->payments
+                ?->sortByDesc('created_at')
+                ?->first()
+                ?->payment_date;
+
             // Get all unique doctors this patient has visited
             $allDoctors = $patient->visits
                 ->filter(fn ($v) => $v->selectedDoctor)
@@ -162,6 +338,8 @@ class PatientController extends Controller
             $patient->last_doctor = $lastDoctor;
             $patient->all_doctors = $allDoctors;
             $patient->total_visits = $patient->visits->count();
+            $patient->registration_date = ($latestPaymentDate ?? $patient->created_at)?->toDateString();
+            $patient->registration_date_source = $latestPaymentDate ? 'payment_date' : 'created_at';
 
             return $patient;
         });
@@ -300,6 +478,10 @@ class PatientController extends Controller
                             'overall_status' => 'vision_test',
                             'payment_completed_at' => now(),
                         ]);
+
+                        // Create doctor serial immediately (so doctor can see the patient even before vision test)
+                        $visit->refresh();
+                        $visit->ensureAppointmentForSelectedDoctor(auth()->id());
                     }
                 }
 
@@ -858,7 +1040,7 @@ class PatientController extends Controller
 
                 // Process payment
                 if ($request->payment_amount > 0) {
-                    PatientPayment::create([
+                    $payment = PatientPayment::create([
                         'patient_id' => $patient->id,
                         'visit_id' => $visit->id,
                         'amount' => $request->payment_amount,
@@ -903,6 +1085,16 @@ class PatientController extends Controller
         return Inertia::render('Patients/Print', [
             'patient' => $patient,
         ]);
+    }
+
+    /**
+     * Download/print blank prescription for a patient (doctor will write by hand).
+     *
+     * This is a simple proxy to `PrescriptionController@downloadBlankPrescription`.
+     */
+    public function downloadBlankPrescription(Patient $patient)
+    {
+        return redirect()->route('prescriptions.download-blank', $patient->id);
     }
 
     /**

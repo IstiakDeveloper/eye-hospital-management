@@ -1,18 +1,7 @@
-import React, { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import {
-    ArrowLeft,
-    User,
-    Calendar,
-    FileText,
-    DollarSign,
-    Package,
-    Printer,
-    Eye,
-    X,
-    CreditCard
-} from 'lucide-react';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { ArrowLeft, Calendar, CreditCard, DollarSign, Package, Printer, User, X } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface SaleItem {
     id: number;
@@ -78,15 +67,18 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
             month: 'short',
             year: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
         });
     };
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'paid': return 'bg-green-100 text-green-800 border-green-200';
-            case 'partial': return 'bg-amber-100 text-amber-800 border-amber-200';
-            default: return 'bg-red-100 text-red-800 border-red-200';
+            case 'paid':
+                return 'bg-green-100 text-green-800 border-green-200';
+            case 'partial':
+                return 'bg-amber-100 text-amber-800 border-amber-200';
+            default:
+                return 'bg-red-100 text-red-800 border-red-200';
         }
     };
 
@@ -105,17 +97,17 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
     const PaymentModal = () => {
         if (!showPaymentModal) return null;
 
-        const remainingDue = sale.due_amount || (sale.total_amount - sale.paid_amount);
+        const remainingDue = sale.due_amount || sale.total_amount - sale.paid_amount;
         const maxPayment = sale.total_amount;
         const currentPaidAmount = Number(data.paid_amount) || 0;
         const collectingAmount = Math.max(0, currentPaidAmount - sale.paid_amount);
         const remainingAfterPayment = Math.max(0, sale.total_amount - currentPaidAmount);
 
         return (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
                     <div className="p-6">
-                        <div className="flex items-center justify-between mb-6">
+                        <div className="mb-6 flex items-center justify-between">
                             <h2 className="text-xl font-semibold text-gray-900">Collect Payment</h2>
                             <button
                                 onClick={() => {
@@ -124,13 +116,13 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                 }}
                                 className="text-gray-400 hover:text-gray-600"
                             >
-                                <X className="w-5 h-5" />
+                                <X className="h-5 w-5" />
                             </button>
                         </div>
 
                         <form onSubmit={handlePaymentSubmit}>
                             {/* Invoice Info */}
-                            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                            <div className="mb-6 rounded-lg bg-gray-50 p-4">
                                 <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Invoice:</span>
@@ -144,8 +136,8 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                         <span className="text-gray-600">Already Paid:</span>
                                         <span className="font-medium text-green-600">{formatCurrency(sale.paid_amount)}</span>
                                     </div>
-                                    <div className="flex justify-between pt-2 border-t border-gray-200">
-                                        <span className="text-gray-900 font-semibold">Due Amount:</span>
+                                    <div className="flex justify-between border-t border-gray-200 pt-2">
+                                        <span className="font-semibold text-gray-900">Due Amount:</span>
                                         <span className="font-bold text-red-600">{formatCurrency(remainingDue)}</span>
                                     </div>
                                 </div>
@@ -153,11 +145,11 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
 
                             {/* Payment Input */}
                             <div className="mb-6">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
                                     New Paid Amount <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">৳</span>
+                                    <span className="absolute top-1/2 left-3 -translate-y-1/2 font-medium text-gray-500">৳</span>
                                     <input
                                         type="number"
                                         step="0.01"
@@ -175,15 +167,13 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                                 }
                                             }
                                         }}
-                                        className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base"
+                                        className="w-full rounded-lg border border-gray-300 py-2.5 pr-4 pl-8 text-base focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                         placeholder={`Enter amount (min: ${formatCurrency(sale.paid_amount)})`}
                                         required
                                     />
                                 </div>
-                                {errors.paid_amount && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.paid_amount}</p>
-                                )}
-                                <div className="mt-2 p-2 bg-blue-50 rounded text-xs space-y-1">
+                                {errors.paid_amount && <p className="mt-1 text-sm text-red-600">{errors.paid_amount}</p>}
+                                <div className="mt-2 space-y-1 rounded bg-blue-50 p-2 text-xs">
                                     <div className="flex justify-between">
                                         <span className="text-blue-700">Collecting Now:</span>
                                         <span className="font-semibold text-blue-900">{formatCurrency(collectingAmount)}</span>
@@ -197,37 +187,31 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
 
                             {/* Quick Amount Buttons */}
                             <div className="mb-6">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Quick Select:</label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">Quick Select:</label>
                                 <div className="grid grid-cols-3 gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setData('paid_amount', Math.round((sale.paid_amount + remainingDue / 2) * 100) / 100)}
-                                        className="px-3 py-2 text-xs font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                        className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium transition-colors hover:bg-gray-50"
                                     >
                                         Half Due
-                                        <div className="text-[10px] text-gray-500 mt-0.5">
-                                            +{formatCurrency(remainingDue / 2)}
-                                        </div>
+                                        <div className="mt-0.5 text-[10px] text-gray-500">+{formatCurrency(remainingDue / 2)}</div>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setData('paid_amount', sale.total_amount)}
-                                        className="px-3 py-2 text-xs font-medium border border-green-300 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"
+                                        className="rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-xs font-medium text-green-700 transition-colors hover:bg-green-100"
                                     >
                                         Full Payment
-                                        <div className="text-[10px] text-green-600 mt-0.5">
-                                            +{formatCurrency(remainingDue)}
-                                        </div>
+                                        <div className="mt-0.5 text-[10px] text-green-600">+{formatCurrency(remainingDue)}</div>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setData('paid_amount', sale.paid_amount)}
-                                        className="px-3 py-2 text-xs font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                        className="rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium transition-colors hover:bg-gray-50"
                                     >
                                         Reset
-                                        <div className="text-[10px] text-gray-500 mt-0.5">
-                                            No change
-                                        </div>
+                                        <div className="mt-0.5 text-[10px] text-gray-500">No change</div>
                                     </button>
                                 </div>
                             </div>
@@ -240,7 +224,7 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                         setShowPaymentModal(false);
                                         setData('paid_amount', sale.paid_amount);
                                     }}
-                                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-50"
                                     disabled={processing}
                                 >
                                     Cancel
@@ -248,9 +232,9 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                 <button
                                     type="submit"
                                     disabled={processing || currentPaidAmount <= sale.paid_amount || currentPaidAmount > sale.total_amount}
-                                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    <CreditCard className="w-4 h-4" />
+                                    <CreditCard className="h-4 w-4" />
                                     {processing ? 'Processing...' : 'Collect Payment'}
                                 </button>
                             </div>
@@ -259,13 +243,13 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                 </div>
             </div>
         );
-    };    // Printable Invoice Component
+    }; // Printable Invoice Component
     const PrintableInvoice = () => {
         const companyInfo = {
-            name: "Naogaon Islamia Eye Hospital & Phaco Centre",
-            address: "Adjacent Circuit House, Main Road, Naogaon",
-            phone: "01307-885566, 01334-925910",
-            email: "niehpc@gmail.com"
+            name: 'Naogaon Islamia Eye Hospital & Phaco Centre',
+            address: 'Adjacent Circuit House, Main Road, Naogaon',
+            phone: '01307-885566, 01334-925910',
+            email: 'niehpc@gmail.com',
         };
 
         const handlePrint = () => {
@@ -273,15 +257,13 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
         };
 
         // Calculate discount to show based on checkbox
-        const discountToShow = printWithoutDiscount ? 0 : (Number(sale.discount) || 0);
+        const discountToShow = printWithoutDiscount ? 0 : Number(sale.discount) || 0;
         // If hiding discount, recalculate total without discount
-        const totalToShow = printWithoutDiscount
-            ? (Number(sale.subtotal) || 0) + (Number(sale.tax) || 0)
-            : (Number(sale.total_amount) || 0);
+        const totalToShow = printWithoutDiscount ? (Number(sale.subtotal) || 0) + (Number(sale.tax) || 0) : Number(sale.total_amount) || 0;
 
         return (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <div className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-lg bg-white shadow-xl">
                     <div className="p-6">
                         {/* Print Styles */}
                         <style>{`
@@ -336,9 +318,8 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
     }
 `}</style>
 
-
                         {/* Print/Close Buttons - Hidden in print */}
-                        <div className="no-print mb-4 flex justify-between items-center border-b pb-4">
+                        <div className="no-print mb-4 flex items-center justify-between border-b pb-4">
                             <h2 className="text-lg font-semibold">Invoice Preview</h2>
                             <div className="flex items-center gap-3">
                                 <label className="flex items-center gap-2 text-sm">
@@ -346,53 +327,60 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                         type="checkbox"
                                         checked={printWithoutDiscount}
                                         onChange={(e) => setPrintWithoutDiscount(e.target.checked)}
-                                        className="w-4 h-4"
+                                        className="h-4 w-4"
                                     />
                                     Print without discount
                                 </label>
 
                                 <button
                                     onClick={handlePrint}
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
                                 >
-                                    <Printer className="w-4 h-4" />
+                                    <Printer className="h-4 w-4" />
                                     Print
                                 </button>
                                 <button
                                     onClick={() => setShowPrintView(false)}
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                                    className="inline-flex items-center gap-2 rounded-lg bg-gray-600 px-4 py-2 text-white transition-colors hover:bg-gray-700"
                                 >
-                                    <X className="w-4 h-4" />
+                                    <X className="h-4 w-4" />
                                     Close
                                 </button>
                             </div>
                         </div>
 
                         {/* Printable Invoice */}
-                        <div className="print-area" style={{
-                            fontFamily: 'Arial, sans-serif',
-                            backgroundColor: 'white',
-                            color: 'black',
-                            fontSize: '11px',
-                            lineHeight: '1.2',
-                            width: '70mm',
-                            maxWidth: '70mm',
-                            margin: '0 auto',
-                            padding: '5mm'
-                        }}>
+                        <div
+                            className="print-area"
+                            style={{
+                                fontFamily: 'Arial, sans-serif',
+                                backgroundColor: 'white',
+                                color: 'black',
+                                fontSize: '11px',
+                                lineHeight: '1.2',
+                                width: '70mm',
+                                maxWidth: '70mm',
+                                margin: '0 auto',
+                                padding: '5mm',
+                            }}
+                        >
                             {/* Header */}
-                            <div style={{
-                                textAlign: 'center',
-                                borderBottom: '1px dashed black',
-                                paddingBottom: '6px',
-                                marginBottom: '6px'
-                            }}>
-                                <h1 style={{
-                                    fontSize: '14px',
-                                    fontWeight: 'bold',
-                                    margin: '0 0 3px 0',
-                                    textTransform: 'uppercase'
-                                }}>
+                            <div
+                                style={{
+                                    textAlign: 'center',
+                                    borderBottom: '1px dashed black',
+                                    paddingBottom: '6px',
+                                    marginBottom: '6px',
+                                }}
+                            >
+                                <h1
+                                    style={{
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                        margin: '0 0 3px 0',
+                                        textTransform: 'uppercase',
+                                    }}
+                                >
                                     {companyInfo.name}
                                 </h1>
                                 <div style={{ fontSize: '9px', lineHeight: '1.3' }}>
@@ -403,73 +391,73 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                             </div>
 
                             {/* Invoice Info */}
-                            <div style={{
-                                borderBottom: '1px dashed black',
-                                paddingBottom: '6px',
-                                marginBottom: '6px',
-                                fontSize: '9px'
-                            }}>
-                                <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '3px' }}>
-                                    INVOICE
-                                </div>
+                            <div
+                                style={{
+                                    borderBottom: '1px dashed black',
+                                    paddingBottom: '6px',
+                                    marginBottom: '6px',
+                                    fontSize: '9px',
+                                }}
+                            >
+                                <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '3px' }}>INVOICE</div>
                                 <div>Invoice: {sale.invoice_number}</div>
                                 <div>Date: {formatDate(sale.sale_date)}</div>
                                 <div>Cashier: {sale.sold_by.name}</div>
                             </div>
 
                             {/* Customer Info */}
-                            <div style={{
-                                borderBottom: '1px dashed black',
-                                paddingBottom: '6px',
-                                marginBottom: '6px',
-                                fontSize: '9px'
-                            }}>
+                            <div
+                                style={{
+                                    borderBottom: '1px dashed black',
+                                    paddingBottom: '6px',
+                                    marginBottom: '6px',
+                                    fontSize: '9px',
+                                }}
+                            >
                                 <div style={{ fontWeight: 'bold' }}>Customer:</div>
                                 <div>{sale.patient?.name || 'Walk-in Customer'}</div>
-                                {sale.patient?.phone && (
-                                    <div>Tel: {sale.patient.phone}</div>
-                                )}
+                                {sale.patient?.phone && <div>Tel: {sale.patient.phone}</div>}
                             </div>
 
                             {/* Items */}
-                            <div style={{
-                                borderBottom: '1px dashed black',
-                                paddingBottom: '6px',
-                                marginBottom: '6px'
-                            }}>
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    fontWeight: 'bold',
-                                    fontSize: '9px',
-                                    marginBottom: '3px',
-                                    borderBottom: '1px solid black',
-                                    paddingBottom: '2px'
-                                }}>
+                            <div
+                                style={{
+                                    borderBottom: '1px dashed black',
+                                    paddingBottom: '6px',
+                                    marginBottom: '6px',
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        fontWeight: 'bold',
+                                        fontSize: '9px',
+                                        marginBottom: '3px',
+                                        borderBottom: '1px solid black',
+                                        paddingBottom: '2px',
+                                    }}
+                                >
                                     <span>ITEM</span>
                                     <span>AMOUNT</span>
                                 </div>
                                 {sale.items.map((item) => (
                                     <div key={item.id} style={{ marginBottom: '4px', fontSize: '9px' }}>
-                                        <div style={{ fontWeight: 'bold' }}>
-                                            {item.medicine_stock.medicine.name}
-                                        </div>
-                                        <div style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            marginTop: '1px'
-                                        }}>
+                                        <div style={{ fontWeight: 'bold' }}>{item.medicine_stock.medicine.name}</div>
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                marginTop: '1px',
+                                            }}
+                                        >
                                             <span>
                                                 {item.quantity} {item.medicine_stock.medicine.unit} x {formatCurrency(item.unit_price)}
                                             </span>
-                                            <span style={{ fontWeight: 'bold' }}>
-                                                {formatCurrency(item.total_price)}
-                                            </span>
+                                            <span style={{ fontWeight: 'bold' }}>{formatCurrency(item.total_price)}</span>
                                         </div>
                                         {item.medicine_stock.medicine.generic_name && (
-                                            <div style={{ fontSize: '8px', color: '#666' }}>
-                                                ({item.medicine_stock.medicine.generic_name})
-                                            </div>
+                                            <div style={{ fontSize: '8px', color: '#666' }}>({item.medicine_stock.medicine.generic_name})</div>
                                         )}
                                     </div>
                                 ))}
@@ -477,79 +465,85 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
 
                             {/* Totals */}
                             <div style={{ fontSize: '9px', marginBottom: '6px' }}>
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    marginBottom: '2px'
-                                }}>
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        marginBottom: '2px',
+                                    }}
+                                >
                                     <span>Subtotal:</span>
                                     <span>{formatCurrency(sale.subtotal)}</span>
                                 </div>
 
                                 {discountToShow > 0 && (
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        marginBottom: '2px'
-                                    }}>
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            marginBottom: '2px',
+                                        }}
+                                    >
                                         <span>Discount:</span>
                                         <span>-{formatCurrency(discountToShow)}</span>
                                     </div>
                                 )}
 
                                 {sale.tax > 0 && (
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        marginBottom: '2px'
-                                    }}>
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            marginBottom: '2px',
+                                        }}
+                                    >
                                         <span>Tax:</span>
                                         <span>+{formatCurrency(sale.tax)}</span>
                                     </div>
                                 )}
 
-                                <div style={{
-                                    borderTop: '1px solid black',
-                                    paddingTop: '3px',
-                                    marginTop: '3px',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    fontWeight: 'bold',
-                                    fontSize: '11px'
-                                }}>
+                                <div
+                                    style={{
+                                        borderTop: '1px solid black',
+                                        paddingTop: '3px',
+                                        marginTop: '3px',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        fontWeight: 'bold',
+                                        fontSize: '11px',
+                                    }}
+                                >
                                     <span>TOTAL:</span>
                                     <span>{formatCurrency(totalToShow)}</span>
                                 </div>
 
                                 {/* Payment Status */}
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    marginTop: '3px',
-                                    fontSize: '9px'
-                                }}>
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        marginTop: '3px',
+                                        fontSize: '9px',
+                                    }}
+                                >
                                     <span>Payment:</span>
-                                    <span style={{ fontWeight: 'bold' }}>
-                                        {sale.payment_status.toUpperCase()}
-                                    </span>
+                                    <span style={{ fontWeight: 'bold' }}>{sale.payment_status.toUpperCase()}</span>
                                 </div>
                             </div>
 
                             {/* Footer */}
-                            <div style={{
-                                borderTop: '1px dashed black',
-                                paddingTop: '6px',
-                                textAlign: 'center',
-                                fontSize: '8px',
-                                lineHeight: '1.3'
-                            }}>
-                                <div style={{ marginBottom: '3px', fontWeight: 'bold' }}>
-                                    Thank you for your business!
-                                </div>
+                            <div
+                                style={{
+                                    borderTop: '1px dashed black',
+                                    paddingTop: '6px',
+                                    textAlign: 'center',
+                                    fontSize: '8px',
+                                    lineHeight: '1.3',
+                                }}
+                            >
+                                <div style={{ marginBottom: '3px', fontWeight: 'bold' }}>Thank you for your business!</div>
                                 <div>Tel: {companyInfo.phone}</div>
-                                <div style={{ marginTop: '3px' }}>
-                                    This is a computer generated invoice
-                                </div>
+                                <div style={{ marginTop: '3px' }}>This is a computer generated invoice</div>
                             </div>
                         </div>
                     </div>
@@ -568,17 +562,19 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                     <div className="flex items-center gap-4">
                         <Link
                             href="/medicine-seller/sales"
-                            className="inline-flex items-center p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                            className="inline-flex items-center rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
                         >
-                            <ArrowLeft className="w-5 h-5" />
+                            <ArrowLeft className="h-5 w-5" />
                         </Link>
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">{sale.invoice_number}</h1>
-                            <p className="text-gray-600 mt-1">Sale transaction details</p>
+                            <p className="mt-1 text-gray-600">Sale transaction details</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(sale.payment_status)}`}>
+                        <span
+                            className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium ${getStatusColor(sale.payment_status)}`}
+                        >
                             {sale.payment_status}
                         </span>
 
@@ -586,66 +582,64 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                         {sale.due_amount > 0 && (
                             <button
                                 onClick={() => setShowPaymentModal(true)}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700"
                             >
-                                <CreditCard className="w-4 h-4" />
+                                <CreditCard className="h-4 w-4" />
                                 Collect Payment
                             </button>
                         )}
 
                         <button
                             onClick={() => setShowPrintView(true)}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
                         >
-                            <Printer className="w-4 h-4" />
+                            <Printer className="h-4 w-4" />
                             Print Invoice
                         </button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Sale Info */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="space-y-6 lg:col-span-2">
                         {/* Customer & Sale Info */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Sale Information</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <h2 className="mb-4 text-lg font-semibold text-gray-900">Sale Information</h2>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div>
-                                    <h3 className="text-sm font-medium text-gray-500 mb-3">Customer Details</h3>
+                                    <h3 className="mb-3 text-sm font-medium text-gray-500">Customer Details</h3>
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2">
-                                            <User className="w-4 h-4 text-gray-400" />
-                                            <span className="text-sm text-gray-900">
-                                                {sale.patient?.name || 'Walk-in Customer'}
-                                            </span>
+                                            <User className="h-4 w-4 text-gray-400" />
+                                            <span className="text-sm text-gray-900">{sale.patient?.name || 'Walk-in Customer'}</span>
                                         </div>
                                         {sale.patient?.phone && (
                                             <div className="flex items-center gap-2">
-                                                <span className="w-4 h-4 text-gray-400">📞</span>
+                                                <span className="h-4 w-4 text-gray-400">📞</span>
                                                 <span className="text-sm text-gray-900">{sale.patient.phone}</span>
                                             </div>
                                         )}
                                         {sale.patient?.email && (
                                             <div className="flex items-center gap-2">
-                                                <span className="w-4 h-4 text-gray-400">✉️</span>
+                                                <span className="h-4 w-4 text-gray-400">✉️</span>
                                                 <span className="text-sm text-gray-900">{sale.patient.email}</span>
                                             </div>
                                         )}
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-medium text-gray-500 mb-3">Sale Details</h3>
+                                    <h3 className="mb-3 text-sm font-medium text-gray-500">Sale Details</h3>
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2">
-                                            <Calendar className="w-4 h-4 text-gray-400" />
+                                            <Calendar className="h-4 w-4 text-gray-400" />
                                             <span className="text-sm text-gray-900">{formatDate(sale.sale_date)}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <User className="w-4 h-4 text-gray-400" />
+                                            <User className="h-4 w-4 text-gray-400" />
                                             <span className="text-sm text-gray-900">Sold by: {sale.sold_by.name}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Package className="w-4 h-4 text-gray-400" />
+                                            <Package className="h-4 w-4 text-gray-400" />
                                             <span className="text-sm text-gray-900">{sale.items.length} items</span>
                                         </div>
                                     </div>
@@ -654,48 +648,38 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                         </div>
 
                         {/* Items */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                            <div className="px-6 py-4 border-b border-gray-200">
+                        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                            <div className="border-b border-gray-200 px-6 py-4">
                                 <h2 className="text-lg font-semibold text-gray-900">Items Sold</h2>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead className="bg-gray-50">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                                 Medicine
                                             </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Batch
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Qty
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Batch</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Qty</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                                 Unit Price
                                             </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Total
-                                            </th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Total</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
+                                    <tbody className="divide-y divide-gray-200 bg-white">
                                         {sale.items.map((item) => (
                                             <tr key={item.id}>
                                                 <td className="px-6 py-4">
                                                     <div>
-                                                        <div className="text-sm font-medium text-gray-900">
-                                                            {item.medicine_stock.medicine.name}
-                                                        </div>
+                                                        <div className="text-sm font-medium text-gray-900">{item.medicine_stock.medicine.name}</div>
                                                         {item.medicine_stock.medicine.generic_name && (
-                                                            <div className="text-sm text-gray-500">
-                                                                {item.medicine_stock.medicine.generic_name}
-                                                            </div>
+                                                            <div className="text-sm text-gray-500">{item.medicine_stock.medicine.generic_name}</div>
                                                         )}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
                                                         {item.medicine_stock.batch_number}
                                                     </span>
                                                 </td>
@@ -705,14 +689,10 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <div className="text-sm text-gray-900">
-                                                        {formatCurrency(item.unit_price)}
-                                                    </div>
+                                                    <div className="text-sm text-gray-900">{formatCurrency(item.unit_price)}</div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <div className="text-sm font-medium text-gray-900">
-                                                        {formatCurrency(item.total_price)}
-                                                    </div>
+                                                    <div className="text-sm font-medium text-gray-900">{formatCurrency(item.total_price)}</div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -725,8 +705,8 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                     {/* Payment Summary */}
                     <div className="space-y-6">
                         {/* Payment Details */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Payment Summary</h2>
+                        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <h2 className="mb-4 text-lg font-semibold text-gray-900">Payment Summary</h2>
                             <div className="space-y-3">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-gray-600">Subtotal:</span>
@@ -770,25 +750,23 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
 
                         {/* Due Amount Alert - Show if there's due */}
                         {sale.due_amount > 0 && (
-                            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
                                 <div className="flex items-start gap-3">
                                     <div className="flex-shrink-0">
-                                        <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                                            <DollarSign className="w-5 h-5 text-red-600" />
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                                            <DollarSign className="h-5 w-5 text-red-600" />
                                         </div>
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="text-sm font-semibold text-red-900 mb-1">
-                                            Payment Pending
-                                        </h3>
-                                        <p className="text-sm text-red-700 mb-3">
+                                        <h3 className="mb-1 text-sm font-semibold text-red-900">Payment Pending</h3>
+                                        <p className="mb-3 text-sm text-red-700">
                                             Due amount: <span className="font-bold">{formatCurrency(sale.due_amount)}</span>
                                         </p>
                                         <button
                                             onClick={() => setShowPaymentModal(true)}
-                                            className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition-colors"
+                                            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm text-white transition-colors hover:bg-red-700"
                                         >
-                                            <CreditCard className="w-4 h-4" />
+                                            <CreditCard className="h-4 w-4" />
                                             Collect Payment Now
                                         </button>
                                     </div>
@@ -797,12 +775,12 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
                         )}
 
                         {/* Quick Stats */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-4">Sale Metrics</h2>
+                        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <h2 className="mb-4 text-lg font-semibold text-gray-900">Sale Metrics</h2>
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <Package className="w-4 h-4 text-blue-600" />
+                                        <Package className="h-4 w-4 text-blue-600" />
                                         <span className="text-sm text-gray-600">Items Sold</span>
                                     </div>
                                     <span className="text-sm font-semibold text-gray-900">{sale.items.length}</span>
@@ -810,7 +788,7 @@ export default function SaleDetails({ sale }: SaleDetailsProps) {
 
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <Calendar className="w-4 h-4 text-purple-600" />
+                                        <Calendar className="h-4 w-4 text-purple-600" />
                                         <span className="text-sm text-gray-600">Sale Date</span>
                                     </div>
                                     <span className="text-sm font-semibold text-gray-900">

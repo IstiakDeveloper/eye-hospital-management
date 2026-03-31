@@ -1,17 +1,24 @@
-import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
+import { Head, router } from '@inertiajs/react';
 import {
-    User, Phone, Mail, MapPin, Calendar, FileText,
-    Eye, Stethoscope, Clock, CheckCircle, ArrowLeft,
-    Activity, Heart, Pill, History, Edit, Plus,
-    AlertCircle, Star, Download, Printer, Save,
-    ChevronRight, ChevronDown, Info, DollarSign,
-    CreditCard, Users, TrendingUp, ClipboardList,
-    ExternalLink, RefreshCw, Search, Filter,
-    Shield, Target, Camera, BookOpen, Zap,
-    Droplets, Monitor, Brain
+    Activity,
+    AlertCircle,
+    ArrowLeft,
+    CheckCircle,
+    ChevronDown,
+    ChevronRight,
+    ClipboardList,
+    Clock,
+    Eye,
+    History,
+    Phone,
+    Plus,
+    Printer,
+    Shield,
+    Stethoscope,
+    X,
 } from 'lucide-react';
+import React, { useState } from 'react';
 
 // Updated interfaces based on new schema
 interface Doctor {
@@ -258,14 +265,9 @@ interface Props {
     doctor: Doctor;
 }
 
-const DoctorPatientView: React.FC<Props> = ({
-    patient,
-    latestVisit,
-    latestVisionTest,
-    todaysAppointment,
-    doctor
-}) => {
+const DoctorPatientView: React.FC<Props> = ({ patient, latestVisit, latestVisionTest, todaysAppointment, doctor }) => {
     const [showOldData, setShowOldData] = useState(false);
+    const [showVisionModal, setShowVisionModal] = useState(false);
 
     // Helper Functions
     const goBack = () => {
@@ -276,6 +278,10 @@ const DoctorPatientView: React.FC<Props> = ({
         if (latestVisit) {
             router.visit(route('prescriptions.create.patient', patient.id));
         }
+    };
+
+    const fillVisionTest = () => {
+        router.visit(route('doctor.vision-tests.create', patient.id));
     };
 
     const handlePrint = (visionTestId: number) => {
@@ -296,34 +302,59 @@ const DoctorPatientView: React.FC<Props> = ({
 
     const getStatusColor = (status: string): string => {
         switch (status?.toLowerCase()) {
-            case 'completed': return 'text-green-600 bg-green-100 border-green-200';
-            case 'paid': return 'text-green-600 bg-green-100 border-green-200';
-            case 'partial': return 'text-yellow-600 bg-yellow-100 border-yellow-200';
-            case 'pending': return 'text-red-600 bg-red-100 border-red-200';
-            case 'prescription': return 'text-blue-600 bg-blue-100 border-blue-200';
-            case 'vision_test': return 'text-purple-600 bg-purple-100 border-purple-200';
-            case 'cancelled': return 'text-gray-600 bg-gray-100 border-gray-200';
-            case 'in_progress': return 'text-blue-600 bg-blue-100 border-blue-200';
-            default: return 'text-gray-600 bg-gray-100 border-gray-200';
+            case 'completed':
+                return 'text-green-600 bg-green-100 border-green-200';
+            case 'paid':
+                return 'text-green-600 bg-green-100 border-green-200';
+            case 'partial':
+                return 'text-yellow-600 bg-yellow-100 border-yellow-200';
+            case 'pending':
+                return 'text-red-600 bg-red-100 border-red-200';
+            case 'prescription':
+                return 'text-blue-600 bg-blue-100 border-blue-200';
+            case 'vision_test':
+                return 'text-purple-600 bg-purple-100 border-purple-200';
+            case 'skipped':
+                return 'text-amber-700 bg-amber-100 border-amber-200';
+            case 'cancelled':
+                return 'text-gray-600 bg-gray-100 border-gray-200';
+            case 'in_progress':
+                return 'text-blue-600 bg-blue-100 border-blue-200';
+            default:
+                return 'text-gray-600 bg-gray-100 border-gray-200';
         }
     };
 
     const getGenderIcon = (gender?: string): string => {
         switch (gender?.toLowerCase()) {
-            case 'male': return '👨';
-            case 'female': return '👩';
-            default: return '👤';
+            case 'male':
+                return '👨';
+            case 'female':
+                return '👩';
+            default:
+                return '👤';
         }
     };
 
     const getConditionIcon = (condition: boolean) => {
-        return condition ?
-            <CheckCircle className="w-4 h-4 text-red-600" /> :
-            <div className="w-4 h-4 rounded-full border-2 border-gray-300"></div>;
+        return condition ? <CheckCircle className="h-4 w-4 text-red-600" /> : <div className="h-4 w-4 rounded-full border-2 border-gray-300"></div>;
     };
 
     const hasValue = (value: any): boolean => {
         return value !== null && value !== undefined && value !== '';
+    };
+
+    const renderField = (label: string, value: any) => {
+        if (!hasValue(value)) {
+            return null;
+        }
+
+        return (
+            <div className="flex items-start justify-between gap-3">
+                <div className="text-xs font-semibold text-gray-600">{label}</div>
+                <div className="text-right text-sm font-medium text-gray-900">{String(value)}</div>
+            </div>
+        );
     };
 
     // Safe stats with fallbacks
@@ -332,610 +363,585 @@ const DoctorPatientView: React.FC<Props> = ({
         total_prescriptions: patient.prescriptions?.length || 0,
         total_vision_tests: patient.visionTests?.length || 0,
         total_appointments: patient.appointments?.length || 0,
-        my_prescriptions: patient.prescriptions?.filter(p => p.doctor.id === doctor.id).length || 0,
+        my_prescriptions: patient.prescriptions?.filter((p) => p.doctor.id === doctor.id).length || 0,
         total_amount_paid: 0,
         total_amount_due: 0,
         last_visit_date: patient.visits?.[0]?.formatted_date || null,
         last_vision_test_date: patient.visionTests?.[0]?.formatted_date || null,
     };
 
+    const previousVisionTests = (patient.visionTests || []).filter((t) => t.id !== latestVisionTest?.id);
+
+    const canFillVisionTest =
+        !!latestVisit &&
+        latestVisit.payment_status === 'paid' &&
+        latestVisit.vision_test_status !== 'completed' &&
+        latestVisit.vision_test_status !== 'skipped';
+    const canWritePrescription =
+        !!latestVisit &&
+        latestVisit.overall_status === 'prescription' &&
+        latestVisit.payment_status === 'paid' &&
+        (latestVisit.vision_test_status === 'completed' || latestVisit.vision_test_status === 'skipped');
+
     return (
         <AdminLayout title={`Patient: ${patient.name}`}>
             <Head title={`Patient: ${patient.name}`} />
 
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 p-6">
-                <div className="max-w-6xl mx-auto space-y-6">
-
-                    {/* 1. Patient Information - First Section */}
-                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <button
-                                onClick={goBack}
-                                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                                Back to Dashboard
-                            </button>
-                            <div className="text-sm text-gray-500">
-                                Dr. {doctor.name} • {doctor.specialization}
+            <div className="mx-auto max-w-6xl space-y-4">
+                {/* Sticky action bar (doctor speed) */}
+                <div className="sticky top-2 z-40 rounded-xl border border-gray-200 bg-white/90 p-3 shadow-sm backdrop-blur">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-sm font-bold text-gray-900">{patient.name}</span>
+                                <span className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-800">
+                                    {patient.patient_id}
+                                </span>
+                                {latestVisit && (
+                                    <span className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-800">
+                                        Visit: {latestVisit.visit_id}
+                                    </span>
+                                )}
+                                {latestVisit && (
+                                    <>
+                                        <span
+                                            className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusColor(latestVisit.payment_status)}`}
+                                        >
+                                            Pay: {latestVisit.payment_status.toUpperCase()}
+                                        </span>
+                                        <span
+                                            className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusColor(latestVisit.vision_test_status)}`}
+                                        >
+                                            Vision: {latestVisit.vision_test_status.toUpperCase()}
+                                        </span>
+                                    </>
+                                )}
                             </div>
-                        </div>
-
-                        {/* Patient Basic Info */}
-                        <div className="flex items-center gap-6 mb-6">
-                            <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl">
-                                <User className="h-10 w-10 text-white" />
-                            </div>
-                            <div className="flex-1">
-                                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                                    <span className="text-2xl">{getGenderIcon(patient.gender)}</span>
-                                    {patient.name}
-                                </h1>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm text-gray-600">
-                                    <div className="flex items-center gap-2">
-                                        <User className="h-4 w-4" />
-                                        <span>ID: {patient.patient_id}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Phone className="h-4 w-4" />
-                                        <span>{patient.phone}</span>
-                                    </div>
-                                    {patient.age && (
-                                        <div className="flex items-center gap-2">
-                                            <Calendar className="h-4 w-4" />
-                                            <span>Age: {patient.age} years</span>
-                                        </div>
-                                    )}
-                                    <div className="flex items-center gap-2">
-                                        <Activity className="h-4 w-4" />
-                                        <span>Visits: {safeStats.total_visits}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            {todaysAppointment && (
-                                <div className="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-medium">
-                                    Today's Serial: {todaysAppointment.serial_number}
+                            {latestVisit?.chief_complaint && (
+                                <div className="mt-1 line-clamp-1 text-xs text-gray-600">
+                                    <span className="font-semibold text-gray-700">CC:</span> {latestVisit.chief_complaint}
                                 </div>
                             )}
                         </div>
 
-                        {/* Contact Details */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Contact Information</h3>
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-3">
-                                        <Phone className="h-4 w-4 text-gray-500" />
-                                        <span className="text-gray-900">{patient.phone}</span>
-                                    </div>
-                                    {patient.email && (
-                                        <div className="flex items-center gap-3">
-                                            <Mail className="h-4 w-4 text-gray-500" />
-                                            <span className="text-gray-900">{patient.email}</span>
-                                        </div>
-                                    )}
-                                    {patient.address && (
-                                        <div className="flex items-start gap-3">
-                                            <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                                            <span className="text-gray-900">{patient.address}</span>
-                                        </div>
-                                    )}
-                                    {patient.nid_card && (
-                                        <div className="flex items-center gap-3">
-                                            <FileText className="h-4 w-4 text-gray-500" />
-                                            <span className="text-gray-900">NID: {patient.nid_card}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Patient Summary</h3>
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <span className="text-gray-600">Age:</span>
-                                        <span className="ml-2 font-medium">{patient.age || 'N/A'} years</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-600">Gender:</span>
-                                        <span className="ml-2 font-medium capitalize">{patient.gender || 'N/A'}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-600">Total Visits:</span>
-                                        <span className="ml-2 font-medium">{safeStats.total_visits}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-gray-600">Registered:</span>
-                                        <span className="ml-2 font-medium">{patient.formatted_registration_date}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Medical History Alert */}
-                        {patient.medical_history && (
-                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Heart className="h-4 w-4 text-red-500" />
-                                    <span className="font-medium text-red-800">Important Medical History</span>
-                                </div>
-                                <p className="text-sm text-gray-700">{patient.medical_history}</p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* 2. Old Data Section - Click to Expand */}
-                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
-                        <div className="p-6 border-b border-gray-200">
-                            <button
-                                onClick={() => setShowOldData(!showOldData)}
-                                className="w-full flex items-center justify-between text-left"
-                            >
-                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                    <History className="h-6 w-6 text-amber-600" />
-                                    Previous Records & History
-                                    <span className="bg-amber-100 text-amber-800 text-sm px-2 py-1 rounded-full">
-                                        {safeStats.total_visits} visits • {safeStats.total_vision_tests} tests • {safeStats.total_prescriptions} prescriptions
-                                    </span>
-                                </h2>
-                                {showOldData ? (
-                                    <ChevronDown className="h-5 w-5 text-gray-500" />
-                                ) : (
-                                    <ChevronRight className="h-5 w-5 text-gray-500" />
-                                )}
-                            </button>
-                        </div>
-
-                        {showOldData && (
-                            <div className="p-6">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    {/* Previous Visits */}
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                            <Activity className="h-5 w-5 text-blue-600" />
-                                            Previous Visits ({patient.visits?.length || 0})
-                                        </h3>
-
-                                        {patient.visits && patient.visits.length > 0 ? (
-                                            <div className="space-y-3">
-                                                {patient.visits.slice(0, 3).map((visit, index) => (
-                                                    <div key={visit.id} className="border border-gray-200 rounded-lg p-3">
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <h4 className="font-medium text-gray-900">{visit.visit_id}</h4>
-                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(visit.overall_status)}`}>
-                                                                {visit.overall_status.replace('_', ' ').toUpperCase()}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-sm text-gray-600">{visit.formatted_date}</p>
-                                                        {visit.chief_complaint && (
-                                                            <p className="text-sm text-gray-700 mt-1">
-                                                                <span className="font-medium">Complaint:</span> {visit.chief_complaint}
-                                                            </p>
-                                                        )}
-                                                        <div className="flex justify-between text-sm mt-2">
-                                                            <span>Dr. {visit.selected_doctor?.name || 'N/A'}</span>
-                                                            <span className="font-medium">{formatCurrency(visit.final_amount)}</span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                {patient.visits.length > 3 && (
-                                                    <p className="text-center text-sm text-gray-500">
-                                                        +{patient.visits.length - 3} more visits
-                                                    </p>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <p className="text-gray-500 text-center py-8">No previous visits</p>
-                                        )}
-                                    </div>
-
-                                    {/* Previous Vision Tests & Prescriptions */}
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                            <Eye className="h-5 w-5 text-purple-600" />
-                                            Previous Vision Tests & Prescriptions
-                                        </h3>
-
-                                        {/* Vision Tests */}
-                                        {patient.visionTests && patient.visionTests.length > 0 && (
-                                            <div className="mb-6">
-                                                <h4 className="font-medium text-purple-800 mb-2">Vision Tests ({patient.visionTests.length})</h4>
-                                                <div className="space-y-2">
-                                                    {patient.visionTests.slice(0, 2).map((test) => (
-                                                        <div key={test.id} className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <span className="text-sm font-medium text-purple-900">{test.formatted_date}</span>
-                                                                <button
-                                                                    onClick={() => printVisionTest(test.id)}
-                                                                    className="text-purple-600 hover:text-purple-800"
-                                                                >
-                                                                    <Printer className="h-4 w-4" />
-                                                                </button>
-                                                            </div>
-                                                            <div className="grid grid-cols-2 gap-2 text-xs">
-                                                                <div>R: {test.right_eye_vision_without_glass || 'N/A'}</div>
-                                                                <div>L: {test.left_eye_vision_without_glass || 'N/A'}</div>
-                                                            </div>
-                                                            <p className="text-xs text-purple-600 mt-1">By: {test.performed_by.name}</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Prescriptions */}
-                                        {patient.prescriptions && patient.prescriptions.length > 0 && (
-                                            <div>
-                                                <h4 className="font-medium text-green-800 mb-2">Prescriptions ({patient.prescriptions.length})</h4>
-                                                <div className="space-y-2">
-                                                    {patient.prescriptions.slice(0, 2).map((prescription) => (
-                                                        <div key={prescription.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <span className="text-sm font-medium text-green-900">{prescription.formatted_date}</span>
-                                                                <button
-                                                                    onClick={() => printPrescription(prescription.id)}
-                                                                    className="text-green-600 hover:text-green-800"
-                                                                >
-                                                                    <Printer className="h-4 w-4" />
-                                                                </button>
-                                                            </div>
-                                                            <p className="text-xs text-green-700">
-                                                                Dr. {prescription.doctor.name} • {prescription.medicines_count} medicines
-                                                            </p>
-                                                            {prescription.can_edit && (
-                                                                <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full mt-1 inline-block">
-                                                                    Can Edit
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* 3. Latest Vision Test Results - Current Data */}
-                    {latestVisionTest && (
-                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                    <Eye className="h-6 w-6 text-purple-600" />
-                                    Latest Vision Test Results
-                                    <span className="bg-purple-100 text-purple-800 text-sm px-2 py-1 rounded-full">
-                                        {latestVisionTest.formatted_date}
-                                    </span>
-                                </h2>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {canFillVisionTest && (
+                                <button
+                                    onClick={fillVisionTest}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                                >
+                                    <Eye className="h-4 w-4" />
+                                    Fill Vision
+                                </button>
+                            )}
+                            {canWritePrescription && (
+                                <button
+                                    onClick={createPrescription}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-xs font-bold text-white hover:bg-green-700"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Prescription
+                                </button>
+                            )}
+                            {latestVisionTest && (
+                                <button
+                                    onClick={() => setShowVisionModal(true)}
+                                    className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-3 py-2 text-xs font-bold text-purple-800 hover:bg-purple-100"
+                                >
+                                    <Eye className="h-4 w-4" />
+                                    Vision Result
+                                </button>
+                            )}
+                            {latestVisionTest && (
                                 <button
                                     onClick={() => handlePrint(latestVisionTest.id)}
-                                    className="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
+                                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50"
                                 >
                                     <Printer className="h-4 w-4" />
-                                    Print Report
+                                    Print
                                 </button>
-                            </div>
-
-                            {/* Chief Complaints */}
-                            {latestVisionTest.complains && (
-                                <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <ClipboardList className="h-4 w-4 text-orange-600" />
-                                        <span className="font-medium text-orange-800">Patient Complaints</span>
-                                    </div>
-                                    <p className="text-gray-700">{latestVisionTest.complains}</p>
-                                </div>
                             )}
+                        </div>
+                    </div>
+                </div>
 
-                            {/* Visual Acuity Assessment */}
-                            <div className="mb-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                    <Target className="h-5 w-5 text-blue-600" />
-                                    Visual Acuity Assessment
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* Right Eye */}
-                                    <div className="p-4 border border-red-200 rounded-lg bg-red-50">
-                                        <h4 className="font-semibold text-red-800 mb-3 flex items-center gap-2">
-                                            <Eye className="h-4 w-4" />
-                                            Right Eye (OD)
-                                        </h4>
-                                        <div className="space-y-2 text-sm">
-                                            {hasValue(latestVisionTest.right_eye_vision_without_glass) && (
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Without Glass:</span>
-                                                    <span className="font-medium">{latestVisionTest.right_eye_vision_without_glass}</span>
-                                                </div>
-                                            )}
-                                            {hasValue(latestVisionTest.right_eye_vision_with_glass) && (
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">With Glass:</span>
-                                                    <span className="font-medium">{latestVisionTest.right_eye_vision_with_glass}</span>
-                                                </div>
-                                            )}
-                                            {hasValue(latestVisionTest.right_eye_iop) && (
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">IOP:</span>
-                                                    <span className="font-medium">{latestVisionTest.right_eye_iop} mmHg</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Left Eye */}
-                                    <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
-                                        <h4 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-                                            <Eye className="h-4 w-4" />
-                                            Left Eye (OS)
-                                        </h4>
-                                        <div className="space-y-2 text-sm">
-                                            {hasValue(latestVisionTest.left_eye_vision_without_glass) && (
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Without Glass:</span>
-                                                    <span className="font-medium">{latestVisionTest.left_eye_vision_without_glass}</span>
-                                                </div>
-                                            )}
-                                            {hasValue(latestVisionTest.left_eye_vision_with_glass) && (
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">With Glass:</span>
-                                                    <span className="font-medium">{latestVisionTest.left_eye_vision_with_glass}</span>
-                                                </div>
-                                            )}
-                                            {hasValue(latestVisionTest.left_eye_iop) && (
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">IOP:</span>
-                                                    <span className="font-medium">{latestVisionTest.left_eye_iop} mmHg</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                {/* Compact patient header */}
+                <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-start gap-3">
+                        <button
+                            onClick={goBack}
+                            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            Back
+                        </button>
+                        <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <div className="text-lg font-bold text-gray-900">
+                                    <span className="mr-2 text-base">{getGenderIcon(patient.gender)}</span>
+                                    {patient.name}
                                 </div>
+                                <span className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-700">
+                                    {patient.patient_id}
+                                </span>
+                                {patient.age && (
+                                    <span className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs text-gray-700">
+                                        {patient.age}y
+                                    </span>
+                                )}
+                                {todaysAppointment && (
+                                    <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-800">
+                                        Today SL: {todaysAppointment.serial_number}
+                                    </span>
+                                )}
                             </div>
-
-                            {/* Vital Signs */}
-                            {(hasValue(latestVisionTest.blood_pressure) || hasValue(latestVisionTest.blood_sugar)) && (
-                                <div className="mb-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                        <Heart className="h-5 w-5 text-red-600" />
-                                        Vital Signs
-                                    </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {hasValue(latestVisionTest.blood_pressure) && (
-                                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                                                <div className="flex items-center justify-center gap-2 mb-2">
-                                                    <Heart className="h-4 w-4 text-red-600" />
-                                                    <span className="font-medium text-red-800">Blood Pressure</span>
-                                                </div>
-                                                <p className="text-lg font-bold text-red-900">{latestVisionTest.blood_pressure}</p>
-                                            </div>
-                                        )}
-
-                                        {hasValue(latestVisionTest.blood_sugar) && (
-                                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
-                                                <div className="flex items-center justify-center gap-2 mb-2">
-                                                    <Droplets className="h-4 w-4 text-orange-600" />
-                                                    <span className="font-medium text-orange-800">Blood Sugar</span>
-                                                </div>
-                                                <p className="text-lg font-bold text-orange-900">{latestVisionTest.blood_sugar}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Medical Conditions */}
-                            <div className="mb-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                    <Shield className="h-5 w-5 text-green-600" />
-                                    Medical Conditions
-                                </h3>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    <div className="flex items-center gap-2">
-                                        {getConditionIcon(latestVisionTest.is_diabetic)}
-                                        <span className="text-sm text-gray-700">Diabetic</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {getConditionIcon(latestVisionTest.is_cardiac)}
-                                        <span className="text-sm text-gray-700">Cardiac</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {getConditionIcon(latestVisionTest.is_hypertensive)}
-                                        <span className="text-sm text-gray-700">Hypertensive</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="text-sm text-gray-600 text-center">
-                                Performed by: {latestVisionTest.performed_by.name} on {latestVisionTest.formatted_date}
+                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600">
+                                <span className="inline-flex items-center gap-1">
+                                    <Phone className="h-3.5 w-3.5 text-gray-400" />
+                                    {patient.phone}
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                    <Activity className="h-3.5 w-3.5 text-gray-400" />
+                                    Visits: {safeStats.total_visits}
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                    <Stethoscope className="h-3.5 w-3.5 text-gray-400" />
+                                    Dr. {doctor.name}
+                                </span>
                             </div>
                         </div>
+                    </div>
+
+                    {patient.medical_history && (
+                        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                            <span className="font-semibold">Medical history:</span> {patient.medical_history}
+                        </div>
                     )}
+                </div>
 
-                    {/* 4. Current Visit Status & Write Prescription */}
-                    {latestVisit && (
-                        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                    <Activity className="h-6 w-6 text-blue-600" />
-                                    Current Visit Status - {latestVisit.visit_id}
-                                </h2>
-                                <div className="flex items-center gap-2">
-                                    <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(latestVisit.overall_status)}`}>
-                                        {latestVisit.overall_status.replace('_', ' ').toUpperCase()}
-                                    </span>
-                                    <span className="text-sm text-gray-500">{latestVisit.formatted_date}</span>
-                                </div>
-                            </div>
+                {/* 2. Old Data Section - Click to Expand */}
+                <div className="rounded-2xl border border-gray-100 bg-white shadow-xl">
+                    <div className="border-b border-gray-200 p-6">
+                        <button onClick={() => setShowOldData(!showOldData)} className="flex w-full items-center justify-between text-left">
+                            <h2 className="flex items-center gap-2 text-xl font-bold text-gray-900">
+                                <History className="h-6 w-6 text-amber-600" />
+                                Previous Records & History
+                                <span className="rounded-full bg-amber-100 px-2 py-1 text-sm text-amber-800">
+                                    {safeStats.total_visits} visits • {safeStats.total_vision_tests} tests • {safeStats.total_prescriptions}{' '}
+                                    prescriptions
+                                </span>
+                            </h2>
+                            {showOldData ? <ChevronDown className="h-5 w-5 text-gray-500" /> : <ChevronRight className="h-5 w-5 text-gray-500" />}
+                        </button>
+                    </div>
 
-                            {/* Visit Progress Steps */}
-                            <div className="mb-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="font-semibold text-gray-900">Visit Progress</h3>
-                                </div>
-                                <div className="flex items-center">
-                                    {/* Payment Step */}
-                                    <div className="flex items-center">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${latestVisit.payment_status === 'paid' ? 'bg-green-500' : 'bg-gray-300'
-                                            }`}>
-                                            {latestVisit.payment_status === 'paid' ? (
-                                                <CheckCircle className="h-4 w-4 text-white" />
-                                            ) : (
-                                                <DollarSign className="h-4 w-4 text-white" />
+                    {showOldData && (
+                        <div className="p-6">
+                            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                <div className="rounded-xl border border-gray-200 p-4">
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
+                                            <Activity className="h-4 w-4 text-blue-600" />
+                                            Visits
+                                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
+                                                {patient.visits?.length || 0}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {patient.visits && patient.visits.length > 0 ? (
+                                        <div className="divide-y divide-gray-100">
+                                            {patient.visits.slice(0, 5).map((visit) => (
+                                                <div key={visit.id} className="py-2">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <div className="min-w-0">
+                                                            <div className="truncate text-sm font-semibold text-gray-900">{visit.visit_id}</div>
+                                                            <div className="mt-0.5 line-clamp-1 text-xs text-gray-600">
+                                                                {visit.formatted_date}
+                                                                {visit.chief_complaint ? ` • CC: ${visit.chief_complaint}` : ''}
+                                                            </div>
+                                                        </div>
+                                                        <span
+                                                            className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusColor(visit.overall_status)}`}
+                                                        >
+                                                            {visit.overall_status.replace('_', ' ').toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {patient.visits.length > 5 && (
+                                                <div className="pt-2 text-center text-xs text-gray-500">+{patient.visits.length - 5} more</div>
                                             )}
                                         </div>
-                                        <span className={`ml-2 text-sm font-medium ${latestVisit.payment_status === 'paid' ? 'text-green-600' : 'text-gray-500'
-                                            }`}>
-                                            Payment
+                                    ) : (
+                                        <div className="py-8 text-center text-sm text-gray-500">No previous visits</div>
+                                    )}
+                                </div>
+
+                                <div className="rounded-xl border border-gray-200 p-4">
+                                    <div className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900">
+                                        <Eye className="h-4 w-4 text-purple-600" />
+                                        Vision Tests
+                                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
+                                            {previousVisionTests.length}
                                         </span>
                                     </div>
-
-                                    <div className={`flex-1 h-0.5 mx-4 ${latestVisit.payment_status === 'paid' ? 'bg-green-500' : 'bg-gray-300'
-                                        }`}></div>
-
-                                    {/* Vision Test Step */}
-                                    <div className="flex items-center">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${latestVisit.vision_test_status === 'completed' ? 'bg-green-500' :
-                                            latestVisit.payment_status === 'paid' ? 'bg-blue-500' : 'bg-gray-300'
-                                            }`}>
-                                            <Eye className="h-4 w-4 text-white" />
+                                    {previousVisionTests.length > 0 ? (
+                                        <div className="divide-y divide-gray-100">
+                                            {previousVisionTests.slice(0, 5).map((test) => (
+                                                <div key={test.id} className="flex items-center justify-between gap-3 py-2">
+                                                    <div className="min-w-0">
+                                                        <div className="text-sm font-semibold text-gray-900">{test.formatted_date}</div>
+                                                        <div className="mt-0.5 text-xs text-gray-600">
+                                                            OD: {test.right_eye_vision_without_glass || 'N/A'} • OS:{' '}
+                                                            {test.left_eye_vision_without_glass || 'N/A'}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => printVisionTest(test.id)}
+                                                        className="shrink-0 rounded-lg border border-gray-200 bg-white p-2 text-gray-700 hover:bg-gray-50"
+                                                        aria-label="Print vision test"
+                                                    >
+                                                        <Printer className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <span className={`ml-2 text-sm font-medium ${latestVisit.vision_test_status === 'completed' ? 'text-green-600' :
-                                            latestVisit.payment_status === 'paid' ? 'text-blue-600' : 'text-gray-500'
-                                            }`}>
-                                            Vision Test
-                                        </span>
-                                    </div>
-
-                                    <div className={`flex-1 h-0.5 mx-4 ${latestVisit.vision_test_status === 'completed' ? 'bg-green-500' : 'bg-gray-300'
-                                        }`}></div>
-
-                                    {/* Prescription Step */}
-                                    <div className="flex items-center">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${latestVisit.overall_status === 'completed' ? 'bg-green-500' :
-                                            latestVisit.overall_status === 'prescription' ? 'bg-blue-500' : 'bg-gray-300'
-                                            }`}>
-                                            <Stethoscope className="h-4 w-4 text-white" />
-                                        </div>
-                                        <span className={`ml-2 text-sm font-medium ${latestVisit.overall_status === 'completed' ? 'text-green-600' :
-                                            latestVisit.overall_status === 'prescription' ? 'text-blue-600' : 'text-gray-500'
-                                            }`}>
-                                            Prescription
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Chief Complaint */}
-                            {latestVisit.chief_complaint && (
-                                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <AlertCircle className="h-4 w-4 text-yellow-600" />
-                                        <span className="font-medium text-yellow-800">Chief Complaint</span>
-                                    </div>
-                                    <p className="text-gray-700">{latestVisit.chief_complaint}</p>
-                                </div>
-                            )}
-
-                            {/* Payment Summary */}
-                            <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                                    <h4 className="font-semibold text-green-900 mb-2">Total Amount</h4>
-                                    <p className="text-2xl font-bold text-green-600">{formatCurrency(latestVisit.final_amount)}</p>
-                                </div>
-                                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
-                                    <h4 className="font-semibold text-blue-900 mb-2">Paid</h4>
-                                    <p className="text-2xl font-bold text-blue-600">{formatCurrency(latestVisit.total_paid)}</p>
-                                </div>
-                                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
-                                    <h4 className="font-semibold text-red-900 mb-2">Due</h4>
-                                    <p className="text-2xl font-bold text-red-600">{formatCurrency(latestVisit.total_due)}</p>
-                                </div>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex items-center justify-center gap-4">
-                                {/* Ready for Prescription */}
-                                {latestVisit.overall_status === 'prescription' &&
-                                    latestVisit.payment_status === 'paid' &&
-                                    latestVisit.vision_test_status === 'completed' && (
-                                        <button
-                                            onClick={createPrescription}
-                                            className="px-8 py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold text-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-3 shadow-xl"
-                                        >
-                                            <Plus className="h-6 w-6" />
-                                            Write Prescription
-                                        </button>
+                                    ) : (
+                                        <div className="py-8 text-center text-sm text-gray-500">No previous vision tests</div>
                                     )}
 
-                                {/* Status Messages */}
-                                {latestVisit.payment_status !== 'paid' && (
-                                    <div className="flex items-center gap-3 px-8 py-4 bg-red-100 text-red-700 rounded-xl">
-                                        <AlertCircle className="h-6 w-6" />
-                                        <span className="font-medium">Waiting for payment completion</span>
-                                    </div>
-                                )}
-
-                                {latestVisit.payment_status === 'paid' && latestVisit.vision_test_status !== 'completed' && (
-                                    <div className="flex items-center gap-3 px-8 py-4 bg-purple-100 text-purple-700 rounded-xl">
-                                        <Clock className="h-6 w-6" />
-                                        <span className="font-medium">Waiting for vision test completion</span>
-                                    </div>
-                                )}
-
-                                {latestVisit.overall_status === 'completed' && (
-                                    <div className="flex items-center gap-3 px-8 py-4 bg-green-100 text-green-700 rounded-xl">
-                                        <CheckCircle className="h-6 w-6" />
-                                        <span className="font-medium">Visit completed successfully</span>
-                                    </div>
-                                )}
+                                    {patient.prescriptions && patient.prescriptions.length > 0 && (
+                                        <div className="mt-5">
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <div className="text-sm font-bold text-gray-900">Prescriptions</div>
+                                                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700">
+                                                    {patient.prescriptions.length}
+                                                </span>
+                                            </div>
+                                            <div className="divide-y divide-gray-100">
+                                                {patient.prescriptions.slice(0, 5).map((p) => (
+                                                    <div key={p.id} className="flex items-center justify-between gap-3 py-2">
+                                                        <div className="min-w-0">
+                                                            <div className="text-sm font-semibold text-gray-900">{p.formatted_date}</div>
+                                                            <div className="mt-0.5 text-xs text-gray-600">
+                                                                Dr. {p.doctor.name} • {p.medicines_count} meds
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => printPrescription(p.id)}
+                                                            className="shrink-0 rounded-lg border border-gray-200 bg-white p-2 text-gray-700 hover:bg-gray-50"
+                                                            aria-label="Print prescription"
+                                                        >
+                                                            <Printer className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
+                </div>
 
-                    {/* Footer Actions */}
-                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm text-gray-600">
-                                <strong>Consultation with:</strong> Dr. {doctor.name} ({doctor.specialization})
-                                {todaysAppointment && (
-                                    <span className="ml-4">
-                                        <strong>Today's Serial:</strong> {todaysAppointment.serial_number} at {todaysAppointment.appointment_time}
-                                    </span>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-3">
-                                {latestVisionTest && (
-                                    <button
-                                        onClick={() => printVisionTest(latestVisionTest.id)}
-                                        className="px-4 py-2 border border-purple-300 text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition-colors flex items-center gap-2"
-                                    >
-                                        <Eye className="h-4 w-4" />
-                                        Print Vision Test
-                                    </button>
-                                )}
+                {/* 3. Latest Vision Test Results - Current Data */}
+                {latestVisionTest && (
+                    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h2 className="flex items-center gap-2 text-xl font-bold text-gray-900">
+                                <Eye className="h-6 w-6 text-purple-600" />
+                                Latest Vision Test Results
+                                <span className="rounded-full bg-purple-100 px-2 py-1 text-sm text-purple-800">
+                                    {latestVisionTest.formatted_date}
+                                </span>
+                            </h2>
+                            <div className="flex items-center gap-2">
                                 <button
-                                    onClick={() => window.print()}
-                                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+                                    onClick={() => setShowVisionModal(true)}
+                                    className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-700"
+                                >
+                                    <Eye className="h-4 w-4" />
+                                    View
+                                </button>
+                                <button
+                                    onClick={() => handlePrint(latestVisionTest.id)}
+                                    className="flex items-center gap-2 rounded-lg border border-purple-300 px-4 py-2 font-medium text-purple-700 transition-colors hover:bg-purple-50"
                                 >
                                     <Printer className="h-4 w-4" />
-                                    Print Summary
+                                    Print
                                 </button>
-                                {latestVisit && latestVisit.overall_status === 'prescription' && (
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                <div className="text-xs font-semibold text-gray-600">OD / OS (without glass)</div>
+                                <div className="mt-2 flex items-center justify-between text-sm font-bold text-gray-900">
+                                    <span>OD: {latestVisionTest.right_eye_vision_without_glass || '—'}</span>
+                                    <span>OS: {latestVisionTest.left_eye_vision_without_glass || '—'}</span>
+                                </div>
+                                <div className="mt-2 text-xs text-gray-600">
+                                    IOP: OD {latestVisionTest.right_eye_iop || '—'} • OS {latestVisionTest.left_eye_iop || '—'}
+                                </div>
+                            </div>
+
+                            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                <div className="text-xs font-semibold text-gray-600">Vitals</div>
+                                <div className="mt-2 space-y-2">
+                                    {renderField('BP', latestVisionTest.blood_pressure)}
+                                    {renderField('Blood sugar', latestVisionTest.blood_sugar)}
+                                </div>
+                            </div>
+
+                            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                <div className="text-xs font-semibold text-gray-600">Flags</div>
+                                <div className="mt-2 space-y-2 text-sm">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-gray-700">Diabetic</span>
+                                        {getConditionIcon(latestVisionTest.is_diabetic)}
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-gray-700">Cardiac</span>
+                                        {getConditionIcon(latestVisionTest.is_cardiac)}
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-gray-700">Hypertensive</span>
+                                        {getConditionIcon(latestVisionTest.is_hypertensive)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {latestVisionTest.complains && (
+                            <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-gray-900">
+                                <span className="mr-2 inline-flex items-center gap-2 font-bold text-orange-900">
+                                    <ClipboardList className="h-4 w-4" />
+                                    Complaints:
+                                </span>
+                                {latestVisionTest.complains}
+                            </div>
+                        )}
+
+                        <div className="mt-4 text-xs text-gray-600">
+                            Performed by <span className="font-semibold">{latestVisionTest.performed_by.name}</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* 4. Current Visit Status & Write Prescription */}
+                {latestVisit && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div className="flex items-center gap-2">
+                                <Activity className="h-5 w-5 text-blue-600" />
+                                <div className="text-sm font-bold text-gray-900">Current Visit</div>
+                                <span className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-800">
+                                    {latestVisit.visit_id}
+                                </span>
+                                <span className="text-xs text-gray-500">{latestVisit.formatted_date}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <span
+                                    className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusColor(latestVisit.payment_status)}`}
+                                >
+                                    Payment: {latestVisit.payment_status.toUpperCase()}
+                                </span>
+                                <span
+                                    className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusColor(latestVisit.vision_test_status)}`}
+                                >
+                                    Vision: {latestVisit.vision_test_status.toUpperCase()}
+                                </span>
+                                <span
+                                    className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${getStatusColor(latestVisit.overall_status)}`}
+                                >
+                                    {latestVisit.overall_status.replace('_', ' ').toUpperCase()}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Amount quick view */}
+                        <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-center">
+                                <div className="text-gray-600">Total</div>
+                                <div className="font-bold text-gray-900">{formatCurrency(latestVisit.final_amount)}</div>
+                            </div>
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-center">
+                                <div className="text-gray-600">Paid</div>
+                                <div className="font-bold text-gray-900">{formatCurrency(latestVisit.total_paid)}</div>
+                            </div>
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-center">
+                                <div className="text-gray-600">Due</div>
+                                <div className="font-bold text-gray-900">{formatCurrency(latestVisit.total_due)}</div>
+                            </div>
+                        </div>
+
+                        {/* Chief Complaint */}
+                        {latestVisit.chief_complaint && (
+                            <div className="mt-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                                <div className="mb-1 flex items-center gap-2">
+                                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                                    <span className="text-xs font-semibold text-yellow-800">Chief Complaint</span>
+                                </div>
+                                <p className="text-sm text-gray-800">{latestVisit.chief_complaint}</p>
+                            </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="mt-4 flex flex-col items-center justify-center gap-3 md:flex-row">
+                            {/* Ready for Prescription */}
+                            {latestVisit.overall_status === 'prescription' &&
+                                latestVisit.payment_status === 'paid' &&
+                                (latestVisit.vision_test_status === 'completed' || latestVisit.vision_test_status === 'skipped') && (
                                     <button
                                         onClick={createPrescription}
-                                        className="px-6 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 flex items-center gap-2"
+                                        className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-5 py-3 text-sm font-bold text-white hover:bg-green-700"
                                     >
-                                        <Plus className="h-4 w-4" />
+                                        <Plus className="h-5 w-5" />
                                         Write Prescription
                                     </button>
                                 )}
-                            </div>
+
+                            {/* Status Messages */}
+                            {latestVisit.payment_status !== 'paid' && (
+                                <div className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+                                    <AlertCircle className="h-5 w-5" />
+                                    <span className="font-semibold">Waiting for payment</span>
+                                </div>
+                            )}
+
+                            {latestVisit.payment_status === 'paid' &&
+                                latestVisit.vision_test_status !== 'completed' &&
+                                latestVisit.vision_test_status !== 'skipped' && (
+                                    <div className="flex flex-col items-center gap-2 rounded-lg bg-purple-50 px-4 py-3 text-purple-900">
+                                        <div className="flex items-center gap-2 text-sm font-semibold">
+                                            <Clock className="h-5 w-5" />
+                                            Vision test pending
+                                        </div>
+                                        <button
+                                            onClick={fillVisionTest}
+                                            className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
+                                        >
+                                            Fill vision test (Doctor)
+                                        </button>
+                                    </div>
+                                )}
+
+                            {latestVisit.payment_status === 'paid' && latestVisit.vision_test_status === 'skipped' && (
+                                <div className="inline-flex items-center gap-2 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                    <AlertCircle className="h-5 w-5" />
+                                    <span className="font-semibold">Vision test skipped (blank)</span>
+                                </div>
+                            )}
+
+                            {latestVisit.overall_status === 'completed' && (
+                                <div className="inline-flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-800">
+                                    <CheckCircle className="h-5 w-5" />
+                                    <span className="font-semibold">Visit completed</span>
+                                </div>
+                            )}
                         </div>
                     </div>
-
-                </div>
+                )}
             </div>
+
+            {/* Vision test details modal */}
+            {latestVisionTest && showVisionModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-gray-200 p-5">
+                            <div>
+                                <div className="text-sm font-bold text-gray-900">Vision Test Details</div>
+                                <div className="mt-1 text-xs text-gray-600">
+                                    {patient.name} • {patient.patient_id} • {latestVisionTest.formatted_date}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowVisionModal(false)}
+                                className="rounded-lg p-2 text-gray-600 hover:bg-gray-100"
+                                aria-label="Close"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="max-h-[70vh] overflow-y-auto p-5">
+                            {hasValue(latestVisionTest.complains) && (
+                                <div className="mb-4 rounded-xl border border-orange-200 bg-orange-50 p-4">
+                                    <div className="mb-2 flex items-center gap-2 text-sm font-bold text-orange-900">
+                                        <ClipboardList className="h-4 w-4" />
+                                        Complaints
+                                    </div>
+                                    <div className="text-sm text-gray-900">{latestVisionTest.complains}</div>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                <div className="rounded-xl border border-gray-200 p-4">
+                                    <div className="mb-3 text-sm font-bold text-gray-900">Visual Acuity</div>
+                                    <div className="space-y-2">
+                                        {renderField('OD (without)', latestVisionTest.right_eye_vision_without_glass)}
+                                        {renderField('OD (with)', latestVisionTest.right_eye_vision_with_glass)}
+                                        {renderField('OS (without)', latestVisionTest.left_eye_vision_without_glass)}
+                                        {renderField('OS (with)', latestVisionTest.left_eye_vision_with_glass)}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border border-gray-200 p-4">
+                                    <div className="mb-3 text-sm font-bold text-gray-900">IOP & Vitals</div>
+                                    <div className="space-y-2">
+                                        {renderField('OD IOP', latestVisionTest.right_eye_iop)}
+                                        {renderField('OS IOP', latestVisionTest.left_eye_iop)}
+                                        {renderField('BP', latestVisionTest.blood_pressure)}
+                                        {renderField('Blood sugar', latestVisionTest.blood_sugar)}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 rounded-xl border border-gray-200 p-4">
+                                <div className="mb-3 flex items-center gap-2 text-sm font-bold text-gray-900">
+                                    <Shield className="h-4 w-4 text-gray-700" />
+                                    Medical Conditions
+                                </div>
+                                <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
+                                    <div className="flex items-center gap-2">
+                                        {getConditionIcon(latestVisionTest.is_diabetic)}
+                                        <span className="text-gray-800">Diabetic</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {getConditionIcon(latestVisionTest.is_cardiac)}
+                                        <span className="text-gray-800">Cardiac</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {getConditionIcon(latestVisionTest.is_hypertensive)}
+                                        <span className="text-gray-800">Hypertensive</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 text-xs text-gray-600">
+                                Performed by <span className="font-semibold">{latestVisionTest.performed_by.name}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 border-t border-gray-200 p-5">
+                            <button
+                                onClick={() => setShowVisionModal(false)}
+                                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                                Close
+                            </button>
+                            <button
+                                onClick={() => handlePrint(latestVisionTest.id)}
+                                className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700"
+                            >
+                                <Printer className="h-4 w-4" />
+                                Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 };

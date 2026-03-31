@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
-import { router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
+import { Head, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 
 interface Patient {
     id: number;
@@ -60,14 +59,26 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
     const [showBulkModal, setShowBulkModal] = useState(false);
     const [currentVisit, setCurrentVisit] = useState<Visit | null>(null);
 
-    const { data: completeData, setData: setCompleteData, patch: patchComplete, processing: processingComplete, reset: resetComplete } = useForm({
+    const {
+        data: completeData,
+        setData: setCompleteData,
+        patch: patchComplete,
+        processing: processingComplete,
+        reset: resetComplete,
+    } = useForm({
         completion_type: 'both',
         notes: '',
         skip_vision_test: false,
         skip_prescription: false,
     });
 
-    const { data: bulkData, setData: setBulkData, post: postBulk, processing: processingBulk, reset: resetBulk } = useForm({
+    const {
+        data: bulkData,
+        setData: setBulkData,
+        post: postBulk,
+        processing: processingBulk,
+        reset: resetBulk,
+    } = useForm({
         visit_ids: [] as number[],
         completion_type: 'simple_complete',
         bulk_notes: '',
@@ -75,20 +86,29 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'completed': return 'bg-green-100 text-green-800';
-            case 'vision_test': return 'bg-blue-100 text-blue-800';
-            case 'prescription': return 'bg-yellow-100 text-yellow-800';
-            case 'pending': return 'bg-gray-100 text-gray-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'completed':
+                return 'bg-green-100 text-green-800';
+            case 'vision_test':
+                return 'bg-blue-100 text-blue-800';
+            case 'prescription':
+                return 'bg-yellow-100 text-yellow-800';
+            case 'pending':
+                return 'bg-gray-100 text-gray-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
         }
     };
 
     const getPaymentStatusColor = (status: string) => {
         switch (status) {
-            case 'paid': return 'bg-green-100 text-green-800';
-            case 'pending': return 'bg-red-100 text-red-800';
-            case 'partial': return 'bg-yellow-100 text-yellow-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'paid':
+                return 'bg-green-100 text-green-800';
+            case 'pending':
+                return 'bg-red-100 text-red-800';
+            case 'partial':
+                return 'bg-yellow-100 text-yellow-800';
+            default:
+                return 'bg-gray-100 text-gray-800';
         }
     };
 
@@ -124,14 +144,14 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
             },
             onError: (errors) => {
                 console.error('Complete visit errors:', errors);
-            }
+            },
         });
     };
 
     const submitBulkComplete = () => {
         const submitData = {
             ...bulkData,
-            visit_ids: selectedVisits
+            visit_ids: selectedVisits,
         };
 
         console.log('Submitting bulk complete with data:', submitData);
@@ -146,15 +166,13 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
             },
             onError: (errors) => {
                 console.error('Bulk complete errors:', errors);
-            }
+            },
         });
     };
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
-            const selectableVisits = visits.data
-                .filter(visit => visit.overall_status !== 'completed')
-                .map(visit => visit.id);
+            const selectableVisits = visits.data.filter((visit) => visit.overall_status !== 'completed').map((visit) => visit.id);
             setSelectedVisits(selectableVisits);
         } else {
             setSelectedVisits([]);
@@ -163,9 +181,9 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
 
     const handleSelectVisit = (visitId: number, checked: boolean) => {
         if (checked) {
-            setSelectedVisits(prev => [...prev, visitId]);
+            setSelectedVisits((prev) => [...prev, visitId]);
         } else {
-            setSelectedVisits(prev => prev.filter(id => id !== visitId));
+            setSelectedVisits((prev) => prev.filter((id) => id !== visitId));
         }
     };
 
@@ -197,7 +215,7 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
     };
 
     // Get count of selectable (non-completed) visits
-    const selectableVisitsCount = visits.data.filter(visit => visit.overall_status !== 'completed').length;
+    const selectableVisitsCount = visits.data.filter((visit) => visit.overall_status !== 'completed').length;
     const isAllSelectableSelected = selectedVisits.length === selectableVisitsCount && selectableVisitsCount > 0;
 
     return (
@@ -206,76 +224,73 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
 
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Pending Visits</h1>
                         <p className="text-gray-600">Manage and complete patient visits</p>
                     </div>
                     {selectedVisits.length > 0 && (
-                        <button
-                            onClick={handleBulkComplete}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
-                        >
+                        <button onClick={handleBulkComplete} className="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700">
                             Complete {selectedVisits.length} Visits
                         </button>
                     )}
                 </div>
 
                 {/* Statistics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-white p-6 rounded-lg shadow border">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    <div className="rounded-lg border bg-white p-6 shadow">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Total Pending</p>
                                 <p className="text-2xl font-bold text-gray-900">{statistics.total_pending}</p>
                             </div>
-                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                <span className="text-red-600 text-xl">⏳</span>
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                                <span className="text-xl text-red-600">⏳</span>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-white p-6 rounded-lg shadow border">
+                    <div className="rounded-lg border bg-white p-6 shadow">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Vision Test Ready</p>
                                 <p className="text-2xl font-bold text-gray-900">{statistics.ready_for_vision_test}</p>
                             </div>
-                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                                <span className="text-blue-600 text-xl">👁️</span>
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+                                <span className="text-xl text-blue-600">👁️</span>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-white p-6 rounded-lg shadow border">
+                    <div className="rounded-lg border bg-white p-6 shadow">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Prescription Ready</p>
                                 <p className="text-2xl font-bold text-gray-900">{statistics.ready_for_prescription}</p>
                             </div>
-                            <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                                <span className="text-yellow-600 text-xl">📋</span>
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
+                                <span className="text-xl text-yellow-600">📋</span>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-white p-6 rounded-lg shadow border">
+                    <div className="rounded-lg border bg-white p-6 shadow">
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Payment Pending</p>
                                 <p className="text-2xl font-bold text-gray-900">{statistics.payment_pending}</p>
                             </div>
-                            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
-                                <span className="text-orange-600 text-xl">💰</span>
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
+                                <span className="text-xl text-orange-600">💰</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Filters */}
-                <div className="bg-white p-4 rounded-lg shadow border">
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="rounded-lg border bg-white p-4 shadow">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Status Filter</label>
+                            <label className="mb-2 block text-sm font-medium text-gray-700">Status Filter</label>
                             <select
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 value={filters.status_filter || ''}
                                 onChange={(e) => handleFilter('status_filter', e.target.value)}
                             >
@@ -286,9 +301,9 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Payment Status</label>
+                            <label className="mb-2 block text-sm font-medium text-gray-700">Payment Status</label>
                             <select
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 value={filters.payment_filter || ''}
                                 onChange={(e) => handleFilter('payment_filter', e.target.value)}
                             >
@@ -299,9 +314,9 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Date Filter</label>
+                            <label className="mb-2 block text-sm font-medium text-gray-700">Date Filter</label>
                             <select
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 value={filters.date_filter || ''}
                                 onChange={(e) => handleFilter('date_filter', e.target.value)}
                             >
@@ -313,9 +328,9 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Per Page</label>
+                            <label className="mb-2 block text-sm font-medium text-gray-700">Per Page</label>
                             <select
-                                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 value={filters.per_page || 20}
                                 onChange={(e) => handlePerPageChange(parseInt(e.target.value))}
                             >
@@ -331,7 +346,7 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                                     setSelectedVisits([]);
                                     router.get(route('patients.pending-visits'));
                                 }}
-                                className="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
+                                className="w-full rounded-lg bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
                             >
                                 Clear Filters
                             </button>
@@ -340,13 +355,11 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                 </div>
 
                 {/* Visits Table */}
-                <div className="bg-white rounded-lg shadow border overflow-hidden">
-                    <div className="p-4 border-b">
+                <div className="overflow-hidden rounded-lg border bg-white shadow">
+                    <div className="border-b p-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h2 className="text-lg font-semibold text-gray-900">
-                                    Patient Visits ({visits.total} total)
-                                </h2>
+                                <h2 className="text-lg font-semibold text-gray-900">Patient Visits ({visits.total} total)</h2>
                                 <p className="text-sm text-gray-600">
                                     Showing {visits.from} to {visits.to} of {visits.total} results
                                 </p>
@@ -369,16 +382,16 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Select</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Select</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Patient</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Doctor</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Status</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Payment</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Created</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="divide-y divide-gray-200 bg-white">
                                 {visits.data.map((visit) => (
                                     <tr key={visit.id} className={`hover:bg-gray-50 ${visit.overall_status === 'completed' ? 'bg-green-50' : ''}`}>
                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -403,37 +416,45 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="space-y-1">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(visit.overall_status)}`}>
+                                                <span
+                                                    className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getStatusColor(visit.overall_status)}`}
+                                                >
                                                     {visit.overall_status.replace('_', ' ').toUpperCase()}
                                                 </span>
                                                 <div className="flex gap-1">
-                                                    <span className={`text-xs px-1 py-0.5 rounded ${visit.vision_test_status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                                                    <span
+                                                        className={`rounded px-1 py-0.5 text-xs ${visit.vision_test_status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}
+                                                    >
                                                         Vision: {visit.vision_test_status || 'pending'}
                                                     </span>
-                                                    <span className={`text-xs px-1 py-0.5 rounded ${visit.prescription_status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                                                    <span
+                                                        className={`rounded px-1 py-0.5 text-xs ${visit.prescription_status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}
+                                                    >
                                                         Prescription: {visit.prescription_status || 'pending'}
                                                     </span>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentStatusColor(visit.payment_status)}`}>
+                                            <span
+                                                className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getPaymentStatusColor(visit.payment_status)}`}
+                                            >
                                                 {visit.payment_status.toUpperCase()}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
                                             {new Date(visit.created_at).toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             {visit.overall_status !== 'completed' ? (
                                                 <button
                                                     onClick={() => handleCompleteVisit(visit)}
-                                                    className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm"
+                                                    className="rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700"
                                                 >
                                                     Mark Complete
                                                 </button>
                                             ) : (
-                                                <span className="text-green-600 text-sm font-medium">✓ Completed</span>
+                                                <span className="text-sm font-medium text-green-600">✓ Completed</span>
                                             )}
                                         </td>
                                     </tr>
@@ -443,11 +464,11 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                     </div>
 
                     {visits.data.length === 0 && (
-                        <div className="text-center py-12">
-                            <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <div className="py-12 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
                                 <span className="text-2xl text-gray-400">📋</span>
                             </div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">No pending visits</h3>
+                            <h3 className="mb-2 text-lg font-medium text-gray-900">No pending visits</h3>
                             <p className="text-gray-500">All visits have been completed or there are no visits to show.</p>
                         </div>
                     )}
@@ -455,8 +476,8 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
 
                 {/* Enhanced Pagination */}
                 {visits.last_page > 1 && (
-                    <div className="bg-white p-4 rounded-lg shadow border">
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="rounded-lg border bg-white p-4 shadow">
+                        <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
                             <div className="text-sm text-gray-700">
                                 Showing {visits.from} to {visits.to} of {visits.total} results (Page {visits.current_page} of {visits.last_page})
                             </div>
@@ -466,7 +487,7 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                                 <button
                                     onClick={() => handlePageChange(1)}
                                     disabled={visits.current_page === 1}
-                                    className="px-3 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     First
                                 </button>
@@ -475,13 +496,13 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                                 <button
                                     onClick={() => handlePageChange(visits.current_page - 1)}
                                     disabled={visits.current_page === 1}
-                                    className="px-3 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Previous
                                 </button>
 
                                 {/* Page Numbers */}
-                                <div className="hidden sm:flex items-center gap-1">
+                                <div className="hidden items-center gap-1 sm:flex">
                                     {Array.from({ length: Math.min(5, visits.last_page) }, (_, i) => {
                                         let pageNum;
                                         if (visits.last_page <= 5) {
@@ -498,10 +519,10 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                                             <button
                                                 key={pageNum}
                                                 onClick={() => handlePageChange(pageNum)}
-                                                className={`px-3 py-2 text-sm border rounded-md ${
+                                                className={`rounded-md border px-3 py-2 text-sm ${
                                                     pageNum === visits.current_page
-                                                        ? 'bg-blue-600 text-white border-blue-600'
-                                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                                        ? 'border-blue-600 bg-blue-600 text-white'
+                                                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
                                                 }`}
                                             >
                                                 {pageNum}
@@ -514,7 +535,7 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                                 <button
                                     onClick={() => handlePageChange(visits.current_page + 1)}
                                     disabled={visits.current_page === visits.last_page}
-                                    className="px-3 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Next
                                 </button>
@@ -523,7 +544,7 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                                 <button
                                     onClick={() => handlePageChange(visits.last_page)}
                                     disabled={visits.current_page === visits.last_page}
-                                    className="px-3 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Last
                                 </button>
@@ -535,20 +556,17 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
 
             {/* Complete Visit Modal */}
             {showCompleteModal && currentVisit && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-                        <div className="flex items-center justify-between mb-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6">
+                        <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-lg font-semibold">Complete Visit</h3>
-                            <button
-                                onClick={() => setShowCompleteModal(false)}
-                                className="text-gray-400 hover:text-gray-600"
-                            >
+                            <button onClick={() => setShowCompleteModal(false)} className="text-gray-400 hover:text-gray-600">
                                 ✕
                             </button>
                         </div>
 
                         <div className="mb-4">
-                            <p className="text-sm text-gray-600 mb-2">
+                            <p className="mb-2 text-sm text-gray-600">
                                 Patient: <span className="font-medium">{currentVisit.patient.name}</span>
                             </p>
                             <p className="text-sm text-gray-600">
@@ -558,13 +576,11 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Completion Type
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">Completion Type</label>
                                 <select
                                     value={completeData.completion_type}
                                     onChange={(e) => setCompleteData('completion_type', e.target.value)}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 >
                                     <option value="vision_only">Vision Test Only</option>
                                     <option value="prescription_only">Prescription Only</option>
@@ -574,14 +590,12 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Notes (Optional)
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">Notes (Optional)</label>
                                 <textarea
                                     value={completeData.notes}
                                     onChange={(e) => setCompleteData('notes', e.target.value)}
                                     rows={3}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                     placeholder="Add completion notes..."
                                 />
                             </div>
@@ -599,17 +613,17 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                             )}
                         </div>
 
-                        <div className="flex gap-3 mt-6">
+                        <div className="mt-6 flex gap-3">
                             <button
                                 onClick={() => setShowCompleteModal(false)}
-                                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg"
+                                className="flex-1 rounded-lg bg-gray-200 px-4 py-2 text-gray-800 hover:bg-gray-300"
                                 disabled={processingComplete}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={submitComplete}
-                                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg"
+                                className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
                                 disabled={processingComplete}
                             >
                                 {processingComplete ? 'Processing...' : 'Complete Visit'}
@@ -621,14 +635,11 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
 
             {/* Bulk Complete Modal */}
             {showBulkModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-                        <div className="flex items-center justify-between mb-4">
+                <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
+                    <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6">
+                        <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-lg font-semibold">Bulk Complete Visits</h3>
-                            <button
-                                onClick={() => setShowBulkModal(false)}
-                                className="text-gray-400 hover:text-gray-600"
-                            >
+                            <button onClick={() => setShowBulkModal(false)} className="text-gray-400 hover:text-gray-600">
                                 ✕
                             </button>
                         </div>
@@ -641,13 +652,11 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
 
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Completion Type
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">Completion Type</label>
                                 <select
                                     value={bulkData.completion_type}
                                     onChange={(e) => setBulkData('completion_type', e.target.value)}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                 >
                                     <option value="simple_complete">Simple Complete</option>
                                     <option value="both">Both Vision & Prescription</option>
@@ -655,30 +664,28 @@ export default function PendingVisits({ visits, filters, statistics }: Props) {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Bulk Notes (Optional)
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">Bulk Notes (Optional)</label>
                                 <textarea
                                     value={bulkData.bulk_notes}
                                     onChange={(e) => setBulkData('bulk_notes', e.target.value)}
                                     rows={3}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                     placeholder="Add notes for all selected visits..."
                                 />
                             </div>
                         </div>
 
-                        <div className="flex gap-3 mt-6">
+                        <div className="mt-6 flex gap-3">
                             <button
                                 onClick={() => setShowBulkModal(false)}
-                                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-lg"
+                                className="flex-1 rounded-lg bg-gray-200 px-4 py-2 text-gray-800 hover:bg-gray-300"
                                 disabled={processingBulk}
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={submitBulkComplete}
-                                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg"
+                                className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
                                 disabled={processingBulk}
                             >
                                 {processingBulk ? 'Processing...' : 'Complete All'}

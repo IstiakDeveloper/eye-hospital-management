@@ -1,15 +1,7 @@
-import React, { useState } from 'react';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import {
-    ChevronLeft,
-    DollarSign,
-    TrendingUp,
-    Clock,
-    FileText,
-    AlertCircle,
-    X
-} from 'lucide-react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { AlertCircle, ChevronLeft, Clock, DollarSign, FileText, TrendingUp, X } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface Vendor {
     id: number;
@@ -74,7 +66,8 @@ interface PageProps {
 }
 
 const Button = ({ children, className = '', variant = 'primary', ...props }: any) => {
-    const baseClasses = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed';
+    const baseClasses =
+        'px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed';
     const variants = {
         primary: 'bg-blue-600 text-white hover:bg-blue-700',
         secondary: 'bg-gray-200 text-gray-700 hover:bg-gray-300',
@@ -89,20 +82,15 @@ const Button = ({ children, className = '', variant = 'primary', ...props }: any
     );
 };
 
-const StatCard = ({ title, value, icon: Icon, color }: {
-    title: string;
-    value: string | number;
-    icon: any;
-    color: string;
-}) => (
-    <div className="bg-white p-6 rounded-xl shadow-sm border">
+const StatCard = ({ title, value, icon: Icon, color }: { title: string; value: string | number; icon: any; color: string }) => (
+    <div className="rounded-xl border bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
             <div>
                 <p className="text-sm font-medium text-gray-600">{title}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
             </div>
-            <div className={`p-3 rounded-lg ${color}`}>
-                <Icon className="w-6 h-6 text-white" />
+            <div className={`rounded-lg p-3 ${color}`}>
+                <Icon className="h-6 w-6 text-white" />
             </div>
         </div>
     </div>
@@ -112,20 +100,15 @@ const Modal = ({ isOpen, onClose, title, children }: any) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-                <div className="flex items-center justify-between p-6 border-b">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b p-6">
                     <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-                    <button
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                        <X className="w-5 h-5" />
+                    <button onClick={onClose} className="text-gray-400 transition-colors hover:text-gray-600">
+                        <X className="h-5 w-5" />
                     </button>
                 </div>
-                <div className="p-6">
-                    {children}
-                </div>
+                <div className="p-6">{children}</div>
             </div>
         </div>
     );
@@ -172,15 +155,13 @@ export default function VendorTransactions() {
                     <div className="flex items-center space-x-4">
                         <Link href={route('optics.vendors.index')}>
                             <Button variant="secondary">
-                                <ChevronLeft className="w-4 h-4" />
+                                <ChevronLeft className="h-4 w-4" />
                                 <span>Back</span>
                             </Button>
                         </Link>
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">{vendor.name}</h1>
-                            {vendor.company_name && (
-                                <p className="text-gray-600">{vendor.company_name}</p>
-                            )}
+                            {vendor.company_name && <p className="text-gray-600">{vendor.company_name}</p>}
                         </div>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -189,7 +170,7 @@ export default function VendorTransactions() {
                         </Link>
                         {vendor.balance_type === 'due' && vendor.current_balance > 0 && (
                             <Button onClick={() => setShowPaymentModal(true)}>
-                                <DollarSign className="w-4 h-4" />
+                                <DollarSign className="h-4 w-4" />
                                 <span>Make Payment</span>
                             </Button>
                         )}
@@ -197,94 +178,65 @@ export default function VendorTransactions() {
                 </div>
 
                 {/* Vendor Info Card */}
-                <div className="bg-white rounded-xl shadow-sm border p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="rounded-xl border bg-white p-6 shadow-sm">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
                         <div>
                             <p className="text-sm text-gray-600">Contact</p>
                             <p className="font-medium text-gray-900">{vendor.phone}</p>
-                            {vendor.email && (
-                                <p className="text-sm text-gray-500">{vendor.email}</p>
-                            )}
+                            {vendor.email && <p className="text-sm text-gray-500">{vendor.email}</p>}
                         </div>
                         <div>
                             <p className="text-sm text-gray-600">Address</p>
-                            <p className="font-medium text-gray-900">
-                                {vendor.address || 'Not provided'}
-                            </p>
+                            <p className="font-medium text-gray-900">{vendor.address || 'Not provided'}</p>
                         </div>
                         <div>
                             <p className="text-sm text-gray-600">Credit Limit</p>
-                            <p className="font-medium text-gray-900">
-                                {formatCurrency(vendor.credit_limit)}
-                            </p>
+                            <p className="font-medium text-gray-900">{formatCurrency(vendor.credit_limit)}</p>
                         </div>
                         <div>
                             <p className="text-sm text-gray-600">Payment Terms</p>
-                            <p className="font-medium text-gray-900">
-                                {vendor.payment_terms_days} days
-                            </p>
+                            <p className="font-medium text-gray-900">{vendor.payment_terms_days} days</p>
                         </div>
                     </div>
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
                     <StatCard
                         title="Current Balance"
                         value={formatCurrency(vendor.current_balance)}
                         icon={vendor.balance_type === 'due' ? Clock : TrendingUp}
                         color={vendor.balance_type === 'due' ? 'bg-red-500' : 'bg-blue-500'}
                     />
-                    <StatCard
-                        title="Total Purchases"
-                        value={formatCurrency(totalPurchases)}
-                        icon={FileText}
-                        color="bg-purple-500"
-                    />
-                    <StatCard
-                        title="Total Paid"
-                        value={formatCurrency(totalPaid)}
-                        icon={DollarSign}
-                        color="bg-green-500"
-                    />
-                    <StatCard
-                        title="Purchase Count"
-                        value={safePurchases.length}
-                        icon={FileText}
-                        color="bg-indigo-500"
-                    />
+                    <StatCard title="Total Purchases" value={formatCurrency(totalPurchases)} icon={FileText} color="bg-purple-500" />
+                    <StatCard title="Total Paid" value={formatCurrency(totalPaid)} icon={DollarSign} color="bg-green-500" />
+                    <StatCard title="Purchase Count" value={safePurchases.length} icon={FileText} color="bg-indigo-500" />
                 </div>
 
                 {/* Due Alert */}
                 {vendor.balance_type === 'due' && vendor.current_balance > 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-6">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4">
-                                <div className="p-3 bg-red-100 rounded-lg">
-                                    <AlertCircle className="w-6 h-6 text-red-600" />
+                                <div className="rounded-lg bg-red-100 p-3">
+                                    <AlertCircle className="h-6 w-6 text-red-600" />
                                 </div>
                                 <div>
                                     <h3 className="font-semibold text-red-900">Outstanding Payment</h3>
-                                    <p className="text-sm text-red-700">
-                                        You have {formatCurrency(vendor.current_balance)} due to this vendor
-                                    </p>
+                                    <p className="text-sm text-red-700">You have {formatCurrency(vendor.current_balance)} due to this vendor</p>
                                 </div>
                             </div>
-                            <Button onClick={() => setShowPaymentModal(true)}>
-                                Pay Now
-                            </Button>
+                            <Button onClick={() => setShowPaymentModal(true)}>Pay Now</Button>
                         </div>
                     </div>
                 )}
 
                 {/* Tabs */}
-                <div className="bg-white rounded-xl shadow-sm border">
+                <div className="rounded-xl border bg-white shadow-sm">
                     <div className="border-b">
                         <nav className="flex space-x-8 px-6">
-                            <button className="py-4 px-1 border-b-2 border-blue-500 font-medium text-blue-600 text-sm">
-                                Transactions
-                            </button>
-                            <button className="py-4 px-1 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700 text-sm">
+                            <button className="border-b-2 border-blue-500 px-1 py-4 text-sm font-medium text-blue-600">Transactions</button>
+                            <button className="border-b-2 border-transparent px-1 py-4 text-sm font-medium text-gray-500 hover:text-gray-700">
                                 Purchases
                             </button>
                         </nav>
@@ -295,22 +247,25 @@ export default function VendorTransactions() {
                         <div className="space-y-4">
                             {safeTransactions.length > 0 ? (
                                 safeTransactions.map((transaction) => (
-                                    <div key={transaction.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                    <div
+                                        key={transaction.id}
+                                        className="flex items-center justify-between rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100"
+                                    >
                                         <div className="flex-1">
                                             <div className="flex items-center space-x-3">
-                                                <div className={`w-2 h-2 rounded-full ${
-                                                    transaction.type === 'purchase' ? 'bg-red-500' :
-                                                    transaction.type === 'payment' ? 'bg-green-500' :
-                                                    'bg-blue-500'
-                                                }`}></div>
+                                                <div
+                                                    className={`h-2 w-2 rounded-full ${
+                                                        transaction.type === 'purchase'
+                                                            ? 'bg-red-500'
+                                                            : transaction.type === 'payment'
+                                                              ? 'bg-green-500'
+                                                              : 'bg-blue-500'
+                                                    }`}
+                                                ></div>
                                                 <div>
-                                                    <p className="font-medium text-gray-900">
-                                                        {transaction.transaction_no}
-                                                    </p>
-                                                    <p className="text-sm text-gray-600">
-                                                        {transaction.description}
-                                                    </p>
-                                                    <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                                                    <p className="font-medium text-gray-900">{transaction.transaction_no}</p>
+                                                    <p className="text-sm text-gray-600">{transaction.description}</p>
+                                                    <div className="mt-1 flex items-center space-x-4 text-xs text-gray-500">
                                                         <span>{formatDate(transaction.transaction_date)}</span>
                                                         <span>•</span>
                                                         <span>By {transaction.created_by.name}</span>
@@ -324,28 +279,28 @@ export default function VendorTransactions() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="text-right ml-4">
-                                            <p className={`text-lg font-bold ${
-                                                transaction.type === 'purchase' ? 'text-red-600' :
-                                                transaction.type === 'payment' ? 'text-green-600' :
-                                                'text-blue-600'
-                                            }`}>
+                                        <div className="ml-4 text-right">
+                                            <p
+                                                className={`text-lg font-bold ${
+                                                    transaction.type === 'purchase'
+                                                        ? 'text-red-600'
+                                                        : transaction.type === 'payment'
+                                                          ? 'text-green-600'
+                                                          : 'text-blue-600'
+                                                }`}
+                                            >
                                                 {transaction.type === 'purchase' ? '+' : '-'}
                                                 {formatCurrency(transaction.amount)}
                                             </p>
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                Balance: {formatCurrency(transaction.new_balance)}
-                                            </p>
+                                            <p className="mt-1 text-xs text-gray-500">Balance: {formatCurrency(transaction.new_balance)}</p>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center py-12">
-                                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                                    <p className="text-gray-500 font-medium">No transactions yet</p>
-                                    <p className="text-gray-400 text-sm mt-1">
-                                        Transactions will appear here once you make purchases or payments
-                                    </p>
+                                <div className="py-12 text-center">
+                                    <FileText className="mx-auto mb-3 h-12 w-12 text-gray-400" />
+                                    <p className="font-medium text-gray-500">No transactions yet</p>
+                                    <p className="mt-1 text-sm text-gray-400">Transactions will appear here once you make purchases or payments</p>
                                 </div>
                             )}
                         </div>
@@ -353,8 +308,8 @@ export default function VendorTransactions() {
                 </div>
 
                 {/* Purchases Table */}
-                <div className="bg-white rounded-xl shadow-sm border p-6">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Purchases</h2>
+                <div className="rounded-xl border bg-white p-6 shadow-sm">
+                    <h2 className="mb-4 text-lg font-semibold text-gray-900">Recent Purchases</h2>
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
@@ -367,43 +322,37 @@ export default function VendorTransactions() {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="divide-y divide-gray-200 bg-white">
                                 {safePurchases.length > 0 ? (
                                     safePurchases.map((purchase) => (
                                         <tr key={purchase.id} className="hover:bg-gray-50">
-                                            <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                                                {purchase.purchase_no}
-                                            </td>
+                                            <td className="px-6 py-4 text-sm font-medium text-gray-900">{purchase.purchase_no}</td>
                                             <td className="px-6 py-4 text-sm text-gray-600">
                                                 {purchase.glasses.brand} {purchase.glasses.model}
                                             </td>
-                                            <td className="px-6 py-4 text-sm text-gray-600">
-                                                {purchase.quantity} pcs
-                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{purchase.quantity} pcs</td>
                                             <td className="px-6 py-4">
                                                 <div className="text-sm">
-                                                    <div className="font-semibold text-gray-900">
-                                                        {formatCurrency(purchase.total_cost)}
-                                                    </div>
+                                                    <div className="font-semibold text-gray-900">{formatCurrency(purchase.total_cost)}</div>
                                                     {purchase.due_amount > 0 && (
-                                                        <div className="text-red-600">
-                                                            Due: {formatCurrency(purchase.due_amount)}
-                                                        </div>
+                                                        <div className="text-red-600">Due: {formatCurrency(purchase.due_amount)}</div>
                                                     )}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                                    purchase.payment_status === 'paid' ? 'bg-green-100 text-green-800' :
-                                                    purchase.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
-                                                    'bg-red-100 text-red-800'
-                                                }`}>
+                                                <span
+                                                    className={`rounded-full px-3 py-1 text-xs font-medium ${
+                                                        purchase.payment_status === 'paid'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : purchase.payment_status === 'partial'
+                                                              ? 'bg-yellow-100 text-yellow-800'
+                                                              : 'bg-red-100 text-red-800'
+                                                    }`}
+                                                >
                                                     {purchase.payment_status}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-sm text-gray-600">
-                                                {formatDate(purchase.purchase_date)}
-                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{formatDate(purchase.purchase_date)}</td>
                                         </tr>
                                     ))
                                 ) : (
@@ -429,17 +378,15 @@ export default function VendorTransactions() {
                 title="Make Payment to Vendor"
             >
                 <form onSubmit={handlePayment} className="space-y-4">
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-                        <div className="flex justify-between items-center">
+                    <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-4">
+                        <div className="flex items-center justify-between">
                             <span className="text-sm text-orange-700">Current Due:</span>
-                            <span className="text-xl font-bold text-orange-900">
-                                {formatCurrency(vendor.current_balance)}
-                            </span>
+                            <span className="text-xl font-bold text-orange-900">{formatCurrency(vendor.current_balance)}</span>
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
                             Amount <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -449,25 +396,23 @@ export default function VendorTransactions() {
                             max={vendor.current_balance}
                             value={data.amount}
                             onChange={(e) => setData('amount', e.target.value)}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
                                 errors.amount ? 'border-red-300' : 'border-gray-300'
                             }`}
                             placeholder="0.00"
                             required
                         />
-                        {errors.amount && (
-                            <p className="text-red-600 text-sm mt-1">{errors.amount}</p>
-                        )}
+                        {errors.amount && <p className="mt-1 text-sm text-red-600">{errors.amount}</p>}
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
                             Payment Method <span className="text-red-500">*</span>
                         </label>
                         <select
                             value={data.payment_method_id}
                             onChange={(e) => setData('payment_method_id', Number(e.target.value))}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
                                 errors.payment_method_id ? 'border-red-300' : 'border-gray-300'
                             }`}
                             required
@@ -479,53 +424,47 @@ export default function VendorTransactions() {
                                 </option>
                             ))}
                         </select>
-                        {errors.payment_method_id && (
-                            <p className="text-red-600 text-sm mt-1">{errors.payment_method_id}</p>
-                        )}
+                        {errors.payment_method_id && <p className="mt-1 text-sm text-red-600">{errors.payment_method_id}</p>}
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
                             Payment Date <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="date"
                             value={data.payment_date}
                             onChange={(e) => setData('payment_date', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                             required
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
                             Description <span className="text-red-500">*</span>
                         </label>
                         <textarea
                             value={data.description}
                             onChange={(e) => setData('description', e.target.value)}
                             rows={3}
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
                                 errors.description ? 'border-red-300' : 'border-gray-300'
                             }`}
                             placeholder="Payment description..."
                             required
                         />
-                        {errors.description && (
-                            <p className="text-red-600 text-sm mt-1">{errors.description}</p>
-                        )}
+                        {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
                     </div>
 
                     {data.amount && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="rounded-lg border border-green-200 bg-green-50 p-4">
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
                                     <span className="text-green-700">Payment Amount:</span>
-                                    <span className="font-semibold text-green-900">
-                                        {formatCurrency(parseFloat(data.amount || '0'))}
-                                    </span>
+                                    <span className="font-semibold text-green-900">{formatCurrency(parseFloat(data.amount || '0'))}</span>
                                 </div>
-                                <div className="flex justify-between pt-2 border-t border-green-300">
+                                <div className="flex justify-between border-t border-green-300 pt-2">
                                     <span className="text-green-700">Remaining Due:</span>
                                     <span className="font-bold text-green-900">
                                         {formatCurrency(vendor.current_balance - parseFloat(data.amount || '0'))}
@@ -535,7 +474,7 @@ export default function VendorTransactions() {
                         </div>
                     )}
 
-                    <div className="flex justify-end space-x-3 pt-4 border-t">
+                    <div className="flex justify-end space-x-3 border-t pt-4">
                         <Button
                             type="button"
                             variant="secondary"
@@ -547,7 +486,7 @@ export default function VendorTransactions() {
                             Cancel
                         </Button>
                         <Button type="submit" disabled={processing}>
-                            <DollarSign className="w-4 h-4" />
+                            <DollarSign className="h-4 w-4" />
                             <span>{processing ? 'Processing...' : 'Make Payment'}</span>
                         </Button>
                     </div>

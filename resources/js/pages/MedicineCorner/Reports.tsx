@@ -1,29 +1,25 @@
-import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
+import { Head, router } from '@inertiajs/react';
 import {
-    BarChart3,
-    TrendingUp,
-    TrendingDown,
-    Download,
-    Calendar as CalendarIcon,
-    Package,
-    DollarSign,
-    PieChart,
     Activity,
-    FileText,
-    Building2,
-    CreditCard,
-    Users,
     AlertTriangle,
-    CheckCircle,
-    Clock,
-    Target,
-    Zap,
+    BarChart3,
+    Building2,
+    Calendar as CalendarIcon,
+    CreditCard,
+    DollarSign,
+    Download,
     Eye,
     Filter,
-    RefreshCw
+    Package,
+    PieChart,
+    RefreshCw,
+    Target,
+    TrendingDown,
+    TrendingUp,
+    Zap,
 } from 'lucide-react';
+import { useState } from 'react';
 
 // Types
 interface PurchaseSummary {
@@ -103,7 +99,7 @@ export default function Reports({
     dateTo,
     totalPurchase,
     totalPayments,
-    totalVendorDues
+    totalVendorDues,
 }: ReportsPageProps) {
     const [dateRange, setDateRange] = useState({ from: dateFrom, to: dateTo });
     const [activeTab, setActiveTab] = useState('overview');
@@ -128,7 +124,7 @@ export default function Reports({
     const formatDate = (date: string) => {
         return new Date(date).toLocaleDateString('en-GB', {
             day: '2-digit',
-            month: 'short'
+            month: 'short',
         });
     };
 
@@ -136,13 +132,12 @@ export default function Reports({
         return new Date(date).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short',
-            year: 'numeric'
+            year: 'numeric',
         });
     };
 
     const getMonthName = (month: number) => {
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         return months[month - 1];
     };
 
@@ -164,12 +159,16 @@ export default function Reports({
 
     const handleDateRangeChange = async () => {
         setIsLoading(true);
-        router.get(route('medicine-corner.reports'), {
-            date_from: dateRange.from,
-            date_to: dateRange.to
-        }, {
-            onFinish: () => setIsLoading(false)
-        });
+        router.get(
+            route('medicine-corner.reports'),
+            {
+                date_from: dateRange.from,
+                date_to: dateRange.to,
+            },
+            {
+                onFinish: () => setIsLoading(false),
+            },
+        );
     };
 
     const exportReport = (format: string) => {
@@ -177,7 +176,7 @@ export default function Reports({
             format,
             type: activeTab,
             date_from: dateRange.from,
-            date_to: dateRange.to
+            date_to: dateRange.to,
         });
     };
 
@@ -187,44 +186,44 @@ export default function Reports({
 
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">Medicine Corner Analytics</h1>
-                        <p className="text-gray-600 mt-1">
-                            Comprehensive insights into inventory, purchases, vendors, and financial performance
-                        </p>
+                        <p className="mt-1 text-gray-600">Comprehensive insights into inventory, purchases, vendors, and financial performance</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => router.visit(route('medicine-vendors.analytics'))}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                            className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-white transition-colors hover:bg-purple-700"
                         >
-                            <Building2 className="w-4 h-4" />
+                            <Building2 className="h-4 w-4" />
                             Vendor Analytics
                         </button>
                         <div className="relative">
                             <select
                                 onChange={(e) => exportReport(e.target.value)}
-                                className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:ring-2 focus:ring-blue-500"
+                                className="appearance-none rounded-lg border border-gray-300 bg-white px-4 py-2 pr-8 focus:ring-2 focus:ring-blue-500"
                                 defaultValue=""
                             >
-                                <option value="" disabled>Export Report</option>
+                                <option value="" disabled>
+                                    Export Report
+                                </option>
                                 <option value="pdf">PDF Report</option>
                                 <option value="excel">Excel Spreadsheet</option>
                                 <option value="csv">CSV Data</option>
                             </select>
-                            <Download className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            <Download className="pointer-events-none absolute top-1/2 right-2 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
                         </div>
                     </div>
                 </div>
 
                 {/* Date Range & Quick Filters */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
                         {/* Date Range */}
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                             <div className="flex items-center gap-2">
-                                <CalendarIcon className="w-5 h-5 text-gray-400" />
+                                <CalendarIcon className="h-5 w-5 text-gray-400" />
                                 <span className="text-sm font-medium text-gray-700">Date Range:</span>
                             </div>
                             <div className="flex items-center gap-3">
@@ -232,25 +231,21 @@ export default function Reports({
                                     type="date"
                                     value={dateRange.from}
                                     onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                 />
                                 <span className="text-gray-500">to</span>
                                 <input
                                     type="date"
                                     value={dateRange.to}
                                     onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-                                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                 />
                                 <button
                                     onClick={handleDateRangeChange}
                                     disabled={isLoading}
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 disabled:bg-gray-400"
                                 >
-                                    {isLoading ? (
-                                        <RefreshCw className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        <Filter className="w-4 h-4" />
-                                    )}
+                                    {isLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Filter className="h-4 w-4" />}
                                     Apply
                                 </button>
                             </div>
@@ -273,10 +268,10 @@ export default function Reports({
                                         startDate.setDate(endDate.getDate() - period.days);
                                         setDateRange({
                                             from: startDate.toISOString().split('T')[0],
-                                            to: endDate.toISOString().split('T')[0]
+                                            to: endDate.toISOString().split('T')[0],
                                         });
                                     }}
-                                    className="px-3 py-1 text-sm border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+                                    className="rounded-md border border-gray-200 px-3 py-1 text-sm transition-colors hover:bg-gray-50"
                                 >
                                     {period.label}
                                 </button>
@@ -286,8 +281,8 @@ export default function Reports({
                 </div>
 
                 {/* Tab Navigation */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                    <div className="flex border-b border-gray-200 overflow-x-auto">
+                <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+                    <div className="flex overflow-x-auto border-b border-gray-200">
                         {[
                             { key: 'overview', label: 'Overview', icon: Activity },
                             { key: 'purchases', label: 'Purchases', icon: Package },
@@ -298,13 +293,11 @@ export default function Reports({
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors whitespace-nowrap ${
-                                    activeTab === tab.key
-                                        ? 'text-blue-600 border-b-2 border-blue-600'
-                                        : 'text-gray-500 hover:text-gray-700'
+                                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium whitespace-nowrap transition-colors ${
+                                    activeTab === tab.key ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'
                                 }`}
                             >
-                                <tab.icon className="w-4 h-4" />
+                                <tab.icon className="h-4 w-4" />
                                 {tab.label}
                             </button>
                         ))}
@@ -315,118 +308,108 @@ export default function Reports({
                         {activeTab === 'overview' && (
                             <div className="space-y-6">
                                 {/* Key Metrics Cards */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+                                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                                    <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-6">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-blue-600">Total Purchases</p>
-                                                <p className="text-2xl font-bold text-blue-900 mt-1">
-                                                    {formatCurrency(totalPurchase)}
-                                                </p>
-                                                <div className="flex items-center gap-1 mt-2">
+                                                <p className="mt-1 text-2xl font-bold text-blue-900">{formatCurrency(totalPurchase)}</p>
+                                                <div className="mt-2 flex items-center gap-1">
                                                     {growthPercentage >= 0 ? (
-                                                        <TrendingUp className="w-4 h-4 text-green-600" />
+                                                        <TrendingUp className="h-4 w-4 text-green-600" />
                                                     ) : (
-                                                        <TrendingDown className="w-4 h-4 text-red-600" />
+                                                        <TrendingDown className="h-4 w-4 text-red-600" />
                                                     )}
-                                                    <span className={`text-sm font-medium ${growthPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                    <span
+                                                        className={`text-sm font-medium ${growthPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                                                    >
                                                         {Math.abs(growthPercentage).toFixed(1)}%
                                                     </span>
                                                     <span className="text-sm text-gray-600">vs previous</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-blue-200 p-3 rounded-lg">
-                                                <DollarSign className="w-6 h-6 text-blue-700" />
+                                            <div className="rounded-lg bg-blue-200 p-3">
+                                                <DollarSign className="h-6 w-6 text-blue-700" />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+                                    <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-6">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-green-600">Vendor Payments</p>
-                                                <p className="text-2xl font-bold text-green-900 mt-1">
-                                                    {formatCurrency(totalPayments)}
-                                                </p>
-                                                <div className="flex items-center gap-1 mt-2">
-                                                    <Target className="w-4 h-4 text-green-600" />
-                                                    <span className="text-sm font-medium text-green-600">
-                                                        {paymentRatio.toFixed(1)}%
-                                                    </span>
+                                                <p className="mt-1 text-2xl font-bold text-green-900">{formatCurrency(totalPayments)}</p>
+                                                <div className="mt-2 flex items-center gap-1">
+                                                    <Target className="h-4 w-4 text-green-600" />
+                                                    <span className="text-sm font-medium text-green-600">{paymentRatio.toFixed(1)}%</span>
                                                     <span className="text-sm text-gray-600">of purchases</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-green-200 p-3 rounded-lg">
-                                                <CreditCard className="w-6 h-6 text-green-700" />
+                                            <div className="rounded-lg bg-green-200 p-3">
+                                                <CreditCard className="h-6 w-6 text-green-700" />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
+                                    <div className="rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 p-6">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-red-600">Outstanding Dues</p>
-                                                <p className="text-2xl font-bold text-red-900 mt-1">
-                                                    {formatCurrency(totalVendorDues)}
-                                                </p>
-                                                <div className="flex items-center gap-1 mt-2">
-                                                    <AlertTriangle className="w-4 h-4 text-red-600" />
-                                                    <span className="text-sm font-medium text-red-600">
-                                                        {outstandingRatio.toFixed(1)}%
-                                                    </span>
+                                                <p className="mt-1 text-2xl font-bold text-red-900">{formatCurrency(totalVendorDues)}</p>
+                                                <div className="mt-2 flex items-center gap-1">
+                                                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                                                    <span className="text-sm font-medium text-red-600">{outstandingRatio.toFixed(1)}%</span>
                                                     <span className="text-sm text-gray-600">outstanding</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-red-200 p-3 rounded-lg">
-                                                <Building2 className="w-6 h-6 text-red-700" />
+                                            <div className="rounded-lg bg-red-200 p-3">
+                                                <Building2 className="h-6 w-6 text-red-700" />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+                                    <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-6">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-purple-600">Stock Value</p>
-                                                <p className="text-2xl font-bold text-purple-900 mt-1">
-                                                    {formatCurrency(totalStockValue)}
-                                                </p>
-                                                <div className="flex items-center gap-1 mt-2">
-                                                    <Package className="w-4 h-4 text-purple-600" />
-                                                    <span className="text-sm font-medium text-purple-600">
-                                                        {stockValuation.length}
-                                                    </span>
+                                                <p className="mt-1 text-2xl font-bold text-purple-900">{formatCurrency(totalStockValue)}</p>
+                                                <div className="mt-2 flex items-center gap-1">
+                                                    <Package className="h-4 w-4 text-purple-600" />
+                                                    <span className="text-sm font-medium text-purple-600">{stockValuation.length}</span>
                                                     <span className="text-sm text-gray-600">items</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-purple-200 p-3 rounded-lg">
-                                                <Package className="w-6 h-6 text-purple-700" />
+                                            <div className="rounded-lg bg-purple-200 p-3">
+                                                <Package className="h-6 w-6 text-purple-700" />
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Performance Indicators */}
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Metrics</h3>
+                                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                                    <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                        <h3 className="mb-4 text-lg font-semibold text-gray-900">Performance Metrics</h3>
                                         <div className="space-y-4">
-                                            <div className="flex justify-between items-center">
+                                            <div className="flex items-center justify-between">
                                                 <span className="text-sm text-gray-600">Avg. Daily Purchase</span>
                                                 <span className="font-semibold text-gray-900">{formatCurrency(averageDailyPurchase)}</span>
                                             </div>
-                                            <div className="flex justify-between items-center">
+                                            <div className="flex items-center justify-between">
                                                 <span className="text-sm text-gray-600">Active Vendors</span>
                                                 <span className="font-semibold text-gray-900">{topVendors.length}</span>
                                             </div>
-                                            <div className="flex justify-between items-center">
+                                            <div className="flex items-center justify-between">
                                                 <span className="text-sm text-gray-600">Purchase Orders</span>
                                                 <span className="font-semibold text-gray-900">
                                                     {purchaseSummary.reduce((sum, item) => sum + item.count, 0)}
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between items-center">
+                                            <div className="flex items-center justify-between">
                                                 <span className="text-sm text-gray-600">Payment Rate</span>
-                                                <span className={`font-semibold ${paymentRatio >= 80 ? 'text-green-600' : paymentRatio >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                                <span
+                                                    className={`font-semibold ${paymentRatio >= 80 ? 'text-green-600' : paymentRatio >= 60 ? 'text-yellow-600' : 'text-red-600'}`}
+                                                >
                                                     {paymentRatio.toFixed(1)}%
                                                 </span>
                                             </div>
@@ -434,21 +417,21 @@ export default function Reports({
                                     </div>
 
                                     <div className="lg:col-span-2">
-                                        <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Daily Purchase Trend</h3>
+                                        <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                            <h3 className="mb-4 text-lg font-semibold text-gray-900">Daily Purchase Trend</h3>
                                             <div className="space-y-3">
                                                 {purchaseSummary.slice(0, 7).map((item, index) => {
-                                                    const maxAmount = Math.max(...purchaseSummary.slice(0, 7).map(p => p.total));
+                                                    const maxAmount = Math.max(...purchaseSummary.slice(0, 7).map((p) => p.total));
                                                     const percentage = maxAmount > 0 ? (item.total / maxAmount) * 100 : 0;
 
                                                     return (
                                                         <div key={item.date} className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-3 min-w-0">
-                                                                <span className="text-sm font-medium text-gray-900 w-12">
+                                                            <div className="flex min-w-0 items-center gap-3">
+                                                                <span className="w-12 text-sm font-medium text-gray-900">
                                                                     {formatDate(item.date)}
                                                                 </span>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                                                <div className="min-w-0 flex-1">
+                                                                    <div className="h-2 w-full rounded-full bg-gray-200">
                                                                         <div
                                                                             className={`h-2 rounded-full ${index === 0 ? 'bg-blue-600' : 'bg-gray-400'}`}
                                                                             style={{ width: `${percentage}%` }}
@@ -456,7 +439,7 @@ export default function Reports({
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <div className="flex items-center gap-2 ml-4">
+                                                            <div className="ml-4 flex items-center gap-2">
                                                                 <span className="text-xs text-gray-500">{item.count} orders</span>
                                                                 <span className="text-sm font-semibold text-gray-900">
                                                                     {formatCompactCurrency(item.total)}
@@ -475,36 +458,32 @@ export default function Reports({
                         {/* Purchases Tab */}
                         {activeTab === 'purchases' && (
                             <div className="space-y-6">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                                     {/* Daily Purchase Analysis */}
-                                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                        <div className="flex items-center justify-between mb-6">
+                                    <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                        <div className="mb-6 flex items-center justify-between">
                                             <h3 className="text-lg font-semibold text-gray-900">Daily Purchase Analysis</h3>
-                                            <BarChart3 className="w-5 h-5 text-gray-400" />
+                                            <BarChart3 className="h-5 w-5 text-gray-400" />
                                         </div>
                                         <div className="space-y-4">
                                             {purchaseSummary.slice(0, 10).map((item) => {
-                                                const maxAmount = Math.max(...purchaseSummary.map(p => p.total));
+                                                const maxAmount = Math.max(...purchaseSummary.map((p) => p.total));
                                                 const percentage = maxAmount > 0 ? (item.total / maxAmount) * 100 : 0;
 
                                                 return (
                                                     <div key={item.date} className="space-y-2">
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-3">
-                                                                <span className="text-sm font-medium text-gray-900">
-                                                                    {formatFullDate(item.date)}
-                                                                </span>
-                                                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                                                <span className="text-sm font-medium text-gray-900">{formatFullDate(item.date)}</span>
+                                                                <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-500">
                                                                     {item.count} orders
                                                                 </span>
                                                             </div>
-                                                            <span className="text-sm font-semibold text-green-600">
-                                                                {formatCurrency(item.total)}
-                                                            </span>
+                                                            <span className="text-sm font-semibold text-green-600">{formatCurrency(item.total)}</span>
                                                         </div>
-                                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                                        <div className="h-2 w-full rounded-full bg-gray-200">
                                                             <div
-                                                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                                                className="h-2 rounded-full bg-blue-600 transition-all duration-300"
                                                                 style={{ width: `${percentage}%` }}
                                                             ></div>
                                                         </div>
@@ -515,30 +494,26 @@ export default function Reports({
                                     </div>
 
                                     {/* Top Purchased Medicines */}
-                                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                        <div className="flex items-center justify-between mb-6">
+                                    <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                        <div className="mb-6 flex items-center justify-between">
                                             <h3 className="text-lg font-semibold text-gray-900">Top Purchased Medicines</h3>
-                                            <TrendingUp className="w-5 h-5 text-gray-400" />
+                                            <TrendingUp className="h-5 w-5 text-gray-400" />
                                         </div>
                                         <div className="space-y-4">
                                             {topPurchased.slice(0, 10).map((item, index) => (
-                                                <div key={item.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                <div key={item.name} className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-600 rounded-full text-sm font-semibold">
+                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-600">
                                                             {index + 1}
                                                         </div>
                                                         <div>
-                                                            <div className="text-sm font-medium text-gray-900 truncate max-w-[150px]">
+                                                            <div className="max-w-[150px] truncate text-sm font-medium text-gray-900">
                                                                 {item.name}
                                                             </div>
-                                                            <div className="text-xs text-gray-500">
-                                                                {item.total_quantity} units purchased
-                                                            </div>
+                                                            <div className="text-xs text-gray-500">{item.total_quantity} units purchased</div>
                                                         </div>
                                                     </div>
-                                                    <div className="text-sm font-semibold text-green-600">
-                                                        {formatCurrency(item.total_amount)}
-                                                    </div>
+                                                    <div className="text-sm font-semibold text-green-600">{formatCurrency(item.total_amount)}</div>
                                                 </div>
                                             ))}
                                         </div>
@@ -546,26 +521,26 @@ export default function Reports({
                                 </div>
 
                                 {/* Monthly Purchase Trend */}
-                                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                    <div className="flex items-center justify-between mb-6">
+                                <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                    <div className="mb-6 flex items-center justify-between">
                                         <h3 className="text-lg font-semibold text-gray-900">Monthly Purchase Trend</h3>
-                                        <Activity className="w-5 h-5 text-gray-400" />
+                                        <Activity className="h-5 w-5 text-gray-400" />
                                     </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
                                         {monthlyTrend.slice(0, 12).map((item, index) => {
                                             const isCurrentMonth = index === 0;
                                             return (
                                                 <div key={`${item.year}-${item.month}`} className="text-center">
-                                                    <div className={`rounded-lg p-4 ${isCurrentMonth ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'}`}>
+                                                    <div
+                                                        className={`rounded-lg p-4 ${isCurrentMonth ? 'border border-blue-200 bg-blue-50' : 'bg-gray-50'}`}
+                                                    >
                                                         <div className={`text-2xl font-bold ${isCurrentMonth ? 'text-blue-600' : 'text-gray-700'}`}>
                                                             {formatCompactCurrency(item.total)}
                                                         </div>
-                                                        <div className="text-sm text-gray-600 mt-1">
+                                                        <div className="mt-1 text-sm text-gray-600">
                                                             {getMonthName(item.month)} {item.year}
                                                         </div>
-                                                        {isCurrentMonth && (
-                                                            <div className="text-xs text-blue-600 mt-1 font-medium">Current</div>
-                                                        )}
+                                                        {isCurrentMonth && <div className="mt-1 text-xs font-medium text-blue-600">Current</div>}
                                                     </div>
                                                 </div>
                                             );
@@ -578,84 +553,88 @@ export default function Reports({
                         {/* Vendors Tab */}
                         {activeTab === 'vendors' && (
                             <div className="space-y-6">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                                     {/* Top Vendors */}
-                                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                        <div className="flex items-center justify-between mb-6">
+                                    <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                        <div className="mb-6 flex items-center justify-between">
                                             <h3 className="text-lg font-semibold text-gray-900">Top Vendors by Volume</h3>
-                                            <Building2 className="w-5 h-5 text-gray-400" />
+                                            <Building2 className="h-5 w-5 text-gray-400" />
                                         </div>
                                         <div className="space-y-4">
                                             {topVendors.slice(0, 8).map((vendor, index) => (
-                                                <div key={vendor.vendor_name} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                                <div
+                                                    key={vendor.vendor_name}
+                                                    className="flex items-center justify-between rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100"
+                                                >
                                                     <div className="flex items-center gap-3">
-                                                        <div className="flex items-center justify-center w-8 h-8 bg-purple-100 text-purple-600 rounded-full text-sm font-semibold">
+                                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-600">
                                                             {index + 1}
                                                         </div>
                                                         <div>
-                                                            <div className="text-sm font-medium text-gray-900">
-                                                                {vendor.vendor_name}
-                                                            </div>
+                                                            <div className="text-sm font-medium text-gray-900">{vendor.vendor_name}</div>
                                                             <div className="text-xs text-gray-500">
                                                                 {vendor.transaction_count} transactions
                                                                 {vendor.total_due > 0 && (
-                                                                    <span className="text-red-500 ml-2">
+                                                                    <span className="ml-2 text-red-500">
                                                                         Due: {formatCompactCurrency(vendor.total_due)}
                                                                     </span>
                                                                 )}
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="text-sm font-semibold text-green-600">
-                                                        {formatCurrency(vendor.total_amount)}
-                                                    </div>
+                                                    <div className="text-sm font-semibold text-green-600">{formatCurrency(vendor.total_amount)}</div>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
                                     {/* Vendor Payment Status */}
-                                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                        <div className="flex items-center justify-between mb-6">
+                                    <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                        <div className="mb-6 flex items-center justify-between">
                                             <h3 className="text-lg font-semibold text-gray-900">Vendor Payment Status</h3>
-                                            <CreditCard className="w-5 h-5 text-gray-400" />
+                                            <CreditCard className="h-5 w-5 text-gray-400" />
                                         </div>
                                         <div className="space-y-4">
                                             {vendorDueSummary.slice(0, 8).map((vendor, index) => {
-                                                const creditUtilization = vendor.credit_limit > 0
-                                                    ? (vendor.current_balance / vendor.credit_limit) * 100
-                                                    : 0;
+                                                const creditUtilization =
+                                                    vendor.credit_limit > 0 ? (vendor.current_balance / vendor.credit_limit) * 100 : 0;
 
                                                 return (
-                                                    <div key={vendor.name} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
-                                                        <div className="flex items-center justify-between mb-3">
-                                                            <div className="text-sm font-medium text-gray-900">
-                                                                {vendor.name}
-                                                            </div>
+                                                    <div
+                                                        key={vendor.name}
+                                                        className="rounded-lg border border-gray-200 p-4 transition-shadow hover:shadow-sm"
+                                                    >
+                                                        <div className="mb-3 flex items-center justify-between">
+                                                            <div className="text-sm font-medium text-gray-900">{vendor.name}</div>
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-sm font-bold text-red-600">
                                                                     {formatCurrency(vendor.current_balance)}
                                                                 </span>
                                                                 {vendor.current_balance > 0 && (
-                                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                                    <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
                                                                         Due
                                                                     </span>
                                                                 )}
                                                             </div>
                                                         </div>
 
-                                                        <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                                                        <div className="mb-2 flex items-center justify-between text-xs text-gray-500">
                                                             <span>Credit Limit: {formatCurrency(vendor.credit_limit)}</span>
-                                                            <span className={`font-medium ${creditUtilization > 80 ? 'text-red-500' : creditUtilization > 60 ? 'text-yellow-500' : 'text-green-500'}`}>
+                                                            <span
+                                                                className={`font-medium ${creditUtilization > 80 ? 'text-red-500' : creditUtilization > 60 ? 'text-yellow-500' : 'text-green-500'}`}
+                                                            >
                                                                 {creditUtilization.toFixed(1)}% utilized
                                                             </span>
                                                         </div>
 
-                                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                                        <div className="h-2 w-full rounded-full bg-gray-200">
                                                             <div
                                                                 className={`h-2 rounded-full transition-all duration-300 ${
-                                                                    creditUtilization > 80 ? 'bg-red-500' :
-                                                                    creditUtilization > 60 ? 'bg-yellow-500' : 'bg-green-500'
+                                                                    creditUtilization > 80
+                                                                        ? 'bg-red-500'
+                                                                        : creditUtilization > 60
+                                                                          ? 'bg-yellow-500'
+                                                                          : 'bg-green-500'
                                                                 }`}
                                                                 style={{ width: `${Math.min(creditUtilization, 100)}%` }}
                                                             ></div>
@@ -668,41 +647,41 @@ export default function Reports({
                                 </div>
 
                                 {/* Purchase vs Payment Comparison */}
-                                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                    <div className="flex items-center justify-between mb-6">
+                                <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                    <div className="mb-6 flex items-center justify-between">
                                         <h3 className="text-lg font-semibold text-gray-900">Purchase vs Payment Analysis</h3>
-                                        <Activity className="w-5 h-5 text-gray-400" />
+                                        <Activity className="h-5 w-5 text-gray-400" />
                                     </div>
                                     <div className="space-y-4">
                                         {purchaseSummary.slice(0, 10).map((purchase) => {
-                                            const payment = paymentSummary.find(p => p.date === purchase.date) || { total: 0, count: 0 };
-                                            const maxAmount = Math.max(...purchaseSummary.slice(0, 10).map(p => p.total));
+                                            const payment = paymentSummary.find((p) => p.date === purchase.date) || { total: 0, count: 0 };
+                                            const maxAmount = Math.max(...purchaseSummary.slice(0, 10).map((p) => p.total));
                                             const purchasePercentage = maxAmount > 0 ? (purchase.total / maxAmount) * 100 : 0;
                                             const paymentPercentage = maxAmount > 0 ? (payment.total / maxAmount) * 100 : 0;
 
                                             return (
-                                                <div key={purchase.date} className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                                                <div key={purchase.date} className="space-y-3 rounded-lg bg-gray-50 p-4">
                                                     <div className="flex items-center justify-between">
                                                         <span className="text-sm font-medium text-gray-900">{formatFullDate(purchase.date)}</span>
                                                         <div className="flex gap-6 text-xs">
-                                                            <span className="text-blue-600 font-medium">
+                                                            <span className="font-medium text-blue-600">
                                                                 Purchase: {formatCurrency(purchase.total)}
                                                             </span>
-                                                            <span className="text-green-600 font-medium">
+                                                            <span className="font-medium text-green-600">
                                                                 Payment: {formatCurrency(payment.total)}
                                                             </span>
                                                         </div>
                                                     </div>
                                                     <div className="grid grid-cols-2 gap-2">
-                                                        <div className="bg-blue-200 rounded-full h-2">
+                                                        <div className="h-2 rounded-full bg-blue-200">
                                                             <div
-                                                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                                                className="h-2 rounded-full bg-blue-600 transition-all duration-300"
                                                                 style={{ width: `${purchasePercentage}%` }}
                                                             ></div>
                                                         </div>
-                                                        <div className="bg-green-200 rounded-full h-2">
+                                                        <div className="h-2 rounded-full bg-green-200">
                                                             <div
-                                                                className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                                                                className="h-2 rounded-full bg-green-600 transition-all duration-300"
                                                                 style={{ width: `${paymentPercentage}%` }}
                                                             ></div>
                                                         </div>
@@ -719,34 +698,32 @@ export default function Reports({
                         {activeTab === 'inventory' && (
                             <div className="space-y-6">
                                 {/* Stock Valuation Overview */}
-                                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                    <div className="flex items-center justify-between mb-6">
+                                <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                    <div className="mb-6 flex items-center justify-between">
                                         <h3 className="text-lg font-semibold text-gray-900">Stock Valuation Overview</h3>
-                                        <div className="text-2xl font-bold text-purple-600">
-                                            {formatCurrency(totalStockValue)}
-                                        </div>
+                                        <div className="text-2xl font-bold text-purple-600">{formatCurrency(totalStockValue)}</div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                                        <div className="text-center p-4 bg-blue-50 rounded-lg">
+                                    <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+                                        <div className="rounded-lg bg-blue-50 p-4 text-center">
                                             <div className="text-2xl font-bold text-blue-600">{stockValuation.length}</div>
                                             <div className="text-sm text-gray-600">Total Items</div>
                                         </div>
-                                        <div className="text-center p-4 bg-green-50 rounded-lg">
+                                        <div className="rounded-lg bg-green-50 p-4 text-center">
                                             <div className="text-2xl font-bold text-green-600">
                                                 {stockValuation.reduce((sum, item) => sum + item.total_stock, 0)}
                                             </div>
                                             <div className="text-sm text-gray-600">Total Units</div>
                                         </div>
-                                        <div className="text-center p-4 bg-purple-50 rounded-lg">
+                                        <div className="rounded-lg bg-purple-50 p-4 text-center">
                                             <div className="text-2xl font-bold text-purple-600">
                                                 {formatCompactCurrency(totalStockValue / stockValuation.length || 0)}
                                             </div>
                                             <div className="text-sm text-gray-600">Avg Value</div>
                                         </div>
-                                        <div className="text-center p-4 bg-orange-50 rounded-lg">
+                                        <div className="rounded-lg bg-orange-50 p-4 text-center">
                                             <div className="text-2xl font-bold text-orange-600">
-                                                {new Set(stockValuation.flatMap(item => item.vendors.map(v => v.vendor))).size}
+                                                {new Set(stockValuation.flatMap((item) => item.vendors.map((v) => v.vendor))).size}
                                             </div>
                                             <div className="text-sm text-gray-600">Suppliers</div>
                                         </div>
@@ -754,63 +731,57 @@ export default function Reports({
                                 </div>
 
                                 {/* Stock Valuation Table */}
-                                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                                <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+                                    <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                                         <div className="flex items-center justify-between">
                                             <h3 className="text-lg font-semibold text-gray-900">Detailed Stock Analysis</h3>
-                                            <PieChart className="w-5 h-5 text-gray-400" />
+                                            <PieChart className="h-5 w-5 text-gray-400" />
                                         </div>
                                     </div>
 
                                     <div className="overflow-x-auto">
                                         <table className="w-full">
-                                            <thead className="bg-gray-50 border-b border-gray-200">
+                                            <thead className="border-b border-gray-200 bg-gray-50">
                                                 <tr>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                                         Medicine
                                                     </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                                         Stock Qty
                                                     </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                                         Avg Price
                                                     </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                                         Total Value
                                                     </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                                         Vendors
                                                     </th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                                         % Share
                                                     </th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="bg-white divide-y divide-gray-200">
+                                            <tbody className="divide-y divide-gray-200 bg-white">
                                                 {stockValuation.slice(0, 20).map((item, index) => {
                                                     const percentage = totalStockValue > 0 ? (item.total_value / totalStockValue) * 100 : 0;
 
                                                     return (
-                                                        <tr key={item.name} className="hover:bg-gray-50 transition-colors">
+                                                        <tr key={item.name} className="transition-colors hover:bg-gray-50">
                                                             <td className="px-6 py-4">
                                                                 <div className="flex items-center gap-3">
-                                                                    <div className="flex items-center justify-center w-6 h-6 bg-gray-100 text-gray-600 rounded text-xs font-medium">
+                                                                    <div className="flex h-6 w-6 items-center justify-center rounded bg-gray-100 text-xs font-medium text-gray-600">
                                                                         {index + 1}
                                                                     </div>
-                                                                    <div className="text-sm font-medium text-gray-900">
-                                                                        {item.name}
-                                                                    </div>
+                                                                    <div className="text-sm font-medium text-gray-900">{item.name}</div>
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-4">
-                                                                <div className="text-sm text-gray-900 font-medium">
-                                                                    {item.total_stock}
-                                                                </div>
+                                                                <div className="text-sm font-medium text-gray-900">{item.total_stock}</div>
                                                             </td>
                                                             <td className="px-6 py-4">
-                                                                <div className="text-sm text-gray-900">
-                                                                    {formatCurrency(item.average_price)}
-                                                                </div>
+                                                                <div className="text-sm text-gray-900">{formatCurrency(item.average_price)}</div>
                                                             </td>
                                                             <td className="px-6 py-4">
                                                                 <div className="text-sm font-semibold text-green-600">
@@ -820,12 +791,15 @@ export default function Reports({
                                                             <td className="px-6 py-4">
                                                                 <div className="flex flex-wrap gap-1">
                                                                     {item.vendors.slice(0, 3).map((vendor, idx) => (
-                                                                        <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                        <span
+                                                                            key={idx}
+                                                                            className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800"
+                                                                        >
                                                                             {vendor.vendor}: {vendor.quantity}
                                                                         </span>
                                                                     ))}
                                                                     {item.vendors.length > 3 && (
-                                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
                                                                             +{item.vendors.length - 3}
                                                                         </span>
                                                                     )}
@@ -833,13 +807,13 @@ export default function Reports({
                                                             </td>
                                                             <td className="px-6 py-4">
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className="w-20 bg-gray-200 rounded-full h-2">
+                                                                    <div className="h-2 w-20 rounded-full bg-gray-200">
                                                                         <div
-                                                                            className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                                                                            className="h-2 rounded-full bg-purple-600 transition-all duration-300"
                                                                             style={{ width: `${percentage}%` }}
                                                                         ></div>
                                                                     </div>
-                                                                    <span className="text-sm text-gray-600 font-medium">
+                                                                    <span className="text-sm font-medium text-gray-600">
                                                                         {percentage.toFixed(1)}%
                                                                     </span>
                                                                 </div>
@@ -852,12 +826,12 @@ export default function Reports({
                                     </div>
 
                                     {stockValuation.length > 20 && (
-                                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 text-center">
+                                        <div className="border-t border-gray-200 bg-gray-50 px-6 py-4 text-center">
                                             <button
                                                 onClick={() => router.visit(route('medicine-corner.stock'))}
-                                                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+                                                className="inline-flex items-center gap-2 font-medium text-blue-600 hover:text-blue-700"
                                             >
-                                                <Eye className="w-4 h-4" />
+                                                <Eye className="h-4 w-4" />
                                                 View all {stockValuation.length} items
                                             </button>
                                         </div>
@@ -870,80 +844,78 @@ export default function Reports({
                         {activeTab === 'financial' && (
                             <div className="space-y-6">
                                 {/* Financial Overview */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+                                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                                    <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-6">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-green-700">Cash Flow</p>
-                                                <p className="text-2xl font-bold text-green-900 mt-1">
+                                                <p className="mt-1 text-2xl font-bold text-green-900">
                                                     {formatCurrency(totalPayments - totalPurchase)}
                                                 </p>
-                                                <div className="text-sm text-green-600 mt-1">
+                                                <div className="mt-1 text-sm text-green-600">
                                                     {totalPayments > totalPurchase ? 'Positive' : 'Negative'} Flow
                                                 </div>
                                             </div>
-                                            <div className="bg-green-200 p-3 rounded-lg">
-                                                <Activity className="w-6 h-6 text-green-700" />
+                                            <div className="rounded-lg bg-green-200 p-3">
+                                                <Activity className="h-6 w-6 text-green-700" />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+                                    <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-6">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-blue-700">Payment Efficiency</p>
-                                                <p className="text-2xl font-bold text-blue-900 mt-1">
-                                                    {paymentRatio.toFixed(1)}%
-                                                </p>
-                                                <div className="text-sm text-blue-600 mt-1">
-                                                    of purchases paid
-                                                </div>
+                                                <p className="mt-1 text-2xl font-bold text-blue-900">{paymentRatio.toFixed(1)}%</p>
+                                                <div className="mt-1 text-sm text-blue-600">of purchases paid</div>
                                             </div>
-                                            <div className="bg-blue-200 p-3 rounded-lg">
-                                                <Target className="w-6 h-6 text-blue-700" />
+                                            <div className="rounded-lg bg-blue-200 p-3">
+                                                <Target className="h-6 w-6 text-blue-700" />
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+                                    <div className="rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-6">
                                         <div className="flex items-center justify-between">
                                             <div>
                                                 <p className="text-sm font-medium text-purple-700">Working Capital</p>
-                                                <p className="text-2xl font-bold text-purple-900 mt-1">
+                                                <p className="mt-1 text-2xl font-bold text-purple-900">
                                                     {formatCurrency(totalStockValue - totalVendorDues)}
                                                 </p>
-                                                <div className="text-sm text-purple-600 mt-1">
-                                                    Net investment
-                                                </div>
+                                                <div className="mt-1 text-sm text-purple-600">Net investment</div>
                                             </div>
-                                            <div className="bg-purple-200 p-3 rounded-lg">
-                                                <Zap className="w-6 h-6 text-purple-700" />
+                                            <div className="rounded-lg bg-purple-200 p-3">
+                                                <Zap className="h-6 w-6 text-purple-700" />
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Financial Breakdown */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-6">Monthly Financial Summary</h3>
+                                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                    <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                        <h3 className="mb-6 text-lg font-semibold text-gray-900">Monthly Financial Summary</h3>
                                         <div className="space-y-4">
                                             {monthlyTrend.slice(0, 6).map((item, index) => {
-                                                const paymentData = paymentSummary.find(p =>
-                                                    new Date(p.date).getMonth() === item.month - 1 &&
-                                                    new Date(p.date).getFullYear() === item.year
+                                                const paymentData = paymentSummary.find(
+                                                    (p) =>
+                                                        new Date(p.date).getMonth() === item.month - 1 &&
+                                                        new Date(p.date).getFullYear() === item.year,
                                                 );
                                                 const payments = paymentData?.total || 0;
                                                 const netFlow = payments - item.total;
 
                                                 return (
-                                                    <div key={`${item.year}-${item.month}`} className="p-4 bg-gray-50 rounded-lg">
-                                                        <div className="flex items-center justify-between mb-2">
+                                                    <div key={`${item.year}-${item.month}`} className="rounded-lg bg-gray-50 p-4">
+                                                        <div className="mb-2 flex items-center justify-between">
                                                             <span className="font-medium text-gray-900">
                                                                 {getMonthName(item.month)} {item.year}
                                                             </span>
-                                                            <span className={`text-sm font-semibold ${netFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                                {netFlow >= 0 ? '+' : ''}{formatCompactCurrency(netFlow)}
+                                                            <span
+                                                                className={`text-sm font-semibold ${netFlow >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                                                            >
+                                                                {netFlow >= 0 ? '+' : ''}
+                                                                {formatCompactCurrency(netFlow)}
                                                             </span>
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-4 text-sm">
@@ -962,15 +934,15 @@ export default function Reports({
                                         </div>
                                     </div>
 
-                                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-6">Key Financial Ratios</h3>
+                                    <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                        <h3 className="mb-6 text-lg font-semibold text-gray-900">Key Financial Ratios</h3>
                                         <div className="space-y-6">
                                             <div>
-                                                <div className="flex justify-between items-center mb-2">
+                                                <div className="mb-2 flex items-center justify-between">
                                                     <span className="text-sm text-gray-600">Payment Coverage Ratio</span>
                                                     <span className="font-semibold text-gray-900">{paymentRatio.toFixed(1)}%</span>
                                                 </div>
-                                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div className="h-2 w-full rounded-full bg-gray-200">
                                                     <div
                                                         className={`h-2 rounded-full ${paymentRatio >= 80 ? 'bg-green-500' : paymentRatio >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
                                                         style={{ width: `${Math.min(paymentRatio, 100)}%` }}
@@ -979,11 +951,11 @@ export default function Reports({
                                             </div>
 
                                             <div>
-                                                <div className="flex justify-between items-center mb-2">
+                                                <div className="mb-2 flex items-center justify-between">
                                                     <span className="text-sm text-gray-600">Outstanding Ratio</span>
                                                     <span className="font-semibold text-gray-900">{outstandingRatio.toFixed(1)}%</span>
                                                 </div>
-                                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div className="h-2 w-full rounded-full bg-gray-200">
                                                     <div
                                                         className={`h-2 rounded-full ${outstandingRatio <= 20 ? 'bg-green-500' : outstandingRatio <= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
                                                         style={{ width: `${Math.min(outstandingRatio, 100)}%` }}
@@ -992,35 +964,31 @@ export default function Reports({
                                             </div>
 
                                             <div>
-                                                <div className="flex justify-between items-center mb-2">
+                                                <div className="mb-2 flex items-center justify-between">
                                                     <span className="text-sm text-gray-600">Inventory Turnover</span>
                                                     <span className="font-semibold text-gray-900">
                                                         {totalStockValue > 0 ? (totalPurchase / totalStockValue).toFixed(1) : '0'}x
                                                     </span>
                                                 </div>
-                                                <div className="text-xs text-gray-500">
-                                                    Higher is better (stock moving faster)
-                                                </div>
+                                                <div className="text-xs text-gray-500">Higher is better (stock moving faster)</div>
                                             </div>
 
                                             <div>
-                                                <div className="flex justify-between items-center mb-2">
+                                                <div className="mb-2 flex items-center justify-between">
                                                     <span className="text-sm text-gray-600">Working Capital Ratio</span>
                                                     <span className="font-semibold text-gray-900">
                                                         {totalVendorDues > 0 ? (totalStockValue / totalVendorDues).toFixed(1) : '∞'}
                                                     </span>
                                                 </div>
-                                                <div className="text-xs text-gray-500">
-                                                    Stock value vs outstanding dues
-                                                </div>
+                                                <div className="text-xs text-gray-500">Stock value vs outstanding dues</div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Vendor Credit Analysis */}
-                                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-6">Vendor Credit Analysis</h3>
+                                <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                    <h3 className="mb-6 text-lg font-semibold text-gray-900">Vendor Credit Analysis</h3>
                                     <div className="overflow-x-auto">
                                         <table className="w-full">
                                             <thead className="bg-gray-50">
@@ -1029,23 +997,28 @@ export default function Reports({
                                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credit Limit</th>
                                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Outstanding</th>
                                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Utilization</th>
-                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Available Credit</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                                        Available Credit
+                                                    </th>
                                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-200">
                                                 {vendorDueSummary.map((vendor) => {
-                                                    const utilization = vendor.credit_limit > 0 ? (vendor.current_balance / vendor.credit_limit) * 100 : 0;
+                                                    const utilization =
+                                                        vendor.credit_limit > 0 ? (vendor.current_balance / vendor.credit_limit) * 100 : 0;
                                                     const availableCredit = Math.max(0, vendor.credit_limit - vendor.current_balance);
 
                                                     return (
                                                         <tr key={vendor.name} className="hover:bg-gray-50">
                                                             <td className="px-4 py-3 text-sm font-medium text-gray-900">{vendor.name}</td>
                                                             <td className="px-4 py-3 text-sm text-gray-900">{formatCurrency(vendor.credit_limit)}</td>
-                                                            <td className="px-4 py-3 text-sm font-medium text-red-600">{formatCurrency(vendor.current_balance)}</td>
+                                                            <td className="px-4 py-3 text-sm font-medium text-red-600">
+                                                                {formatCurrency(vendor.current_balance)}
+                                                            </td>
                                                             <td className="px-4 py-3">
                                                                 <div className="flex items-center gap-2">
-                                                                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                                                                    <div className="h-2 w-16 rounded-full bg-gray-200">
                                                                         <div
                                                                             className={`h-2 rounded-full ${utilization > 80 ? 'bg-red-500' : utilization > 60 ? 'bg-yellow-500' : 'bg-green-500'}`}
                                                                             style={{ width: `${Math.min(utilization, 100)}%` }}
@@ -1054,17 +1027,28 @@ export default function Reports({
                                                                     <span className="text-sm text-gray-600">{utilization.toFixed(0)}%</span>
                                                                 </div>
                                                             </td>
-                                                            <td className="px-4 py-3 text-sm text-green-600 font-medium">{formatCurrency(availableCredit)}</td>
+                                                            <td className="px-4 py-3 text-sm font-medium text-green-600">
+                                                                {formatCurrency(availableCredit)}
+                                                            </td>
                                                             <td className="px-4 py-3">
-                                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                                    utilization > 90 ? 'bg-red-100 text-red-800' :
-                                                                    utilization > 80 ? 'bg-yellow-100 text-yellow-800' :
-                                                                    utilization > 60 ? 'bg-blue-100 text-blue-800' :
-                                                                    'bg-green-100 text-green-800'
-                                                                }`}>
-                                                                    {utilization > 90 ? 'Critical' :
-                                                                     utilization > 80 ? 'High' :
-                                                                     utilization > 60 ? 'Medium' : 'Good'}
+                                                                <span
+                                                                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                                                        utilization > 90
+                                                                            ? 'bg-red-100 text-red-800'
+                                                                            : utilization > 80
+                                                                              ? 'bg-yellow-100 text-yellow-800'
+                                                                              : utilization > 60
+                                                                                ? 'bg-blue-100 text-blue-800'
+                                                                                : 'bg-green-100 text-green-800'
+                                                                    }`}
+                                                                >
+                                                                    {utilization > 90
+                                                                        ? 'Critical'
+                                                                        : utilization > 80
+                                                                          ? 'High'
+                                                                          : utilization > 60
+                                                                            ? 'Medium'
+                                                                            : 'Good'}
                                                                 </span>
                                                             </td>
                                                         </tr>
@@ -1080,15 +1064,15 @@ export default function Reports({
                 </div>
 
                 {/* Quick Actions */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                    <h3 className="mb-4 text-lg font-semibold text-gray-900">Quick Actions</h3>
+                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                         <button
                             onClick={() => router.visit(route('medicine-vendors.index'))}
-                            className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                            className="flex items-center gap-3 rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
                         >
-                            <div className="bg-purple-100 p-2 rounded-lg">
-                                <Building2 className="w-5 h-5 text-purple-600" />
+                            <div className="rounded-lg bg-purple-100 p-2">
+                                <Building2 className="h-5 w-5 text-purple-600" />
                             </div>
                             <div className="text-left">
                                 <div className="font-medium text-gray-900">Manage Vendors</div>
@@ -1098,10 +1082,10 @@ export default function Reports({
 
                         <button
                             onClick={() => router.visit(route('medicine-corner.stock'))}
-                            className="flex items-center gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                            className="flex items-center gap-3 rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
                         >
-                            <div className="bg-orange-100 p-2 rounded-lg">
-                                <Eye className="w-5 h-5 text-orange-600" />
+                            <div className="rounded-lg bg-orange-100 p-2">
+                                <Eye className="h-5 w-5 text-orange-600" />
                             </div>
                             <div className="text-left">
                                 <div className="font-medium text-gray-900">View Stock</div>

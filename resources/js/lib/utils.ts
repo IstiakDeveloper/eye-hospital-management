@@ -107,9 +107,7 @@ export function isToday(date: string | Date) {
     const today = new Date();
     const compareDate = new Date(date);
     return (
-        compareDate.getDate() === today.getDate() &&
-        compareDate.getMonth() === today.getMonth() &&
-        compareDate.getFullYear() === today.getFullYear()
+        compareDate.getDate() === today.getDate() && compareDate.getMonth() === today.getMonth() && compareDate.getFullYear() === today.getFullYear()
     );
 }
 

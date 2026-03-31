@@ -1,24 +1,9 @@
 // resources/js/Pages/MedicineCorner/EditSale.tsx
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Head, Link, useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import {
-    ArrowLeft,
-    Plus,
-    Minus,
-    Trash2,
-    Save,
-    User,
-    Phone,
-    Search,
-    Package,
-    AlertCircle,
-    X,
-    ShoppingCart,
-    Calculator,
-    DollarSign
-} from 'lucide-react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { AlertCircle, ArrowLeft, Calculator, DollarSign, Minus, Package, Phone, Plus, Save, Search, Trash2, User, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 interface MedicineStock {
     id: number;
@@ -120,22 +105,20 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
         paid_amount: sale.paid_amount || 0,
         customer_name: sale.patient?.name || '',
         customer_phone: sale.patient?.phone || '',
-        notes: sale.notes || ''
+        notes: sale.notes || '',
     });
 
     // Initialize cart with existing sale items
     useEffect(() => {
         const initialCart: CartItem[] = [];
 
-        sale.items.forEach(item => {
+        sale.items.forEach((item) => {
             // Find the medicine in the medicines array
-            const medicine = medicines.find(m =>
-                m.stocks.some(s => s.id === item.medicine_stock.id)
-            );
+            const medicine = medicines.find((m) => m.stocks.some((s) => s.id === item.medicine_stock.id));
 
             if (medicine) {
                 // Find the stock
-                const stock = medicine.stocks.find(s => s.id === item.medicine_stock.id);
+                const stock = medicine.stocks.find((s) => s.id === item.medicine_stock.id);
 
                 if (stock) {
                     initialCart.push({
@@ -144,11 +127,11 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                         stock: {
                             ...stock,
                             // Add back the sold quantity to available quantity for editing
-                            available_quantity: stock.available_quantity + item.quantity
+                            available_quantity: stock.available_quantity + item.quantity,
                         },
                         quantity: item.quantity,
                         unit_price: item.unit_price,
-                        original_quantity: item.quantity
+                        original_quantity: item.quantity,
                     });
                 } else {
                     // Create a virtual stock entry for items not found in current medicines
@@ -158,7 +141,7 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                         generic_name: item.medicine_stock.medicine.generic_name,
                         unit: item.medicine_stock.medicine.unit,
                         is_active: true,
-                        stocks: []
+                        stocks: [],
                     };
 
                     const virtualStock: MedicineStock = {
@@ -167,7 +150,7 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                         sale_price: item.unit_price,
                         buy_price: item.buy_price,
                         expiry_date: '2025-12-31',
-                        batch_number: item.medicine_stock.batch_number
+                        batch_number: item.medicine_stock.batch_number,
                     };
 
                     initialCart.push({
@@ -176,7 +159,7 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                         stock: virtualStock,
                         quantity: item.quantity,
                         unit_price: item.unit_price,
-                        original_quantity: item.quantity
+                        original_quantity: item.quantity,
                     });
                 }
             }
@@ -188,9 +171,8 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
     // Patient search functionality
     useEffect(() => {
         if (phoneSearch.length >= 3) {
-            const filtered = patients.filter(patient =>
-                patient.phone.includes(phoneSearch) ||
-                patient.name.toLowerCase().includes(phoneSearch.toLowerCase())
+            const filtered = patients.filter(
+                (patient) => patient.phone.includes(phoneSearch) || patient.name.toLowerCase().includes(phoneSearch.toLowerCase()),
             );
             setFilteredPatients(filtered.slice(0, 5));
             setShowPatientSuggestions(true);
@@ -242,7 +224,7 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
             totalAmount,
             paidAmount,
             dueAmount,
-            totalProfit
+            totalProfit,
         };
     }, [cart, data.discount, data.tax, data.paid_amount]);
 
@@ -251,27 +233,24 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
     };
 
     const filteredMedicines = useMemo(() => {
-        return medicines.filter(medicine =>
-            medicine.is_active &&
-            (medicine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            medicine.generic_name?.toLowerCase().includes(searchTerm.toLowerCase()))
+        return medicines.filter(
+            (medicine) =>
+                medicine.is_active &&
+                (medicine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    medicine.generic_name?.toLowerCase().includes(searchTerm.toLowerCase())),
         );
     }, [medicines, searchTerm]);
 
     const addToCart = (medicine: Medicine) => {
-        const availableStock = medicine.stocks.find(s => s.available_quantity > 0);
+        const availableStock = medicine.stocks.find((s) => s.available_quantity > 0);
         if (!availableStock) return;
 
-        const existingItem = cart.find(item => item.medicine_stock_id === availableStock.id);
+        const existingItem = cart.find((item) => item.medicine_stock_id === availableStock.id);
 
         if (existingItem) {
             if (existingItem.quantity < existingItem.stock.available_quantity) {
-                setCart(prevCart =>
-                    prevCart.map(item =>
-                        item.medicine_stock_id === availableStock.id
-                            ? { ...item, quantity: item.quantity + 1 }
-                            : item
-                    )
+                setCart((prevCart) =>
+                    prevCart.map((item) => (item.medicine_stock_id === availableStock.id ? { ...item, quantity: item.quantity + 1 } : item)),
                 );
             }
         } else {
@@ -280,43 +259,37 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                 medicine,
                 stock: availableStock,
                 quantity: 1,
-                unit_price: availableStock.sale_price
+                unit_price: availableStock.sale_price,
             };
-            setCart(prevCart => [...prevCart, newItem]);
+            setCart((prevCart) => [...prevCart, newItem]);
         }
     };
 
     const updateQuantity = (stockId: number, newQuantity: number) => {
         if (newQuantity <= 0) {
-            setCart(prevCart => prevCart.filter(item => item.medicine_stock_id !== stockId));
+            setCart((prevCart) => prevCart.filter((item) => item.medicine_stock_id !== stockId));
         } else {
-            setCart(prevCart =>
-                prevCart.map(item => {
+            setCart((prevCart) =>
+                prevCart.map((item) => {
                     if (item.medicine_stock_id === stockId) {
                         const maxQuantity = item.stock.available_quantity;
                         const validQuantity = Math.min(newQuantity, maxQuantity);
                         return { ...item, quantity: validQuantity };
                     }
                     return item;
-                })
+                }),
             );
         }
     };
 
     const updatePrice = (stockId: number, newPrice: number) => {
         if (newPrice >= 0) {
-            setCart(prevCart =>
-                prevCart.map(item =>
-                    item.medicine_stock_id === stockId
-                        ? { ...item, unit_price: newPrice }
-                        : item
-                )
-            );
+            setCart((prevCart) => prevCart.map((item) => (item.medicine_stock_id === stockId ? { ...item, unit_price: newPrice } : item)));
         }
     };
 
     const removeFromCart = (stockId: number) => {
-        setCart(prevCart => prevCart.filter(item => item.medicine_stock_id !== stockId));
+        setCart((prevCart) => prevCart.filter((item) => item.medicine_stock_id !== stockId));
     };
 
     const selectPatient = (patient: Patient) => {
@@ -370,31 +343,35 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
             }
         }
 
-        const cartItems = cart.map(item => ({
+        const cartItems = cart.map((item) => ({
             medicine_stock_id: item.medicine_stock_id,
             quantity: item.quantity,
-            unit_price: item.unit_price
+            unit_price: item.unit_price,
         }));
 
         // Use router.put directly like POS uses router.post
-        router.put(`/medicine-corner/sales/${sale.id}`, {
-            items: cartItems,
-            patient_id: data.patient_id || null,
-            discount: calculations.discount,
-            tax: calculations.tax,
-            paid_amount: calculations.paidAmount,
-            customer_name: data.customer_name || 'Walk-in Customer',
-            customer_phone: data.customer_phone,
-            notes: data.notes
-        }, {
-            onSuccess: () => {
-                // Redirect to sale details page
-                router.visit(`/medicine-corner/sales/${sale.id}`);
+        router.put(
+            `/medicine-corner/sales/${sale.id}`,
+            {
+                items: cartItems,
+                patient_id: data.patient_id || null,
+                discount: calculations.discount,
+                tax: calculations.tax,
+                paid_amount: calculations.paidAmount,
+                customer_name: data.customer_name || 'Walk-in Customer',
+                customer_phone: data.customer_phone,
+                notes: data.notes,
             },
-            onError: (errors) => {
-                console.error('Update failed:', errors);
-            }
-        });
+            {
+                onSuccess: () => {
+                    // Redirect to sale details page
+                    router.visit(`/medicine-corner/sales/${sale.id}`);
+                },
+                onError: (errors) => {
+                    console.error('Update failed:', errors);
+                },
+            },
+        );
     };
 
     return (
@@ -407,13 +384,13 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                     <div className="flex items-center gap-4">
                         <Link
                             href={`/medicine-corner/sales/${sale.id}`}
-                            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                         >
-                            <ArrowLeft className="w-5 h-5" />
+                            <ArrowLeft className="h-5 w-5" />
                         </Link>
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">Edit Sale</h1>
-                            <p className="text-gray-600 mt-1">
+                            <p className="mt-1 text-gray-600">
                                 {sale.invoice_number} • {new Date(sale.sale_date).toLocaleDateString('en-GB')}
                             </p>
                         </div>
@@ -426,12 +403,12 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
 
                 {/* Error Messages */}
                 {Object.keys(errors).length > 0 && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <div className="flex items-center gap-2 text-red-800 mb-2">
-                            <AlertCircle className="w-4 h-4" />
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                        <div className="mb-2 flex items-center gap-2 text-red-800">
+                            <AlertCircle className="h-4 w-4" />
                             <span className="font-medium">Please fix the following errors:</span>
                         </div>
-                        <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                        <ul className="list-inside list-disc space-y-1 text-sm text-red-700">
                             {Object.entries(errors).map(([key, message]) => (
                                 <li key={key}>{message}</li>
                             ))}
@@ -440,27 +417,27 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                 )}
 
                 <form onSubmit={handleSubmit}>
-                    <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 gap-6 xl:grid-cols-4">
                         {/* Left Side - Medicine Selection */}
-                        <div className="xl:col-span-3 space-y-6">
+                        <div className="space-y-6 xl:col-span-3">
                             {/* Search */}
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                    <Search className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
                                     <input
                                         type="text"
                                         placeholder="Search medicines by name or generic name..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="w-full rounded-lg border border-gray-300 py-3 pr-4 pl-12 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
                             </div>
 
                             {/* Current Cart Items */}
                             {cart.length > 0 && (
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                                    <div className="px-6 py-4 border-b border-gray-200">
+                                <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+                                    <div className="border-b border-gray-200 px-6 py-4">
                                         <div className="flex items-center justify-between">
                                             <h2 className="text-lg font-semibold text-gray-900">Current Items</h2>
                                             <span className="text-sm text-gray-500">{cart.length} items</span>
@@ -469,88 +446,84 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                     <div className="p-6">
                                         <div className="space-y-4">
                                             {cart.map((item) => (
-                                                <div key={item.medicine_stock_id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                                    <div className="flex items-start justify-between mb-3">
-                                                        <div className="flex-1 min-w-0">
-                                                            <h3 className="font-medium text-gray-900 mb-1">
-                                                                {item.medicine.name}
-                                                            </h3>
+                                                <div key={item.medicine_stock_id} className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                                    <div className="mb-3 flex items-start justify-between">
+                                                        <div className="min-w-0 flex-1">
+                                                            <h3 className="mb-1 font-medium text-gray-900">{item.medicine.name}</h3>
                                                             {item.medicine.generic_name && (
-                                                                <p className="text-sm text-gray-600 mb-1">
-                                                                    {item.medicine.generic_name}
-                                                                </p>
+                                                                <p className="mb-1 text-sm text-gray-600">{item.medicine.generic_name}</p>
                                                             )}
                                                             <div className="flex items-center gap-4 text-sm text-gray-500">
                                                                 <span>Batch: {item.stock.batch_number}</span>
-                                                                <span>Available: {item.stock.available_quantity} {item.medicine.unit}</span>
+                                                                <span>
+                                                                    Available: {item.stock.available_quantity} {item.medicine.unit}
+                                                                </span>
                                                                 <span>Buy Price: {formatCurrency(item.stock.buy_price)}</span>
                                                             </div>
                                                         </div>
                                                         <button
                                                             type="button"
                                                             onClick={() => removeFromCart(item.medicine_stock_id)}
-                                                            className="p-2 text-red-600 hover:bg-red-100 rounded-lg"
+                                                            className="rounded-lg p-2 text-red-600 hover:bg-red-100"
                                                             title="Remove item"
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <Trash2 className="h-4 w-4" />
                                                         </button>
                                                     </div>
 
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                                         {/* Quantity Controls */}
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                            <label className="mb-2 block text-sm font-medium text-gray-700">
                                                                 Quantity ({item.medicine.unit})
                                                             </label>
                                                             <div className="flex items-center gap-2">
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => updateQuantity(item.medicine_stock_id, item.quantity - 1)}
-                                                                    className="p-2 rounded bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                                                    className="rounded bg-gray-200 p-2 hover:bg-gray-300 disabled:cursor-not-allowed disabled:bg-gray-100"
                                                                     disabled={item.quantity <= 1}
                                                                 >
-                                                                    <Minus className="w-4 h-4" />
+                                                                    <Minus className="h-4 w-4" />
                                                                 </button>
                                                                 <input
                                                                     type="number"
                                                                     min="1"
                                                                     max={item.stock.available_quantity}
                                                                     value={item.quantity}
-                                                                    onChange={(e) => updateQuantity(item.medicine_stock_id, parseInt(e.target.value) || 1)}
-                                                                    className="w-20 text-center px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                    onChange={(e) =>
+                                                                        updateQuantity(item.medicine_stock_id, parseInt(e.target.value) || 1)
+                                                                    }
+                                                                    className="w-20 rounded-lg border border-gray-300 px-3 py-2 text-center focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                                                 />
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => updateQuantity(item.medicine_stock_id, item.quantity + 1)}
                                                                     disabled={item.quantity >= item.stock.available_quantity}
-                                                                    className="p-2 rounded bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                                                    className="rounded bg-gray-200 p-2 hover:bg-gray-300 disabled:cursor-not-allowed disabled:bg-gray-100"
                                                                 >
-                                                                    <Plus className="w-4 h-4" />
+                                                                    <Plus className="h-4 w-4" />
                                                                 </button>
                                                             </div>
                                                         </div>
 
                                                         {/* Unit Price */}
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                                Unit Price (৳)
-                                                            </label>
+                                                            <label className="mb-2 block text-sm font-medium text-gray-700">Unit Price (৳)</label>
                                                             <input
                                                                 type="number"
                                                                 step="0.01"
                                                                 min="0"
                                                                 value={item.unit_price}
                                                                 onChange={(e) => updatePrice(item.medicine_stock_id, parseFloat(e.target.value) || 0)}
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                                             />
                                                         </div>
 
                                                         {/* Line Total */}
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                                Line Total
-                                                            </label>
-                                                            <div className="px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                                                            <label className="mb-2 block text-sm font-medium text-gray-700">Line Total</label>
+                                                            <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2">
                                                                 <div className="text-lg font-bold text-green-700">
                                                                     {formatCurrency(item.quantity * item.unit_price)}
                                                                 </div>
@@ -568,65 +541,53 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                             )}
 
                             {/* Medicine Grid */}
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <h2 className="text-lg font-semibold text-gray-900 mb-4">Add More Medicines</h2>
+                            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                                <h2 className="mb-4 text-lg font-semibold text-gray-900">Add More Medicines</h2>
                                 {filteredMedicines.length === 0 ? (
-                                    <div className="text-center py-8 text-gray-500">
-                                        <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                                    <div className="py-8 text-center text-gray-500">
+                                        <Package className="mx-auto mb-3 h-12 w-12 text-gray-300" />
                                         <p className="text-sm">
                                             {searchTerm ? 'No medicines found matching your search' : 'Start typing to search medicines'}
                                         </p>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
+                                    <div className="grid max-h-96 grid-cols-1 gap-4 overflow-y-auto md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                         {filteredMedicines.map((medicine) => {
-                                            const availableStock = medicine.stocks.find(s => s.available_quantity > 0);
-                                            const cartItem = cart.find(item => item.medicine_stock_id === availableStock?.id);
+                                            const availableStock = medicine.stocks.find((s) => s.available_quantity > 0);
+                                            const cartItem = cart.find((item) => item.medicine_stock_id === availableStock?.id);
                                             const hasStock = availableStock && availableStock.available_quantity > 0;
 
                                             return (
                                                 <div
                                                     key={medicine.id}
-                                                    className={`p-4 border rounded-lg transition-all cursor-pointer ${
+                                                    className={`cursor-pointer rounded-lg border p-4 transition-all ${
                                                         hasStock
                                                             ? 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                                                            : 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
+                                                            : 'cursor-not-allowed border-gray-100 bg-gray-50 opacity-60'
                                                     }`}
                                                     onClick={() => hasStock && addToCart(medicine)}
                                                 >
                                                     <div className="text-center">
                                                         <div className="mb-2">
-                                                            <Package className={`w-6 h-6 mx-auto ${hasStock ? 'text-blue-600' : 'text-gray-400'}`} />
+                                                            <Package className={`mx-auto h-6 w-6 ${hasStock ? 'text-blue-600' : 'text-gray-400'}`} />
                                                         </div>
-                                                        <h3 className="font-medium text-sm text-gray-900 mb-1 line-clamp-2">
-                                                            {medicine.name}
-                                                        </h3>
+                                                        <h3 className="mb-1 line-clamp-2 text-sm font-medium text-gray-900">{medicine.name}</h3>
                                                         {medicine.generic_name && (
-                                                            <p className="text-xs text-gray-500 mb-1 line-clamp-1">
-                                                                {medicine.generic_name}
-                                                            </p>
+                                                            <p className="mb-1 line-clamp-1 text-xs text-gray-500">{medicine.generic_name}</p>
                                                         )}
-                                                        <div className="text-xs text-gray-600 mb-2">
+                                                        <div className="mb-2 text-xs text-gray-600">
                                                             Stock: {availableStock?.available_quantity || 0} {medicine.unit}
                                                         </div>
                                                         <div className="text-sm font-semibold text-green-600">
                                                             {formatCurrency(availableStock?.sale_price || 0)}
                                                         </div>
                                                         {availableStock?.batch_number && (
-                                                            <div className="text-xs text-gray-500 mt-1">
-                                                                Batch: {availableStock.batch_number}
-                                                            </div>
+                                                            <div className="mt-1 text-xs text-gray-500">Batch: {availableStock.batch_number}</div>
                                                         )}
                                                         {cartItem && (
-                                                            <div className="text-xs text-blue-600 font-medium mt-1">
-                                                                In cart: {cartItem.quantity}
-                                                            </div>
+                                                            <div className="mt-1 text-xs font-medium text-blue-600">In cart: {cartItem.quantity}</div>
                                                         )}
-                                                        {!hasStock && (
-                                                            <div className="text-xs text-red-500 font-medium mt-1">
-                                                                Out of Stock
-                                                            </div>
-                                                        )}
+                                                        {!hasStock && <div className="mt-1 text-xs font-medium text-red-500">Out of Stock</div>}
                                                     </div>
                                                 </div>
                                             );
@@ -639,30 +600,26 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                         {/* Right Side - Customer & Checkout */}
                         <div className="space-y-6">
                             {/* Customer Selection */}
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <h2 className="text-lg font-semibold text-gray-900 mb-4">Customer</h2>
+                            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                                <h2 className="mb-4 text-lg font-semibold text-gray-900">Customer</h2>
 
                                 {selectedPatient ? (
-                                    <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3">
                                         <div className="flex items-center gap-2">
-                                            <User className="w-4 h-4 text-blue-600" />
+                                            <User className="h-4 w-4 text-blue-600" />
                                             <div>
-                                                <p className="font-medium text-blue-900 text-sm">{selectedPatient.name}</p>
+                                                <p className="text-sm font-medium text-blue-900">{selectedPatient.name}</p>
                                                 <p className="text-xs text-blue-600">{selectedPatient.phone}</p>
                                             </div>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={clearPatient}
-                                            className="p-1 hover:bg-blue-200 rounded"
-                                        >
-                                            <X className="w-4 h-4 text-blue-600" />
+                                        <button type="button" onClick={clearPatient} className="rounded p-1 hover:bg-blue-200">
+                                            <X className="h-4 w-4 text-blue-600" />
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="space-y-3 relative">
+                                    <div className="relative space-y-3">
                                         <div className="relative">
-                                            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                            <Phone className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
                                             <input
                                                 type="text"
                                                 placeholder="Search by phone or name..."
@@ -670,20 +627,20 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                                 onChange={(e) => setPhoneSearch(e.target.value)}
                                                 onFocus={() => phoneSearch.length >= 3 && setShowPatientSuggestions(true)}
                                                 onBlur={() => setTimeout(() => setShowPatientSuggestions(false), 200)}
-                                                className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                className="w-full rounded-lg border border-gray-300 py-2 pr-4 pl-9 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
 
                                         {showPatientSuggestions && filteredPatients.length > 0 && (
-                                            <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                            <div className="absolute z-10 max-h-48 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
                                                 {filteredPatients.map((patient) => (
                                                     <button
                                                         key={patient.id}
                                                         type="button"
                                                         onClick={() => selectPatient(patient)}
-                                                        className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                                                        className="w-full border-b border-gray-100 p-3 text-left last:border-0 hover:bg-gray-50"
                                                     >
-                                                        <p className="font-medium text-sm text-gray-900">{patient.name}</p>
+                                                        <p className="text-sm font-medium text-gray-900">{patient.name}</p>
                                                         <p className="text-xs text-gray-500">{patient.phone}</p>
                                                     </button>
                                                 ))}
@@ -696,14 +653,14 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                                 placeholder="Customer name"
                                                 value={data.customer_name}
                                                 onChange={(e) => setData('customer_name', e.target.value)}
-                                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                className="rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                             />
                                             <input
                                                 type="text"
                                                 placeholder="Phone number"
                                                 value={data.customer_phone}
                                                 onChange={(e) => setData('customer_phone', e.target.value)}
-                                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                className="rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
                                     </div>
@@ -711,15 +668,15 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                             </div>
 
                             {/* Calculation Summary */}
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Calculator className="w-5 h-5 text-blue-600" />
+                            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                                <div className="mb-4 flex items-center gap-2">
+                                    <Calculator className="h-5 w-5 text-blue-600" />
                                     <h2 className="text-lg font-semibold text-gray-900">Order Summary</h2>
                                 </div>
 
                                 <div className="space-y-4">
                                     {/* Subtotal */}
-                                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                                    <div className="flex items-center justify-between border-b border-gray-100 py-2">
                                         <span className="text-sm text-gray-600">Subtotal ({cart.length} items):</span>
                                         <span className="font-medium text-gray-900">{formatCurrency(calculations.subtotal)}</span>
                                     </div>
@@ -727,7 +684,7 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                     {/* Discount & Tax Inputs */}
                                     <div className="space-y-3">
                                         <div>
-                                            <div className="flex items-center justify-between mb-1">
+                                            <div className="mb-1 flex items-center justify-between">
                                                 <label className="block text-sm font-medium text-gray-700">
                                                     Discount {discountType === 'percentage' ? '(%)' : '(৳)'}
                                                 </label>
@@ -737,7 +694,7 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                                         setDiscountType(discountType === 'amount' ? 'percentage' : 'amount');
                                                         setDiscountInput(0);
                                                     }}
-                                                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                                    className="text-xs font-medium text-blue-600 hover:text-blue-700"
                                                 >
                                                     Switch to {discountType === 'amount' ? '%' : '৳'}
                                                 </button>
@@ -750,34 +707,32 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                                     max={discountType === 'percentage' ? 100 : calculations.subtotal}
                                                     value={discountInput}
                                                     onChange={(e) => setDiscountInput(parseFloat(e.target.value) || 0)}
-                                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                                     placeholder={discountType === 'percentage' ? '0-100' : '0'}
                                                 />
-                                                <div className="w-12 flex items-center justify-center bg-gray-100 border border-gray-300 rounded-lg text-sm font-medium text-gray-700">
+                                                <div className="flex w-12 items-center justify-center rounded-lg border border-gray-300 bg-gray-100 text-sm font-medium text-gray-700">
                                                     {discountType === 'percentage' ? '%' : '৳'}
                                                 </div>
                                             </div>
                                             {discountType === 'percentage' && discountInput > 0 && (
-                                                <div className="text-xs text-gray-500 mt-1">
-                                                    Amount: {formatCurrency(calculations.discount)}
-                                                </div>
+                                                <div className="mt-1 text-xs text-gray-500">Amount: {formatCurrency(calculations.discount)}</div>
                                             )}
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Tax (৳)</label>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">Tax (৳)</label>
                                             <input
                                                 type="number"
                                                 step="0.01"
                                                 min="0"
                                                 value={data.tax}
                                                 onChange={(e) => setData('tax', parseFloat(e.target.value) || 0)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
                                     </div>
 
                                     {/* Calculations Display */}
-                                    <div className="space-y-2 pt-3 border-t border-gray-200">
+                                    <div className="space-y-2 border-t border-gray-200 pt-3">
                                         {calculations.discount > 0 && (
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-red-600">Discount:</span>
@@ -790,7 +745,7 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                                 <span className="text-gray-900">+{formatCurrency(calculations.tax)}</span>
                                             </div>
                                         )}
-                                        <div className="flex justify-between items-center py-2 border-t border-gray-200">
+                                        <div className="flex items-center justify-between border-t border-gray-200 py-2">
                                             <span className="text-base font-semibold text-gray-900">Total Amount:</span>
                                             <span className="text-xl font-bold text-blue-600">{formatCurrency(calculations.totalAmount)}</span>
                                         </div>
@@ -798,7 +753,7 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
 
                                     {/* Payment Input */}
                                     <div className="pt-3">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Paid Amount (৳)</label>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Paid Amount (৳)</label>
                                         <input
                                             type="number"
                                             step="0.01"
@@ -806,7 +761,7 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                             max={calculations.totalAmount}
                                             value={data.paid_amount}
                                             onChange={(e) => setData('paid_amount', parseFloat(e.target.value) || 0)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                             required
                                         />
 
@@ -814,20 +769,25 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                         <div className="mt-2 space-y-1">
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-gray-600">Paid:</span>
-                                                <span className="text-green-600 font-medium">{formatCurrency(calculations.paidAmount)}</span>
+                                                <span className="font-medium text-green-600">{formatCurrency(calculations.paidAmount)}</span>
                                             </div>
                                             {calculations.dueAmount > 0 && (
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-gray-600">Due:</span>
-                                                    <span className="text-red-600 font-medium">{formatCurrency(calculations.dueAmount)}</span>
+                                                    <span className="font-medium text-red-600">{formatCurrency(calculations.dueAmount)}</span>
                                                 </div>
                                             )}
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-gray-600">Status:</span>
-                                                <span className={`font-medium ${
-                                                    calculations.dueAmount === 0 ? 'text-green-600' :
-                                                    calculations.paidAmount === 0 ? 'text-red-600' : 'text-amber-600'
-                                                }`}>
+                                                <span
+                                                    className={`font-medium ${
+                                                        calculations.dueAmount === 0
+                                                            ? 'text-green-600'
+                                                            : calculations.paidAmount === 0
+                                                              ? 'text-red-600'
+                                                              : 'text-amber-600'
+                                                    }`}
+                                                >
                                                     {calculations.dueAmount === 0 ? 'Paid' : calculations.paidAmount === 0 ? 'Pending' : 'Partial'}
                                                 </span>
                                             </div>
@@ -835,16 +795,16 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                     </div>
 
                                     {/* Profit Display */}
-                                    <div className="pt-3 border-t border-gray-200">
+                                    <div className="border-t border-gray-200 pt-3">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
-                                                <DollarSign className="w-4 h-4 text-green-600" />
+                                                <DollarSign className="h-4 w-4 text-green-600" />
                                                 <span className="text-sm font-medium text-gray-600">Total Profit:</span>
                                             </div>
                                             <span className="text-base font-bold text-green-600">{formatCurrency(calculations.totalProfit)}</span>
                                         </div>
                                         {calculations.totalAmount > 0 && (
-                                            <div className="text-xs text-gray-500 text-right mt-1">
+                                            <div className="mt-1 text-right text-xs text-gray-500">
                                                 Margin: {((calculations.totalProfit / calculations.totalAmount) * 100).toFixed(1)}%
                                             </div>
                                         )}
@@ -853,13 +813,13 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                             </div>
 
                             {/* Notes */}
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <h2 className="text-lg font-semibold text-gray-900 mb-4">Notes</h2>
+                            <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                                <h2 className="mb-4 text-lg font-semibold text-gray-900">Notes</h2>
                                 <textarea
                                     value={data.notes}
                                     onChange={(e) => setData('notes', e.target.value)}
                                     rows={4}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                                     placeholder="Additional notes for this sale..."
                                 />
                             </div>
@@ -869,16 +829,16 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                 <button
                                     type="submit"
                                     disabled={processing || cart.length === 0}
-                                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 py-3 font-medium text-white transition-colors hover:bg-green-700 disabled:bg-gray-400"
                                 >
                                     {processing ? (
                                         <>
-                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                                             Updating Sale...
                                         </>
                                     ) : (
                                         <>
-                                            <Save className="w-4 h-4" />
+                                            <Save className="h-4 w-4" />
                                             Update Sale - {formatCurrency(calculations.totalAmount)}
                                         </>
                                     )}
@@ -887,7 +847,7 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                 <div className="grid grid-cols-2 gap-3">
                                     <Link
                                         href={`/medicine-corner/sales/${sale.id}`}
-                                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-center"
+                                        className="rounded-lg border border-gray-300 px-4 py-2 text-center text-gray-700 hover:bg-gray-50"
                                     >
                                         Cancel
                                     </Link>
@@ -899,7 +859,7 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                                     setCart([]);
                                                 }
                                             }}
-                                            className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50"
+                                            className="rounded-lg border border-red-300 px-4 py-2 text-red-700 hover:bg-red-50"
                                         >
                                             Clear Cart
                                         </button>
@@ -908,8 +868,8 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                             </div>
 
                             {/* Quick Stats */}
-                            <div className="bg-gray-50 rounded-xl p-4">
-                                <h3 className="text-sm font-medium text-gray-900 mb-3">Quick Stats</h3>
+                            <div className="rounded-xl bg-gray-50 p-4">
+                                <h3 className="mb-3 text-sm font-medium text-gray-900">Quick Stats</h3>
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
                                         <div className="text-gray-500">Items</div>
@@ -922,7 +882,9 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                                     <div>
                                         <div className="text-gray-500">Avg Price</div>
                                         <div className="font-medium">
-                                            {cart.length > 0 ? formatCurrency(calculations.subtotal / cart.reduce((sum, item) => sum + item.quantity, 0)) : '৳0'}
+                                            {cart.length > 0
+                                                ? formatCurrency(calculations.subtotal / cart.reduce((sum, item) => sum + item.quantity, 0))
+                                                : '৳0'}
                                         </div>
                                     </div>
                                     <div>
@@ -939,8 +901,8 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
 
                 {/* Mobile Floating Summary */}
                 {cart.length > 0 && (
-                    <div className="xl:hidden fixed bottom-4 left-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-40">
-                        <div className="flex items-center justify-between mb-2">
+                    <div className="fixed right-4 bottom-4 left-4 z-40 rounded-lg border border-gray-200 bg-white p-4 shadow-lg xl:hidden">
+                        <div className="mb-2 flex items-center justify-between">
                             <div>
                                 <div className="font-medium text-gray-900">
                                     {cart.length} items • {formatCurrency(calculations.totalAmount)}
@@ -952,7 +914,7 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                             <button
                                 type="submit"
                                 disabled={processing}
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 text-sm font-medium"
+                                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:bg-gray-400"
                                 onClick={handleSubmit}
                             >
                                 {processing ? 'Updating...' : 'Update Sale'}
@@ -960,9 +922,9 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                         </div>
 
                         {/* Progress bar */}
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="h-2 w-full rounded-full bg-gray-200">
                             <div
-                                className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                                className="h-2 rounded-full bg-green-600 transition-all duration-300"
                                 style={{ width: `${Math.min(100, (calculations.paidAmount / calculations.totalAmount) * 100)}%` }}
                             ></div>
                         </div>
@@ -972,9 +934,9 @@ export function EditSale({ sale, medicines, patients }: EditSaleProps) {
                 {/* Change Detection Warning */}
                 {JSON.stringify(cart) !== JSON.stringify([]) && (
                     <div className="fixed top-4 right-4 z-50">
-                        <div className="bg-amber-100 border border-amber-300 text-amber-800 px-4 py-2 rounded-lg shadow-lg">
+                        <div className="rounded-lg border border-amber-300 bg-amber-100 px-4 py-2 text-amber-800 shadow-lg">
                             <div className="flex items-center gap-2">
-                                <AlertCircle className="w-4 h-4" />
+                                <AlertCircle className="h-4 w-4" />
                                 <span className="text-sm font-medium">Unsaved Changes</span>
                             </div>
                         </div>

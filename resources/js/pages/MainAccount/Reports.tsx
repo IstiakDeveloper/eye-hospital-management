@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/MainAccountLayout';
-import { Calendar, FileText, TrendingUp, TrendingDown } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { Calendar, FileText, TrendingDown, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
 
 const Reports: React.FC = () => {
     const [formData, setFormData] = useState({
@@ -15,7 +15,7 @@ const Reports: React.FC = () => {
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value
+            [e.target.name]: e.target.value,
         });
     };
 
@@ -29,18 +29,18 @@ const Reports: React.FC = () => {
         if (formData.reportType === 'daily') {
             router.get('/main-account/daily-report', {
                 ...params,
-                date: formData.date
+                date: formData.date,
             });
         } else if (formData.reportType === 'monthly') {
             router.get('/main-account/monthly-report', {
                 ...params,
                 month: formData.month,
-                year: formData.year
+                year: formData.year,
             });
         } else if (formData.reportType === 'yearly') {
             router.get('/main-account/yearly-report', {
                 ...params,
-                year: formData.year
+                year: formData.year,
             });
         }
     };
@@ -48,12 +48,11 @@ const Reports: React.FC = () => {
     return (
         <AdminLayout>
             <div className="space-y-6">
-
-                <div className="bg-white rounded-lg shadow-sm border p-8 max-w-2xl mx-auto">
+                <div className="mx-auto max-w-2xl rounded-lg border bg-white p-8 shadow-sm">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Report Type */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-3">Report Type</label>
+                            <label className="mb-3 block text-sm font-medium text-gray-700">Report Type</label>
                             <div className="grid grid-cols-3 gap-4">
                                 {[
                                     { value: 'daily', label: 'Daily Report', icon: Calendar },
@@ -69,11 +68,14 @@ const Reports: React.FC = () => {
                                             onChange={handleInputChange}
                                             className="sr-only"
                                         />
-                                        <div className={`p-4 rounded-lg border-2 cursor-pointer text-center ${formData.reportType === option.value
-                                                ? 'border-blue-500 bg-blue-50'
-                                                : 'border-gray-200 hover:border-gray-300'
-                                            }`}>
-                                            <option.icon className="w-6 h-6 mx-auto mb-2 text-blue-600" />
+                                        <div
+                                            className={`cursor-pointer rounded-lg border-2 p-4 text-center ${
+                                                formData.reportType === option.value
+                                                    ? 'border-blue-500 bg-blue-50'
+                                                    : 'border-gray-200 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            <option.icon className="mx-auto mb-2 h-6 w-6 text-blue-600" />
                                             <span className="text-sm font-medium">{option.label}</span>
                                         </div>
                                     </label>
@@ -83,7 +85,7 @@ const Reports: React.FC = () => {
 
                         {/* Voucher Type */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-3">Voucher Type</label>
+                            <label className="mb-3 block text-sm font-medium text-gray-700">Voucher Type</label>
                             <div className="grid grid-cols-2 gap-4">
                                 {[
                                     { value: 'Debit', label: 'Debit Voucher', icon: TrendingDown },
@@ -98,12 +100,16 @@ const Reports: React.FC = () => {
                                             onChange={handleInputChange}
                                             className="sr-only"
                                         />
-                                        <div className={`p-4 rounded-lg border-2 cursor-pointer text-center ${formData.voucherType === option.value
-                                                ? 'border-green-500 bg-green-50'
-                                                : 'border-gray-200 hover:border-gray-300'
-                                            }`}>
-                                            <option.icon className={`w-6 h-6 mx-auto mb-2 ${option.value === 'Debit' ? 'text-red-600' : 'text-green-600'
-                                                }`} />
+                                        <div
+                                            className={`cursor-pointer rounded-lg border-2 p-4 text-center ${
+                                                formData.voucherType === option.value
+                                                    ? 'border-green-500 bg-green-50'
+                                                    : 'border-gray-200 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            <option.icon
+                                                className={`mx-auto mb-2 h-6 w-6 ${option.value === 'Debit' ? 'text-red-600' : 'text-green-600'}`}
+                                            />
                                             <span className="text-sm font-medium">{option.label}</span>
                                         </div>
                                     </label>
@@ -115,13 +121,13 @@ const Reports: React.FC = () => {
                         <div className="space-y-4">
                             {formData.reportType === 'daily' && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Select Date</label>
                                     <input
                                         type="date"
                                         name="date"
                                         value={formData.date}
                                         onChange={handleInputChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                         required
                                     />
                                 </div>
@@ -130,12 +136,12 @@ const Reports: React.FC = () => {
                             {formData.reportType === 'monthly' && (
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Month</label>
+                                        <label className="mb-2 block text-sm font-medium text-gray-700">Month</label>
                                         <select
                                             name="month"
                                             value={formData.month}
                                             onChange={handleInputChange}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                         >
                                             {Array.from({ length: 12 }, (_, i) => (
                                                 <option key={i + 1} value={i + 1}>
@@ -145,12 +151,12 @@ const Reports: React.FC = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                                        <label className="mb-2 block text-sm font-medium text-gray-700">Year</label>
                                         <select
                                             name="year"
                                             value={formData.year}
                                             onChange={handleInputChange}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                         >
                                             {Array.from({ length: 10 }, (_, i) => {
                                                 const year = new Date().getFullYear() - 5 + i;
@@ -167,12 +173,12 @@ const Reports: React.FC = () => {
 
                             {formData.reportType === 'yearly' && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">Year</label>
                                     <select
                                         name="year"
                                         value={formData.year}
                                         onChange={handleInputChange}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                     >
                                         {Array.from({ length: 10 }, (_, i) => {
                                             const year = new Date().getFullYear() - 5 + i;
@@ -190,7 +196,7 @@ const Reports: React.FC = () => {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white transition-colors hover:bg-blue-700"
                         >
                             Generate Report
                         </button>

@@ -1,20 +1,8 @@
-import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
 import { formatDate } from '@/lib/utils';
-import {
-    Filter,
-    RefreshCw,
-    Edit,
-    Trash2,
-    TrendingUp,
-    TrendingDown,
-    Wallet,
-    Building2,
-    Home,
-    Receipt,
-    DollarSign
-} from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { Building2, DollarSign, Edit, Filter, Home, Receipt, RefreshCw, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface Transaction {
     id: number;
@@ -73,20 +61,13 @@ interface TransactionsProps {
     };
 }
 
-const Transactions: React.FC<TransactionsProps> = ({
-    transactions,
-    expenseCategories,
-    incomeCategories,
-    filters = {},
-    totals,
-    categoryStats
-}) => {
+const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCategories, incomeCategories, filters = {}, totals, categoryStats }) => {
     const [filter, setFilter] = useState({
         type: filters.type || '',
         date_from: filters.date_from || '',
         date_to: filters.date_to || '',
         category: filters.category || '',
-        category_filter: filters.category_filter || ''
+        category_filter: filters.category_filter || '',
     });
 
     const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
@@ -160,7 +141,7 @@ const Transactions: React.FC<TransactionsProps> = ({
                 onError: () => {
                     setDeleteConfirm(null);
                 },
-                onFinish: () => setLoading(false)
+                onFinish: () => setLoading(false),
             });
         } else {
             setDeleteConfirm(transactionId);
@@ -175,13 +156,13 @@ const Transactions: React.FC<TransactionsProps> = ({
     return (
         <HospitalAccountLayout title="Transactions">
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+            <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-4">
                 {/* Income Card */}
-                <div className="bg-white border-l-4 border-green-500 rounded-lg shadow-sm p-3 hover:shadow-md transition-shadow">
+                <div className="rounded-lg border-l-4 border-green-500 bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <div className="bg-green-50 p-1.5 rounded">
-                                <TrendingUp className="w-4 h-4 text-green-600" />
+                            <div className="rounded bg-green-50 p-1.5">
+                                <TrendingUp className="h-4 w-4 text-green-600" />
                             </div>
                             <div>
                                 <div className="text-xs text-gray-500">INCOME</div>
@@ -192,11 +173,11 @@ const Transactions: React.FC<TransactionsProps> = ({
                 </div>
 
                 {/* Expense Card */}
-                <div className="bg-white border-l-4 border-red-500 rounded-lg shadow-sm p-3 hover:shadow-md transition-shadow">
+                <div className="rounded-lg border-l-4 border-red-500 bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <div className="bg-red-50 p-1.5 rounded">
-                                <TrendingDown className="w-4 h-4 text-red-600" />
+                            <div className="rounded bg-red-50 p-1.5">
+                                <TrendingDown className="h-4 w-4 text-red-600" />
                             </div>
                             <div>
                                 <div className="text-xs text-gray-500">EXPENSE</div>
@@ -207,11 +188,11 @@ const Transactions: React.FC<TransactionsProps> = ({
                 </div>
 
                 {/* Fixed Assets Card */}
-                <div className="bg-white border-l-4 border-purple-500 rounded-lg shadow-sm p-3 hover:shadow-md transition-shadow">
+                <div className="rounded-lg border-l-4 border-purple-500 bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <div className="bg-purple-50 p-1.5 rounded">
-                                <Building2 className="w-4 h-4 text-purple-600" />
+                            <div className="rounded bg-purple-50 p-1.5">
+                                <Building2 className="h-4 w-4 text-purple-600" />
                             </div>
                             <div>
                                 <div className="text-xs text-gray-500">ASSETS</div>
@@ -222,11 +203,11 @@ const Transactions: React.FC<TransactionsProps> = ({
                 </div>
 
                 {/* Advance Rent Balance Card */}
-                <div className="bg-white border-l-4 border-indigo-500 rounded-lg shadow-sm p-3 hover:shadow-md transition-shadow">
+                <div className="rounded-lg border-l-4 border-indigo-500 bg-white p-3 shadow-sm transition-shadow hover:shadow-md">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <div className="bg-indigo-50 p-1.5 rounded">
-                                <Home className="w-4 h-4 text-indigo-600" />
+                            <div className="rounded bg-indigo-50 p-1.5">
+                                <Home className="h-4 w-4 text-indigo-600" />
                             </div>
                             <div>
                                 <div className="text-xs text-gray-500">ADVANCE RENT</div>
@@ -238,79 +219,77 @@ const Transactions: React.FC<TransactionsProps> = ({
             </div>
 
             {/* Quick Filter Buttons */}
-            <div className="flex flex-wrap gap-3 mb-6">
+            <div className="mb-6 flex flex-wrap gap-3">
                 <button
                     onClick={() => applyQuickFilter('')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                        !filter.category_filter
-                            ? 'bg-gray-800 text-white shadow-lg'
-                            : 'bg-white text-gray-700 border hover:bg-gray-50'
+                    className={`rounded-lg px-4 py-2 font-medium transition-all ${
+                        !filter.category_filter ? 'bg-gray-800 text-white shadow-lg' : 'border bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                 >
-                    <Receipt className="w-4 h-4 inline mr-2" />
+                    <Receipt className="mr-2 inline h-4 w-4" />
                     All Transactions
                 </button>
                 <button
                     onClick={() => applyQuickFilter('other_income')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    className={`rounded-lg px-4 py-2 font-medium transition-all ${
                         filter.category_filter === 'other_income'
                             ? 'bg-green-600 text-white shadow-lg'
-                            : 'bg-white text-gray-700 border hover:bg-gray-50'
+                            : 'border bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                 >
-                    <TrendingUp className="w-4 h-4 inline mr-2" />
+                    <TrendingUp className="mr-2 inline h-4 w-4" />
                     Income Only
                 </button>
                 <button
                     onClick={() => applyQuickFilter('other_expense')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    className={`rounded-lg px-4 py-2 font-medium transition-all ${
                         filter.category_filter === 'other_expense'
                             ? 'bg-red-600 text-white shadow-lg'
-                            : 'bg-white text-gray-700 border hover:bg-gray-50'
+                            : 'border bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                 >
-                    <TrendingDown className="w-4 h-4 inline mr-2" />
+                    <TrendingDown className="mr-2 inline h-4 w-4" />
                     Other Expenses
                 </button>
                 <button
                     onClick={() => applyQuickFilter('fixed_asset')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    className={`rounded-lg px-4 py-2 font-medium transition-all ${
                         filter.category_filter === 'fixed_asset'
                             ? 'bg-purple-600 text-white shadow-lg'
-                            : 'bg-white text-gray-700 border hover:bg-gray-50'
+                            : 'border bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                 >
-                    <Building2 className="w-4 h-4 inline mr-2" />
+                    <Building2 className="mr-2 inline h-4 w-4" />
                     Fixed Assets
                 </button>
                 <button
                     onClick={() => applyQuickFilter('advance_house_rent')}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    className={`rounded-lg px-4 py-2 font-medium transition-all ${
                         filter.category_filter === 'advance_house_rent'
                             ? 'bg-indigo-600 text-white shadow-lg'
-                            : 'bg-white text-gray-700 border hover:bg-gray-50'
+                            : 'border bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                 >
-                    <Home className="w-4 h-4 inline mr-2" />
+                    <Home className="mr-2 inline h-4 w-4" />
                     Advance Rent
                 </button>
             </div>
 
             {/* Advanced Filter Section */}
-            <div className="bg-white border rounded-lg p-4 mb-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-3">
-                    <Filter className="w-4 h-4 text-gray-500" />
+            <div className="mb-4 rounded-lg border bg-white p-4 shadow-sm">
+                <div className="mb-3 flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-gray-500" />
                     <span className="text-sm font-semibold text-gray-700">Advanced Filters</span>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                        <label className="mb-1 block text-xs font-medium text-gray-700">Type</label>
                         <select
                             name="type"
                             value={filter.type}
                             onChange={handleFilterChange}
-                            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                         >
                             <option value="">All Types</option>
                             <option value="income">Income</option>
@@ -319,34 +298,34 @@ const Transactions: React.FC<TransactionsProps> = ({
                     </div>
 
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">From Date</label>
+                        <label className="mb-1 block text-xs font-medium text-gray-700">From Date</label>
                         <input
                             type="date"
                             name="date_from"
                             value={filter.date_from}
                             onChange={handleFilterChange}
-                            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">To Date</label>
+                        <label className="mb-1 block text-xs font-medium text-gray-700">To Date</label>
                         <input
                             type="date"
                             name="date_to"
                             value={filter.date_to}
                             onChange={handleFilterChange}
-                            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Specific Category</label>
+                        <label className="mb-1 block text-xs font-medium text-gray-700">Specific Category</label>
                         <select
                             name="category"
                             value={filter.category}
                             onChange={handleFilterChange}
-                            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                         >
                             <option value="">All Categories</option>
                             <optgroup label="Expense Categories">
@@ -370,20 +349,20 @@ const Transactions: React.FC<TransactionsProps> = ({
                 <div className="mt-3 flex justify-end">
                     <button
                         onClick={clearFilters}
-                        className="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-700 flex items-center gap-2 transition-colors"
+                        className="flex items-center gap-2 rounded-lg bg-gray-600 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-700"
                     >
-                        <RefreshCw className="w-4 h-4" />
+                        <RefreshCw className="h-4 w-4" />
                         Clear All Filters
                     </button>
                 </div>
             </div>
 
             {/* Data Table */}
-            <div className="bg-white border rounded-lg shadow-sm">
-                <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b flex justify-between items-center">
+            <div className="rounded-lg border bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4">
                     <div>
                         <h3 className="text-lg font-semibold text-gray-800">Transaction Records</h3>
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p className="mt-1 text-xs text-gray-600">
                             Showing {transactions.data.length} of {totals.total_count} total filtered transactions
                         </p>
                     </div>
@@ -391,9 +370,7 @@ const Transactions: React.FC<TransactionsProps> = ({
                         <div className="text-sm font-medium text-gray-700">
                             Page {transactions.current_page} of {transactions.last_page}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                            {transactions.per_page} per page
-                        </div>
+                        <div className="mt-1 text-xs text-gray-500">{transactions.per_page} per page</div>
                     </div>
                 </div>
 
@@ -401,44 +378,44 @@ const Transactions: React.FC<TransactionsProps> = ({
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="bg-gray-100 border-b-2 border-gray-200">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Trans. No</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Category</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Amount</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Description</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                                <tr className="border-b-2 border-gray-200 bg-gray-100">
+                                    <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-700 uppercase">Trans. No</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-700 uppercase">Type</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-700 uppercase">Category</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold tracking-wider text-gray-700 uppercase">Amount</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-700 uppercase">Date</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-700 uppercase">Description</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold tracking-wider text-gray-700 uppercase">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="divide-y divide-gray-200 bg-white">
                                 {transactions.data.map((transaction, index) => (
-                                    <tr key={transaction.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-4 py-3 text-sm font-mono text-blue-600 font-medium">{transaction.transaction_no}</td>
+                                    <tr key={transaction.id} className="transition-colors hover:bg-gray-50">
+                                        <td className="px-4 py-3 font-mono text-sm font-medium text-blue-600">{transaction.transaction_no}</td>
                                         <td className="px-4 py-3">
-                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${transaction.type === 'income'
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : 'bg-red-100 text-red-700'
-                                                }`}>
+                                            <span
+                                                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                                    transaction.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                                }`}
+                                            >
                                                 {transaction.type === 'income' ? (
-                                                    <TrendingUp className="w-3 h-3 mr-1" />
+                                                    <TrendingUp className="mr-1 h-3 w-3" />
                                                 ) : (
-                                                    <TrendingDown className="w-3 h-3 mr-1" />
+                                                    <TrendingDown className="mr-1 h-3 w-3" />
                                                 )}
                                                 {transaction.type === 'income' ? 'Income' : 'Expense'}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-700 font-medium">
-                                            {transaction.category || 'Uncategorized'}
-                                        </td>
-                                        <td className={`px-4 py-3 text-right font-mono text-sm font-bold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                                            }`}>
+                                        <td className="px-4 py-3 text-sm font-medium text-gray-700">{transaction.category || 'Uncategorized'}</td>
+                                        <td
+                                            className={`px-4 py-3 text-right font-mono text-sm font-bold ${
+                                                transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                                            }`}
+                                        >
                                             {transaction.type === 'income' ? '+' : '-'}৳{Number(transaction.amount).toLocaleString()}
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">
-                                            {formatDate(transaction.transaction_date)}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate" title={transaction.description}>
+                                        <td className="px-4 py-3 text-sm text-gray-600">{formatDate(transaction.transaction_date)}</td>
+                                        <td className="max-w-xs truncate px-4 py-3 text-sm text-gray-700" title={transaction.description}>
                                             {transaction.description || 'No description'}
                                         </td>
                                         <td className="px-4 py-3">
@@ -446,10 +423,10 @@ const Transactions: React.FC<TransactionsProps> = ({
                                                 {/* Edit Button */}
                                                 <button
                                                     onClick={() => handleEdit(transaction.id)}
-                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    className="rounded-lg p-1.5 text-blue-600 transition-colors hover:bg-blue-50"
                                                     title="Edit Transaction"
                                                 >
-                                                    <Edit className="w-4 h-4" />
+                                                    <Edit className="h-4 w-4" />
                                                 </button>
 
                                                 {/* Delete Button */}
@@ -458,7 +435,7 @@ const Transactions: React.FC<TransactionsProps> = ({
                                                         <button
                                                             onClick={() => handleDelete(transaction.id)}
                                                             disabled={loading}
-                                                            className="px-3 py-1 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700 disabled:opacity-50"
+                                                            className="rounded-lg bg-red-600 px-3 py-1 text-xs text-white hover:bg-red-700 disabled:opacity-50"
                                                             title="Confirm Delete"
                                                         >
                                                             {loading ? 'Deleting...' : 'Yes'}
@@ -466,7 +443,7 @@ const Transactions: React.FC<TransactionsProps> = ({
                                                         <button
                                                             onClick={cancelDelete}
                                                             disabled={loading}
-                                                            className="px-3 py-1 bg-gray-500 text-white text-xs rounded-lg hover:bg-gray-600 disabled:opacity-50"
+                                                            className="rounded-lg bg-gray-500 px-3 py-1 text-xs text-white hover:bg-gray-600 disabled:opacity-50"
                                                             title="Cancel Delete"
                                                         >
                                                             No
@@ -475,10 +452,10 @@ const Transactions: React.FC<TransactionsProps> = ({
                                                 ) : (
                                                     <button
                                                         onClick={() => handleDelete(transaction.id)}
-                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        className="rounded-lg p-1.5 text-red-600 transition-colors hover:bg-red-50"
                                                         title="Delete Transaction"
                                                     >
-                                                        <Trash2 className="w-4 h-4" />
+                                                        <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 )}
                                             </div>
@@ -489,27 +466,26 @@ const Transactions: React.FC<TransactionsProps> = ({
                         </table>
                     </div>
                 ) : (
-                    <div className="text-center py-16">
-                        <DollarSign className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                    <div className="py-16 text-center">
+                        <DollarSign className="mx-auto mb-4 h-16 w-16 text-gray-300" />
                         <p className="text-lg font-medium text-gray-600">No transactions found</p>
-                        <p className="text-sm text-gray-400 mt-2">Try adjusting your filters or add a new transaction</p>
+                        <p className="mt-2 text-sm text-gray-400">Try adjusting your filters or add a new transaction</p>
                     </div>
                 )}
 
                 {/* Pagination */}
                 {transactions.last_page > 1 && (
-                    <div className="px-6 py-4 border-t bg-gray-50 flex justify-between items-center">
+                    <div className="flex items-center justify-between border-t bg-gray-50 px-6 py-4">
                         <div className="text-xs text-gray-600">
-                            Showing {((transactions.current_page - 1) * transactions.per_page) + 1} to{' '}
-                            {Math.min(transactions.current_page * transactions.per_page, transactions.total)} of{' '}
-                            {transactions.total} results
+                            Showing {(transactions.current_page - 1) * transactions.per_page + 1} to{' '}
+                            {Math.min(transactions.current_page * transactions.per_page, transactions.total)} of {transactions.total} results
                         </div>
 
                         <div className="flex gap-2">
                             <button
                                 onClick={() => handlePagination(transactions.current_page - 1)}
                                 disabled={transactions.current_page === 1}
-                                className="px-4 py-2 text-sm font-medium border rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Previous
                             </button>
@@ -531,10 +507,11 @@ const Transactions: React.FC<TransactionsProps> = ({
                                     <button
                                         key={pageNum}
                                         onClick={() => handlePagination(pageNum)}
-                                        className={`px-4 py-2 text-sm font-medium border rounded-lg transition-colors ${pageNum === transactions.current_page
-                                                ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                                        className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                                            pageNum === transactions.current_page
+                                                ? 'border-blue-600 bg-blue-600 text-white shadow-md'
                                                 : 'hover:bg-gray-100'
-                                            }`}
+                                        }`}
                                     >
                                         {pageNum}
                                     </button>
@@ -544,7 +521,7 @@ const Transactions: React.FC<TransactionsProps> = ({
                             <button
                                 onClick={() => handlePagination(transactions.current_page + 1)}
                                 disabled={transactions.current_page === transactions.last_page}
-                                className="px-4 py-2 text-sm font-medium border rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Next
                             </button>

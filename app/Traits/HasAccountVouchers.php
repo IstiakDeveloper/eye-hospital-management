@@ -48,14 +48,14 @@ trait HasAccountVouchers
         string $category,
         string $description
     ): string {
-        $accountName = match($sourceAccount) {
+        $accountName = match ($sourceAccount) {
             'hospital' => 'Hospital',
             'medicine' => 'Medicine',
             'optics' => 'Optics',
             default => ucfirst($sourceAccount)
         };
 
-        $typeText = match($transactionType) {
+        $typeText = match ($transactionType) {
             'income' => 'Income',
             'expense' => 'Expense',
             'fund_in' => 'Fund In',

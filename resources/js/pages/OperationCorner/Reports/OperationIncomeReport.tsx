@@ -1,7 +1,6 @@
 import AdminLayout from '@/layouts/MainAccountLayout';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
 import * as XLSX from 'xlsx';
 
 interface ReportItem {
@@ -59,7 +58,7 @@ export default function OperationIncomeReport({ reportData, summary, filters }: 
                 to_date: toDate,
                 search: search || undefined,
             },
-            { preserveState: true }
+            { preserveState: true },
         );
     };
 
@@ -71,23 +70,10 @@ export default function OperationIncomeReport({ reportData, summary, filters }: 
         const excelData = [];
 
         excelData.push(['Operation Income Receipt Report']);
-        excelData.push([
-            `Period: ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}`,
-        ]);
+        excelData.push([`Period: ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}`]);
         excelData.push([]);
 
-        excelData.push([
-            'SL',
-            'DATE',
-            'PATIENT ID',
-            'PATIENT NAME',
-            'AGE',
-            'OPERATION',
-            'BILL AMOUNT',
-            'DISCOUNT',
-            'NET BILL',
-            'RECEIVED',
-        ]);
+        excelData.push(['SL', 'DATE', 'PATIENT ID', 'PATIENT NAME', 'AGE', 'OPERATION', 'BILL AMOUNT', 'DISCOUNT', 'NET BILL', 'RECEIVED']);
 
         reportData.forEach((item) => {
             excelData.push([
@@ -135,9 +121,7 @@ export default function OperationIncomeReport({ reportData, summary, filters }: 
                     <div className="mb-6 flex items-center justify-between print:hidden">
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">Operation Income Report</h1>
-                            <p className="mt-1 text-sm text-gray-600">
-                                Income and performance report for operations
-                            </p>
+                            <p className="mt-1 text-sm text-gray-600">Income and performance report for operations</p>
                         </div>
                     </div>
 
@@ -174,7 +158,7 @@ export default function OperationIncomeReport({ reportData, summary, filters }: 
                             <div className="flex items-end gap-2">
                                 <button
                                     onClick={handleFilter}
-                                    className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
                                 >
                                     Filter
                                 </button>
@@ -185,30 +169,31 @@ export default function OperationIncomeReport({ reportData, summary, filters }: 
                     <div className="mb-4 flex gap-2 print:hidden">
                         <button
                             onClick={handlePrint}
-                            className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                            className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:outline-none"
                         >
                             Print
                         </button>
                         <button
                             onClick={handleExportExcel}
-                            className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                            className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
                         >
                             Export Excel
                         </button>
                     </div>
 
                     <div id="printable-area">
-                        <div className="overflow-hidden rounded-lg bg-white shadow report-section">
+                        <div className="report-section overflow-hidden rounded-lg bg-white shadow">
                             {/* Print Header */}
                             <div className="print-header mb-3">
-                                <div className="text-center mb-2">
+                                <div className="mb-2 text-center">
                                     <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
-                                    <h2 className="text-sm font-semibold mt-1">Operation Corner - Operation Income Receipt Report</h2>
+                                    <h2 className="mt-1 text-sm font-semibold">Operation Corner - Operation Income Receipt Report</h2>
                                 </div>
-                                <div className="flex justify-between items-center mt-2">
+                                <div className="mt-2 flex items-center justify-between">
                                     <p className="text-xs font-medium">Period Report</p>
                                     <p className="text-xs">
-                                        {new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} to {new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        {new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} to{' '}
+                                        {new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                                     </p>
                                 </div>
                             </div>
@@ -216,21 +201,15 @@ export default function OperationIncomeReport({ reportData, summary, filters }: 
                                 <table className="min-w-full">
                                     <thead className="bg-gray-50">
                                         <tr>
-                                            <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
-                                                SL
-                                            </th>
-                                            <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
-                                                DATE
-                                            </th>
+                                            <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">SL</th>
+                                            <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">DATE</th>
                                             <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-900">
                                                 PATIENT
                                             </th>
                                             <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-900">
                                                 OPERATION
                                             </th>
-                                            <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">
-                                                BILL
-                                            </th>
+                                            <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-900">BILL</th>
                                             <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-red-600">
                                                 DISCOUNT
                                             </th>
@@ -261,7 +240,10 @@ export default function OperationIncomeReport({ reportData, summary, filters }: 
                                                         </td>
                                                         <td className="border border-gray-300 px-3 py-2 text-sm">
                                                             <span className="font-medium text-gray-900">{item.patient_name}</span>
-                                                            <span className="text-xs text-gray-500"> (ID: {item.patient_id}, {item.patient_age}y/{item.patient_gender})</span>
+                                                            <span className="text-xs text-gray-500">
+                                                                {' '}
+                                                                (ID: {item.patient_id}, {item.patient_age}y/{item.patient_gender})
+                                                            </span>
                                                         </td>
                                                         <td className="border border-gray-300 px-3 py-2 text-sm">
                                                             <span className="font-medium text-gray-900">{item.operation_name}</span>
@@ -283,10 +265,7 @@ export default function OperationIncomeReport({ reportData, summary, filters }: 
                                                 ))}
 
                                                 <tr className="bg-gray-100 font-bold">
-                                                    <td
-                                                        colSpan={4}
-                                                        className="border border-gray-300 px-3 py-3 text-right text-sm text-gray-900"
-                                                    >
+                                                    <td colSpan={4} className="border border-gray-300 px-3 py-3 text-right text-sm text-gray-900">
                                                         TOTAL ({summary.total_receipts} receipts)
                                                     </td>
                                                     <td className="border border-gray-300 px-2 py-3 text-right text-sm text-gray-900">

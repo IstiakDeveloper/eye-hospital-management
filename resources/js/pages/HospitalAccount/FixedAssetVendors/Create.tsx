@@ -1,7 +1,7 @@
-import React, { useState, FormEvent } from 'react';
-import { router } from '@inertiajs/react';
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
+import { router } from '@inertiajs/react';
 import { ArrowLeft, Save } from 'lucide-react';
+import React, { FormEvent, useState } from 'react';
 
 interface CreateProps {
     errors?: Record<string, string>;
@@ -15,7 +15,7 @@ const Create: React.FC<CreateProps> = ({ errors = {} }) => {
         phone: '',
         email: '',
         address: '',
-        notes: ''
+        notes: '',
     });
 
     const [loading, setLoading] = useState(false);
@@ -23,7 +23,7 @@ const Create: React.FC<CreateProps> = ({ errors = {} }) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value
+            [e.target.name]: e.target.value,
         });
     };
 
@@ -31,36 +31,34 @@ const Create: React.FC<CreateProps> = ({ errors = {} }) => {
         e.preventDefault();
         setLoading(true);
         router.post(route('hospital-account.fixed-asset-vendors.store'), formData, {
-            onFinish: () => setLoading(false)
+            onFinish: () => setLoading(false),
         });
     };
 
     return (
         <HospitalAccountLayout title="Add Vendor">
-            <div className="max-w-3xl mx-auto">
+            <div className="mx-auto max-w-3xl">
                 <div className="mb-6">
                     <button
                         onClick={() => router.visit(route('hospital-account.fixed-asset-vendors.index'))}
                         className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
                     >
-                        <ArrowLeft className="w-4 h-4 mr-1" />
+                        <ArrowLeft className="mr-1 h-4 w-4" />
                         Back to Vendors
                     </button>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-lg p-6">
+                <div className="rounded-lg bg-white p-6 shadow-lg">
                     <div className="mb-6">
                         <h2 className="text-2xl font-bold text-gray-900">Add New Vendor</h2>
-                        <p className="mt-1 text-sm text-gray-600">
-                            Add a new vendor for fixed asset purchases
-                        </p>
+                        <p className="mt-1 text-sm text-gray-600">Add a new vendor for fixed asset purchases</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Basic Information */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="mb-1 block text-sm font-medium text-gray-700">
                                     Vendor Name <span className="text-red-500">*</span>
                                 </label>
                                 <input
@@ -69,49 +67,43 @@ const Create: React.FC<CreateProps> = ({ errors = {} }) => {
                                     value={formData.name}
                                     onChange={handleChange}
                                     required
-                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                                    className={`w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-500 ${
                                         errors.name ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                     placeholder="Enter vendor name"
                                 />
-                                {errors.name && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.name}</p>
-                                )}
+                                {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Company Name
-                                </label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Company Name</label>
                                 <input
                                     type="text"
                                     name="company_name"
                                     value={formData.company_name}
                                     onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
                                     placeholder="Company name (optional)"
                                 />
                             </div>
                         </div>
 
                         {/* Contact Information */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Contact Person
-                                </label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Contact Person</label>
                                 <input
                                     type="text"
                                     name="contact_person"
                                     value={formData.contact_person}
                                     onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
                                     placeholder="Contact person name"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="mb-1 block text-sm font-medium text-gray-700">
                                     Phone <span className="text-red-500">*</span>
                                 </label>
                                 <input
@@ -120,60 +112,50 @@ const Create: React.FC<CreateProps> = ({ errors = {} }) => {
                                     value={formData.phone}
                                     onChange={handleChange}
                                     required
-                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                                    className={`w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-500 ${
                                         errors.phone ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                     placeholder="Phone number"
                                 />
-                                {errors.phone && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
-                                )}
+                                {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Email
-                            </label>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
                             <input
                                 type="email"
                                 name="email"
                                 value={formData.email}
                                 onChange={handleChange}
-                                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                                className={`w-full rounded-lg border px-3 py-2 focus:ring-2 focus:ring-blue-500 ${
                                     errors.email ? 'border-red-500' : 'border-gray-300'
                                 }`}
                                 placeholder="Email address (optional)"
                             />
-                            {errors.email && (
-                                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-                            )}
+                            {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Address
-                            </label>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Address</label>
                             <textarea
                                 name="address"
                                 value={formData.address}
                                 onChange={handleChange}
                                 rows={3}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
                                 placeholder="Complete address"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Notes
-                            </label>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Notes</label>
                             <textarea
                                 name="notes"
                                 value={formData.notes}
                                 onChange={handleChange}
                                 rows={4}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
                                 placeholder="Additional notes about vendor..."
                             />
                         </div>
@@ -183,15 +165,15 @@ const Create: React.FC<CreateProps> = ({ errors = {} }) => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="inline-flex items-center px-6 py-3 bg-blue-600 border border-transparent rounded-lg text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="inline-flex items-center rounded-lg border border-transparent bg-blue-600 px-6 py-3 text-sm font-medium text-white hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                <Save className="w-4 h-4 mr-2" />
+                                <Save className="mr-2 h-4 w-4" />
                                 {loading ? 'Saving...' : 'Save Vendor'}
                             </button>
                             <button
                                 type="button"
                                 onClick={() => router.visit(route('hospital-account.fixed-asset-vendors.index'))}
-                                className="px-6 py-3 bg-gray-200 border border-transparent rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-300"
+                                className="rounded-lg border border-transparent bg-gray-200 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-300"
                             >
                                 Cancel
                             </button>

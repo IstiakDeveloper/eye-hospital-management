@@ -25,7 +25,6 @@ const sidebarNavItems: NavItem[] = [
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
-
     if (typeof window === 'undefined') {
         return null;
     }

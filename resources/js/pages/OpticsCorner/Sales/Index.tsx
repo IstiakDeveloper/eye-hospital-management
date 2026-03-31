@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { Plus, Search, Filter, X, FileSpreadsheet, Printer, Calendar, Edit, Trash2, CheckCircle, Clock, Package } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { CheckCircle, Clock, Edit, FileSpreadsheet, Filter, Package, Plus, Search, Trash2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 
 interface Sale {
@@ -46,7 +46,8 @@ interface PageProps {
 }
 
 const Button = ({ children, className = '', variant = 'primary', disabled = false, ...props }: any) => {
-    const baseClasses = 'px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed';
+    const baseClasses =
+        'px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed';
     const variants = {
         primary: 'bg-blue-600 text-white hover:bg-blue-700 disabled:hover:bg-blue-600',
         secondary: 'bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:hover:bg-gray-200',
@@ -54,15 +55,11 @@ const Button = ({ children, className = '', variant = 'primary', disabled = fals
         danger: 'bg-red-600 text-white hover:bg-red-700 disabled:hover:bg-red-600',
         warning: 'bg-yellow-600 text-white hover:bg-yellow-700 disabled:hover:bg-yellow-600',
         outline: 'border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:hover:bg-transparent',
-        print: 'bg-purple-600 text-white hover:bg-purple-700 disabled:hover:bg-purple-600'
+        print: 'bg-purple-600 text-white hover:bg-purple-700 disabled:hover:bg-purple-600',
     };
 
     return (
-        <button
-            className={`${baseClasses} ${variants[variant as keyof typeof variants]} ${className}`}
-            disabled={disabled}
-            {...props}
-        >
+        <button className={`${baseClasses} ${variants[variant as keyof typeof variants]} ${className}`} disabled={disabled} {...props}>
             {children}
         </button>
     );
@@ -70,27 +67,29 @@ const Button = ({ children, className = '', variant = 'primary', disabled = fals
 
 const Input = ({ label, error, className = '', ...props }: any) => (
     <div className={className}>
-        {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
+        {label && <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>}
         <input
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${error ? 'border-red-300' : 'border-gray-300'
-                }`}
+            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
+                error ? 'border-red-300' : 'border-gray-300'
+            }`}
             {...props}
         />
-        {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
 );
 
 const Select = ({ label, error, className = '', children, ...props }: any) => (
     <div className={className}>
-        {label && <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>}
+        {label && <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>}
         <select
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${error ? 'border-red-300' : 'border-gray-300'
-                }`}
+            className={`w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 ${
+                error ? 'border-red-300' : 'border-gray-300'
+            }`}
             {...props}
         >
             {children}
         </select>
-        {error && <p className="text-red-600 text-sm mt-1">{error}</p>}
+        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
 );
 
@@ -129,7 +128,7 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
         router.get(route('optics.sales'), params, {
             preserveState: true,
             preserveScroll: true,
-            replace: true
+            replace: true,
         });
     };
 
@@ -169,34 +168,34 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
 
                 try {
                     const excelData = allSales.map((sale: Sale, index: number) => ({
-                        'SL': index + 1,
+                        SL: index + 1,
                         'Invoice No': sale.invoice_number,
                         'Customer Name': sale.customer_name,
-                        'Phone': sale.customer_phone || 'N/A',
-                        'Items': sale.items_count,
+                        Phone: sale.customer_phone || 'N/A',
+                        Items: sale.items_count,
                         'Total Amount': sale.total_amount,
-                        'Advance': sale.advance_payment,
-                        'Due': sale.due_amount,
-                        'Status': sale.status.charAt(0).toUpperCase() + sale.status.slice(1),
-                        'Date': new Date(sale.created_at).toLocaleDateString(),
-                        'Seller': sale.seller?.name || 'N/A'
+                        Advance: sale.advance_payment,
+                        Due: sale.due_amount,
+                        Status: sale.status.charAt(0).toUpperCase() + sale.status.slice(1),
+                        Date: new Date(sale.created_at).toLocaleDateString(),
+                        Seller: sale.seller?.name || 'N/A',
                     }));
 
                     const wb = XLSX.utils.book_new();
                     const ws = XLSX.utils.json_to_sheet(excelData);
 
                     const colWidths = [
-                        { wch: 5 },  // SL
+                        { wch: 5 }, // SL
                         { wch: 20 }, // Invoice No
                         { wch: 25 }, // Customer Name
                         { wch: 15 }, // Phone
-                        { wch: 8 },  // Items
+                        { wch: 8 }, // Items
                         { wch: 15 }, // Total Amount
                         { wch: 12 }, // Advance
                         { wch: 12 }, // Due
                         { wch: 12 }, // Status
                         { wch: 15 }, // Date
-                        { wch: 20 }  // Seller
+                        { wch: 20 }, // Seller
                     ];
                     ws['!cols'] = colWidths;
 
@@ -217,7 +216,7 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
             onError: () => {
                 setExportingExcel(false);
                 alert('Failed to load sales data. Please try again.');
-            }
+            },
         });
     };
 
@@ -234,7 +233,7 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
             },
             onError: () => {
                 setDeletingSaleId(null);
-            }
+            },
         });
     };
 
@@ -242,7 +241,7 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
         const numAmount = Number(amount) || 0;
         return `৳${numAmount.toLocaleString('en-US', {
             minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            maximumFractionDigits: 2,
         })}`;
     };
 
@@ -252,19 +251,19 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
         const badges = {
             pending: 'bg-yellow-100 text-yellow-800',
             ready: 'bg-blue-100 text-blue-800',
-            delivered: 'bg-green-100 text-green-800'
+            delivered: 'bg-green-100 text-green-800',
         };
         const icons = {
             pending: Clock,
             ready: Package,
-            delivered: CheckCircle
+            delivered: CheckCircle,
         };
         const Icon = icons[status as keyof typeof icons];
         const badge = badges[status as keyof typeof badges];
 
         return (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge}`}>
-                <Icon className="w-3 h-3 mr-1" />
+            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badge}`}>
+                <Icon className="mr-1 h-3 w-3" />
                 {status.charAt(0).toUpperCase() + status.slice(1)}
             </span>
         );
@@ -276,29 +275,31 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
 
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Optics Sales</h1>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                            <span>Total: <span className="font-semibold text-gray-900">{salesCount}</span></span>
+                        <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
+                            <span>
+                                Total: <span className="font-semibold text-gray-900">{salesCount}</span>
+                            </span>
                             <span className="text-gray-300">|</span>
-                            <span>Revenue: <span className="font-semibold text-green-600">{formatCurrency(totalSales || 0)}</span></span>
+                            <span>
+                                Revenue: <span className="font-semibold text-green-600">{formatCurrency(totalSales || 0)}</span>
+                            </span>
                             <span className="text-gray-300">|</span>
-                            <span>Due: <span className="font-semibold text-red-600">{formatCurrency(totalDue || 0)}</span></span>
+                            <span>
+                                Due: <span className="font-semibold text-red-600">{formatCurrency(totalDue || 0)}</span>
+                            </span>
                         </div>
                     </div>
                     <div className="flex space-x-3">
-                        <Button
-                            variant="success"
-                            onClick={exportToExcel}
-                            disabled={exportingExcel}
-                        >
-                            <FileSpreadsheet className="w-4 h-4" />
+                        <Button variant="success" onClick={exportToExcel} disabled={exportingExcel}>
+                            <FileSpreadsheet className="h-4 w-4" />
                             <span>{exportingExcel ? 'Exporting...' : 'Export Excel'}</span>
                         </Button>
                         <Link href={route('optics.sales.create')}>
                             <Button>
-                                <Plus className="w-4 h-4" />
+                                <Plus className="h-4 w-4" />
                                 <span>New Sale</span>
                             </Button>
                         </Link>
@@ -306,7 +307,7 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                 </div>
 
                 {/* Filters */}
-                <div className="bg-white rounded-xl shadow-sm border">
+                <div className="rounded-xl border bg-white shadow-sm">
                     <div className="p-6">
                         <div className="flex flex-col space-y-4">
                             <div className="flex space-x-4">
@@ -321,55 +322,37 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                                 <Button
                                     variant="outline"
                                     onClick={() => setShowFilters(!showFilters)}
-                                    className={showFilters ? 'bg-blue-50 border-blue-300' : ''}
+                                    className={showFilters ? 'border-blue-300 bg-blue-50' : ''}
                                 >
-                                    <Filter className="w-4 h-4" />
+                                    <Filter className="h-4 w-4" />
                                     <span>Filters</span>
                                 </Button>
                                 {hasActiveFilters && (
                                     <Button variant="outline" onClick={clearFilters}>
-                                        <X className="w-4 h-4" />
+                                        <X className="h-4 w-4" />
                                         <span>Clear</span>
                                     </Button>
                                 )}
                             </div>
 
                             {showFilters && (
-                                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 pt-4 border-t">
-                                    <Input
-                                        type="date"
-                                        label="From Date"
-                                        value={fromDate}
-                                        onChange={(e: any) => setFromDate(e.target.value)}
-                                    />
-                                    <Input
-                                        type="date"
-                                        label="To Date"
-                                        value={toDate}
-                                        onChange={(e: any) => setToDate(e.target.value)}
-                                    />
-                                    <Select
-                                        label="Status"
-                                        value={statusFilter}
-                                        onChange={(e: any) => setStatusFilter(e.target.value)}
-                                    >
+                                <div className="grid grid-cols-1 gap-4 border-t pt-4 md:grid-cols-5">
+                                    <Input type="date" label="From Date" value={fromDate} onChange={(e: any) => setFromDate(e.target.value)} />
+                                    <Input type="date" label="To Date" value={toDate} onChange={(e: any) => setToDate(e.target.value)} />
+                                    <Select label="Status" value={statusFilter} onChange={(e: any) => setStatusFilter(e.target.value)}>
                                         <option value="">All Status</option>
                                         <option value="pending">Pending</option>
                                         <option value="ready">Ready</option>
                                         <option value="delivered">Delivered</option>
                                     </Select>
-                                    <Select
-                                        label="Due Status"
-                                        value={dueStatusFilter}
-                                        onChange={(e: any) => setDueStatusFilter(e.target.value)}
-                                    >
+                                    <Select label="Due Status" value={dueStatusFilter} onChange={(e: any) => setDueStatusFilter(e.target.value)}>
                                         <option value="">All</option>
                                         <option value="paid">Paid</option>
                                         <option value="due">Has Due</option>
                                     </Select>
                                     <div className="flex items-end">
                                         <Button onClick={handleSearch} className="w-full">
-                                            <Search className="w-4 h-4" />
+                                            <Search className="h-4 w-4" />
                                             <span>Apply Filters</span>
                                         </Button>
                                     </div>
@@ -382,28 +365,24 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                 {/* Active Filters Display */}
                 {hasActiveFilters && (
                     <div className="flex flex-wrap gap-2">
-                        {search && (
-                            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
-                                Search: "{search}"
-                            </span>
-                        )}
+                        {search && <span className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800">Search: "{search}"</span>}
                         {fromDate && (
-                            <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm">
+                            <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-800">
                                 From: {new Date(fromDate).toLocaleDateString()}
                             </span>
                         )}
                         {toDate && (
-                            <span className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm">
+                            <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-800">
                                 To: {new Date(toDate).toLocaleDateString()}
                             </span>
                         )}
                         {statusFilter && (
-                            <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">
+                            <span className="rounded-full bg-purple-100 px-3 py-1 text-sm text-purple-800">
                                 Status: {statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
                             </span>
                         )}
                         {dueStatusFilter && (
-                            <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm">
+                            <span className="rounded-full bg-orange-100 px-3 py-1 text-sm text-orange-800">
                                 Due: {dueStatusFilter === 'paid' ? 'Paid' : 'Has Due'}
                             </span>
                         )}
@@ -416,7 +395,7 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                 </div>
 
                 {/* Sales Table */}
-                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-gray-50">
@@ -436,8 +415,8 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                                     <tr>
                                         <td colSpan={8} className="px-6 py-12 text-center">
                                             <div className="flex flex-col items-center justify-center">
-                                                <FileSpreadsheet className="w-12 h-12 text-gray-400 mb-4" />
-                                                <h3 className="text-lg font-medium text-gray-900 mb-2">No sales found</h3>
+                                                <FileSpreadsheet className="mb-4 h-12 w-12 text-gray-400" />
+                                                <h3 className="mb-2 text-lg font-medium text-gray-900">No sales found</h3>
                                                 <p className="text-gray-600">
                                                     {hasActiveFilters ? 'Try adjusting your filters' : 'Start by creating your first sale'}
                                                 </p>
@@ -446,10 +425,8 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                                     </tr>
                                 ) : (
                                     salesData.map((sale: Sale, index: number) => (
-                                        <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4 text-sm text-gray-500">
-                                                {salesFrom + index}
-                                            </td>
+                                        <tr key={sale.id} className="transition-colors hover:bg-gray-50">
+                                            <td className="px-6 py-4 text-sm text-gray-500">{salesFrom + index}</td>
                                             <td className="px-6 py-4">
                                                 <div>
                                                     <p className="font-medium text-gray-900">{sale.invoice_number}</p>
@@ -459,32 +436,26 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                                             <td className="px-6 py-4">
                                                 <div>
                                                     <p className="text-sm font-medium text-gray-900">{sale.customer_name}</p>
-                                                    {sale.customer_phone && (
-                                                        <p className="text-xs text-gray-500">{sale.customer_phone}</p>
-                                                    )}
+                                                    {sale.customer_phone && <p className="text-xs text-gray-500">{sale.customer_phone}</p>}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-500">
                                                 {sale.items_count} item{sale.items_count !== 1 ? 's' : ''}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="text-sm font-semibold text-green-600">
-                                                    {formatCurrency(sale.total_amount)}
-                                                </span>
+                                                <span className="text-sm font-semibold text-green-600">{formatCurrency(sale.total_amount)}</span>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className={`text-sm font-semibold ${sale.due_amount > 0 ? 'text-red-600' : 'text-gray-400'}`}>
                                                     {formatCurrency(sale.due_amount)}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                {getStatusBadge(sale.status)}
-                                            </td>
+                                            <td className="px-6 py-4">{getStatusBadge(sale.status)}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-end space-x-2">
                                                     <Link href={route('optics.sales.edit', sale.id)}>
                                                         <Button variant="warning" className="text-xs">
-                                                            <Edit className="w-3 h-3" />
+                                                            <Edit className="h-3 w-3" />
                                                         </Button>
                                                     </Link>
                                                     <Button
@@ -494,9 +465,9 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                                                         disabled={deletingSaleId === sale.id}
                                                     >
                                                         {deletingSaleId === sale.id ? (
-                                                            <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
                                                         ) : (
-                                                            <Trash2 className="w-3 h-3" />
+                                                            <Trash2 className="h-3 w-3" />
                                                         )}
                                                     </Button>
                                                 </div>
@@ -506,20 +477,16 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                                 )}
                             </tbody>
                             {salesData.length > 0 && (
-                                <tfoot className="bg-gray-50 border-t-2 border-gray-200">
+                                <tfoot className="border-t-2 border-gray-200 bg-gray-50">
                                     <tr>
                                         <td colSpan={4} className="px-6 py-4 text-right font-semibold text-gray-900">
                                             Total:
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-lg font-bold text-green-600">
-                                                {formatCurrency(totalSales || 0)}
-                                            </span>
+                                            <span className="text-lg font-bold text-green-600">{formatCurrency(totalSales || 0)}</span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-lg font-bold text-red-600">
-                                                {formatCurrency(totalDue || 0)}
-                                            </span>
+                                            <span className="text-lg font-bold text-red-600">{formatCurrency(totalDue || 0)}</span>
                                         </td>
                                         <td colSpan={3}></td>
                                     </tr>
@@ -540,17 +507,18 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                                         if (link.url) {
                                             router.visit(link.url, {
                                                 preserveState: true,
-                                                preserveScroll: false
+                                                preserveScroll: false,
                                             });
                                         }
                                     }}
                                     disabled={!link.url}
-                                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${link.active
+                                    className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                                        link.active
                                             ? 'bg-blue-600 text-white'
                                             : link.url
-                                                ? 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 cursor-pointer'
-                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                        }`}
+                                              ? 'cursor-pointer border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                              : 'cursor-not-allowed bg-gray-100 text-gray-400'
+                                    }`}
                                     dangerouslySetInnerHTML={{ __html: link.label }}
                                 />
                             ))}

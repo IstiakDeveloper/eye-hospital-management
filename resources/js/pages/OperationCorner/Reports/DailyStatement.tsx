@@ -1,4 +1,3 @@
-
 import AdminLayout from '@/layouts/OperationAccountLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
@@ -37,11 +36,7 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
     const [toDate, setToDate] = useState(filters.to_date);
 
     const handleFilter = () => {
-        router.get(
-            route('operation.reports.daily-statement'),
-            { from_date: fromDate, to_date: toDate },
-            { preserveState: true }
-        );
+        router.get(route('operation.reports.daily-statement'), { from_date: fromDate, to_date: toDate }, { preserveState: true });
     };
 
     const handlePrint = () => {
@@ -62,26 +57,8 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
         excelData.push(['Total Credit', totals.total_credit.toFixed(2)]);
         excelData.push(['Total Debit', totals.total_debit.toFixed(2)]);
         excelData.push([]);
-        excelData.push([
-            'Date',
-            'Fund In',
-            'Income',
-            'Fund Out',
-            'Expense',
-            'Total Credit',
-            'Total Debit',
-            'Balance',
-        ]);
-        excelData.push([
-            'Opening Balance',
-            '-',
-            '-',
-            '-',
-            '-',
-            '-',
-            '-',
-            openingBalance.toFixed(2),
-        ]);
+        excelData.push(['Date', 'Fund In', 'Income', 'Fund Out', 'Expense', 'Total Credit', 'Total Debit', 'Balance']);
+        excelData.push(['Opening Balance', '-', '-', '-', '-', '-', '-', openingBalance.toFixed(2)]);
         rows.forEach((row) => {
             excelData.push([
                 row.date,
@@ -105,16 +82,7 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
             '',
         ]);
         const ws = XLSX.utils.aoa_to_sheet(excelData);
-        ws['!cols'] = [
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 15 },
-        ];
+        ws['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Daily Statement');
         XLSX.writeFile(wb, `Operation-Daily-Statement-${fromDate}-to-${toDate}.xlsx`);
@@ -129,9 +97,7 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                     <div className={`mb-6 rounded-lg bg-white p-6 shadow dark:bg-gray-800`}>
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    From Date
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">From Date</label>
                                 <input
                                     type="date"
                                     value={fromDate}
@@ -140,9 +106,7 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                                 />
                             </div>
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    To Date
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">To Date</label>
                                 <input
                                     type="date"
                                     value={toDate}
@@ -151,22 +115,13 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                                 />
                             </div>
                             <div className="flex items-end gap-2">
-                                <button
-                                    onClick={handleFilter}
-                                    className="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
-                                >
+                                <button onClick={handleFilter} className="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
                                     Filter
                                 </button>
-                                <button
-                                    onClick={handlePrint}
-                                    className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700"
-                                >
+                                <button onClick={handlePrint} className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700">
                                     Print
                                 </button>
-                                <button
-                                    onClick={handleExportExcel}
-                                    className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-                                >
+                                <button onClick={handleExportExcel} className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700">
                                     Export Excel
                                 </button>
                             </div>
@@ -178,39 +133,28 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                         <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
                             {/* Header */}
                             <div className="mb-6 border-b pb-4 text-center print:border-black">
-                                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-                                    Operation Daily Statement
-                                </h1>
+                                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Operation Daily Statement</h1>
                                 <p className="mt-2 text-gray-600 dark:text-gray-400">
-                                    Period: {new Date(filters.from_date).toLocaleDateString()} to{' '}
-                                    {new Date(filters.to_date).toLocaleDateString()}
+                                    Period: {new Date(filters.from_date).toLocaleDateString()} to {new Date(filters.to_date).toLocaleDateString()}
                                 </p>
                             </div>
                             {/* Summary Cards */}
                             <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
                                 <div className="rounded-lg border border-gray-200 bg-blue-50 p-4 dark:border-gray-600 dark:bg-blue-900/20">
                                     <div className="text-sm text-gray-600 dark:text-gray-400">Opening Balance</div>
-                                    <div className="mt-1 text-xl font-bold text-blue-600 dark:text-blue-400">
-                                        ৳{openingBalance.toFixed(2)}
-                                    </div>
+                                    <div className="mt-1 text-xl font-bold text-blue-600 dark:text-blue-400">৳{openingBalance.toFixed(2)}</div>
                                 </div>
                                 <div className="rounded-lg border border-gray-200 bg-green-50 p-4 dark:border-gray-600 dark:bg-green-900/20">
                                     <div className="text-sm text-gray-600 dark:text-gray-400">Total Fund In</div>
-                                    <div className="mt-1 text-xl font-bold text-green-600 dark:text-green-400">
-                                        ৳{totals.fund_in.toFixed(2)}
-                                    </div>
+                                    <div className="mt-1 text-xl font-bold text-green-600 dark:text-green-400">৳{totals.fund_in.toFixed(2)}</div>
                                 </div>
                                 <div className="rounded-lg border border-gray-200 bg-yellow-50 p-4 dark:border-gray-600 dark:bg-yellow-900/20">
                                     <div className="text-sm text-gray-600 dark:text-gray-400">Total Income</div>
-                                    <div className="mt-1 text-xl font-bold text-yellow-600 dark:text-yellow-400">
-                                        ৳{totals.income.toFixed(2)}
-                                    </div>
+                                    <div className="mt-1 text-xl font-bold text-yellow-600 dark:text-yellow-400">৳{totals.income.toFixed(2)}</div>
                                 </div>
                                 <div className="rounded-lg border border-gray-200 bg-red-50 p-4 dark:border-gray-600 dark:bg-red-900/20">
                                     <div className="text-sm text-gray-600 dark:text-gray-400">Total Fund Out</div>
-                                    <div className="mt-1 text-xl font-bold text-red-600 dark:text-red-400">
-                                        ৳{totals.fund_out.toFixed(2)}
-                                    </div>
+                                    <div className="mt-1 text-xl font-bold text-red-600 dark:text-red-400">৳{totals.fund_out.toFixed(2)}</div>
                                 </div>
                             </div>
                             {/* Transaction Table */}
@@ -218,14 +162,30 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                                 <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600">
                                     <thead>
                                         <tr className="bg-gray-100 dark:bg-gray-700">
-                                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Date</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Fund In</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Income</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Fund Out</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Expense</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Total Credit</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Total Debit</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Balance</th>
+                                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Date
+                                            </th>
+                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Fund In
+                                            </th>
+                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Income
+                                            </th>
+                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Fund Out
+                                            </th>
+                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Expense
+                                            </th>
+                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Total Credit
+                                            </th>
+                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Total Debit
+                                            </th>
+                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Balance
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -238,30 +198,60 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                                             <td className="border border-gray-300 px-4 py-2 dark:border-gray-600"></td>
                                             <td className="border border-gray-300 px-4 py-2 dark:border-gray-600"></td>
                                             <td className="border border-gray-300 px-4 py-2 dark:border-gray-600"></td>
-                                            <td className="border border-gray-300 px-4 py-2 text-right dark:border-gray-600">৳{openingBalance.toFixed(2)}</td>
+                                            <td className="border border-gray-300 px-4 py-2 text-right dark:border-gray-600">
+                                                ৳{openingBalance.toFixed(2)}
+                                            </td>
                                         </tr>
                                         {/* Transaction Rows */}
                                         {rows.map((row, idx) => (
                                             <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                                <td className="border border-gray-300 px-4 py-2 text-sm dark:border-gray-600 dark:text-gray-300">{row.date}</td>
-                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm text-green-600 dark:border-gray-600 dark:text-green-400">{row.fund_in > 0 ? `৳${row.fund_in.toFixed(2)}` : '-'}</td>
-                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm text-yellow-600 dark:border-gray-600 dark:text-yellow-400">{row.income > 0 ? `৳${row.income.toFixed(2)}` : '-'}</td>
-                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm text-red-600 dark:border-gray-600 dark:text-red-400">{row.fund_out > 0 ? `৳${row.fund_out.toFixed(2)}` : '-'}</td>
-                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm text-red-600 dark:border-gray-600 dark:text-red-400">{row.expense > 0 ? `৳${row.expense.toFixed(2)}` : '-'}</td>
-                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold dark:border-gray-600 dark:text-gray-300">{row.total_credit > 0 ? `৳${row.total_credit.toFixed(2)}` : '-'}</td>
-                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold dark:border-gray-600 dark:text-gray-300">{row.total_debit > 0 ? `৳${row.total_debit.toFixed(2)}` : '-'}</td>
-                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold dark:border-gray-600 dark:text-gray-300">৳{row.balance.toFixed(2)}</td>
+                                                <td className="border border-gray-300 px-4 py-2 text-sm dark:border-gray-600 dark:text-gray-300">
+                                                    {row.date}
+                                                </td>
+                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm text-green-600 dark:border-gray-600 dark:text-green-400">
+                                                    {row.fund_in > 0 ? `৳${row.fund_in.toFixed(2)}` : '-'}
+                                                </td>
+                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm text-yellow-600 dark:border-gray-600 dark:text-yellow-400">
+                                                    {row.income > 0 ? `৳${row.income.toFixed(2)}` : '-'}
+                                                </td>
+                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm text-red-600 dark:border-gray-600 dark:text-red-400">
+                                                    {row.fund_out > 0 ? `৳${row.fund_out.toFixed(2)}` : '-'}
+                                                </td>
+                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm text-red-600 dark:border-gray-600 dark:text-red-400">
+                                                    {row.expense > 0 ? `৳${row.expense.toFixed(2)}` : '-'}
+                                                </td>
+                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold dark:border-gray-600 dark:text-gray-300">
+                                                    {row.total_credit > 0 ? `৳${row.total_credit.toFixed(2)}` : '-'}
+                                                </td>
+                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold dark:border-gray-600 dark:text-gray-300">
+                                                    {row.total_debit > 0 ? `৳${row.total_debit.toFixed(2)}` : '-'}
+                                                </td>
+                                                <td className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold dark:border-gray-600 dark:text-gray-300">
+                                                    ৳{row.balance.toFixed(2)}
+                                                </td>
                                             </tr>
                                         ))}
                                         {/* Totals Row */}
                                         <tr className="bg-gray-100 font-bold dark:bg-gray-700">
                                             <td className="border border-gray-300 px-4 py-2 dark:border-gray-600">Total</td>
-                                            <td className="border border-gray-300 px-4 py-2 text-right text-green-600 dark:border-gray-600 dark:text-green-400">৳{totals.fund_in.toFixed(2)}</td>
-                                            <td className="border border-gray-300 px-4 py-2 text-right text-yellow-600 dark:border-gray-600 dark:text-yellow-400">৳{totals.income.toFixed(2)}</td>
-                                            <td className="border border-gray-300 px-4 py-2 text-right text-red-600 dark:border-gray-600 dark:text-red-400">৳{totals.fund_out.toFixed(2)}</td>
-                                            <td className="border border-gray-300 px-4 py-2 text-right text-red-600 dark:border-gray-600 dark:text-red-400">৳{totals.expense.toFixed(2)}</td>
-                                            <td className="border border-gray-300 px-4 py-2 text-right font-semibold dark:border-gray-600 dark:text-gray-300">৳{totals.total_credit.toFixed(2)}</td>
-                                            <td className="border border-gray-300 px-4 py-2 text-right font-semibold dark:border-gray-600 dark:text-gray-300">৳{totals.total_debit.toFixed(2)}</td>
+                                            <td className="border border-gray-300 px-4 py-2 text-right text-green-600 dark:border-gray-600 dark:text-green-400">
+                                                ৳{totals.fund_in.toFixed(2)}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2 text-right text-yellow-600 dark:border-gray-600 dark:text-yellow-400">
+                                                ৳{totals.income.toFixed(2)}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2 text-right text-red-600 dark:border-gray-600 dark:text-red-400">
+                                                ৳{totals.fund_out.toFixed(2)}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2 text-right text-red-600 dark:border-gray-600 dark:text-red-400">
+                                                ৳{totals.expense.toFixed(2)}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2 text-right font-semibold dark:border-gray-600 dark:text-gray-300">
+                                                ৳{totals.total_credit.toFixed(2)}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2 text-right font-semibold dark:border-gray-600 dark:text-gray-300">
+                                                ৳{totals.total_debit.toFixed(2)}
+                                            </td>
                                             <td className="border border-gray-300 px-4 py-2 text-right dark:border-gray-600"></td>
                                         </tr>
                                     </tbody>

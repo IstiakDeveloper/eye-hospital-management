@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
 import OperationAccountLayout from '@/layouts/OperationAccountLayout';
-import { BarChart3, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { BarChart3, Calendar, TrendingDown, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface DailyTrend {
     date: string;
@@ -23,17 +23,10 @@ interface Props {
     endDate: string;
 }
 
-const Analytics: React.FC<Props> = ({
-    dailyTrend,
-    topIncomeCategories,
-    topExpenseCategories,
-    balance,
-    startDate,
-    endDate
-}) => {
+const Analytics: React.FC<Props> = ({ dailyTrend, topIncomeCategories, topExpenseCategories, balance, startDate, endDate }) => {
     const [dates, setDates] = useState({
         start_date: startDate,
-        end_date: endDate
+        end_date: endDate,
     });
 
     const formatAmount = (amount: number) => {
@@ -41,21 +34,23 @@ const Analytics: React.FC<Props> = ({
             style: 'currency',
             currency: 'BDT',
             minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(amount).replace('BDT', '৳');
+            maximumFractionDigits: 2,
+        })
+            .format(amount)
+            .replace('BDT', '৳');
     };
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-GB', {
             day: '2-digit',
-            month: 'short'
+            month: 'short',
         });
     };
 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setDates({
             ...dates,
-            [e.target.name]: e.target.value
+            [e.target.name]: e.target.value,
         });
     };
 
@@ -70,34 +65,31 @@ const Analytics: React.FC<Props> = ({
     return (
         <OperationAccountLayout title="Analytics">
             {/* Date Range Filter */}
-            <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+            <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div>
-                            <label className="block text-sm font-medium mb-2">Start Date</label>
+                            <label className="mb-2 block text-sm font-medium">Start Date</label>
                             <input
                                 type="date"
                                 name="start_date"
                                 value={dates.start_date}
                                 onChange={handleDateChange}
-                                className="border rounded-lg px-4 py-2"
+                                className="rounded-lg border px-4 py-2"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2">End Date</label>
+                            <label className="mb-2 block text-sm font-medium">End Date</label>
                             <input
                                 type="date"
                                 name="end_date"
                                 value={dates.end_date}
                                 onChange={handleDateChange}
-                                className="border rounded-lg px-4 py-2"
+                                className="rounded-lg border px-4 py-2"
                             />
                         </div>
                         <div className="flex items-end">
-                            <button
-                                onClick={applyDateFilter}
-                                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700"
-                            >
+                            <button onClick={applyDateFilter} className="rounded-lg bg-purple-600 px-6 py-2 text-white hover:bg-purple-700">
                                 Apply
                             </button>
                         </div>
@@ -110,46 +102,44 @@ const Analytics: React.FC<Props> = ({
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <div className="flex items-center justify-between mb-2">
+            <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+                <div className="rounded-lg border bg-white p-6 shadow-sm">
+                    <div className="mb-2 flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-600">Total Income</p>
-                        <TrendingUp className="w-5 h-5 text-green-600" />
+                        <TrendingUp className="h-5 w-5 text-green-600" />
                     </div>
                     <p className="text-2xl font-bold text-green-600">{formatAmount(totalIncome)}</p>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <div className="flex items-center justify-between mb-2">
+                <div className="rounded-lg border bg-white p-6 shadow-sm">
+                    <div className="mb-2 flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-600">Total Expense</p>
-                        <TrendingDown className="w-5 h-5 text-red-600" />
+                        <TrendingDown className="h-5 w-5 text-red-600" />
                     </div>
                     <p className="text-2xl font-bold text-red-600">{formatAmount(totalExpense)}</p>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <div className="flex items-center justify-between mb-2">
+                <div className="rounded-lg border bg-white p-6 shadow-sm">
+                    <div className="mb-2 flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-600">Net Profit/Loss</p>
-                        <BarChart3 className="w-5 h-5 text-blue-600" />
+                        <BarChart3 className="h-5 w-5 text-blue-600" />
                     </div>
-                    <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {formatAmount(netProfit)}
-                    </p>
+                    <p className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatAmount(netProfit)}</p>
                 </div>
             </div>
 
             {/* Daily Trend */}
-            <div className="bg-white rounded-lg shadow-sm border mb-8">
-                <div className="p-6 border-b">
+            <div className="mb-8 rounded-lg border bg-white shadow-sm">
+                <div className="border-b p-6">
                     <div className="flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-gray-600" />
+                        <Calendar className="h-5 w-5 text-gray-600" />
                         <h3 className="text-lg font-semibold">Daily Trend</h3>
                     </div>
                 </div>
                 <div className="p-6">
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-gray-50 border-b">
+                            <thead className="border-b bg-gray-50">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Date</th>
                                     <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Income</th>
@@ -167,7 +157,7 @@ const Analytics: React.FC<Props> = ({
                                                 <td className="px-6 py-3 text-right text-green-600">{formatAmount(day.income)}</td>
                                                 <td className="px-6 py-3 text-right text-red-600">{formatAmount(day.expense)}</td>
                                                 <td className="px-6 py-3 text-right">
-                                                    <span className={net >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
+                                                    <span className={net >= 0 ? 'font-semibold text-green-600' : 'font-semibold text-red-600'}>
                                                         {formatAmount(net)}
                                                     </span>
                                                 </td>
@@ -188,12 +178,12 @@ const Analytics: React.FC<Props> = ({
             </div>
 
             {/* Top Categories */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                 {/* Top Income Categories */}
-                <div className="bg-white rounded-lg shadow-sm border">
-                    <div className="p-6 border-b">
+                <div className="rounded-lg border bg-white shadow-sm">
+                    <div className="border-b p-6">
                         <div className="flex items-center gap-2">
-                            <TrendingUp className="w-5 h-5 text-green-600" />
+                            <TrendingUp className="h-5 w-5 text-green-600" />
                             <h3 className="text-lg font-semibold">Top Income Categories</h3>
                         </div>
                     </div>
@@ -205,31 +195,28 @@ const Analytics: React.FC<Props> = ({
                                     const percentage = (item.total / maxTotal) * 100;
                                     return (
                                         <div key={index}>
-                                            <div className="flex justify-between items-center mb-1">
+                                            <div className="mb-1 flex items-center justify-between">
                                                 <span className="text-sm font-medium text-gray-700">{item.category}</span>
                                                 <span className="text-sm font-semibold text-green-600">{formatAmount(item.total)}</span>
                                             </div>
-                                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                                <div
-                                                    className="bg-green-600 h-2 rounded-full"
-                                                    style={{ width: `${percentage}%` }}
-                                                />
+                                            <div className="h-2 w-full rounded-full bg-gray-200">
+                                                <div className="h-2 rounded-full bg-green-600" style={{ width: `${percentage}%` }} />
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
                         ) : (
-                            <p className="text-center text-gray-500 py-8">No income data</p>
+                            <p className="py-8 text-center text-gray-500">No income data</p>
                         )}
                     </div>
                 </div>
 
                 {/* Top Expense Categories */}
-                <div className="bg-white rounded-lg shadow-sm border">
-                    <div className="p-6 border-b">
+                <div className="rounded-lg border bg-white shadow-sm">
+                    <div className="border-b p-6">
                         <div className="flex items-center gap-2">
-                            <TrendingDown className="w-5 h-5 text-red-600" />
+                            <TrendingDown className="h-5 w-5 text-red-600" />
                             <h3 className="text-lg font-semibold">Top Expense Categories</h3>
                         </div>
                     </div>
@@ -241,22 +228,19 @@ const Analytics: React.FC<Props> = ({
                                     const percentage = (item.total / maxTotal) * 100;
                                     return (
                                         <div key={index}>
-                                            <div className="flex justify-between items-center mb-1">
+                                            <div className="mb-1 flex items-center justify-between">
                                                 <span className="text-sm font-medium text-gray-700">{item.category}</span>
                                                 <span className="text-sm font-semibold text-red-600">{formatAmount(item.total)}</span>
                                             </div>
-                                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                                <div
-                                                    className="bg-red-600 h-2 rounded-full"
-                                                    style={{ width: `${percentage}%` }}
-                                                />
+                                            <div className="h-2 w-full rounded-full bg-gray-200">
+                                                <div className="h-2 rounded-full bg-red-600" style={{ width: `${percentage}%` }} />
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
                         ) : (
-                            <p className="text-center text-gray-500 py-8">No expense data</p>
+                            <p className="py-8 text-center text-gray-500">No expense data</p>
                         )}
                     </div>
                 </div>

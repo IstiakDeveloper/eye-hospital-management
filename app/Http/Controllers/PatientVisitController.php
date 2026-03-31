@@ -61,11 +61,17 @@ class PatientVisitController extends Controller
 
         // Filter by date range
         if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
+            $query->whereHas('payments', function ($paymentQuery) use ($request) {
+                $paymentQuery->where('amount', '>', 0)
+                    ->whereDate('payment_date', '>=', $request->date_from);
+            });
         }
 
         if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
+            $query->whereHas('payments', function ($paymentQuery) use ($request) {
+                $paymentQuery->where('amount', '>', 0)
+                    ->whereDate('payment_date', '<=', $request->date_to);
+            });
         }
 
         // Sort by latest first
@@ -181,6 +187,10 @@ class PatientVisitController extends Controller
                             'overall_status' => 'vision_test',
                             'payment_completed_at' => now(),
                         ]);
+
+                        // Create doctor serial immediately (so doctor can see the patient even before vision test)
+                        $visit->refresh();
+                        $visit->ensureAppointmentForSelectedDoctor(Auth::id());
                     }
                 }
 
@@ -286,7 +296,7 @@ class PatientVisitController extends Controller
      */
     public function readyForPrescription()
     {
-        $visits = PatientVisit::where('vision_test_status', 'completed')
+        $visits = PatientVisit::whereIn('vision_test_status', ['completed', 'skipped'])
             ->where('prescription_status', 'pending')
             ->where('overall_status', 'prescription')
             ->with(['patient', 'selectedDoctor.user'])

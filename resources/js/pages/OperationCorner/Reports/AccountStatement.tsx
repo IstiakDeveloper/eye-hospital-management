@@ -1,8 +1,6 @@
-
 import AdminLayout from '@/layouts/OperationAccountLayout';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
 import * as XLSX from 'xlsx';
 
 interface Transaction {
@@ -36,22 +34,12 @@ interface Props {
     };
 }
 
-export default function AccountStatement({
-    transactions,
-    summary,
-    openingBalance,
-    currentBalance,
-    filters,
-}: Props) {
+export default function AccountStatement({ transactions, summary, openingBalance, currentBalance, filters }: Props) {
     const [fromDate, setFromDate] = useState(filters.from_date);
     const [toDate, setToDate] = useState(filters.to_date);
 
     const handleFilter = () => {
-        router.get(
-            route('operation-account.reports.account-statement'),
-            { from_date: fromDate, to_date: toDate },
-            { preserveState: true }
-        );
+        router.get(route('operation-account.reports.account-statement'), { from_date: fromDate, to_date: toDate }, { preserveState: true });
     };
 
     const handlePrint = () => {
@@ -71,24 +59,8 @@ export default function AccountStatement({
         excelData.push(['Total Transactions', summary.transaction_count]);
         excelData.push(['Current Account Balance', currentBalance.toFixed(2)]);
         excelData.push([]);
-        excelData.push([
-            'Date',
-            'Reference No',
-            'Description',
-            'Deposit',
-            'Withdraw',
-            'Balance',
-            'Created By',
-        ]);
-        excelData.push([
-            'Opening Balance',
-            '-',
-            '-',
-            '-',
-            '-',
-            openingBalance.toFixed(2),
-            '-',
-        ]);
+        excelData.push(['Date', 'Reference No', 'Description', 'Deposit', 'Withdraw', 'Balance', 'Created By']);
+        excelData.push(['Opening Balance', '-', '-', '-', '-', openingBalance.toFixed(2), '-']);
         transactions.forEach((transaction) => {
             const deposit = Number(transaction.deposit) || 0;
             const withdraw = Number(transaction.withdraw) || 0;
@@ -104,34 +76,10 @@ export default function AccountStatement({
                 transaction.created_by,
             ]);
         });
-        excelData.push([
-            'Total',
-            '-',
-            '-',
-            summary.total_deposit.toFixed(2),
-            summary.total_withdraw.toFixed(2),
-            '-',
-            '-',
-        ]);
-        excelData.push([
-            'Closing Balance',
-            '-',
-            '-',
-            '-',
-            '-',
-            summary.closing_balance.toFixed(2),
-            '-',
-        ]);
+        excelData.push(['Total', '-', '-', summary.total_deposit.toFixed(2), summary.total_withdraw.toFixed(2), '-', '-']);
+        excelData.push(['Closing Balance', '-', '-', '-', '-', summary.closing_balance.toFixed(2), '-']);
         const ws = XLSX.utils.aoa_to_sheet(excelData);
-        ws['!cols'] = [
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 40 },
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 15 },
-            { wch: 20 },
-        ];
+        ws['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 20 }];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Account Statement');
         XLSX.writeFile(wb, `Account-Statement-${fromDate}-to-${toDate}.xlsx`);
@@ -149,9 +97,7 @@ export default function AccountStatement({
                     <div className={`mb-6 rounded-lg bg-white p-6 shadow dark:bg-gray-800`}>
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    From Date
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">From Date</label>
                                 <input
                                     type="date"
                                     value={fromDate}
@@ -160,9 +106,7 @@ export default function AccountStatement({
                                 />
                             </div>
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    To Date
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">To Date</label>
                                 <input
                                     type="date"
                                     value={toDate}
@@ -171,22 +115,13 @@ export default function AccountStatement({
                                 />
                             </div>
                             <div className="flex items-end gap-2">
-                                <button
-                                    onClick={handleFilter}
-                                    className="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
-                                >
+                                <button onClick={handleFilter} className="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700">
                                     Filter
                                 </button>
-                                <button
-                                    onClick={handlePrint}
-                                    className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700"
-                                >
+                                <button onClick={handlePrint} className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700">
                                     Print
                                 </button>
-                                <button
-                                    onClick={handleExportExcel}
-                                    className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-                                >
+                                <button onClick={handleExportExcel} className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700">
                                     Export Excel
                                 </button>
                             </div>
@@ -198,21 +133,16 @@ export default function AccountStatement({
                         <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
                             {/* Header */}
                             <div className="mb-6 border-b pb-4 text-center print:border-black">
-                                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">
-                                    Operation Account Statement
-                                </h1>
+                                <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Operation Account Statement</h1>
                                 <p className="mt-2 text-gray-600 dark:text-gray-400">
-                                    Period: {new Date(filters.from_date).toLocaleDateString()} to{' '}
-                                    {new Date(filters.to_date).toLocaleDateString()}
+                                    Period: {new Date(filters.from_date).toLocaleDateString()} to {new Date(filters.to_date).toLocaleDateString()}
                                 </p>
                             </div>
                             {/* Summary Cards */}
                             <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
                                 <div className="rounded-lg border border-gray-200 bg-blue-50 p-4 dark:border-gray-600 dark:bg-blue-900/20">
                                     <div className="text-sm text-gray-600 dark:text-gray-400">Opening Balance</div>
-                                    <div className="mt-1 text-xl font-bold text-blue-600 dark:text-blue-400">
-                                        ৳{openingBalance.toFixed(2)}
-                                    </div>
+                                    <div className="mt-1 text-xl font-bold text-blue-600 dark:text-blue-400">৳{openingBalance.toFixed(2)}</div>
                                 </div>
                                 <div className="rounded-lg border border-gray-200 bg-green-50 p-4 dark:border-gray-600 dark:bg-green-900/20">
                                     <div className="text-sm text-gray-600 dark:text-gray-400">Total Deposit</div>
@@ -222,9 +152,7 @@ export default function AccountStatement({
                                 </div>
                                 <div className="rounded-lg border border-gray-200 bg-red-50 p-4 dark:border-gray-600 dark:bg-red-900/20">
                                     <div className="text-sm text-gray-600 dark:text-gray-400">Total Withdraw</div>
-                                    <div className="mt-1 text-xl font-bold text-red-600 dark:text-red-400">
-                                        ৳{summary.total_withdraw.toFixed(2)}
-                                    </div>
+                                    <div className="mt-1 text-xl font-bold text-red-600 dark:text-red-400">৳{summary.total_withdraw.toFixed(2)}</div>
                                 </div>
                                 <div className="rounded-lg border border-gray-200 bg-indigo-50 p-4 dark:border-gray-600 dark:bg-indigo-900/20">
                                     <div className="text-sm text-gray-600 dark:text-gray-400">Closing Balance</div>
@@ -238,21 +166,37 @@ export default function AccountStatement({
                                 <table className="min-w-full border-collapse border border-gray-300 dark:border-gray-600">
                                     <thead>
                                         <tr className="bg-gray-100 dark:bg-gray-700">
-                                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Date</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Reference No</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Description</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Deposit</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Withdraw</th>
-                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">Balance</th>
+                                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Date
+                                            </th>
+                                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Reference No
+                                            </th>
+                                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Description
+                                            </th>
+                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Deposit
+                                            </th>
+                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Withdraw
+                                            </th>
+                                            <th className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold text-gray-700 dark:border-gray-600 dark:text-gray-300">
+                                                Balance
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {/* Opening Balance Row */}
                                         <tr className="bg-blue-50 font-semibold dark:bg-blue-900/20">
-                                            <td className="border border-gray-300 px-4 py-2 dark:border-gray-600" colSpan={3}>Opening Balance</td>
+                                            <td className="border border-gray-300 px-4 py-2 dark:border-gray-600" colSpan={3}>
+                                                Opening Balance
+                                            </td>
                                             <td className="border border-gray-300 px-4 py-2 dark:border-gray-600"></td>
                                             <td className="border border-gray-300 px-4 py-2 dark:border-gray-600"></td>
-                                            <td className="border border-gray-300 px-4 py-2 text-right dark:border-gray-600">৳{openingBalance.toFixed(2)}</td>
+                                            <td className="border border-gray-300 px-4 py-2 text-right dark:border-gray-600">
+                                                ৳{openingBalance.toFixed(2)}
+                                            </td>
                                         </tr>
                                         {/* Transaction Rows */}
                                         {transactions.map((transaction) => {
@@ -261,26 +205,48 @@ export default function AccountStatement({
                                             const balance = Number(transaction.balance) || 0;
                                             return (
                                                 <tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                                    <td className="border border-gray-300 px-4 py-2 text-sm dark:border-gray-600 dark:text-gray-300">{new Date(transaction.date).toLocaleDateString()}</td>
-                                                    <td className="border border-gray-300 px-4 py-2 text-sm dark:border-gray-600 dark:text-gray-300">{transaction.reference_no}</td>
-                                                    <td className="border border-gray-300 px-4 py-2 text-sm dark:border-gray-600 dark:text-gray-300">{transaction.description}</td>
-                                                    <td className="border border-gray-300 px-4 py-2 text-right text-sm text-green-600 dark:border-gray-600 dark:text-green-400">{deposit > 0 ? `৳${deposit.toFixed(2)}` : '-'}</td>
-                                                    <td className="border border-gray-300 px-4 py-2 text-right text-sm text-red-600 dark:border-gray-600 dark:text-red-400">{withdraw > 0 ? `৳${withdraw.toFixed(2)}` : '-'}</td>
-                                                    <td className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold dark:border-gray-600 dark:text-gray-300">৳{balance.toFixed(2)}</td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-sm dark:border-gray-600 dark:text-gray-300">
+                                                        {new Date(transaction.date).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-sm dark:border-gray-600 dark:text-gray-300">
+                                                        {transaction.reference_no}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-sm dark:border-gray-600 dark:text-gray-300">
+                                                        {transaction.description}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-right text-sm text-green-600 dark:border-gray-600 dark:text-green-400">
+                                                        {deposit > 0 ? `৳${deposit.toFixed(2)}` : '-'}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-right text-sm text-red-600 dark:border-gray-600 dark:text-red-400">
+                                                        {withdraw > 0 ? `৳${withdraw.toFixed(2)}` : '-'}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-right text-sm font-semibold dark:border-gray-600 dark:text-gray-300">
+                                                        ৳{balance.toFixed(2)}
+                                                    </td>
                                                 </tr>
                                             );
                                         })}
                                         {/* Totals Row */}
                                         <tr className="bg-gray-100 font-bold dark:bg-gray-700">
-                                            <td className="border border-gray-300 px-4 py-2 dark:border-gray-600" colSpan={3}>Total</td>
-                                            <td className="border border-gray-300 px-4 py-2 text-right text-green-600 dark:border-gray-600 dark:text-green-400">৳{summary.total_deposit.toFixed(2)}</td>
-                                            <td className="border border-gray-300 px-4 py-2 text-right text-red-600 dark:border-gray-600 dark:text-red-400">৳{summary.total_withdraw.toFixed(2)}</td>
+                                            <td className="border border-gray-300 px-4 py-2 dark:border-gray-600" colSpan={3}>
+                                                Total
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2 text-right text-green-600 dark:border-gray-600 dark:text-green-400">
+                                                ৳{summary.total_deposit.toFixed(2)}
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2 text-right text-red-600 dark:border-gray-600 dark:text-red-400">
+                                                ৳{summary.total_withdraw.toFixed(2)}
+                                            </td>
                                             <td className="border border-gray-300 px-4 py-2 text-right dark:border-gray-600"></td>
                                         </tr>
                                         {/* Closing Balance Row */}
                                         <tr className="bg-indigo-50 font-bold dark:bg-indigo-900/20">
-                                            <td className="border border-gray-300 px-4 py-2 dark:border-gray-600" colSpan={5}>Closing Balance</td>
-                                            <td className="border border-gray-300 px-4 py-2 text-right dark:border-gray-600">৳{summary.closing_balance.toFixed(2)}</td>
+                                            <td className="border border-gray-300 px-4 py-2 dark:border-gray-600" colSpan={5}>
+                                                Closing Balance
+                                            </td>
+                                            <td className="border border-gray-300 px-4 py-2 text-right dark:border-gray-600">
+                                                ৳{summary.closing_balance.toFixed(2)}
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>

@@ -1,47 +1,32 @@
-import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/Layouts/admin-layout';
-import { Button } from '@/Components/ui/button';
 import { Badge } from '@/Components/ui/badge';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from '@/Components/ui/table';
-import {
-    Card,
-    CardHeader,
-    CardTitle,
-    CardContent,
-    CardDescription
-} from '@/Components/ui/card';
+import { Button } from '@/Components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
-import { formatTime, formatDate } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table';
+import AdminLayout from '@/Layouts/admin-layout';
+import { formatDate, formatTime } from '@/lib/utils';
+import { Head, Link, router } from '@inertiajs/react';
 import {
-    Calendar,
-    Clock,
-    User,
-    FileText,
-    Check,
-    X as XIcon,
-    Filter,
-    RefreshCw,
-    Printer,
-    Stethoscope,
-    Phone,
-    Search,
-    Eye,
-    Edit,
-    Trash2,
-    CalendarPlus,
     AlertCircle,
+    Calendar,
+    CalendarPlus,
+    Check,
     CheckCircle,
+    Clock,
+    Edit,
+    Eye,
+    Filter,
+    Phone,
+    Printer,
+    RefreshCw,
+    Search,
+    Stethoscope,
     Timer,
-    Users
+    Trash2,
+    Users,
+    X as XIcon,
 } from 'lucide-react';
+import { useState } from 'react';
 
 interface Patient {
     id: number;
@@ -89,17 +74,11 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
     const [dateFilter, setDateFilter] = useState<string>('all');
 
     // Extract unique doctors from appointments
-    const doctors = Array.from(
-        new Map(
-            appointments.data.map(apt => [
-                apt.doctor.id,
-                apt.doctor
-            ])
-        ).values()
-    );
+    const doctors = Array.from(new Map(appointments.data.map((apt) => [apt.doctor.id, apt.doctor])).values());
 
-    const filteredAppointments = appointments.data.filter(appointment => {
-        const matchesSearch = searchQuery === '' ||
+    const filteredAppointments = appointments.data.filter((appointment) => {
+        const matchesSearch =
+            searchQuery === '' ||
             appointment.patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             appointment.patient.patient_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             appointment.patient.phone.includes(searchQuery) ||
@@ -124,7 +103,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
         const statusConfig = {
             pending: { label: 'Pending', className: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200', icon: Timer },
             completed: { label: 'Completed', className: 'bg-green-100 text-green-800 hover:bg-green-200', icon: CheckCircle },
-            cancelled: { label: 'Cancelled', className: 'bg-red-100 text-red-800 hover:bg-red-200', icon: XIcon }
+            cancelled: { label: 'Cancelled', className: 'bg-red-100 text-red-800 hover:bg-red-200', icon: XIcon },
         };
 
         const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
@@ -132,7 +111,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
 
         return (
             <Badge className={config.className}>
-                <Icon className="h-3 w-3 mr-1" />
+                <Icon className="mr-1 h-3 w-3" />
                 {config.label}
             </Badge>
         );
@@ -140,21 +119,25 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
 
     const handleStatusChange = (appointmentId: number, newStatus: string) => {
         if (confirm(`Are you sure you want to mark this appointment as ${newStatus}?`)) {
-            router.put(route('appointments.status', appointmentId), {
-                status: newStatus
-            }, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    // Status updated successfully
-                }
-            });
+            router.put(
+                route('appointments.status', appointmentId),
+                {
+                    status: newStatus,
+                },
+                {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        // Status updated successfully
+                    },
+                },
+            );
         }
     };
 
     const handleDelete = (appointmentId: number) => {
         if (confirm('Are you sure you want to delete this appointment?')) {
             router.delete(route('appointments.destroy', appointmentId), {
-                preserveScroll: true
+                preserveScroll: true,
             });
         }
     };
@@ -166,26 +149,24 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
     // Statistics
     const stats = {
         total: appointments.data.length,
-        pending: appointments.data.filter(a => a.status === 'pending').length,
-        completed: appointments.data.filter(a => a.status === 'completed').length,
-        cancelled: appointments.data.filter(a => a.status === 'cancelled').length
+        pending: appointments.data.filter((a) => a.status === 'pending').length,
+        completed: appointments.data.filter((a) => a.status === 'completed').length,
+        cancelled: appointments.data.filter((a) => a.status === 'cancelled').length,
     };
 
     return (
         <AdminLayout>
             <Head title="All Appointments" />
 
-            <div className="p-6 space-y-6">
+            <div className="space-y-6 p-6">
                 {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                        <h1 className="flex items-center gap-3 text-3xl font-bold text-gray-900">
                             <Calendar className="h-8 w-8 text-blue-600" />
                             All Appointments
                         </h1>
-                        <p className="text-gray-600 mt-1">
-                            Manage and track all patient appointments
-                        </p>
+                        <p className="mt-1 text-gray-600">Manage and track all patient appointments</p>
                     </div>
                     <div className="flex gap-3">
                         <Link href={route('appointments.today')}>
@@ -204,7 +185,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                 </div>
 
                 {/* Statistics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                     <Card>
                         <CardContent className="pt-6">
                             <div className="flex items-center justify-between">
@@ -212,7 +193,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                                     <p className="text-sm font-medium text-gray-600">Total</p>
                                     <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
                                 </div>
-                                <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
                                     <Calendar className="h-6 w-6 text-blue-600" />
                                 </div>
                             </div>
@@ -226,7 +207,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                                     <p className="text-sm font-medium text-gray-600">Pending</p>
                                     <p className="text-2xl font-bold text-yellow-600">{stats.pending}</p>
                                 </div>
-                                <div className="h-12 w-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
                                     <Timer className="h-6 w-6 text-yellow-600" />
                                 </div>
                             </div>
@@ -240,7 +221,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                                     <p className="text-sm font-medium text-gray-600">Completed</p>
                                     <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
                                 </div>
-                                <div className="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
                                     <CheckCircle className="h-6 w-6 text-green-600" />
                                 </div>
                             </div>
@@ -254,7 +235,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                                     <p className="text-sm font-medium text-gray-600">Cancelled</p>
                                     <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
                                 </div>
-                                <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
                                     <XIcon className="h-6 w-6 text-red-600" />
                                 </div>
                             </div>
@@ -271,10 +252,10 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                             {/* Search */}
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
                                 <Input
                                     type="text"
                                     placeholder="Search by name, ID, phone..."
@@ -288,10 +269,10 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                             <select
                                 value={selectedDoctor}
                                 onChange={(e) => setSelectedDoctor(e.target.value)}
-                                className="border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="all">All Doctors</option>
-                                {doctors.map(doctor => (
+                                {doctors.map((doctor) => (
                                     <option key={doctor.id} value={doctor.id}>
                                         Dr. {doctor.user.name}
                                     </option>
@@ -302,7 +283,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                             <select
                                 value={statusFilter}
                                 onChange={(e) => setStatusFilter(e.target.value)}
-                                className="border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="all">All Status</option>
                                 <option value="pending">Pending</option>
@@ -314,7 +295,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                             <select
                                 value={dateFilter}
                                 onChange={(e) => setDateFilter(e.target.value)}
-                                className="border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                             >
                                 <option value="all">All Dates</option>
                                 <option value="today">Today</option>
@@ -333,12 +314,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                                 <Users className="h-5 w-5" />
                                 Appointments List ({filteredAppointments.length})
                             </CardTitle>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => router.reload()}
-                                className="gap-2"
-                            >
+                            <Button variant="outline" size="sm" onClick={() => router.reload()} className="gap-2">
                                 <RefreshCw className="h-4 w-4" />
                                 Refresh
                             </Button>
@@ -346,10 +322,10 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                     </CardHeader>
                     <CardContent>
                         {filteredAppointments.length === 0 ? (
-                            <div className="text-center py-12">
-                                <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                <p className="text-gray-500 text-lg">No appointments found</p>
-                                <p className="text-gray-400 text-sm mt-2">Try adjusting your filters or create a new appointment</p>
+                            <div className="py-12 text-center">
+                                <AlertCircle className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+                                <p className="text-lg text-gray-500">No appointments found</p>
+                                <p className="mt-2 text-sm text-gray-400">Try adjusting your filters or create a new appointment</p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
@@ -368,19 +344,13 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                                         {filteredAppointments.map((appointment) => (
                                             <TableRow key={appointment.id} className="hover:bg-gray-50">
                                                 <TableCell>
-                                                    <div className="font-mono text-sm font-semibold text-blue-600">
-                                                        #{appointment.serial_number}
-                                                    </div>
+                                                    <div className="font-mono text-sm font-semibold text-blue-600">#{appointment.serial_number}</div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div>
-                                                        <div className="font-medium text-gray-900">
-                                                            {appointment.patient.name}
-                                                        </div>
-                                                        <div className="text-sm text-gray-500">
-                                                            ID: {appointment.patient.patient_id}
-                                                        </div>
-                                                        <div className="text-sm text-gray-500 flex items-center gap-1">
+                                                        <div className="font-medium text-gray-900">{appointment.patient.name}</div>
+                                                        <div className="text-sm text-gray-500">ID: {appointment.patient.patient_id}</div>
+                                                        <div className="flex items-center gap-1 text-sm text-gray-500">
                                                             <Phone className="h-3 w-3" />
                                                             {appointment.patient.phone}
                                                         </div>
@@ -389,14 +359,10 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
                                                         <Stethoscope className="h-4 w-4 text-blue-600" />
-                                                        <span className="font-medium">
-                                                            Dr. {appointment.doctor.user.name}
-                                                        </span>
+                                                        <span className="font-medium">Dr. {appointment.doctor.user.name}</span>
                                                     </div>
                                                     {appointment.doctor.specialization && (
-                                                        <div className="text-sm text-gray-500 ml-6">
-                                                            {appointment.doctor.specialization}
-                                                        </div>
+                                                        <div className="ml-6 text-sm text-gray-500">{appointment.doctor.specialization}</div>
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
@@ -411,9 +377,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                                                         </div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>
-                                                    {getStatusBadge(appointment.status)}
-                                                </TableCell>
+                                                <TableCell>{getStatusBadge(appointment.status)}</TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex items-center justify-end gap-2">
                                                         <Link href={route('appointments.show', appointment.id)}>
@@ -433,7 +397,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
-                                                                    className="gap-1 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                                                    className="gap-1 text-green-600 hover:bg-green-50 hover:text-green-700"
                                                                     onClick={() => handleStatusChange(appointment.id, 'completed')}
                                                                 >
                                                                     <Check className="h-4 w-4" />
@@ -442,7 +406,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="sm"
-                                                                    className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                    className="gap-1 text-red-600 hover:bg-red-50 hover:text-red-700"
                                                                     onClick={() => handleStatusChange(appointment.id, 'cancelled')}
                                                                 >
                                                                     <XIcon className="h-4 w-4" />
@@ -463,7 +427,7 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                className="gap-1 text-red-600 hover:bg-red-50 hover:text-red-700"
                                                                 onClick={() => handleDelete(appointment.id)}
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
@@ -483,14 +447,12 @@ export default function AppointmentsIndex({ appointments }: PageProps) {
                 {/* Pagination */}
                 {appointments.last_page > 1 && (
                     <div className="flex items-center justify-center gap-2">
-                        {Array.from({ length: appointments.last_page }, (_, i) => i + 1).map(page => (
+                        {Array.from({ length: appointments.last_page }, (_, i) => i + 1).map((page) => (
                             <Link
                                 key={page}
                                 href={route('appointments.index', { page })}
-                                className={`px-4 py-2 rounded-md ${
-                                    page === appointments.current_page
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                className={`rounded-md px-4 py-2 ${
+                                    page === appointments.current_page ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                 }`}
                             >
                                 {page}

@@ -1,19 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { Head, useForm, router } from '@inertiajs/react';
-import AdminLayout from '@/layouts/admin-layout';
-import {
-    User, Calendar, FileText, PlusCircle, X, Save,
-    AlertCircle, Eye, Stethoscope, Clock, Phone,
-    Activity, Target, Pill, Heart, CheckCircle,
-    AlertTriangle, MapPin, Filter, ArrowLeft,
-    UserCheck, Clipboard, Thermometer, Droplets,
-    ClockIcon, Glasses, Palette, DollarSign,
-    Package, Layers, Settings, Sparkles, Info,
-    CreditCard, Truck, Calendar as CalendarIcon,
-    Copy, Trash2, RotateCcw, BookOpen, Zap,
-    Download
-} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import AdminLayout from '@/layouts/admin-layout';
+import { Head, router, useForm } from '@inertiajs/react';
+import {
+    Activity,
+    AlertCircle,
+    AlertTriangle,
+    ArrowLeft,
+    BookOpen,
+    Calendar,
+    CheckCircle,
+    Clock,
+    ClockIcon,
+    Download,
+    FileText,
+    Glasses,
+    Info,
+    Pill,
+    PlusCircle,
+    RotateCcw,
+    Save,
+    Sparkles,
+    Stethoscope,
+    Target,
+    X,
+    Zap,
+} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 // Complete Type definitions
 interface Patient {
@@ -137,14 +149,7 @@ interface GlassesItem {
     special_instructions: string;
 }
 
-export default function PrescriptionCreate({
-    patient,
-    medicines,
-    latestVisionTest,
-    latestVisit,
-    appointment,
-    doctor
-}: PrescriptionCreateProps) {
+export default function PrescriptionCreate({ patient, medicines, latestVisionTest, latestVisit, appointment, doctor }: PrescriptionCreateProps) {
     // State Management
     const [medicineItems, setMedicineItems] = useState<MedicineItem[]>([
         {
@@ -154,8 +159,8 @@ export default function PrescriptionCreate({
             frequency: '',
             duration: '',
             instructions: '',
-            quantity: ''
-        }
+            quantity: '',
+        },
     ]);
 
     const [glassesItems, setGlassesItems] = useState<GlassesItem[]>([]);
@@ -165,19 +170,110 @@ export default function PrescriptionCreate({
     const [showGlassesHelp, setShowGlassesHelp] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isDownloadingBlank, setIsDownloadingBlank] = useState(false);
-
+    const [medicineSearch, setMedicineSearch] = useState('');
+    const [expandedMedicineId, setExpandedMedicineId] = useState<string | null>(null);
+    const [showAddMedicineForm, setShowAddMedicineForm] = useState(false);
+    const [draftDosagePreset, setDraftDosagePreset] = useState<'1-0-1' | '1-1-1' | '0-1-0' | '0-0-1' | '2-0-2' | '__custom__'>('1-0-1');
+    const [draftDurationPreset, setDraftDurationPreset] = useState<
+        '3 days' | '5 days' | '7 days' | '10 days' | '14 days' | '21 days' | '30 days' | '1 month' | '2 months' | '3 months' | '__custom__'
+    >('7 days');
+    const [draftMedicine, setDraftMedicine] = useState<MedicineItem>({
+        id: 'draft',
+        medicine_id: '',
+        dosage: '1-0-1',
+        frequency: 'Daily',
+        duration: '7 days',
+        instructions: 'After meal',
+        quantity: '',
+    });
 
     // Group medicines by type for easier selection
-    const medicinesByType = medicines.reduce((acc, medicine) => {
-        const type = medicine.type || 'General';
-        if (!acc[type]) {
-            acc[type] = [];
-        }
-        acc[type].push(medicine);
-        return acc;
-    }, {} as Record<string, Medicine[]>);
+    const medicinesByType = medicines.reduce(
+        (acc, medicine) => {
+            const type = medicine.type || 'General';
+            if (!acc[type]) {
+                acc[type] = [];
+            }
+            acc[type].push(medicine);
+            return acc;
+        },
+        {} as Record<string, Medicine[]>,
+    );
 
     const medicineTypes = Object.keys(medicinesByType).sort();
+
+    const filteredMedicines = medicines
+        .filter((m) => !selectedMedicineType || m.type === selectedMedicineType)
+        .filter((m) => {
+            if (!medicineSearch.trim()) return true;
+            const q = medicineSearch.trim().toLowerCase();
+            return (
+                m.name.toLowerCase().includes(q) ||
+                (m.generic_name ? m.generic_name.toLowerCase().includes(q) : false) ||
+                (m.manufacturer ? m.manufacturer.toLowerCase().includes(q) : false)
+            );
+        });
+
+    const getMedicineLabel = (medicineId: string): string => {
+        const id = parseInt(medicineId);
+        const med = medicines.find((m) => m.id === id);
+        if (!med) return 'Select medicine';
+        const parts = [med.name];
+        if (med.generic_name) parts.push(`(${med.generic_name})`);
+        return parts.join(' ');
+    };
+
+    const openAddMedicineForm = () => {
+        setShowAddMedicineForm(true);
+        setDraftDosagePreset('1-0-1');
+        setDraftDurationPreset('7 days');
+        setDraftMedicine({
+            id: 'draft',
+            medicine_id: '',
+            dosage: '1-0-1',
+            frequency: 'Daily',
+            duration: '7 days',
+            instructions: 'After meal',
+            quantity: '',
+        });
+        setMedicineSearch('');
+    };
+
+    const addDraftMedicine = () => {
+        if (!draftMedicine.medicine_id) {
+            alert('Please select a medicine');
+            return;
+        }
+        if (!draftMedicine.dosage) {
+            alert('Please enter dosage');
+            return;
+        }
+        const exists = medicineItems.some((i) => i.medicine_id === draftMedicine.medicine_id);
+        if (exists) {
+            alert('This medicine is already added');
+            return;
+        }
+
+        const newItem: MedicineItem = {
+            ...draftMedicine,
+            id: `med-${Date.now()}`,
+        };
+        setMedicineItems([...medicineItems, newItem]);
+        setExpandedMedicineId(null);
+        setShowAddMedicineForm(false);
+        setDraftMedicine({
+            id: 'draft',
+            medicine_id: '',
+            dosage: '1-0-1',
+            frequency: 'Daily',
+            duration: '7 days',
+            instructions: 'After meal',
+            quantity: '',
+        });
+        setDraftDosagePreset('1-0-1');
+        setDraftDurationPreset('7 days');
+        setMedicineSearch('');
+    };
 
     const { data, setData, post, processing, errors } = useForm({
         patient_id: patient.id,
@@ -207,33 +303,37 @@ export default function PrescriptionCreate({
             });
 
             if (parsed.medicines && parsed.medicines.length > 0) {
-                setMedicineItems(parsed.medicines.map((med: any, index: number) => ({
-                    id: `med-${Date.now()}-${index}`,
-                    medicine_id: med.medicine_id?.toString() || '',
-                    dosage: med.dosage || '',
-                    frequency: med.frequency || '',
-                    duration: med.duration || '',
-                    instructions: med.instructions || '',
-                    quantity: med.quantity?.toString() || '',
-                })));
+                setMedicineItems(
+                    parsed.medicines.map((med: any, index: number) => ({
+                        id: `med-${Date.now()}-${index}`,
+                        medicine_id: med.medicine_id?.toString() || '',
+                        dosage: med.dosage || '',
+                        frequency: med.frequency || '',
+                        duration: med.duration || '',
+                        instructions: med.instructions || '',
+                        quantity: med.quantity?.toString() || '',
+                    })),
+                );
             }
 
             if (parsed.glasses && parsed.glasses.length > 0) {
-                setGlassesItems(parsed.glasses.map((glass: any, index: number) => ({
-                    id: `glass-${Date.now()}-${index}`,
-                    prescription_type: glass.prescription_type || 'distance',
-                    right_eye_sphere: glass.right_eye_sphere?.toString() || '',
-                    right_eye_cylinder: glass.right_eye_cylinder?.toString() || '',
-                    right_eye_axis: glass.right_eye_axis?.toString() || '',
-                    right_eye_add: glass.right_eye_add?.toString() || '',
-                    left_eye_sphere: glass.left_eye_sphere?.toString() || '',
-                    left_eye_cylinder: glass.left_eye_cylinder?.toString() || '',
-                    left_eye_axis: glass.left_eye_axis?.toString() || '',
-                    left_eye_add: glass.left_eye_add?.toString() || '',
-                    pupillary_distance: glass.pupillary_distance?.toString() || '',
-                    segment_height: glass.segment_height?.toString() || '',
-                    special_instructions: glass.special_instructions || '',
-                })));
+                setGlassesItems(
+                    parsed.glasses.map((glass: any, index: number) => ({
+                        id: `glass-${Date.now()}-${index}`,
+                        prescription_type: glass.prescription_type || 'distance',
+                        right_eye_sphere: glass.right_eye_sphere?.toString() || '',
+                        right_eye_cylinder: glass.right_eye_cylinder?.toString() || '',
+                        right_eye_axis: glass.right_eye_axis?.toString() || '',
+                        right_eye_add: glass.right_eye_add?.toString() || '',
+                        left_eye_sphere: glass.left_eye_sphere?.toString() || '',
+                        left_eye_cylinder: glass.left_eye_cylinder?.toString() || '',
+                        left_eye_axis: glass.left_eye_axis?.toString() || '',
+                        left_eye_add: glass.left_eye_add?.toString() || '',
+                        pupillary_distance: glass.pupillary_distance?.toString() || '',
+                        segment_height: glass.segment_height?.toString() || '',
+                        special_instructions: glass.special_instructions || '',
+                    })),
+                );
                 setIncludesGlasses(true);
             }
 
@@ -265,8 +365,8 @@ export default function PrescriptionCreate({
                 frequency: '',
                 duration: '',
                 instructions: '',
-                quantity: ''
-            }
+                quantity: '',
+            },
         ]);
     };
 
@@ -274,27 +374,28 @@ export default function PrescriptionCreate({
         if (medicineItems.length === 1) {
             return;
         }
-        setMedicineItems(medicineItems.filter(item => item.id !== id));
+        setMedicineItems(medicineItems.filter((item) => item.id !== id));
+        if (expandedMedicineId === id) {
+            setExpandedMedicineId(null);
+        }
     };
 
     const updateMedicineItem = (id: string, field: keyof MedicineItem, value: string) => {
-        setMedicineItems(
-            medicineItems.map(item =>
-                item.id === id ? { ...item, [field]: value } : item
-            )
-        );
+        setMedicineItems(medicineItems.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
     };
 
     const clearAllMedicines = () => {
-        setMedicineItems([{
-            id: `med-${Date.now()}`,
-            medicine_id: '',
-            dosage: '',
-            frequency: '',
-            duration: '',
-            instructions: '',
-            quantity: ''
-        }]);
+        setMedicineItems([
+            {
+                id: `med-${Date.now()}`,
+                medicine_id: '',
+                dosage: '',
+                frequency: '',
+                duration: '',
+                instructions: '',
+                quantity: '',
+            },
+        ]);
     };
 
     // Glasses Management Functions
@@ -315,13 +416,13 @@ export default function PrescriptionCreate({
                 pupillary_distance: latestVisionTest?.pupillary_distance?.toString() || '',
                 segment_height: '',
                 special_instructions: '',
-            }
+            },
         ]);
         setIncludesGlasses(true);
     };
 
     const removeGlassesItem = (id: string) => {
-        const newItems = glassesItems.filter(item => item.id !== id);
+        const newItems = glassesItems.filter((item) => item.id !== id);
         setGlassesItems(newItems);
         if (newItems.length === 0) {
             setIncludesGlasses(false);
@@ -329,11 +430,7 @@ export default function PrescriptionCreate({
     };
 
     const updateGlassesItem = (id: string, field: keyof GlassesItem, value: string) => {
-        setGlassesItems(
-            glassesItems.map(item =>
-                item.id === id ? { ...item, [field]: value } : item
-            )
-        );
+        setGlassesItems(glassesItems.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
     };
 
     const clearAllGlasses = () => {
@@ -360,10 +457,8 @@ export default function PrescriptionCreate({
         setIsSubmitting(true);
 
         // Validate medicines if any are added
-        const validMedicines = medicineItems.filter(item => item.medicine_id && item.dosage);
-        const invalidMedicines = medicineItems.filter(item =>
-            (item.medicine_id && !item.dosage) || (!item.medicine_id && item.dosage)
-        );
+        const validMedicines = medicineItems.filter((item) => item.medicine_id && item.dosage);
+        const invalidMedicines = medicineItems.filter((item) => (item.medicine_id && !item.dosage) || (!item.medicine_id && item.dosage));
 
         if (invalidMedicines.length > 0) {
             alert('Please complete all medicine entries or remove incomplete ones');
@@ -373,11 +468,9 @@ export default function PrescriptionCreate({
 
         // Validate glasses if any are added
         if (glassesItems.length > 0) {
-            const isValidGlasses = glassesItems.every(item =>
-                item.prescription_type && (
-                    item.right_eye_sphere || item.left_eye_sphere ||
-                    item.right_eye_cylinder || item.left_eye_cylinder
-                )
+            const isValidGlasses = glassesItems.every(
+                (item) =>
+                    item.prescription_type && (item.right_eye_sphere || item.left_eye_sphere || item.right_eye_cylinder || item.left_eye_cylinder),
             );
             if (!isValidGlasses) {
                 alert('Please specify prescription type and at least one eye prescription value for all glasses');
@@ -387,7 +480,7 @@ export default function PrescriptionCreate({
         }
 
         // Format medicines data
-        const formattedMedicines = validMedicines.map(item => ({
+        const formattedMedicines = validMedicines.map((item) => ({
             medicine_id: parseInt(item.medicine_id),
             dosage: item.dosage,
             frequency: item.frequency || null,
@@ -398,8 +491,8 @@ export default function PrescriptionCreate({
 
         // Format glasses data (medical data only)
         const formattedGlasses = glassesItems
-            .filter(item => item.prescription_type)
-            .map(item => ({
+            .filter((item) => item.prescription_type)
+            .map((item) => ({
                 prescription_type: item.prescription_type,
                 right_eye_sphere: item.right_eye_sphere ? parseFloat(item.right_eye_sphere) : null,
                 right_eye_cylinder: item.right_eye_cylinder ? parseFloat(item.right_eye_cylinder) : null,
@@ -427,7 +520,7 @@ export default function PrescriptionCreate({
             includes_glasses: includesGlasses,
             glasses_notes: data.glasses_notes,
             medicines: formattedMedicines,
-            glasses: formattedGlasses
+            glasses: formattedGlasses,
         };
 
         console.log('Submitting prescription:', submitData);
@@ -440,7 +533,7 @@ export default function PrescriptionCreate({
             onError: (errors) => {
                 console.error('Prescription creation failed:', errors);
                 setIsSubmitting(false);
-            }
+            },
         });
     };
 
@@ -464,9 +557,12 @@ export default function PrescriptionCreate({
 
     const getGenderIcon = (gender?: string) => {
         switch (gender?.toLowerCase()) {
-            case 'male': return '👨';
-            case 'female': return '👩';
-            default: return '👤';
+            case 'male':
+                return '👨';
+            case 'female':
+                return '👩';
+            default:
+                return '👤';
         }
     };
 
@@ -474,7 +570,7 @@ export default function PrescriptionCreate({
         return new Date(dateString).toLocaleDateString('en-BD', {
             year: 'numeric',
             month: 'long',
-            day: 'numeric'
+            day: 'numeric',
         });
     };
 
@@ -489,9 +585,7 @@ export default function PrescriptionCreate({
         }
 
         // Check medicines
-        const incompleteMedicines = medicineItems.filter(item =>
-            (item.medicine_id && !item.dosage) || (!item.medicine_id && item.dosage)
-        );
+        const incompleteMedicines = medicineItems.filter((item) => (item.medicine_id && !item.dosage) || (!item.medicine_id && item.dosage));
 
         if (incompleteMedicines.length > 0) {
             alert('Please complete all medicine entries or remove incomplete ones');
@@ -505,64 +599,58 @@ export default function PrescriptionCreate({
         <AdminLayout title="Create Prescription">
             <Head title="Create Prescription" />
 
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
-                <div className="max-w-7xl mx-auto space-y-6">
-
+            <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+                <div className="mx-auto max-w-7xl space-y-4 pb-28">
                     {/* Header Section */}
-                    <div className="flex items-center gap-4 mb-8">
-                        <button
-                            onClick={goBack}
-                            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                            <ArrowLeft className="h-5 w-5 text-gray-600" />
-                        </button>
-                        <div className="flex-1">
-                            <h1 className="text-3xl font-bold text-gray-900">Create Medical Prescription</h1>
-                            <p className="text-gray-600 mt-1">Write a comprehensive medical prescription for {patient.name}</p>
+                    <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+                        <div className="flex items-center gap-3">
+                            <button onClick={goBack} className="rounded-lg p-2 transition-colors hover:bg-gray-100">
+                                <ArrowLeft className="h-5 w-5 text-gray-600" />
+                            </button>
+                            <div className="min-w-0">
+                                <h1 className="text-base font-bold text-gray-900">Create Prescription</h1>
+                                <p className="mt-0.5 line-clamp-1 text-sm text-gray-600">
+                                    {patient.name} • {patient.patient_id} {latestVisit?.visit_id ? `• Visit: ${latestVisit.visit_id}` : ''}
+                                </p>
+                            </div>
                         </div>
-                        <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700">
+                                <Stethoscope className="h-4 w-4 text-gray-500" />
+                                Dr. {doctor.name}
+                            </div>
+                            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700">
+                                <Clock className="h-4 w-4 text-gray-500" />
+                                {new Date().toLocaleDateString('en-BD')}
+                            </div>
                             <Button
                                 type="button"
                                 variant="outline"
                                 onClick={handleDownloadBlankPrescription}
                                 disabled={isDownloadingBlank}
-                                className="flex items-center space-x-2 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200 text-purple-700 hover:from-purple-100 hover:to-indigo-100"
+                                className="h-8 gap-2 border-gray-200 px-3 text-xs"
                             >
                                 {isDownloadingBlank ? (
                                     <>
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
-                                        <span>Downloading...</span>
+                                        <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-gray-700" />
+                                        <span>Downloading</span>
                                     </>
                                 ) : (
                                     <>
                                         <Download className="h-4 w-4" />
-                                        <span>Download Blank Prescription</span>
+                                        <span>Blank</span>
                                     </>
                                 )}
                             </Button>
                         </div>
-                        <div className="flex items-center space-x-3">
-                            <div className="flex items-center space-x-2 bg-blue-50 px-4 py-2 rounded-lg">
-                                <Stethoscope className="h-4 w-4 text-blue-600" />
-                                <span className="text-sm font-medium text-blue-900">
-                                    Dr. {doctor.name}
-                                </span>
-                            </div>
-                            <div className="flex items-center space-x-2 bg-green-50 px-4 py-2 rounded-lg">
-                                <Clock className="h-4 w-4 text-green-600" />
-                                <span className="text-sm font-medium text-green-900">
-                                    {new Date().toLocaleDateString('en-BD')}
-                                </span>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="flex items-center gap-3 mb-6">
+                    <div className="mb-6 flex items-center gap-3">
                         <button
                             type="button"
                             onClick={() => setShowMedicineHelp(!showMedicineHelp)}
-                            className="px-3 py-2 bg-amber-100 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-200 transition-colors flex items-center gap-2"
+                            className="flex items-center gap-2 rounded-lg bg-amber-100 px-3 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-200"
                         >
                             <BookOpen className="h-4 w-4" />
                             Medicine Guide
@@ -571,7 +659,7 @@ export default function PrescriptionCreate({
                             <button
                                 type="button"
                                 onClick={() => setShowGlassesHelp(!showGlassesHelp)}
-                                className="px-3 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors flex items-center gap-2"
+                                className="flex items-center gap-2 rounded-lg bg-purple-100 px-3 py-2 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-200"
                             >
                                 <Glasses className="h-4 w-4" />
                                 Glasses Guide
@@ -580,7 +668,7 @@ export default function PrescriptionCreate({
                         <button
                             type="button"
                             onClick={clearAllMedicines}
-                            className="px-3 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors flex items-center gap-2"
+                            className="flex items-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-200"
                         >
                             <RotateCcw className="h-4 w-4" />
                             Clear Medicines
@@ -589,7 +677,7 @@ export default function PrescriptionCreate({
                             <button
                                 type="button"
                                 onClick={clearAllGlasses}
-                                className="px-3 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors flex items-center gap-2"
+                                className="flex items-center gap-2 rounded-lg bg-red-100 px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-200"
                             >
                                 <RotateCcw className="h-4 w-4" />
                                 Clear Glasses
@@ -599,15 +687,15 @@ export default function PrescriptionCreate({
 
                     {/* Help Sections */}
                     {showMedicineHelp && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
-                            <h4 className="font-medium text-amber-900 mb-3 flex items-center gap-2">
+                        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                            <h4 className="mb-3 flex items-center gap-2 font-medium text-amber-900">
                                 <BookOpen className="h-4 w-4" />
                                 Medicine Prescription Guide
                             </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-amber-700">
+                            <div className="grid grid-cols-1 gap-4 text-sm text-amber-700 md:grid-cols-2">
                                 <div>
                                     <strong>Dosage Format:</strong>
-                                    <ul className="list-disc list-inside mt-1 space-y-1">
+                                    <ul className="mt-1 list-inside list-disc space-y-1">
                                         <li>1-0-1 (Morning-Afternoon-Night)</li>
                                         <li>0-1-0 (Only afternoon)</li>
                                         <li>1-1-1 (Three times daily)</li>
@@ -615,7 +703,7 @@ export default function PrescriptionCreate({
                                 </div>
                                 <div>
                                     <strong>Common Instructions:</strong>
-                                    <ul className="list-disc list-inside mt-1 space-y-1">
+                                    <ul className="mt-1 list-inside list-disc space-y-1">
                                         <li>After meal, Before meal</li>
                                         <li>With water, Before sleep</li>
                                         <li>Don't crush, Take with milk</li>
@@ -626,15 +714,15 @@ export default function PrescriptionCreate({
                     )}
 
                     {showGlassesHelp && (
-                        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
-                            <h4 className="font-medium text-purple-900 mb-3 flex items-center gap-2">
+                        <div className="mb-6 rounded-xl border border-purple-200 bg-purple-50 p-4">
+                            <h4 className="mb-3 flex items-center gap-2 font-medium text-purple-900">
                                 <Glasses className="h-4 w-4" />
                                 Optical Prescription Guide
                             </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-purple-700">
+                            <div className="grid grid-cols-1 gap-4 text-sm text-purple-700 md:grid-cols-2">
                                 <div>
                                     <strong>Prescription Values:</strong>
-                                    <ul className="list-disc list-inside mt-1 space-y-1">
+                                    <ul className="mt-1 list-inside list-disc space-y-1">
                                         <li>SPH: Sphere (+ for farsighted, - for nearsighted)</li>
                                         <li>CYL: Cylinder (astigmatism correction)</li>
                                         <li>AXIS: Direction of astigmatism (0-180°)</li>
@@ -643,7 +731,7 @@ export default function PrescriptionCreate({
                                 </div>
                                 <div>
                                     <strong>Prescription Types:</strong>
-                                    <ul className="list-disc list-inside mt-1 space-y-1">
+                                    <ul className="mt-1 list-inside list-disc space-y-1">
                                         <li>Distance: For far vision</li>
                                         <li>Reading: For near vision only</li>
                                         <li>Progressive: Distance + Reading</li>
@@ -655,11 +743,11 @@ export default function PrescriptionCreate({
                     )}
 
                     {/* Patient & Context Info Cards */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
                         {/* Patient Information Card */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+                        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                            <div className="mb-4 flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-sm font-bold text-white">
                                     {getGenderIcon(patient.gender)}
                                 </div>
                                 <div>
@@ -686,16 +774,16 @@ export default function PrescriptionCreate({
                                 {patient.address && (
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Address:</span>
-                                        <span className="font-medium text-right text-xs">{patient.address}</span>
+                                        <span className="text-right text-xs font-medium">{patient.address}</span>
                                     </div>
                                 )}
                                 {patient.medical_history && (
-                                    <div className="mt-3 p-3 bg-red-50 rounded-lg">
-                                        <span className="text-red-600 text-xs font-medium flex items-center gap-1">
+                                    <div className="mt-3 rounded-lg bg-red-50 p-3">
+                                        <span className="flex items-center gap-1 text-xs font-medium text-red-600">
                                             <AlertTriangle className="h-3 w-3" />
                                             Medical History:
                                         </span>
-                                        <p className="text-red-700 text-xs mt-1">{patient.medical_history}</p>
+                                        <p className="mt-1 text-xs text-red-700">{patient.medical_history}</p>
                                     </div>
                                 )}
                             </div>
@@ -703,9 +791,9 @@ export default function PrescriptionCreate({
 
                         {/* Current Visit Card */}
                         {latestVisit && (
-                            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                    <Activity className="h-5 w-5 text-green-600" />
+                            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
+                                    <Activity className="h-4 w-4 text-green-600" />
                                     Current Visit
                                 </h3>
                                 <div className="space-y-3 text-sm">
@@ -719,20 +807,20 @@ export default function PrescriptionCreate({
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Status:</span>
-                                        <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-medium">
+                                        <span className="rounded bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
                                             {latestVisit.overall_status.replace('_', ' ').toUpperCase()}
                                         </span>
                                     </div>
                                     {latestVisit.chief_complaint && (
-                                        <div className="mt-3 p-3 bg-yellow-50 rounded-lg">
-                                            <span className="text-yellow-600 text-xs font-medium">Chief Complaint:</span>
-                                            <p className="text-yellow-700 text-xs mt-1">{latestVisit.chief_complaint}</p>
+                                        <div className="mt-3 rounded-lg bg-yellow-50 p-3">
+                                            <span className="text-xs font-medium text-yellow-600">Chief Complaint:</span>
+                                            <p className="mt-1 text-xs text-yellow-700">{latestVisit.chief_complaint}</p>
                                         </div>
                                     )}
                                     {latestVisit.visit_notes && (
-                                        <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                                            <span className="text-blue-600 text-xs font-medium">Visit Notes:</span>
-                                            <p className="text-blue-700 text-xs mt-1">{latestVisit.visit_notes}</p>
+                                        <div className="mt-3 rounded-lg bg-blue-50 p-3">
+                                            <span className="text-xs font-medium text-blue-600">Visit Notes:</span>
+                                            <p className="mt-1 text-xs text-blue-700">{latestVisit.visit_notes}</p>
                                         </div>
                                     )}
                                 </div>
@@ -741,9 +829,9 @@ export default function PrescriptionCreate({
 
                         {/* Appointment Card */}
                         {appointment && (
-                            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                    <Calendar className="h-5 w-5 text-emerald-600" />
+                            <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
+                                    <Calendar className="h-4 w-4 text-emerald-600" />
                                     Today's Appointment
                                 </h3>
                                 <div className="space-y-3 text-sm">
@@ -757,13 +845,13 @@ export default function PrescriptionCreate({
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Serial:</span>
-                                        <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-xs font-bold">
+                                        <span className="rounded bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-800">
                                             #{appointment.serial_number}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Status:</span>
-                                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                                        <span className="rounded bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
                                             {appointment.status.toUpperCase()}
                                         </span>
                                     </div>
@@ -772,96 +860,77 @@ export default function PrescriptionCreate({
                         )}
                     </div>
 
-
                     <form onSubmit={handleSubmit}>
-                        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-
+                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                             {/* Left Column - Prescription Details */}
-                            <div className="xl:col-span-2 space-y-6">
-
+                            <div className="space-y-6">
                                 {/* Diagnosis and Treatment */}
-                                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                                    <h3 className="font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                                    <h3 className="mb-6 flex items-center gap-2 font-semibold text-gray-900">
                                         <FileText className="h-5 w-5 text-indigo-600" />
                                         Medical Diagnosis and Treatment Plan
                                     </h3>
 
                                     <div className="space-y-6">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Primary Diagnosis *
-                                            </label>
+                                            <label className="mb-2 block text-sm font-medium text-gray-700">Primary Diagnosis *</label>
                                             <input
                                                 type="text"
                                                 value={data.diagnosis}
                                                 onChange={(e) => setData('diagnosis', e.target.value)}
-                                                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none"
                                                 placeholder="Enter detailed medical diagnosis..."
                                                 required
                                             />
-                                            {errors.diagnosis && (
-                                                <p className="mt-1 text-sm text-red-600">{errors.diagnosis}</p>
-                                            )}
+                                            {errors.diagnosis && <p className="mt-1 text-sm text-red-600">{errors.diagnosis}</p>}
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Medical Advice & Recommendations
-                                            </label>
+                                            <label className="mb-2 block text-sm font-medium text-gray-700">Medical Advice & Recommendations</label>
                                             <textarea
                                                 value={data.advice}
                                                 onChange={(e) => setData('advice', e.target.value)}
-                                                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none"
                                                 rows={4}
                                                 placeholder="Enter lifestyle recommendations, precautions, dietary advice, follow-up instructions..."
                                             />
-                                            {errors.advice && (
-                                                <p className="mt-1 text-sm text-red-600">{errors.advice}</p>
-                                            )}
+                                            {errors.advice && <p className="mt-1 text-sm text-red-600">{errors.advice}</p>}
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Clinical Notes
-                                            </label>
+                                            <label className="mb-2 block text-sm font-medium text-gray-700">Clinical Notes</label>
                                             <textarea
                                                 value={data.notes}
                                                 onChange={(e) => setData('notes', e.target.value)}
-                                                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none"
                                                 rows={3}
                                                 placeholder="Any additional clinical observations, examination findings, or doctor notes..."
                                             />
-                                            {errors.notes && (
-                                                <p className="mt-1 text-sm text-red-600">{errors.notes}</p>
-                                            )}
+                                            {errors.notes && <p className="mt-1 text-sm text-red-600">{errors.notes}</p>}
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Follow-up Date
-                                                </label>
+                                                <label className="mb-2 block text-sm font-medium text-gray-700">Follow-up Date</label>
                                                 <input
                                                     type="date"
                                                     value={data.followup_date}
                                                     onChange={(e) => setData('followup_date', e.target.value)}
-                                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none"
                                                     min={new Date().toISOString().split('T')[0]}
                                                 />
-                                                {errors.followup_date && (
-                                                    <p className="mt-1 text-sm text-red-600">{errors.followup_date}</p>
-                                                )}
+                                                {errors.followup_date && <p className="mt-1 text-sm text-red-600">{errors.followup_date}</p>}
                                             </div>
 
                                             <div className="flex items-end">
-                                                <label className="flex items-center space-x-3 cursor-pointer">
+                                                <label className="flex cursor-pointer items-center space-x-3">
                                                     <input
                                                         type="checkbox"
                                                         checked={includesGlasses}
                                                         onChange={(e) => setIncludesGlasses(e.target.checked)}
-                                                        className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                                        className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                                     />
-                                                    <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                                    <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
                                                         <Glasses className="h-4 w-4 text-blue-600" />
                                                         Include Optical Prescription
                                                     </span>
@@ -871,13 +940,11 @@ export default function PrescriptionCreate({
 
                                         {includesGlasses && (
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Optical Prescription Notes
-                                                </label>
+                                                <label className="mb-2 block text-sm font-medium text-gray-700">Optical Prescription Notes</label>
                                                 <textarea
                                                     value={data.glasses_notes}
                                                     onChange={(e) => setData('glasses_notes', e.target.value)}
-                                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none"
                                                     rows={2}
                                                     placeholder="Special notes about optical prescription, visual requirements, etc..."
                                                 />
@@ -888,10 +955,10 @@ export default function PrescriptionCreate({
 
                                 {/* Glasses Prescription Section */}
                                 {includesGlasses && (
-                                    <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                                        <div className="flex items-center justify-between mb-6">
+                                    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                                        <div className="mb-6 flex items-center justify-between">
                                             <div className="flex items-center gap-2">
-                                                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                                                <h3 className="flex items-center gap-2 font-semibold text-gray-900">
                                                     <Glasses className="h-5 w-5 text-purple-600" />
                                                     Optical Prescription (Medical Values Only)
                                                 </h3>
@@ -906,38 +973,41 @@ export default function PrescriptionCreate({
                                             <button
                                                 type="button"
                                                 onClick={addGlassesItem}
-                                                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200 flex items-center gap-2 shadow-lg"
+                                                className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:from-purple-700 hover:to-blue-700"
                                             >
                                                 <PlusCircle className="h-4 w-4" />
                                                 Add Optical Prescription
                                             </button>
                                         </div>
 
-                                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                            <p className="text-sm text-blue-700 flex items-center gap-2">
+                                        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                            <p className="flex items-center gap-2 text-sm text-blue-700">
                                                 <Info className="h-4 w-4" />
-                                                <strong>Doctor's Focus:</strong> You only provide the medical prescription values.
-                                                Patient can take this prescription to any optical shop to choose frames and lenses.
+                                                <strong>Doctor's Focus:</strong> You only provide the medical prescription values. Patient can take
+                                                this prescription to any optical shop to choose frames and lenses.
                                             </p>
                                         </div>
 
                                         <div className="space-y-8">
                                             {glassesItems.map((item, index) => (
-                                                <div key={item.id} className="group p-6 border-2 border-purple-200 rounded-xl hover:border-purple-300 transition-all duration-300 relative bg-gradient-to-r from-purple-50 to-blue-50">
+                                                <div
+                                                    key={item.id}
+                                                    className="group relative rounded-xl border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 p-6 transition-all duration-300 hover:border-purple-300"
+                                                >
                                                     {glassesItems.length > 1 && (
                                                         <button
                                                             type="button"
                                                             onClick={() => removeGlassesItem(item.id)}
-                                                            className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors duration-200 shadow-lg"
+                                                            className="absolute -top-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow-lg transition-colors duration-200 hover:bg-red-600"
                                                         >
                                                             <X className="h-4 w-4" />
                                                         </button>
                                                     )}
 
                                                     <div className="space-y-6">
-                                                        <div className="flex items-center justify-between mb-4">
+                                                        <div className="mb-4 flex items-center justify-between">
                                                             <div className="flex items-center space-x-3">
-                                                                <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-400 to-purple-600 text-sm font-bold text-white">
                                                                     {index + 1}
                                                                 </div>
                                                                 <h4 className="font-semibold text-gray-900">Optical Prescription #{index + 1}</h4>
@@ -946,7 +1016,7 @@ export default function PrescriptionCreate({
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => fillFromVisionTest(item.id)}
-                                                                    className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1"
+                                                                    className="flex items-center gap-1 rounded-lg bg-blue-100 px-3 py-1 text-xs text-blue-700 transition-colors hover:bg-blue-200"
                                                                 >
                                                                     <Sparkles className="h-3 w-3" />
                                                                     Auto-fill from Vision Test
@@ -956,7 +1026,7 @@ export default function PrescriptionCreate({
 
                                                         {/* Prescription Type */}
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                            <label className="mb-2 block text-sm font-medium text-gray-700">
                                                                 Prescription Type *
                                                             </label>
                                                             <select
@@ -974,16 +1044,16 @@ export default function PrescriptionCreate({
                                                         </div>
 
                                                         {/* Eye Prescription Values */}
-                                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                                                             {/* Right Eye */}
-                                                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                                                                <h5 className="font-medium text-red-700 mb-3 flex items-center">
-                                                                    <Target className="h-4 w-4 mr-2" />
+                                                            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                                                                <h5 className="mb-3 flex items-center font-medium text-red-700">
+                                                                    <Target className="mr-2 h-4 w-4" />
                                                                     Right Eye (OD)
                                                                 </h5>
                                                                 <div className="grid grid-cols-2 gap-3">
                                                                     <div>
-                                                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                                        <label className="mb-1 block text-xs font-medium text-gray-600">
                                                                             SPH (Sphere)
                                                                         </label>
                                                                         <input
@@ -992,13 +1062,15 @@ export default function PrescriptionCreate({
                                                                             min="-20"
                                                                             max="20"
                                                                             value={item.right_eye_sphere}
-                                                                            onChange={(e) => updateGlassesItem(item.id, 'right_eye_sphere', e.target.value)}
+                                                                            onChange={(e) =>
+                                                                                updateGlassesItem(item.id, 'right_eye_sphere', e.target.value)
+                                                                            }
                                                                             className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-red-400 focus:outline-none"
                                                                             placeholder="0.00"
                                                                         />
                                                                     </div>
                                                                     <div>
-                                                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                                        <label className="mb-1 block text-xs font-medium text-gray-600">
                                                                             CYL (Cylinder)
                                                                         </label>
                                                                         <input
@@ -1007,13 +1079,15 @@ export default function PrescriptionCreate({
                                                                             min="-10"
                                                                             max="10"
                                                                             value={item.right_eye_cylinder}
-                                                                            onChange={(e) => updateGlassesItem(item.id, 'right_eye_cylinder', e.target.value)}
+                                                                            onChange={(e) =>
+                                                                                updateGlassesItem(item.id, 'right_eye_cylinder', e.target.value)
+                                                                            }
                                                                             className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-red-400 focus:outline-none"
                                                                             placeholder="0.00"
                                                                         />
                                                                     </div>
                                                                     <div>
-                                                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                                        <label className="mb-1 block text-xs font-medium text-gray-600">
                                                                             AXIS (°)
                                                                         </label>
                                                                         <input
@@ -1021,13 +1095,15 @@ export default function PrescriptionCreate({
                                                                             min="0"
                                                                             max="180"
                                                                             value={item.right_eye_axis}
-                                                                            onChange={(e) => updateGlassesItem(item.id, 'right_eye_axis', e.target.value)}
+                                                                            onChange={(e) =>
+                                                                                updateGlassesItem(item.id, 'right_eye_axis', e.target.value)
+                                                                            }
                                                                             className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-red-400 focus:outline-none"
                                                                             placeholder="0"
                                                                         />
                                                                     </div>
                                                                     <div>
-                                                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                                        <label className="mb-1 block text-xs font-medium text-gray-600">
                                                                             ADD (Near)
                                                                         </label>
                                                                         <input
@@ -1036,7 +1112,9 @@ export default function PrescriptionCreate({
                                                                             min="0"
                                                                             max="5"
                                                                             value={item.right_eye_add}
-                                                                            onChange={(e) => updateGlassesItem(item.id, 'right_eye_add', e.target.value)}
+                                                                            onChange={(e) =>
+                                                                                updateGlassesItem(item.id, 'right_eye_add', e.target.value)
+                                                                            }
                                                                             className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-red-400 focus:outline-none"
                                                                             placeholder="0.00"
                                                                         />
@@ -1045,14 +1123,14 @@ export default function PrescriptionCreate({
                                                             </div>
 
                                                             {/* Left Eye */}
-                                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                                                <h5 className="font-medium text-blue-700 mb-3 flex items-center">
-                                                                    <Target className="h-4 w-4 mr-2" />
+                                                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                                                                <h5 className="mb-3 flex items-center font-medium text-blue-700">
+                                                                    <Target className="mr-2 h-4 w-4" />
                                                                     Left Eye (OS)
                                                                 </h5>
                                                                 <div className="grid grid-cols-2 gap-3">
                                                                     <div>
-                                                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                                        <label className="mb-1 block text-xs font-medium text-gray-600">
                                                                             SPH (Sphere)
                                                                         </label>
                                                                         <input
@@ -1061,13 +1139,15 @@ export default function PrescriptionCreate({
                                                                             min="-20"
                                                                             max="20"
                                                                             value={item.left_eye_sphere}
-                                                                            onChange={(e) => updateGlassesItem(item.id, 'left_eye_sphere', e.target.value)}
+                                                                            onChange={(e) =>
+                                                                                updateGlassesItem(item.id, 'left_eye_sphere', e.target.value)
+                                                                            }
                                                                             className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none"
                                                                             placeholder="0.00"
                                                                         />
                                                                     </div>
                                                                     <div>
-                                                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                                        <label className="mb-1 block text-xs font-medium text-gray-600">
                                                                             CYL (Cylinder)
                                                                         </label>
                                                                         <input
@@ -1076,13 +1156,15 @@ export default function PrescriptionCreate({
                                                                             min="-10"
                                                                             max="10"
                                                                             value={item.left_eye_cylinder}
-                                                                            onChange={(e) => updateGlassesItem(item.id, 'left_eye_cylinder', e.target.value)}
+                                                                            onChange={(e) =>
+                                                                                updateGlassesItem(item.id, 'left_eye_cylinder', e.target.value)
+                                                                            }
                                                                             className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none"
                                                                             placeholder="0.00"
                                                                         />
                                                                     </div>
                                                                     <div>
-                                                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                                        <label className="mb-1 block text-xs font-medium text-gray-600">
                                                                             AXIS (°)
                                                                         </label>
                                                                         <input
@@ -1090,13 +1172,15 @@ export default function PrescriptionCreate({
                                                                             min="0"
                                                                             max="180"
                                                                             value={item.left_eye_axis}
-                                                                            onChange={(e) => updateGlassesItem(item.id, 'left_eye_axis', e.target.value)}
+                                                                            onChange={(e) =>
+                                                                                updateGlassesItem(item.id, 'left_eye_axis', e.target.value)
+                                                                            }
                                                                             className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none"
                                                                             placeholder="0"
                                                                         />
                                                                     </div>
                                                                     <div>
-                                                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                                                        <label className="mb-1 block text-xs font-medium text-gray-600">
                                                                             ADD (Near)
                                                                         </label>
                                                                         <input
@@ -1105,7 +1189,9 @@ export default function PrescriptionCreate({
                                                                             min="0"
                                                                             max="5"
                                                                             value={item.left_eye_add}
-                                                                            onChange={(e) => updateGlassesItem(item.id, 'left_eye_add', e.target.value)}
+                                                                            onChange={(e) =>
+                                                                                updateGlassesItem(item.id, 'left_eye_add', e.target.value)
+                                                                            }
                                                                             className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-400 focus:outline-none"
                                                                             placeholder="0.00"
                                                                         />
@@ -1115,9 +1201,9 @@ export default function PrescriptionCreate({
                                                         </div>
 
                                                         {/* Additional Measurements */}
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                                             <div>
-                                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                                <label className="mb-2 block text-sm font-medium text-gray-700">
                                                                     📏 Pupillary Distance (PD)
                                                                 </label>
                                                                 <div className="relative">
@@ -1127,16 +1213,18 @@ export default function PrescriptionCreate({
                                                                         min="45"
                                                                         max="85"
                                                                         value={item.pupillary_distance}
-                                                                        onChange={(e) => updateGlassesItem(item.id, 'pupillary_distance', e.target.value)}
+                                                                        onChange={(e) =>
+                                                                            updateGlassesItem(item.id, 'pupillary_distance', e.target.value)
+                                                                        }
                                                                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                                                                         placeholder="63.0"
                                                                     />
-                                                                    <span className="absolute right-3 top-2 text-xs text-gray-500">mm</span>
+                                                                    <span className="absolute top-2 right-3 text-xs text-gray-500">mm</span>
                                                                 </div>
                                                             </div>
 
                                                             <div>
-                                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                                <label className="mb-2 block text-sm font-medium text-gray-700">
                                                                     📐 Segment Height
                                                                 </label>
                                                                 <div className="relative">
@@ -1150,14 +1238,14 @@ export default function PrescriptionCreate({
                                                                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                                                                         placeholder="18.0"
                                                                     />
-                                                                    <span className="absolute right-3 top-2 text-xs text-gray-500">mm</span>
+                                                                    <span className="absolute top-2 right-3 text-xs text-gray-500">mm</span>
                                                                 </div>
                                                             </div>
                                                         </div>
 
                                                         {/* Special Instructions */}
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                            <label className="mb-2 block text-sm font-medium text-gray-700">
                                                                 🔧 Medical Instructions for Optical Lab
                                                             </label>
                                                             <textarea
@@ -1173,16 +1261,16 @@ export default function PrescriptionCreate({
                                             ))}
 
                                             {glassesItems.length === 0 && (
-                                                <div className="text-center py-12">
-                                                    <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <div className="py-12 text-center">
+                                                    <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-purple-100">
                                                         <Glasses className="h-10 w-10 text-purple-400" />
                                                     </div>
-                                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No optical prescription added</h3>
-                                                    <p className="text-gray-500 mb-6">Add medical optical prescription for visual correction</p>
+                                                    <h3 className="mb-2 text-lg font-semibold text-gray-900">No optical prescription added</h3>
+                                                    <p className="mb-6 text-gray-500">Add medical optical prescription for visual correction</p>
                                                     <button
                                                         type="button"
                                                         onClick={addGlassesItem}
-                                                        className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200 flex items-center gap-2 mx-auto shadow-lg"
+                                                        className="mx-auto flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 px-6 py-3 font-medium text-white shadow-lg transition-all duration-200 hover:from-purple-700 hover:to-blue-700"
                                                     >
                                                         <PlusCircle className="h-5 w-5" />
                                                         Add Optical Prescription
@@ -1195,34 +1283,36 @@ export default function PrescriptionCreate({
 
                                 {/* Recent History */}
                                 {(patient.recent_visits.length > 0 || patient.recent_prescriptions.length > 0) && (
-                                    <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                                        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                    <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-lg">
+                                        <h3 className="mb-4 flex items-center gap-2 font-semibold text-gray-900">
                                             <ClockIcon className="h-5 w-5 text-gray-600" />
                                             Patient Medical History
                                         </h3>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                             {/* Recent Visits */}
                                             {patient.recent_visits.length > 0 && (
                                                 <div>
-                                                    <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                                                    <h4 className="mb-3 flex items-center gap-2 font-medium text-gray-800">
                                                         <Activity className="h-4 w-4 text-green-600" />
                                                         Recent Visits
                                                     </h4>
                                                     <div className="space-y-3">
                                                         {patient.recent_visits.slice(0, 3).map((visit) => (
-                                                            <div key={visit.id} className="p-3 bg-gray-50 rounded-lg border-l-4 border-green-300">
-                                                                <div className="flex justify-between items-start">
+                                                            <div key={visit.id} className="rounded-lg border-l-4 border-green-300 bg-gray-50 p-3">
+                                                                <div className="flex items-start justify-between">
                                                                     <div>
                                                                         <p className="text-sm font-medium text-gray-900">{visit.visit_id}</p>
-                                                                        <p className="text-xs text-gray-500">{visit.created_at} • Dr. {visit.doctor_name}</p>
+                                                                        <p className="text-xs text-gray-500">
+                                                                            {visit.created_at} • Dr. {visit.doctor_name}
+                                                                        </p>
                                                                     </div>
-                                                                    <span className="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded-full">
+                                                                    <span className="rounded-full bg-gray-200 px-2 py-1 text-xs text-gray-700">
                                                                         {visit.overall_status.replace('_', ' ')}
                                                                     </span>
                                                                 </div>
                                                                 {visit.chief_complaint && (
-                                                                    <p className="text-xs text-gray-600 mt-1 italic">"{visit.chief_complaint}"</p>
+                                                                    <p className="mt-1 text-xs text-gray-600 italic">"{visit.chief_complaint}"</p>
                                                                 )}
                                                             </div>
                                                         ))}
@@ -1233,27 +1323,32 @@ export default function PrescriptionCreate({
                                             {/* Recent Prescriptions */}
                                             {patient.recent_prescriptions.length > 0 && (
                                                 <div>
-                                                    <h4 className="font-medium text-gray-800 mb-3 flex items-center gap-2">
+                                                    <h4 className="mb-3 flex items-center gap-2 font-medium text-gray-800">
                                                         <FileText className="h-4 w-4 text-blue-600" />
                                                         Recent Prescriptions
                                                     </h4>
                                                     <div className="space-y-3">
                                                         {patient.recent_prescriptions.slice(0, 3).map((prescription) => (
-                                                            <div key={prescription.id} className="p-3 bg-gray-50 rounded-lg border-l-4 border-blue-300">
-                                                                <div className="flex justify-between items-start">
+                                                            <div
+                                                                key={prescription.id}
+                                                                className="rounded-lg border-l-4 border-blue-300 bg-gray-50 p-3"
+                                                            >
+                                                                <div className="flex items-start justify-between">
                                                                     <div>
                                                                         <p className="text-sm font-medium text-gray-900">Rx #{prescription.id}</p>
-                                                                        <p className="text-xs text-gray-500">{prescription.created_at} • Dr. {prescription.doctor_name}</p>
+                                                                        <p className="text-xs text-gray-500">
+                                                                            {prescription.created_at} • Dr. {prescription.doctor_name}
+                                                                        </p>
                                                                     </div>
                                                                     <div className="flex items-center space-x-1">
                                                                         {prescription.medicines_count > 0 && (
-                                                                            <span className="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                                                            <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-700">
                                                                                 <Pill className="h-3 w-3" />
                                                                                 {prescription.medicines_count}
                                                                             </span>
                                                                         )}
                                                                         {prescription.has_glasses && (
-                                                                            <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                                                            <span className="flex items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-xs text-purple-700">
                                                                                 <Glasses className="h-3 w-3" />
                                                                                 {prescription.glasses_count}
                                                                             </span>
@@ -1261,7 +1356,7 @@ export default function PrescriptionCreate({
                                                                     </div>
                                                                 </div>
                                                                 {prescription.diagnosis && (
-                                                                    <p className="text-xs text-gray-600 mt-1 italic">"{prescription.diagnosis}"</p>
+                                                                    <p className="mt-1 text-xs text-gray-600 italic">"{prescription.diagnosis}"</p>
                                                                 )}
                                                             </div>
                                                         ))}
@@ -1275,392 +1370,485 @@ export default function PrescriptionCreate({
 
                             {/* Right Column - Medicines */}
                             <div className="space-y-6">
-                                <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                                    <div className="flex items-center justify-between mb-6">
+                                <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                                    <div className="mb-3 flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                                                <Pill className="h-5 w-5 text-amber-600" />
+                                            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                                                <Pill className="h-4 w-4 text-amber-600" />
                                                 Prescribed Medicines
                                             </h3>
                                             <button
                                                 type="button"
                                                 onClick={() => setShowMedicineHelp(!showMedicineHelp)}
-                                                className="p-1 text-gray-400 hover:text-gray-600"
+                                                className="rounded p-1 text-gray-400 hover:bg-gray-50 hover:text-gray-600"
                                             >
                                                 <Info className="h-4 w-4" />
                                             </button>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={addMedicineItem}
-                                            className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg text-sm font-medium hover:from-amber-700 hover:to-orange-700 transition-all duration-200 flex items-center gap-2 shadow-lg"
-                                        >
-                                            <PlusCircle className="h-4 w-4" />
-                                            Add Medicine
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={openAddMedicineForm}
+                                                className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700"
+                                            >
+                                                <PlusCircle className="h-4 w-4" />
+                                                Add
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={clearAllMedicines}
+                                                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                            >
+                                                <RotateCcw className="h-4 w-4" />
+                                                Clear
+                                            </button>
+                                        </div>
                                     </div>
 
-                                    {/* Medicine Type Filter */}
-                                    {medicineTypes.length > 0 && (
-                                        <div className="mb-6">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Filter by Medicine Type
-                                            </label>
-                                            <select
-                                                value={selectedMedicineType}
-                                                onChange={(e) => setSelectedMedicineType(e.target.value)}
-                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                                            >
-                                                <option value="">All medicine types</option>
-                                                {medicineTypes.map(type => (
-                                                    <option key={type} value={type}>{type}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    )}
+                                    {/* Add medicine form */}
+                                    {showAddMedicineForm && (
+                                        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <div className="text-sm font-semibold text-gray-900">Add medicine</div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setShowAddMedicineForm(false);
+                                                        setMedicineSearch('');
+                                                    }}
+                                                    className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                                >
+                                                    Close
+                                                </button>
+                                            </div>
 
-                                    <div className="space-y-6">
-                                        {medicineItems.map((item, index) => (
-                                            <div key={item.id} className="group p-5 border-2 border-gray-200 rounded-xl hover:border-amber-300 transition-all duration-300 relative bg-gradient-to-r from-amber-50 to-orange-50">
-                                                {medicineItems.length > 1 && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeMedicineItem(item.id)}
-                                                        className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors duration-200 shadow-lg"
+                                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                                <div>
+                                                    <label className="mb-1 block text-xs font-semibold text-gray-700">Type</label>
+                                                    <select
+                                                        value={selectedMedicineType}
+                                                        onChange={(e) => setSelectedMedicineType(e.target.value)}
+                                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
                                                     >
-                                                        <X className="h-4 w-4" />
-                                                    </button>
-                                                )}
+                                                        <option value="">All types</option>
+                                                        {medicineTypes.map((type) => (
+                                                            <option key={type} value={type}>
+                                                                {type}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
 
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center space-x-2 mb-3">
-                                                        <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                                                            {index + 1}
-                                                        </div>
-                                                        <h4 className="font-semibold text-gray-900">Medicine #{index + 1}</h4>
+                                                <div>
+                                                    <label className="mb-1 block text-xs font-semibold text-gray-700">Search</label>
+                                                    <input
+                                                        value={medicineSearch}
+                                                        onChange={(e) => setMedicineSearch(e.target.value)}
+                                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                                                        placeholder="Type name / generic / company…"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-5">
+                                                <div className="rounded-lg border border-gray-200 bg-white md:col-span-2">
+                                                    <div className="border-b border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700">
+                                                        Select medicine
                                                     </div>
-
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                            Medicine Name *
-                                                        </label>
-                                                        <select
-                                                            value={item.medicine_id}
-                                                            onChange={(e) => updateMedicineItem(item.id, 'medicine_id', e.target.value)}
-                                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
-                                                            required
-                                                        >
-                                                            <option value="">Select medicine</option>
-                                                            {medicines
-                                                                .filter(medicine => !selectedMedicineType || medicine.type === selectedMedicineType)
-                                                                .map(medicine => (
-                                                                    <option key={medicine.id} value={medicine.id}>
-                                                                        {medicine.name}
-                                                                        {medicine.generic_name && ` (${medicine.generic_name})`}
-                                                                        {medicine.manufacturer && ` - ${medicine.manufacturer}`}
-                                                                        {` (${medicine.available_quantity ?? 0})`}
-                                                                    </option>
-
-                                                                ))}
-                                                        </select>
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                            Dosage Pattern *
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={item.dosage}
-                                                            onChange={(e) => updateMedicineItem(item.id, 'dosage', e.target.value)}
-                                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
-                                                            placeholder="e.g., 1-0-1 (Morning-Afternoon-Night)"
-                                                            required
-                                                        />
-                                                        <p className="text-xs text-gray-500 mt-1">
-                                                            Format: Morning-Afternoon-Night (e.g., 1-0-1 means 1 in morning, 0 in afternoon, 1 at night)
-                                                        </p>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 gap-3">
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                                Frequency
-                                                            </label>
-                                                            <select
-                                                                value={item.frequency}
-                                                                onChange={(e) => updateMedicineItem(item.id, 'frequency', e.target.value)}
-                                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                                                    <div className="max-h-56 overflow-auto">
+                                                        {filteredMedicines.slice(0, 30).map((m) => (
+                                                            <button
+                                                                key={m.id}
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setDraftMedicine((prev) => ({
+                                                                        ...prev,
+                                                                        medicine_id: String(m.id),
+                                                                    }))
+                                                                }
+                                                                className={`flex w-full items-start justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-amber-50 ${
+                                                                    draftMedicine.medicine_id === String(m.id) ? 'bg-amber-50' : ''
+                                                                }`}
                                                             >
-                                                                <option value="">Select frequency</option>
+                                                                <div className="min-w-0">
+                                                                    <div className="truncate font-semibold text-gray-900">{m.name}</div>
+                                                                    <div className="mt-0.5 truncate text-xs text-gray-600">
+                                                                        {m.generic_name ? `${m.generic_name} • ` : ''}
+                                                                        {m.manufacturer ?? '—'} • Stock: {m.available_quantity ?? 0}
+                                                                    </div>
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                        {filteredMedicines.length === 0 && (
+                                                            <div className="px-3 py-3 text-sm text-gray-600">No match found.</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2 md:col-span-3">
+                                                    <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700">
+                                                        <span className="font-semibold">Selected:</span>{' '}
+                                                        {draftMedicine.medicine_id ? getMedicineLabel(draftMedicine.medicine_id) : '—'}
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                                                        <div>
+                                                            <label className="mb-1 block text-xs font-semibold text-gray-700">Dosage</label>
+                                                            <select
+                                                                value={draftDosagePreset}
+                                                                onChange={(e) => {
+                                                                    const v = e.target.value as typeof draftDosagePreset;
+                                                                    setDraftDosagePreset(v);
+                                                                    if (v !== '__custom__') {
+                                                                        setDraftMedicine((p) => ({ ...p, dosage: v }));
+                                                                    } else {
+                                                                        setDraftMedicine((p) => ({ ...p, dosage: '' }));
+                                                                    }
+                                                                }}
+                                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-amber-500 focus:outline-none"
+                                                            >
+                                                                <option value="1-0-1">1-0-1</option>
+                                                                <option value="1-1-1">1-1-1</option>
+                                                                <option value="0-1-0">0-1-0</option>
+                                                                <option value="0-0-1">0-0-1</option>
+                                                                <option value="2-0-2">2-0-2</option>
+                                                                <option value="__custom__">Custom…</option>
+                                                            </select>
+                                                            {draftDosagePreset === '__custom__' && (
+                                                                <input
+                                                                    value={draftMedicine.dosage}
+                                                                    onChange={(e) => setDraftMedicine((p) => ({ ...p, dosage: e.target.value }))}
+                                                                    className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-amber-500 focus:outline-none"
+                                                                    placeholder="Type custom dosage (e.g. 1-0-1)"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <label className="mb-1 block text-xs font-semibold text-gray-700">Duration</label>
+                                                            <select
+                                                                value={draftDurationPreset}
+                                                                onChange={(e) => {
+                                                                    const v = e.target.value as typeof draftDurationPreset;
+                                                                    setDraftDurationPreset(v);
+                                                                    if (v !== '__custom__') {
+                                                                        setDraftMedicine((p) => ({ ...p, duration: v }));
+                                                                    } else {
+                                                                        setDraftMedicine((p) => ({ ...p, duration: '' }));
+                                                                    }
+                                                                }}
+                                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-amber-500 focus:outline-none"
+                                                            >
+                                                                <option value="3 days">3 days</option>
+                                                                <option value="5 days">5 days</option>
+                                                                <option value="7 days">7 days</option>
+                                                                <option value="10 days">10 days</option>
+                                                                <option value="14 days">14 days</option>
+                                                                <option value="21 days">21 days</option>
+                                                                <option value="30 days">30 days</option>
+                                                                <option value="1 month">1 month</option>
+                                                                <option value="2 months">2 months</option>
+                                                                <option value="3 months">3 months</option>
+                                                                <option value="__custom__">Custom…</option>
+                                                            </select>
+                                                            {draftDurationPreset === '__custom__' && (
+                                                                <input
+                                                                    value={draftMedicine.duration}
+                                                                    onChange={(e) => setDraftMedicine((p) => ({ ...p, duration: e.target.value }))}
+                                                                    className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-amber-500 focus:outline-none"
+                                                                    placeholder="Type custom duration (e.g. 45 days)"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <label className="mb-1 block text-xs font-semibold text-gray-700">Frequency</label>
+                                                            <select
+                                                                value={draftMedicine.frequency}
+                                                                onChange={(e) => setDraftMedicine((p) => ({ ...p, frequency: e.target.value }))}
+                                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-amber-500 focus:outline-none"
+                                                            >
                                                                 <option value="Daily">Daily</option>
                                                                 <option value="Twice daily">Twice daily</option>
                                                                 <option value="Three times daily">Three times daily</option>
                                                                 <option value="As needed">As needed</option>
-                                                                <option value="Every other day">Every other day</option>
-                                                                <option value="Weekly">Weekly</option>
+                                                                <option value="">—</option>
                                                             </select>
                                                         </div>
-
-
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1">
                                                         <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                                Duration
-                                                            </label>
-
-                                                            {/* Parse current duration for display */}
-                                                            {(() => {
-                                                                const parseDuration = (duration) => {
-                                                                    if (!duration) return { number: '', unit: '' };
-                                                                    if (duration === 'Until finish') return { number: '', unit: 'until_finish' };
-
-                                                                    // Handle temporary unit selection
-                                                                    if (duration.startsWith('__UNIT_SELECTED__')) {
-                                                                        return { number: '', unit: duration.replace('__UNIT_SELECTED__', '') };
-                                                                    }
-
-                                                                    const match = duration.match(/^(\d+)\s*(days?|months?)$/i);
-                                                                    if (match) {
-                                                                        return {
-                                                                            number: match[1],
-                                                                            unit: match[2].toLowerCase().replace(/s$/, '')
-                                                                        };
-                                                                    }
-                                                                    return { number: '', unit: '' };
-                                                                };
-
-                                                                const current = parseDuration(item.duration);
-
-                                                                const handleUnitChange = (unit) => {
-                                                                    if (unit === 'until_finish') {
-                                                                        updateMedicineItem(item.id, 'duration', 'Until finish');
-                                                                    } else if (unit === '') {
-                                                                        updateMedicineItem(item.id, 'duration', '');
-                                                                    } else {
-                                                                        // Unit selected কিন্তু number নেই, তাহলে শুধু unit store করি
-                                                                        if (current.number && unit) {
-                                                                            const plural = parseInt(current.number) > 1 ? 's' : '';
-                                                                            const durationText = `${current.number} ${unit}${plural}`;
-                                                                            updateMedicineItem(item.id, 'duration', durationText);
-                                                                        } else {
-                                                                            // Unit selected কিন্তু number নেই - temporary state
-                                                                            updateMedicineItem(item.id, 'duration', `__UNIT_SELECTED__${unit}`);
-                                                                        }
-                                                                    }
-                                                                };
-
-                                                                const handleNumberChange = (number) => {
-                                                                    if (!number) {
-                                                                        if (current.unit && current.unit !== 'until_finish') {
-                                                                            // Number clear হলে শুধু unit keep করি
-                                                                            updateMedicineItem(item.id, 'duration', `__UNIT_SELECTED__${current.unit}`);
-                                                                        }
-                                                                    } else if (current.unit && current.unit !== 'until_finish') {
-                                                                        const plural = parseInt(number) > 1 ? 's' : '';
-                                                                        const durationText = `${number} ${current.unit}${plural}`;
-                                                                        updateMedicineItem(item.id, 'duration', durationText);
-                                                                    }
-                                                                };
-
-                                                                return (
-                                                                    <>
-                                                                        {/* Main input section */}
-                                                                        <div className="flex gap-2 mb-2">
-                                                                            {/* Unit selector - First */}
-                                                                            <div className="flex-1">
-                                                                                <select
-                                                                                    value={current.unit}
-                                                                                    onChange={(e) => handleUnitChange(e.target.value)}
-                                                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
-                                                                                >
-                                                                                    <option value="">Select Unit</option>
-                                                                                    <option value="day">Day(s)</option>
-                                                                                    <option value="month">Month(s)</option>
-                                                                                    <option value="until_finish">Until finish</option>
-                                                                                </select>
-                                                                            </div>
-
-                                                                            {/* Number input - Second */}
-                                                                            <div className="flex-1">
-                                                                                <input
-                                                                                    type="number"
-                                                                                    min="1"
-                                                                                    max="365"
-                                                                                    placeholder="Enter number"
-                                                                                    value={current.number}
-                                                                                    onChange={(e) => handleNumberChange(e.target.value)}
-                                                                                    disabled={current.unit === 'until_finish' || current.unit === ''}
-                                                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-                                                                                />
-                                                                            </div>
-                                                                        </div>
-
-                                                                        {/* Show helper text */}
-                                                                        {!current.unit && (
-                                                                            <div className="mb-2 text-xs text-gray-500 italic">
-                                                                                First select a unit (Day/Month), then enter the number
-                                                                            </div>
-                                                                        )}
-
-                                                                        {current.unit && current.unit !== 'until_finish' && !current.number && (
-                                                                            <div className="mb-2 text-xs text-amber-600 italic">
-                                                                                Now enter the number of {current.unit}s
-                                                                            </div>
-                                                                        )}
-
-                                                                        {/* Quick select buttons */}
-                                                                        <div className="flex flex-wrap gap-1 mb-2">
-                                                                            <span className="text-xs text-gray-500 mr-1">Quick:</span>
-                                                                            {[
-                                                                                { text: '3d', number: '3', unit: 'day' },
-                                                                                { text: '7d', number: '7', unit: 'day' },
-                                                                                { text: '2w', number: '14', unit: 'day' },
-                                                                                { text: '1m', number: '1', unit: 'month' },
-                                                                                { text: '3m', number: '3', unit: 'month' }
-                                                                            ].map((quick) => (
-                                                                                <button
-                                                                                    key={quick.text}
-                                                                                    type="button"
-                                                                                    onClick={() => {
-                                                                                        const plural = parseInt(quick.number) > 1 ? 's' : '';
-                                                                                        const durationText = `${quick.number} ${quick.unit}${plural}`;
-                                                                                        updateMedicineItem(item.id, 'duration', durationText);
-                                                                                    }}
-                                                                                    className="px-2 py-1 text-xs bg-amber-100 text-amber-700 rounded hover:bg-amber-200 transition-colors"
-                                                                                >
-                                                                                    {quick.text}
-                                                                                </button>
-                                                                            ))}
-                                                                        </div>
-
-                                                                        {/* Show current duration */}
-                                                                        {item.duration && !item.duration.startsWith('__UNIT_SELECTED__') && (
-                                                                            <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                                                                                Duration: <span className="font-medium">{item.duration}</span>
-                                                                            </div>
-                                                                        )}
-                                                                    </>
-                                                                );
-                                                            })()}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                                Instructions
-                                                            </label>
+                                                            <label className="mb-1 block text-xs font-semibold text-gray-700">Instruction</label>
                                                             <select
-                                                                value={item.instructions}
-                                                                onChange={(e) => updateMedicineItem(item.id, 'instructions', e.target.value)}
-                                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                                                                value={draftMedicine.instructions}
+                                                                onChange={(e) => setDraftMedicine((p) => ({ ...p, instructions: e.target.value }))}
+                                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-amber-500 focus:outline-none"
                                                             >
-                                                                <option value="">Select instruction</option>
                                                                 <option value="After meal">After meal</option>
                                                                 <option value="Before meal">Before meal</option>
                                                                 <option value="With meal">With meal</option>
                                                                 <option value="Empty stomach">Empty stomach</option>
                                                                 <option value="Before sleep">Before sleep</option>
                                                                 <option value="With water">With water</option>
-                                                                <option value="With milk">With milk</option>
-                                                                <option value="Don't crush">Don't crush</option>
+                                                                <option value="">—</option>
                                                             </select>
                                                         </div>
-
-                                                        <div>
-                                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                                Quantity
-                                                            </label>
-                                                            <input
-                                                                type="number"
-                                                                value={item.quantity}
-                                                                onChange={(e) => updateMedicineItem(item.id, 'quantity', e.target.value)}
-                                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
-                                                                placeholder="30"
-                                                                min="1"
-                                                            />
-                                                        </div>
                                                     </div>
+
+                                                    <div>
+                                                        <label className="mb-1 block text-xs font-semibold text-gray-700">Quantity (optional)</label>
+                                                        <input
+                                                            type="number"
+                                                            value={draftMedicine.quantity}
+                                                            onChange={(e) => setDraftMedicine((p) => ({ ...p, quantity: e.target.value }))}
+                                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-xs focus:border-amber-500 focus:outline-none"
+                                                            placeholder="30"
+                                                            min="1"
+                                                        />
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={addDraftMedicine}
+                                                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-700"
+                                                    >
+                                                        <PlusCircle className="h-4 w-4" />
+                                                        Add medicine
+                                                    </button>
                                                 </div>
                                             </div>
-                                        ))}
+                                        </div>
+                                    )}
 
-                                        {medicineItems.length === 0 && (
-                                            <div className="text-center py-12">
-                                                <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                    <Pill className="h-8 w-8 text-amber-400" />
+                                    {/* Saved list (bullet style) */}
+                                    <div className="mt-4">
+                                        <div className="mb-2 flex items-center justify-between">
+                                            <div className="text-xs font-semibold text-gray-700">
+                                                Saved ({medicineItems.filter((i) => i.medicine_id).length})
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const first = medicineItems.find((i) => i.medicine_id);
+                                                    setExpandedMedicineId(first ? first.id : null);
+                                                }}
+                                                className="text-xs font-semibold text-amber-700 hover:text-amber-800"
+                                            >
+                                                Edit
+                                            </button>
+                                        </div>
+
+                                        <ul className="space-y-2">
+                                            {medicineItems
+                                                .filter((i) => i.medicine_id)
+                                                .map((item) => {
+                                                    const isOpen = expandedMedicineId === item.id;
+                                                    return (
+                                                        <li key={item.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div className="min-w-0">
+                                                                    <div className="text-sm font-semibold text-gray-900">
+                                                                        • {getMedicineLabel(item.medicine_id)}
+                                                                    </div>
+                                                                    <div className="mt-1 text-xs text-gray-600">
+                                                                        {item.dosage || '—'} {item.frequency ? `• ${item.frequency}` : ''}{' '}
+                                                                        {item.duration ? `• ${item.duration}` : ''}{' '}
+                                                                        {item.instructions ? `• ${item.instructions}` : ''}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex shrink-0 items-center gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setExpandedMedicineId(isOpen ? null : item.id)}
+                                                                        className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                                                    >
+                                                                        {isOpen ? 'Hide' : 'Edit'}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removeMedicineItem(item.id)}
+                                                                        className="rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            {isOpen && (
+                                                                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                                                                    <div>
+                                                                        <label className="mb-1 block text-xs font-semibold text-gray-700">
+                                                                            Dosage
+                                                                        </label>
+                                                                        <select
+                                                                            value={item.dosage}
+                                                                            onChange={(e) => updateMedicineItem(item.id, 'dosage', e.target.value)}
+                                                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                                                                        >
+                                                                            <option value="1-0-1">1-0-1</option>
+                                                                            <option value="1-1-1">1-1-1</option>
+                                                                            <option value="0-1-0">0-1-0</option>
+                                                                            <option value="0-0-1">0-0-1</option>
+                                                                            <option value="">Custom…</option>
+                                                                        </select>
+                                                                        {item.dosage === '' && (
+                                                                            <input
+                                                                                value={item.dosage}
+                                                                                onChange={(e) =>
+                                                                                    updateMedicineItem(item.id, 'dosage', e.target.value)
+                                                                                }
+                                                                                className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                                                                                placeholder="e.g. 1-0-1"
+                                                                            />
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="mb-1 block text-xs font-semibold text-gray-700">
+                                                                            Duration
+                                                                        </label>
+                                                                        <select
+                                                                            value={item.duration}
+                                                                            onChange={(e) => updateMedicineItem(item.id, 'duration', e.target.value)}
+                                                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                                                                        >
+                                                                            <option value="3 days">3 days</option>
+                                                                            <option value="7 days">7 days</option>
+                                                                            <option value="14 days">14 days</option>
+                                                                            <option value="1 month">1 month</option>
+                                                                            <option value="3 months">3 months</option>
+                                                                            <option value="Until finish">Until finish</option>
+                                                                            <option value="">Custom…</option>
+                                                                        </select>
+                                                                        {item.duration === '' && (
+                                                                            <input
+                                                                                value={item.duration}
+                                                                                onChange={(e) =>
+                                                                                    updateMedicineItem(item.id, 'duration', e.target.value)
+                                                                                }
+                                                                                className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                                                                                placeholder="e.g. 10 days"
+                                                                            />
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="mb-1 block text-xs font-semibold text-gray-700">
+                                                                            Frequency
+                                                                        </label>
+                                                                        <select
+                                                                            value={item.frequency}
+                                                                            onChange={(e) => updateMedicineItem(item.id, 'frequency', e.target.value)}
+                                                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                                                                        >
+                                                                            <option value="Daily">Daily</option>
+                                                                            <option value="Twice daily">Twice daily</option>
+                                                                            <option value="Three times daily">Three times daily</option>
+                                                                            <option value="As needed">As needed</option>
+                                                                            <option value="Every other day">Every other day</option>
+                                                                            <option value="Weekly">Weekly</option>
+                                                                            <option value="">—</option>
+                                                                        </select>
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="mb-1 block text-xs font-semibold text-gray-700">
+                                                                            Instruction
+                                                                        </label>
+                                                                        <select
+                                                                            value={item.instructions}
+                                                                            onChange={(e) =>
+                                                                                updateMedicineItem(item.id, 'instructions', e.target.value)
+                                                                            }
+                                                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                                                                        >
+                                                                            <option value="After meal">After meal</option>
+                                                                            <option value="Before meal">Before meal</option>
+                                                                            <option value="With meal">With meal</option>
+                                                                            <option value="Empty stomach">Empty stomach</option>
+                                                                            <option value="Before sleep">Before sleep</option>
+                                                                            <option value="With water">With water</option>
+                                                                            <option value="With milk">With milk</option>
+                                                                            <option value="Don't crush">Don't crush</option>
+                                                                            <option value="">—</option>
+                                                                        </select>
+                                                                    </div>
+
+                                                                    <div className="md:col-span-2">
+                                                                        <label className="mb-1 block text-xs font-semibold text-gray-700">
+                                                                            Quantity (optional)
+                                                                        </label>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={item.quantity}
+                                                                            onChange={(e) => updateMedicineItem(item.id, 'quantity', e.target.value)}
+                                                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none"
+                                                                            placeholder="e.g. 30"
+                                                                            min="1"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </li>
+                                                    );
+                                                })}
+                                        </ul>
+
+                                        {medicineItems.filter((i) => i.medicine_id).length === 0 && (
+                                            <div className="mt-3 rounded-lg border border-dashed border-gray-300 bg-white p-6 text-center">
+                                                <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                                                    <Pill className="h-5 w-5 text-amber-600" />
                                                 </div>
-                                                <h3 className="text-lg font-semibold text-gray-900 mb-2">No medicines added</h3>
-                                                <p className="text-gray-500 mb-4">Add medicines to complete the prescription</p>
-                                                <button
-                                                    type="button"
-                                                    onClick={addMedicineItem}
-                                                    className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg font-medium hover:from-amber-700 hover:to-orange-700 transition-all duration-200 flex items-center gap-2 mx-auto shadow-lg"
-                                                >
-                                                    <PlusCircle className="h-4 w-4" />
-                                                    Add First Medicine
-                                                </button>
+                                                <div className="text-sm font-semibold text-gray-900">No medicines added</div>
+                                                <div className="mt-1 text-xs text-gray-600">
+                                                    Search above and click <span className="font-semibold">Add</span>.
+                                                </div>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
                                 {/* Summary Card */}
-                                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl shadow-lg border border-indigo-200 p-6">
-                                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                <div className="rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50 p-6 shadow-lg">
+                                    <h3 className="mb-4 flex items-center gap-2 font-semibold text-gray-900">
                                         <CheckCircle className="h-5 w-5 text-indigo-600" />
                                         Prescription Summary
                                     </h3>
 
                                     <div className="space-y-3 text-sm">
-                                        <div className="flex justify-between items-center">
+                                        <div className="flex items-center justify-between">
                                             <span className="text-gray-600">Patient:</span>
                                             <span className="font-medium">{patient.name}</span>
                                         </div>
-                                        <div className="flex justify-between items-center">
+                                        <div className="flex items-center justify-between">
                                             <span className="text-gray-600">Doctor:</span>
                                             <span className="font-medium">Dr. {doctor.name}</span>
                                         </div>
-                                        <div className="flex justify-between items-center">
+                                        <div className="flex items-center justify-between">
                                             <span className="text-gray-600">Medicines:</span>
-                                            <span className="font-medium">
-                                                {medicineItems.filter(item => item.medicine_id).length} items
-                                            </span>
+                                            <span className="font-medium">{medicineItems.filter((item) => item.medicine_id).length} items</span>
                                         </div>
                                         {includesGlasses && (
-                                            <div className="flex justify-between items-center">
+                                            <div className="flex items-center justify-between">
                                                 <span className="text-gray-600">Optical Prescription:</span>
-                                                <span className="font-medium">
-                                                    {glassesItems.length} prescription(s)
-                                                </span>
+                                                <span className="font-medium">{glassesItems.length} prescription(s)</span>
                                             </div>
                                         )}
                                         {data.followup_date && (
-                                            <div className="flex justify-between items-center">
+                                            <div className="flex items-center justify-between">
                                                 <span className="text-gray-600">Follow-up:</span>
-                                                <span className="font-medium">
-                                                    {new Date(data.followup_date).toLocaleDateString('en-BD')}
-                                                </span>
+                                                <span className="font-medium">{new Date(data.followup_date).toLocaleDateString('en-BD')}</span>
                                             </div>
                                         )}
                                     </div>
 
                                     {/* Quick Stats */}
-                                    <div className="mt-4 pt-4 border-t border-indigo-200">
+                                    <div className="mt-4 border-t border-indigo-200 pt-4">
                                         <div className="grid grid-cols-2 gap-4 text-xs">
                                             <div className="text-center">
-                                                <div className="font-bold text-lg text-indigo-600">
-                                                    {medicineItems.filter(item => item.medicine_id && item.dosage).length}
+                                                <div className="text-lg font-bold text-indigo-600">
+                                                    {medicineItems.filter((item) => item.medicine_id && item.dosage).length}
                                                 </div>
                                                 <div className="text-gray-600">Complete Medicines</div>
                                             </div>
                                             <div className="text-center">
-                                                <div className="font-bold text-lg text-purple-600">
-                                                    {glassesItems.length}
-                                                </div>
+                                                <div className="text-lg font-bold text-purple-600">{glassesItems.length}</div>
                                                 <div className="text-gray-600">Optical Prescriptions</div>
                                             </div>
                                         </div>
@@ -1669,41 +1857,41 @@ export default function PrescriptionCreate({
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mt-8">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                                    <AlertCircle className="h-4 w-4 text-blue-500" />
-                                    <span>Please review all medical information carefully before saving the prescription</span>
-                                </div>
-
-                                <div className="flex space-x-3">
-                                    <button
-                                        type="button"
-                                        onClick={goBack}
-                                        className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
-                                    >
-                                        <X className="h-4 w-4" />
-                                        Cancel
-                                    </button>
-
-                                    <button
-                                        type="submit"
-                                        disabled={processing || isSubmitting || !data.diagnosis}
-                                        className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                                    >
-                                        {processing || isSubmitting ? (
-                                            <>
-                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                                Creating Prescription...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Save className="h-4 w-4" />
-                                                Save Medical Prescription
-                                            </>
-                                        )}
-                                    </button>
+                        {/* Sticky bottom actions */}
+                        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur">
+                            <div className="mx-auto max-w-7xl px-4 py-3 md:px-6">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                                        <AlertCircle className="h-4 w-4 text-blue-500" />
+                                        <span className="line-clamp-1">Review before saving.</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={goBack}
+                                            className="inline-flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                                        >
+                                            <X className="h-4 w-4" />
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={processing || isSubmitting || !data.diagnosis}
+                                            className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {processing || isSubmitting ? (
+                                                <>
+                                                    <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
+                                                    Saving...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Save className="h-4 w-4" />
+                                                    Save
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1711,13 +1899,13 @@ export default function PrescriptionCreate({
 
                     {/* Error Messages */}
                     {Object.keys(errors).length > 0 && (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mt-6">
+                        <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4">
                             <div className="flex items-start space-x-3">
-                                <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                                <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
                                 <div>
                                     <h3 className="text-sm font-medium text-red-800">Please fix the following errors:</h3>
                                     <div className="mt-2 text-sm text-red-700">
-                                        <ul className="list-disc list-inside space-y-1">
+                                        <ul className="list-inside list-disc space-y-1">
                                             {Object.entries(errors).map(([field, message]) => (
                                                 <li key={field}>
                                                     <strong>{field.replace('_', ' ')}:</strong> {message}
@@ -1731,15 +1919,15 @@ export default function PrescriptionCreate({
                     )}
 
                     {/* Quick Tips */}
-                    <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-xl p-4 mt-6">
-                        <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+                    <div className="mt-6 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-green-50 p-4">
+                        <h4 className="mb-2 flex items-center gap-2 font-medium text-blue-900">
                             <Zap className="h-4 w-4" />
                             Quick Tips for Doctors
                         </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
+                        <div className="grid grid-cols-1 gap-4 text-sm text-blue-700 md:grid-cols-2">
                             <div>
                                 <strong>Medicine Prescription:</strong>
-                                <ul className="list-disc list-inside mt-1 space-y-1">
+                                <ul className="mt-1 list-inside list-disc space-y-1">
                                     <li>Use standard dosage format (1-0-1)</li>
                                     <li>Always specify duration clearly</li>
                                     <li>Include special instructions for patient safety</li>
@@ -1747,7 +1935,7 @@ export default function PrescriptionCreate({
                             </div>
                             <div>
                                 <strong>Optical Prescription:</strong>
-                                <ul className="list-disc list-inside mt-1 space-y-1">
+                                <ul className="mt-1 list-inside list-disc space-y-1">
                                     <li>Focus on medical values only</li>
                                     <li>Use vision test data for accuracy</li>
                                     <li>Patient will choose frames separately</li>

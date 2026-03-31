@@ -1,6 +1,6 @@
-import { router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { ArrowLeft, Edit, Trash2, Power, PowerOff, Scissors, DollarSign, Calendar, FileText } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { ArrowLeft, Calendar, DollarSign, Edit, FileText, Power, PowerOff, Scissors, Trash2 } from 'lucide-react';
 
 interface Operation {
     id: number;
@@ -30,7 +30,7 @@ export default function ShowOperation({ operation, can }: Props) {
             month: 'short',
             year: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
         });
     };
 
@@ -47,21 +47,21 @@ export default function ShowOperation({ operation, can }: Props) {
     return (
         <AdminLayout>
             <div className="p-6">
-                <div className="max-w-4xl mx-auto">
+                <div className="mx-auto max-w-4xl">
                     <div className="mb-6 flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                                <Scissors className="w-8 h-8 text-purple-600" />
+                            <h1 className="flex items-center gap-3 text-3xl font-bold text-gray-900">
+                                <Scissors className="h-8 w-8 text-purple-600" />
                                 Operation Details
                             </h1>
-                            <p className="text-gray-600 mt-1">View operation information</p>
+                            <p className="mt-1 text-gray-600">View operation information</p>
                         </div>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => router.visit('/operations')}
-                                className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-50"
                             >
-                                <ArrowLeft className="w-4 h-4" />
+                                <ArrowLeft className="h-4 w-4" />
                                 Back
                             </button>
                         </div>
@@ -74,26 +74,27 @@ export default function ShowOperation({ operation, can }: Props) {
                                 <>
                                     <button
                                         onClick={() => router.visit(`/operations/${operation.id}/edit`)}
-                                        className="flex items-center gap-2 px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
+                                        className="flex items-center gap-2 rounded-lg bg-yellow-600 px-6 py-2 text-white hover:bg-yellow-700"
                                     >
-                                        <Edit className="w-4 h-4" />
+                                        <Edit className="h-4 w-4" />
                                         Edit Operation
                                     </button>
                                     <button
                                         onClick={handleToggleStatus}
-                                        className={`flex items-center gap-2 px-6 py-2 rounded-lg ${operation.is_active
-                                            ? 'bg-red-600 hover:bg-red-700 text-white'
-                                            : 'bg-green-600 hover:bg-green-700 text-white'
-                                            }`}
+                                        className={`flex items-center gap-2 rounded-lg px-6 py-2 ${
+                                            operation.is_active
+                                                ? 'bg-red-600 text-white hover:bg-red-700'
+                                                : 'bg-green-600 text-white hover:bg-green-700'
+                                        }`}
                                     >
                                         {operation.is_active ? (
                                             <>
-                                                <PowerOff className="w-4 h-4" />
+                                                <PowerOff className="h-4 w-4" />
                                                 Deactivate
                                             </>
                                         ) : (
                                             <>
-                                                <Power className="w-4 h-4" />
+                                                <Power className="h-4 w-4" />
                                                 Activate
                                             </>
                                         )}
@@ -103,9 +104,9 @@ export default function ShowOperation({ operation, can }: Props) {
                             {can.delete && (
                                 <button
                                     onClick={handleDelete}
-                                    className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                    className="flex items-center gap-2 rounded-lg bg-red-600 px-6 py-2 text-white hover:bg-red-700"
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="h-4 w-4" />
                                     Delete
                                 </button>
                             )}
@@ -113,21 +114,21 @@ export default function ShowOperation({ operation, can }: Props) {
                     )}
 
                     {/* Main Info Card */}
-                    <div className="bg-white rounded-lg shadow-sm border overflow-hidden mb-6">
+                    <div className="mb-6 overflow-hidden rounded-lg border bg-white shadow-sm">
                         <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
                             <h2 className="text-xl font-bold text-white">{operation.operation_name}</h2>
                         </div>
 
-                        <div className="p-6 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-6 p-6">
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 {/* Operation Type */}
                                 <div>
-                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
-                                        <FileText className="w-4 h-4" />
+                                    <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-500">
+                                        <FileText className="h-4 w-4" />
                                         Operation Type
                                     </div>
                                     <p className="text-lg font-semibold text-gray-900">
-                                        <span className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-100 text-blue-800">
+                                        <span className="inline-flex items-center rounded-lg bg-blue-100 px-4 py-2 text-blue-800">
                                             {operation.operation_type}
                                         </span>
                                     </p>
@@ -135,30 +136,28 @@ export default function ShowOperation({ operation, can }: Props) {
 
                                 {/* Base Price */}
                                 <div>
-                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
-                                        <DollarSign className="w-4 h-4" />
+                                    <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-500">
+                                        <DollarSign className="h-4 w-4" />
                                         Base Price
                                     </div>
-                                    <p className="text-2xl font-bold text-purple-600">
-                                        {formatCurrency(operation.base_price)}
-                                    </p>
+                                    <p className="text-2xl font-bold text-purple-600">{formatCurrency(operation.base_price)}</p>
                                 </div>
 
                                 {/* Status */}
                                 <div>
-                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
-                                        {operation.is_active ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                                    <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-500">
+                                        {operation.is_active ? <Power className="h-4 w-4" /> : <PowerOff className="h-4 w-4" />}
                                         Status
                                     </div>
                                     <p className="text-lg">
                                         {operation.is_active ? (
-                                            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-100 text-green-800 font-semibold">
-                                                <Power className="w-4 h-4" />
+                                            <span className="inline-flex items-center gap-2 rounded-lg bg-green-100 px-4 py-2 font-semibold text-green-800">
+                                                <Power className="h-4 w-4" />
                                                 Active
                                             </span>
                                         ) : (
-                                            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-100 text-red-800 font-semibold">
-                                                <PowerOff className="w-4 h-4" />
+                                            <span className="inline-flex items-center gap-2 rounded-lg bg-red-100 px-4 py-2 font-semibold text-red-800">
+                                                <PowerOff className="h-4 w-4" />
                                                 Inactive
                                             </span>
                                         )}
@@ -167,8 +166,8 @@ export default function ShowOperation({ operation, can }: Props) {
 
                                 {/* Created At */}
                                 <div>
-                                    <div className="flex items-center gap-2 text-sm font-medium text-gray-500 mb-2">
-                                        <Calendar className="w-4 h-4" />
+                                    <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-500">
+                                        <Calendar className="h-4 w-4" />
                                         Created On
                                     </div>
                                     <p className="text-lg font-medium text-gray-900">{formatDate(operation.created_at)}</p>
@@ -178,11 +177,9 @@ export default function ShowOperation({ operation, can }: Props) {
                             {/* Description */}
                             {operation.description && (
                                 <div>
-                                    <div className="text-sm font-medium text-gray-500 mb-2">
-                                        Description
-                                    </div>
-                                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                        <p className="text-gray-700 whitespace-pre-wrap">{operation.description}</p>
+                                    <div className="mb-2 text-sm font-medium text-gray-500">Description</div>
+                                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                        <p className="whitespace-pre-wrap text-gray-700">{operation.description}</p>
                                     </div>
                                 </div>
                             )}
@@ -190,8 +187,8 @@ export default function ShowOperation({ operation, can }: Props) {
                     </div>
 
                     {/* Metadata */}
-                    <div className="bg-gray-50 rounded-lg border p-4">
-                        <h3 className="font-semibold text-gray-700 mb-3">Metadata</h3>
+                    <div className="rounded-lg border bg-gray-50 p-4">
+                        <h3 className="mb-3 font-semibold text-gray-700">Metadata</h3>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span className="text-gray-600">Created:</span>

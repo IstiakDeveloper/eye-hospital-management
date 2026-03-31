@@ -1,35 +1,10 @@
-import React from 'react';
-import { Head, Link, router } from '@inertiajs/react';
-import AdminLayout from '@/layouts/admin-layout';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-    CardContent,
-    CardFooter
-} from '@/components/ui/card';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from '@/components/ui/table';
-import {
-    User as UserIcon,
-    Mail,
-    Phone,
-    Calendar,
-    Clock,
-    Edit,
-    CheckCircle,
-    XCircle,
-    ArrowLeft
-} from 'lucide-react';
-import { formatDate, formatTime, formatCurrency } from '@/lib/utils';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import AdminLayout from '@/layouts/admin-layout';
+import { formatCurrency, formatDate, formatTime } from '@/lib/utils';
+import { Head, Link, router } from '@inertiajs/react';
+import { ArrowLeft, Calendar, CheckCircle, Clock, Edit, Mail, Phone, User as UserIcon, XCircle } from 'lucide-react';
 
 interface User {
     id: number;
@@ -76,29 +51,28 @@ interface DoctorShowProps {
     };
 }
 
-export default function DoctorShow({
-    doctor,
-    todayAppointments = [],
-    upcomingAppointments = [],
-    stats
-}: DoctorShowProps) {
+export default function DoctorShow({ doctor, todayAppointments = [], upcomingAppointments = [], stats }: DoctorShowProps) {
     // Default stats if not provided
     const defaultStats = {
         totalAppointments: 0,
         completedAppointments: 0,
-        todayAppointments: 0
+        todayAppointments: 0,
     };
 
     const appointmentStats = stats || defaultStats;
 
     const toggleAvailability = () => {
-        router.put(route('doctors.availability', doctor.id), {
-            is_available: !doctor.is_available
-        }, {
-            onSuccess: () => {
-                // Doctor availability updated
-            }
-        });
+        router.put(
+            route('doctors.availability', doctor.id),
+            {
+                is_available: !doctor.is_available,
+            },
+            {
+                onSuccess: () => {
+                    // Doctor availability updated
+                },
+            },
+        );
     };
 
     return (
@@ -112,25 +86,17 @@ export default function DoctorShow({
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                    <Button
-                        href={route('doctors.index')}
-                        variant="outline"
-                        icon={<ArrowLeft className="h-4 w-4" />}
-                    >
+                    <Button href={route('doctors.index')} variant="outline" icon={<ArrowLeft className="h-4 w-4" />}>
                         Back to Doctors
                     </Button>
 
-                    <Button
-                        href={route('doctors.edit', doctor.id)}
-                        variant="outline"
-                        icon={<Edit className="h-4 w-4" />}
-                    >
+                    <Button href={route('doctors.edit', doctor.id)} variant="outline" icon={<Edit className="h-4 w-4" />}>
                         Edit Doctor
                     </Button>
 
                     <Button
                         onClick={toggleAvailability}
-                        variant={doctor.is_available ? "destructive" : "default"}
+                        variant={doctor.is_available ? 'destructive' : 'default'}
                         icon={doctor.is_available ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
                     >
                         {doctor.is_available ? 'Set Unavailable' : 'Set Available'}
@@ -138,7 +104,7 @@ export default function DoctorShow({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 {/* Doctor Information */}
                 <Card className="md:col-span-2">
                     <CardHeader>
@@ -146,9 +112,9 @@ export default function DoctorShow({
                     </CardHeader>
 
                     <CardContent className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div className="flex items-start">
-                                <UserIcon className="h-5 w-5 text-gray-400 mt-0.5 mr-2" />
+                                <UserIcon className="mt-0.5 mr-2 h-5 w-5 text-gray-400" />
                                 <div>
                                     <p className="text-sm font-medium text-gray-500">Full Name</p>
                                     <p className="text-gray-900">Dr. {doctor.user.name}</p>
@@ -156,7 +122,7 @@ export default function DoctorShow({
                             </div>
 
                             <div className="flex items-start">
-                                <Mail className="h-5 w-5 text-gray-400 mt-0.5 mr-2" />
+                                <Mail className="mt-0.5 mr-2 h-5 w-5 text-gray-400" />
                                 <div>
                                     <p className="text-sm font-medium text-gray-500">Email Address</p>
                                     <p className="text-gray-900">{doctor.user.email}</p>
@@ -164,7 +130,7 @@ export default function DoctorShow({
                             </div>
 
                             <div className="flex items-start">
-                                <Phone className="h-5 w-5 text-gray-400 mt-0.5 mr-2" />
+                                <Phone className="mt-0.5 mr-2 h-5 w-5 text-gray-400" />
                                 <div>
                                     <p className="text-sm font-medium text-gray-500">Phone Number</p>
                                     <p className="text-gray-900">{doctor.user.phone || 'N/A'}</p>
@@ -172,7 +138,7 @@ export default function DoctorShow({
                             </div>
 
                             <div className="flex items-start">
-                                <div className="h-5 w-5 flex items-center justify-center text-gray-400 mt-0.5 mr-2">
+                                <div className="mt-0.5 mr-2 flex h-5 w-5 items-center justify-center text-gray-400">
                                     <span className="text-lg font-semibold">৳</span>
                                 </div>
                                 <div>
@@ -182,7 +148,7 @@ export default function DoctorShow({
                             </div>
 
                             <div className="flex items-start">
-                                <div className="h-5 w-5 flex items-center justify-center text-gray-400 mt-0.5 mr-2">
+                                <div className="mt-0.5 mr-2 flex h-5 w-5 items-center justify-center text-gray-400">
                                     <span className="text-lg font-semibold">৳</span>
                                 </div>
                                 <div>
@@ -194,7 +160,7 @@ export default function DoctorShow({
 
                         <div>
                             <div className="flex items-start">
-                                <UserIcon className="h-5 w-5 text-gray-400 mt-0.5 mr-2" />
+                                <UserIcon className="mt-0.5 mr-2 h-5 w-5 text-gray-400" />
                                 <div>
                                     <p className="text-sm font-medium text-gray-500">Qualification</p>
                                     <p className="text-gray-900">{doctor.qualification || 'N/A'}</p>
@@ -205,18 +171,24 @@ export default function DoctorShow({
                         {doctor.bio && (
                             <div>
                                 <p className="text-sm font-medium text-gray-500">Biography</p>
-                                <p className="text-gray-900 mt-1">{doctor.bio}</p>
+                                <p className="mt-1 text-gray-900">{doctor.bio}</p>
                             </div>
                         )}
 
                         <div className="flex items-center gap-4">
-                            <div className={`px-3 py-1 rounded-full text-sm ${doctor.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}>
+                            <div
+                                className={`rounded-full px-3 py-1 text-sm ${
+                                    doctor.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}
+                            >
                                 {doctor.is_available ? 'Available for Appointments' : 'Currently Unavailable'}
                             </div>
 
-                            <div className={`px-3 py-1 rounded-full text-sm ${doctor.user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}>
+                            <div
+                                className={`rounded-full px-3 py-1 text-sm ${
+                                    doctor.user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}
+                            >
                                 {doctor.user.is_active ? 'Active Account' : 'Inactive Account'}
                             </div>
                         </div>
@@ -230,27 +202,23 @@ export default function DoctorShow({
                     </CardHeader>
 
                     <CardContent className="space-y-4">
-                        <div className="bg-blue-50 p-4 rounded-md">
-                            <p className="text-blue-700 font-medium">Total Appointments</p>
+                        <div className="rounded-md bg-blue-50 p-4">
+                            <p className="font-medium text-blue-700">Total Appointments</p>
                             <p className="text-3xl font-bold text-blue-900">{appointmentStats.totalAppointments}</p>
                         </div>
 
-                        <div className="bg-green-50 p-4 rounded-md">
-                            <p className="text-green-700 font-medium">Completed Appointments</p>
+                        <div className="rounded-md bg-green-50 p-4">
+                            <p className="font-medium text-green-700">Completed Appointments</p>
                             <p className="text-3xl font-bold text-green-900">{appointmentStats.completedAppointments}</p>
                         </div>
 
-                        <div className="bg-purple-50 p-4 rounded-md">
-                            <p className="text-purple-700 font-medium">Today's Appointments</p>
+                        <div className="rounded-md bg-purple-50 p-4">
+                            <p className="font-medium text-purple-700">Today's Appointments</p>
                             <p className="text-3xl font-bold text-purple-900">{appointmentStats.todayAppointments}</p>
                         </div>
 
                         <div className="mt-4">
-                            <Button
-                                href={route('appointments.create')}
-                                className="w-full"
-                                icon={<Calendar className="h-4 w-4" />}
-                            >
+                            <Button href={route('appointments.create')} className="w-full" icon={<Calendar className="h-4 w-4" />}>
                                 Create Appointment
                             </Button>
                         </div>
@@ -263,12 +231,10 @@ export default function DoctorShow({
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center">
-                            <Calendar className="h-5 w-5 mr-2 text-blue-500" />
+                            <Calendar className="mr-2 h-5 w-5 text-blue-500" />
                             Today's Appointments
                         </CardTitle>
-                        <CardDescription>
-                            {todayAppointments?.length || 0} appointments scheduled for today.
-                        </CardDescription>
+                        <CardDescription>{todayAppointments?.length || 0} appointments scheduled for today.</CardDescription>
                     </CardHeader>
 
                     <CardContent>
@@ -289,7 +255,7 @@ export default function DoctorShow({
                                             <TableRow key={appointment.id}>
                                                 <TableCell>
                                                     <div className="flex items-center">
-                                                        <Clock className="h-4 w-4 text-gray-400 mr-1" />
+                                                        <Clock className="mr-1 h-4 w-4 text-gray-400" />
                                                         {formatTime(appointment.appointment_time)}
                                                     </div>
                                                 </TableCell>
@@ -300,30 +266,29 @@ export default function DoctorShow({
                                                     <div>
                                                         <Link
                                                             href={route('patients.show', appointment.patient.id)}
-                                                            className="text-blue-600 hover:text-blue-800 font-medium"
+                                                            className="font-medium text-blue-600 hover:text-blue-800"
                                                         >
                                                             {appointment.patient.name}
                                                         </Link>
-                                                        <p className="text-xs text-gray-500">
-                                                            ID: {appointment.patient.patient_id}
-                                                        </p>
+                                                        <p className="text-xs text-gray-500">ID: {appointment.patient.patient_id}</p>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
-                            ${appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                                            appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                                                'bg-yellow-100 text-yellow-800'}`}>
+                                                    <span
+                                                        className={`inline-flex rounded-full px-2 py-1 text-xs leading-5 font-semibold ${
+                                                            appointment.status === 'completed'
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : appointment.status === 'cancelled'
+                                                                  ? 'bg-red-100 text-red-800'
+                                                                  : 'bg-yellow-100 text-yellow-800'
+                                                        }`}
+                                                    >
                                                         {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end space-x-2">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            href={route('appointments.show', appointment.id)}
-                                                        >
+                                                        <Button size="sm" variant="ghost" href={route('appointments.show', appointment.id)}>
                                                             View
                                                         </Button>
 
@@ -331,7 +296,10 @@ export default function DoctorShow({
                                                             <Button
                                                                 size="sm"
                                                                 variant="ghost"
-                                                                href={route('prescriptions.create.patient', [appointment.patient.id, { appointment_id: appointment.id }])}
+                                                                href={route('prescriptions.create.patient', [
+                                                                    appointment.patient.id,
+                                                                    { appointment_id: appointment.id },
+                                                                ])}
                                                             >
                                                                 Prescribe
                                                             </Button>
@@ -344,9 +312,7 @@ export default function DoctorShow({
                                 </Table>
                             </div>
                         ) : (
-                            <div className="text-center py-6 text-gray-500">
-                                No appointments scheduled for today.
-                            </div>
+                            <div className="py-6 text-center text-gray-500">No appointments scheduled for today.</div>
                         )}
                     </CardContent>
                 </Card>
@@ -357,12 +323,10 @@ export default function DoctorShow({
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center">
-                            <Calendar className="h-5 w-5 mr-2 text-purple-500" />
+                            <Calendar className="mr-2 h-5 w-5 text-purple-500" />
                             Upcoming Appointments
                         </CardTitle>
-                        <CardDescription>
-                            Next {upcomingAppointments?.length || 0} upcoming appointments.
-                        </CardDescription>
+                        <CardDescription>Next {upcomingAppointments?.length || 0} upcoming appointments.</CardDescription>
                     </CardHeader>
 
                     <CardContent>
@@ -381,9 +345,7 @@ export default function DoctorShow({
                                     <TableBody>
                                         {upcomingAppointments.map((appointment) => (
                                             <TableRow key={appointment.id}>
-                                                <TableCell className="font-medium">
-                                                    {formatDate(appointment.appointment_date)}
-                                                </TableCell>
+                                                <TableCell className="font-medium">{formatDate(appointment.appointment_date)}</TableCell>
                                                 <TableCell>{formatTime(appointment.appointment_time)}</TableCell>
                                                 <TableCell>
                                                     <Link
@@ -395,11 +357,7 @@ export default function DoctorShow({
                                                 </TableCell>
                                                 <TableCell>{appointment.serial_number}</TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="ghost"
-                                                        href={route('appointments.show', appointment.id)}
-                                                    >
+                                                    <Button size="sm" variant="ghost" href={route('appointments.show', appointment.id)}>
                                                         View
                                                     </Button>
                                                 </TableCell>
@@ -409,18 +367,12 @@ export default function DoctorShow({
                                 </Table>
                             </div>
                         ) : (
-                            <div className="text-center py-6 text-gray-500">
-                                No upcoming appointments.
-                            </div>
+                            <div className="py-6 text-center text-gray-500">No upcoming appointments.</div>
                         )}
                     </CardContent>
 
                     <CardFooter>
-                        <Button
-                            href={route('appointments.index')}
-                            variant="outline"
-                            className="w-full"
-                        >
+                        <Button href={route('appointments.index')} variant="outline" className="w-full">
                             View All Appointments
                         </Button>
                     </CardFooter>

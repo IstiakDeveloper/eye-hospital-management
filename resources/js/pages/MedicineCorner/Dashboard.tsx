@@ -1,19 +1,18 @@
-import React from 'react';
-import { Head, Link, usePage } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
-    ShoppingBag,
-    DollarSign,
-    Package,
+    Activity,
     AlertTriangle,
-    TrendingUp,
-    TrendingDown,
+    Clock,
+    DollarSign,
+    FileText,
+    Package,
     Pill,
     Plus,
+    ShoppingBag,
+    TrendingDown,
+    TrendingUp,
     Users,
-    FileText,
-    Clock,
-    Activity
 } from 'lucide-react';
 
 interface Stats {
@@ -96,7 +95,14 @@ interface PageProps {
     recentSales: RecentSale[];
 }
 
-const StatCard = ({ title, value, icon: Icon, color, trend, subtitle }: {
+const StatCard = ({
+    title,
+    value,
+    icon: Icon,
+    color,
+    trend,
+    subtitle,
+}: {
     title: string;
     value: string | number;
     icon: any;
@@ -104,39 +110,32 @@ const StatCard = ({ title, value, icon: Icon, color, trend, subtitle }: {
     trend?: { value: number; isPositive: boolean };
     subtitle?: string;
 }) => (
-    <div className="bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-shadow">
+    <div className="rounded-xl border bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
         <div className="flex items-center justify-between">
             <div className="flex-1">
                 <p className="text-sm font-medium text-gray-600">{title}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-                {subtitle && (
-                    <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
-                )}
+                <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+                {subtitle && <p className="mt-1 text-xs text-gray-500">{subtitle}</p>}
                 {trend && (
-                    <div className={`flex items-center mt-2 text-sm ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                        {trend.isPositive ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
+                    <div className={`mt-2 flex items-center text-sm ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                        {trend.isPositive ? <TrendingUp className="mr-1 h-4 w-4" /> : <TrendingDown className="mr-1 h-4 w-4" />}
                         {Math.abs(trend.value)}%
                     </div>
                 )}
             </div>
-            <div className={`p-3 rounded-lg ${color}`}>
-                <Icon className="w-6 h-6 text-white" />
+            <div className={`rounded-lg p-3 ${color}`}>
+                <Icon className="h-6 w-6 text-white" />
             </div>
         </div>
     </div>
 );
 
-const QuickAction = ({ title, href, icon: Icon, color }: {
-    title: string;
-    href: string;
-    icon: any;
-    color: string;
-}) => (
+const QuickAction = ({ title, href, icon: Icon, color }: { title: string; href: string; icon: any; color: string }) => (
     <Link
         href={href}
-        className={`p-4 rounded-xl text-white ${color} hover:opacity-90 transition-all transform hover:scale-105 flex items-center space-x-3`}
+        className={`rounded-xl p-4 text-white ${color} flex transform items-center space-x-3 transition-all hover:scale-105 hover:opacity-90`}
     >
-        <Icon className="w-5 h-5" />
+        <Icon className="h-5 w-5" />
         <span className="font-medium">{title}</span>
     </Link>
 );
@@ -165,7 +164,7 @@ export default function Dashboard() {
 
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Medicine Corner Dashboard</h1>
                         <p className="text-gray-600">Pharmacy Inventory Management System</p>
@@ -177,7 +176,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Stats Grid - 2 rows of 4 cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
                     {/* Row 1: Stock & Sales */}
                     <StatCard
                         title="Total Medicines"
@@ -193,27 +192,11 @@ export default function Dashboard() {
                         color="bg-green-500"
                         subtitle="Total inventory value"
                     />
-                    <StatCard
-                        title="Today's Sales"
-                        value={formatCurrency(stats.today_sales)}
-                        icon={DollarSign}
-                        color="bg-emerald-500"
-                    />
-                    <StatCard
-                        title="Today's Profit"
-                        value={formatCurrency(stats.today_profit)}
-                        icon={TrendingUp}
-                        color="bg-purple-500"
-                    />
+                    <StatCard title="Today's Sales" value={formatCurrency(stats.today_sales)} icon={DollarSign} color="bg-emerald-500" />
+                    <StatCard title="Today's Profit" value={formatCurrency(stats.today_profit)} icon={TrendingUp} color="bg-purple-500" />
 
                     {/* Row 2: Vendor & Alert Stats */}
-                    <StatCard
-                        title="Total Vendors"
-                        value={stats.total_vendors}
-                        icon={Users}
-                        color="bg-indigo-500"
-                        subtitle="Active suppliers"
-                    />
+                    <StatCard title="Total Vendors" value={stats.total_vendors} icon={Users} color="bg-indigo-500" subtitle="Active suppliers" />
                     <StatCard
                         title="Vendor Due"
                         value={formatCurrency(stats.total_vendor_due)}
@@ -238,7 +221,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
                     <QuickAction title="Add Medicine" href="/medicine-corner/medicines" icon={Plus} color="bg-blue-600" />
                     <QuickAction title="Add Stock" href="/medicine-corner/purchase" icon={Package} color="bg-green-600" />
                     <QuickAction title="Stock List" href="/medicine-corner/stock" icon={Activity} color="bg-indigo-600" />
@@ -247,22 +230,19 @@ export default function Dashboard() {
                     <QuickAction title="Reports" href="/medicine-corner/reports" icon={FileText} color="bg-pink-600" />
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     {/* Low Stock Alert */}
-                    <div className="bg-white rounded-xl shadow-sm border">
-                        <div className="p-6 border-b">
+                    <div className="rounded-xl border bg-white shadow-sm">
+                        <div className="border-b p-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
-                                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                                    <AlertTriangle className="h-5 w-5 text-red-500" />
                                     <h2 className="text-lg font-semibold text-gray-900">Low Stock Alert</h2>
-                                    <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
+                                    <span className="rounded-full bg-red-100 px-2 py-1 text-xs text-red-800">
                                         {stats.low_stock_medicines} medicines
                                     </span>
                                 </div>
-                                <Link
-                                    href="/medicine-corner/purchase"
-                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                >
+                                <Link href="/medicine-corner/purchase" className="text-sm font-medium text-blue-600 hover:text-blue-800">
                                     Add Stock →
                                 </Link>
                             </div>
@@ -271,22 +251,26 @@ export default function Dashboard() {
                             {lowStockMedicines.length > 0 ? (
                                 <div className="space-y-3">
                                     {lowStockMedicines.slice(0, 5).map((medicine) => (
-                                        <div key={medicine.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-100">
+                                        <div
+                                            key={medicine.id}
+                                            className="flex items-center justify-between rounded-lg border border-red-100 bg-red-50 p-3"
+                                        >
                                             <div>
                                                 <p className="font-medium text-gray-900">{medicine.name}</p>
-                                                {medicine.generic_name && (
-                                                    <p className="text-xs text-gray-500">{medicine.generic_name}</p>
-                                                )}
-                                                <p className="text-sm text-gray-600 mt-1">
+                                                {medicine.generic_name && <p className="text-xs text-gray-500">{medicine.generic_name}</p>}
+                                                <p className="mt-1 text-sm text-gray-600">
                                                     Current: <span className="font-semibold text-red-600">{medicine.total_stock}</span>
                                                     {medicine.stock_alert && (
-                                                        <> / Min: <span className="font-semibold">{medicine.stock_alert.minimum_stock}</span></>
+                                                        <>
+                                                            {' '}
+                                                            / Min: <span className="font-semibold">{medicine.stock_alert.minimum_stock}</span>
+                                                        </>
                                                     )}
                                                 </p>
                                             </div>
                                             <div className="text-right">
                                                 {medicine.stock_alert && (
-                                                    <span className="text-red-600 font-medium text-sm">
+                                                    <span className="text-sm font-medium text-red-600">
                                                         Need {medicine.stock_alert.minimum_stock - medicine.total_stock}
                                                     </span>
                                                 )}
@@ -296,36 +280,31 @@ export default function Dashboard() {
                                     {lowStockMedicines.length > 5 && (
                                         <Link
                                             href="/medicine-corner/alerts"
-                                            className="block text-center text-blue-600 hover:text-blue-800 font-medium py-2 hover:bg-blue-50 rounded-lg transition-colors"
+                                            className="block rounded-lg py-2 text-center font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-800"
                                         >
                                             View all {lowStockMedicines.length} medicines →
                                         </Link>
                                     )}
                                 </div>
                             ) : (
-                                <div className="text-center py-8">
-                                    <Package className="w-12 h-12 text-green-500 mx-auto mb-2" />
-                                    <p className="text-green-600 font-medium">All medicines are in good stock!</p>
+                                <div className="py-8 text-center">
+                                    <Package className="mx-auto mb-2 h-12 w-12 text-green-500" />
+                                    <p className="font-medium text-green-600">All medicines are in good stock!</p>
                                 </div>
                             )}
                         </div>
                     </div>
 
                     {/* Expiring Soon */}
-                    <div className="bg-white rounded-xl shadow-sm border">
-                        <div className="p-6 border-b">
+                    <div className="rounded-xl border bg-white shadow-sm">
+                        <div className="border-b p-6">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
-                                    <Clock className="w-5 h-5 text-amber-500" />
+                                    <Clock className="h-5 w-5 text-amber-500" />
                                     <h2 className="text-lg font-semibold text-gray-900">Expiring Soon</h2>
-                                    <span className="bg-amber-100 text-amber-800 text-xs px-2 py-1 rounded-full">
-                                        Next 30 days
-                                    </span>
+                                    <span className="rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-800">Next 30 days</span>
                                 </div>
-                                <Link
-                                    href="/medicine-corner/alerts"
-                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                >
+                                <Link href="/medicine-corner/alerts" className="text-sm font-medium text-blue-600 hover:text-blue-800">
                                     View All →
                                 </Link>
                             </div>
@@ -334,56 +313,54 @@ export default function Dashboard() {
                             {expiringMedicines.length > 0 ? (
                                 <div className="space-y-3">
                                     {expiringMedicines.slice(0, 5).map((stock) => (
-                                        <div key={stock.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100">
+                                        <div
+                                            key={stock.id}
+                                            className="flex items-center justify-between rounded-lg border border-amber-100 bg-amber-50 p-3"
+                                        >
                                             <div className="flex-1">
                                                 <p className="font-medium text-gray-900">{stock.medicine.name}</p>
                                                 {stock.medicine.generic_name && (
                                                     <p className="text-xs text-gray-500">{stock.medicine.generic_name}</p>
                                                 )}
-                                                <p className="text-xs text-gray-600 mt-1">
+                                                <p className="mt-1 text-xs text-gray-600">
                                                     Batch: {stock.batch_number}
                                                     {stock.vendor && <> • Vendor: {stock.vendor.name}</>}
                                                 </p>
                                             </div>
-                                            <div className="text-right ml-4">
+                                            <div className="ml-4 text-right">
                                                 <p className="text-sm font-medium text-amber-600">
                                                     {new Date(stock.expiry_date).toLocaleDateString()}
                                                 </p>
-                                                <p className="text-xs text-gray-600">
-                                                    Qty: {stock.available_quantity}
-                                                </p>
+                                                <p className="text-xs text-gray-600">Qty: {stock.available_quantity}</p>
                                             </div>
                                         </div>
                                     ))}
                                     {expiringMedicines.length > 5 && (
                                         <Link
                                             href="/medicine-corner/alerts"
-                                            className="block text-center text-blue-600 hover:text-blue-800 font-medium py-2 hover:bg-blue-50 rounded-lg transition-colors"
+                                            className="block rounded-lg py-2 text-center font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-800"
                                         >
                                             View all {expiringMedicines.length} items →
                                         </Link>
                                     )}
                                 </div>
                             ) : (
-                                <div className="text-center py-8">
-                                    <Clock className="w-12 h-12 text-green-500 mx-auto mb-2" />
-                                    <p className="text-green-600 font-medium">No medicines expiring soon!</p>
+                                <div className="py-8 text-center">
+                                    <Clock className="mx-auto mb-2 h-12 w-12 text-green-500" />
+                                    <p className="font-medium text-green-600">No medicines expiring soon!</p>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     {/* Recent Sales */}
-                    <div className="bg-white rounded-xl shadow-sm border">
-                        <div className="p-6 border-b">
+                    <div className="rounded-xl border bg-white shadow-sm">
+                        <div className="border-b p-6">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-lg font-semibold text-gray-900">Recent Sales</h2>
-                                <Link
-                                    href="/medicine-corner/sales"
-                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                >
+                                <Link href="/medicine-corner/sales" className="text-sm font-medium text-blue-600 hover:text-blue-800">
                                     View All →
                                 </Link>
                             </div>
@@ -395,33 +372,31 @@ export default function Dashboard() {
                                         <Link
                                             key={sale.id}
                                             href={`/medicine-corner/sales/${sale.id}`}
-                                            className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors border border-gray-100"
+                                            className="flex items-center justify-between rounded-lg border border-gray-100 p-3 transition-colors hover:bg-gray-50"
                                         >
                                             <div className="flex-1">
                                                 <div className="flex items-center space-x-2">
                                                     <p className="font-medium text-gray-900">#{sale.sale_no}</p>
-                                                    <span className={`text-xs px-2 py-1 rounded-full ${getPaymentStatusColor(sale.payment_status)}`}>
+                                                    <span className={`rounded-full px-2 py-1 text-xs ${getPaymentStatusColor(sale.payment_status)}`}>
                                                         {sale.payment_status}
                                                     </span>
                                                 </div>
-                                                <p className="text-sm text-gray-600 mt-1">
+                                                <p className="mt-1 text-sm text-gray-600">
                                                     {sale.patient?.name || sale.customer_name || 'Walk-in Customer'}
                                                 </p>
-                                                <p className="text-xs text-gray-500 mt-1">
+                                                <p className="mt-1 text-xs text-gray-500">
                                                     {new Date(sale.sale_date).toLocaleDateString()} • {sale.sold_by.name}
                                                 </p>
                                             </div>
-                                            <div className="text-right ml-4">
-                                                <p className="font-semibold text-green-600">
-                                                    {formatCurrency(sale.total_amount)}
-                                                </p>
+                                            <div className="ml-4 text-right">
+                                                <p className="font-semibold text-green-600">{formatCurrency(sale.total_amount)}</p>
                                             </div>
                                         </Link>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-8">
-                                    <ShoppingBag className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                                <div className="py-8 text-center">
+                                    <ShoppingBag className="mx-auto mb-2 h-12 w-12 text-gray-400" />
                                     <p className="text-gray-500">No recent sales</p>
                                 </div>
                             )}
@@ -429,14 +404,11 @@ export default function Dashboard() {
                     </div>
 
                     {/* Recent Transactions */}
-                    <div className="bg-white rounded-xl shadow-sm border">
-                        <div className="p-6 border-b">
+                    <div className="rounded-xl border bg-white shadow-sm">
+                        <div className="border-b p-6">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-lg font-semibold text-gray-900">Recent Transactions</h2>
-                                <Link
-                                    href="/medicine-account"
-                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                >
+                                <Link href="/medicine-account" className="text-sm font-medium text-blue-600 hover:text-blue-800">
                                     View All →
                                 </Link>
                             </div>
@@ -445,28 +417,34 @@ export default function Dashboard() {
                             {recentTransactions.length > 0 ? (
                                 <div className="space-y-3">
                                     {recentTransactions.slice(0, 5).map((transaction) => (
-                                        <div key={transaction.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors border border-gray-100">
+                                        <div
+                                            key={transaction.id}
+                                            className="flex items-center justify-between rounded-lg border border-gray-100 p-3 transition-colors hover:bg-gray-50"
+                                        >
                                             <div className="flex-1">
                                                 <div className="flex items-center space-x-2">
-                                                    <span className={`w-2 h-2 rounded-full ${transaction.type === 'income' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                                    <span
+                                                        className={`h-2 w-2 rounded-full ${transaction.type === 'income' ? 'bg-green-500' : 'bg-red-500'}`}
+                                                    ></span>
                                                     <p className="font-medium text-gray-900">{transaction.category}</p>
                                                 </div>
-                                                <p className="text-sm text-gray-600 mt-1 line-clamp-1">{transaction.description}</p>
-                                                <p className="text-xs text-gray-500 mt-1">
+                                                <p className="mt-1 line-clamp-1 text-sm text-gray-600">{transaction.description}</p>
+                                                <p className="mt-1 text-xs text-gray-500">
                                                     {new Date(transaction.transaction_date).toLocaleDateString()} • {transaction.created_by.name}
                                                 </p>
                                             </div>
-                                            <div className="text-right ml-4">
+                                            <div className="ml-4 text-right">
                                                 <p className={`font-semibold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                                                    {transaction.type === 'income' ? '+' : '-'}
+                                                    {formatCurrency(transaction.amount)}
                                                 </p>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-8">
-                                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                                <div className="py-8 text-center">
+                                    <FileText className="mx-auto mb-2 h-12 w-12 text-gray-400" />
                                     <p className="text-gray-500">No recent transactions</p>
                                 </div>
                             )}
@@ -475,45 +453,40 @@ export default function Dashboard() {
                 </div>
 
                 {/* Monthly Summary */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-blue-100 p-6">
-                    <div className="flex items-center justify-between mb-6">
+                <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-6 shadow-sm">
+                    <div className="mb-6 flex items-center justify-between">
                         <h2 className="text-lg font-semibold text-gray-900">This Month Summary</h2>
-                        <Link
-                            href="/medicine-corner/reports"
-                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        >
+                        <Link href="/medicine-corner/reports" className="text-sm font-medium text-blue-600 hover:text-blue-800">
                             View Reports →
                         </Link>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white rounded-lg p-6 text-center shadow-sm">
-                            <div className="flex items-center justify-center mb-2">
-                                <TrendingUp className="w-5 h-5 text-green-500 mr-2" />
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                        <div className="rounded-lg bg-white p-6 text-center shadow-sm">
+                            <div className="mb-2 flex items-center justify-center">
+                                <TrendingUp className="mr-2 h-5 w-5 text-green-500" />
                                 <p className="text-sm font-medium text-gray-600">Total Income</p>
                             </div>
                             <p className="text-3xl font-bold text-green-600">{formatCurrency(stats.month_profit.income)}</p>
                         </div>
-                        <div className="bg-white rounded-lg p-6 text-center shadow-sm">
-                            <div className="flex items-center justify-center mb-2">
-                                <TrendingDown className="w-5 h-5 text-red-500 mr-2" />
+                        <div className="rounded-lg bg-white p-6 text-center shadow-sm">
+                            <div className="mb-2 flex items-center justify-center">
+                                <TrendingDown className="mr-2 h-5 w-5 text-red-500" />
                                 <p className="text-sm font-medium text-gray-600">Total Expenses</p>
                             </div>
                             <p className="text-3xl font-bold text-red-600">{formatCurrency(stats.month_profit.expense)}</p>
                         </div>
-                        <div className="bg-white rounded-lg p-6 text-center shadow-sm">
-                            <div className="flex items-center justify-center mb-2">
-                                <DollarSign className="w-5 h-5 text-blue-500 mr-2" />
+                        <div className="rounded-lg bg-white p-6 text-center shadow-sm">
+                            <div className="mb-2 flex items-center justify-center">
+                                <DollarSign className="mr-2 h-5 w-5 text-blue-500" />
                                 <p className="text-sm font-medium text-gray-600">Net Profit</p>
                             </div>
                             <p className={`text-3xl font-bold ${stats.month_profit.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {formatCurrency(stats.month_profit.profit)}
                             </p>
-                            <p className="text-xs text-gray-500 mt-2">
-                                {stats.month_profit.profit >= 0 ? '↑' : '↓'}
-                                {' '}
-                                {stats.month_profit.income > 0
-                                    ? ((stats.month_profit.profit / stats.month_profit.income) * 100).toFixed(1)
-                                    : '0.0'}% margin
+                            <p className="mt-2 text-xs text-gray-500">
+                                {stats.month_profit.profit >= 0 ? '↑' : '↓'}{' '}
+                                {stats.month_profit.income > 0 ? ((stats.month_profit.profit / stats.month_profit.income) * 100).toFixed(1) : '0.0'}%
+                                margin
                             </p>
                         </div>
                     </div>
@@ -521,11 +494,11 @@ export default function Dashboard() {
 
                 {/* Vendor Payment Alert */}
                 {stats.total_vendor_due > 0 && (
-                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
+                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-6">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-4">
-                                <div className="p-3 bg-orange-100 rounded-lg">
-                                    <Clock className="w-6 h-6 text-orange-600" />
+                                <div className="rounded-lg bg-orange-100 p-3">
+                                    <Clock className="h-6 w-6 text-orange-600" />
                                 </div>
                                 <div>
                                     <h3 className="font-semibold text-gray-900">Vendor Payments Due</h3>
@@ -536,7 +509,7 @@ export default function Dashboard() {
                             </div>
                             <Link
                                 href={route('medicine-vendors.index')}
-                                className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                                className="rounded-lg bg-orange-600 px-6 py-2 font-medium text-white transition-colors hover:bg-orange-700"
                             >
                                 Manage Vendors
                             </Link>

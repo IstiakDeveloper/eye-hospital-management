@@ -1,21 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import {
-    Search,
-    Plus,
-    Eye,
-    Phone,
-    Filter,
-    Users,
-    Edit,
-    MapPin,
-    Calendar,
-    X,
-    DollarSign,
-    Stethoscope,
-    Trash2
-} from 'lucide-react';
+import { formatDhakaDate } from '@/utils/dhaka-time';
+import { Head, Link, router } from '@inertiajs/react';
+import { Calendar, DollarSign, Edit, Eye, Filter, MapPin, Phone, Plus, Printer, Search, Stethoscope, Trash2, Users, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface User {
     id: number;
@@ -34,6 +21,7 @@ interface Patient {
     gender?: string;
     registered_by?: User;
     created_at: string;
+    registration_date?: string;
     total_paid?: number;
     last_doctor?: string;
     all_doctors?: string[];
@@ -91,38 +79,37 @@ export default function Index({ patients, filters }: Props) {
         return cleanDate;
     };
 
-    const isDateFilterActive = filters.date_filter_type && (
-        filters.specific_date ||
-        filters.start_date ||
-        filters.end_date ||
-        filters.date_preset
-    );
+    const isDateFilterActive = filters.date_filter_type && (filters.specific_date || filters.start_date || filters.end_date || filters.date_preset);
 
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             const currentPath = window.location.pathname;
-            router.get(currentPath, {
-                search: searchTerm,
-                gender: genderFilter,
-                date_filter_type: dateFilterType,
-                date_field: dateField,
-                specific_date: specificDate,
-                start_date: startDate,
-                end_date: endDate,
-                date_preset: datePreset,
-            }, {
-                preserveState: true,
-                replace: true,
-            });
+            router.get(
+                currentPath,
+                {
+                    search: searchTerm,
+                    gender: genderFilter,
+                    date_filter_type: dateFilterType,
+                    date_field: dateField,
+                    specific_date: specificDate,
+                    start_date: startDate,
+                    end_date: endDate,
+                    date_preset: datePreset,
+                },
+                {
+                    preserveState: true,
+                    replace: true,
+                },
+            );
         }, 500);
         return () => clearTimeout(timeoutId);
     }, [searchTerm, genderFilter, dateFilterType, dateField, specificDate, startDate, endDate, datePreset]);
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-GB', {
+        return formatDhakaDate(dateString, {
             day: '2-digit',
             month: '2-digit',
-            year: 'numeric'
+            year: 'numeric',
         });
     };
 
@@ -131,7 +118,7 @@ export default function Index({ patients, filters }: Props) {
             style: 'currency',
             currency: 'BDT',
             minimumFractionDigits: 0,
-            maximumFractionDigits: 0
+            maximumFractionDigits: 0,
         }).format(amount);
     };
 
@@ -181,16 +168,16 @@ export default function Index({ patients, filters }: Props) {
         }
         if (filters.date_filter_type === 'preset' && filters.date_preset) {
             const presetLabels = {
-                'today': 'Today',
-                'yesterday': 'Yesterday',
-                'this_week': 'This Week',
-                'last_week': 'Last Week',
-                'this_month': 'This Month',
-                'last_month': 'Last Month',
-                'this_year': 'This Year',
-                'last_7_days': 'Last 7 Days',
-                'last_30_days': 'Last 30 Days',
-                'last_90_days': 'Last 90 Days'
+                today: 'Today',
+                yesterday: 'Yesterday',
+                this_week: 'This Week',
+                last_week: 'Last Week',
+                this_month: 'This Month',
+                last_month: 'Last Month',
+                this_year: 'This Year',
+                last_7_days: 'Last 7 Days',
+                last_30_days: 'Last 30 Days',
+                last_90_days: 'Last 90 Days',
             };
             return `${fieldLabel}: ${presetLabels[filters.date_preset] || filters.date_preset}`;
         }
@@ -208,10 +195,14 @@ export default function Index({ patients, filters }: Props) {
         if (endDate) urlObj.searchParams.set('end_date', endDate);
         if (datePreset) urlObj.searchParams.set('date_preset', datePreset);
 
-        router.get(urlObj.pathname + urlObj.search, {}, {
-            preserveState: true,
-            preserveScroll: true,
-        });
+        router.get(
+            urlObj.pathname + urlObj.search,
+            {},
+            {
+                preserveState: true,
+                preserveScroll: true,
+            },
+        );
     };
 
     return (
@@ -219,36 +210,36 @@ export default function Index({ patients, filters }: Props) {
             <Head title="Patients" />
 
             <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4 flex items-center justify-between">
                     <div>
                         <h1 className="text-lg font-semibold text-gray-900">Patients</h1>
                         <p className="text-xs text-gray-500">Manage patient records and information</p>
                     </div>
                     <Link
                         href="/patients/create"
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
+                        className="inline-flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
                     >
                         <Plus className="h-3 w-3" />
                         Add Patient
                     </Link>
                 </div>
 
-                <div className="flex items-center gap-3 mb-4">
-                    <form onSubmit={(e) => e.preventDefault()} className="flex-1 flex items-center gap-2">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+                <div className="mb-4 flex items-center gap-3">
+                    <form onSubmit={(e) => e.preventDefault()} className="flex flex-1 items-center gap-2">
+                        <div className="relative flex-1">
+                            <Search className="absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2 transform text-gray-400" />
                             <input
                                 type="text"
                                 placeholder="Search by name, phone, NID or patient ID..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-7 pr-3 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded border border-gray-300 py-1.5 pr-3 pl-7 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
                         <select
                             value={genderFilter}
                             onChange={(e) => setGenderFilter(e.target.value)}
-                            className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            className="rounded border border-gray-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                         >
                             <option value="">All Genders</option>
                             <option value="male">Male</option>
@@ -259,9 +250,9 @@ export default function Index({ patients, filters }: Props) {
                         <button
                             type="button"
                             onClick={() => setShowDateFilter(!showDateFilter)}
-                            className={`px-3 py-1.5 text-xs font-medium rounded flex items-center gap-1 ${
+                            className={`flex items-center gap-1 rounded px-3 py-1.5 text-xs font-medium ${
                                 isDateFilterActive || showDateFilter
-                                    ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                    ? 'border border-blue-300 bg-blue-100 text-blue-700'
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
                         >
@@ -271,7 +262,7 @@ export default function Index({ patients, filters }: Props) {
 
                         <button
                             type="button"
-                            className="px-3 py-1.5 bg-gray-100 text-gray-600 text-xs font-medium rounded hover:bg-gray-200"
+                            className="rounded bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-200"
                             onClick={clearAllFilters}
                         >
                             Clear All
@@ -282,7 +273,7 @@ export default function Index({ patients, filters }: Props) {
                 {isDateFilterActive && (
                     <div className="mb-3 flex items-center gap-2">
                         <span className="text-xs text-gray-500">Active filter:</span>
-                        <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                        <div className="inline-flex items-center gap-1 rounded bg-blue-100 px-2 py-1 text-xs text-blue-700">
                             <Calendar className="h-3 w-3" />
                             {getDateFilterLabel()}
                             <button onClick={clearDateFilter} className="ml-1 hover:text-blue-900">
@@ -293,14 +284,14 @@ export default function Index({ patients, filters }: Props) {
                 )}
 
                 {showDateFilter && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded border border-gray-200">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="mb-4 rounded border border-gray-200 bg-gray-50 p-3">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Filter by</label>
+                                <label className="mb-1 block text-xs font-medium text-gray-700">Filter by</label>
                                 <select
                                     value={dateField}
                                     onChange={(e) => setDateField(e.target.value)}
-                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500"
                                 >
                                     <option value="created_at">Registration Date</option>
                                     <option value="date_of_birth">Birth Date</option>
@@ -308,11 +299,11 @@ export default function Index({ patients, filters }: Props) {
                             </div>
 
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                                <label className="mb-1 block text-xs font-medium text-gray-700">Type</label>
                                 <select
                                     value={dateFilterType}
                                     onChange={(e) => setDateFilterType(e.target.value)}
-                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                                    className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500"
                                 >
                                     <option value="preset">Quick Select</option>
                                     <option value="specific">Specific Date</option>
@@ -323,11 +314,11 @@ export default function Index({ patients, filters }: Props) {
                             <div className="md:col-span-2">
                                 {dateFilterType === 'preset' && (
                                     <div>
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">Quick Select</label>
+                                        <label className="mb-1 block text-xs font-medium text-gray-700">Quick Select</label>
                                         <select
                                             value={datePreset}
                                             onChange={(e) => setDatePreset(e.target.value)}
-                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                                            className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500"
                                         >
                                             <option value="">Select period...</option>
                                             <option value="today">Today</option>
@@ -346,14 +337,14 @@ export default function Index({ patients, filters }: Props) {
 
                                 {dateFilterType === 'specific' && (
                                     <div>
-                                        <label className="block text-xs font-medium text-gray-700 mb-1">Specific Date</label>
+                                        <label className="mb-1 block text-xs font-medium text-gray-700">Specific Date</label>
                                         <input
                                             type="date"
                                             value={ensureValidDateInput(specificDate)}
                                             onChange={(e) => setSpecificDate(ensureValidDateInput(e.target.value))}
                                             max="9999-12-31"
                                             min="1900-01-01"
-                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                                            className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500"
                                         />
                                     </div>
                                 )}
@@ -361,25 +352,25 @@ export default function Index({ patients, filters }: Props) {
                                 {dateFilterType === 'range' && (
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">From</label>
+                                            <label className="mb-1 block text-xs font-medium text-gray-700">From</label>
                                             <input
                                                 type="date"
                                                 value={ensureValidDateInput(startDate)}
                                                 onChange={(e) => setStartDate(ensureValidDateInput(e.target.value))}
                                                 max="9999-12-31"
                                                 min="1900-01-01"
-                                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                                                className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-medium text-gray-700 mb-1">To</label>
+                                            <label className="mb-1 block text-xs font-medium text-gray-700">To</label>
                                             <input
                                                 type="date"
                                                 value={ensureValidDateInput(endDate)}
                                                 onChange={(e) => setEndDate(ensureValidDateInput(e.target.value))}
                                                 max="9999-12-31"
                                                 min="1900-01-01"
-                                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                                                className="w-full rounded border border-gray-300 px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-500"
                                             />
                                         </div>
                                     </div>
@@ -389,37 +380,39 @@ export default function Index({ patients, filters }: Props) {
                     </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-3 mb-4">
-                    <div className="bg-blue-50 rounded p-2">
+                <div className="mb-4 grid grid-cols-3 gap-3">
+                    <div className="rounded bg-blue-50 p-2">
                         <div className="flex items-center gap-2">
                             <Users className="h-3 w-3 text-blue-600" />
                             <div>
-                                <p className="text-xs text-blue-600 font-medium">Total Patients</p>
+                                <p className="text-xs font-medium text-blue-600">Total Patients</p>
                                 <p className="text-sm font-semibold text-blue-700">{patients.total}</p>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-green-50 rounded p-2">
+                    <div className="rounded bg-green-50 p-2">
                         <div className="flex items-center gap-2">
                             <Filter className="h-3 w-3 text-green-600" />
                             <div>
-                                <p className="text-xs text-green-600 font-medium">This Page</p>
+                                <p className="text-xs font-medium text-green-600">This Page</p>
                                 <p className="text-sm font-semibold text-green-700">{patients.data.length}</p>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-purple-50 rounded p-2">
+                    <div className="rounded bg-purple-50 p-2">
                         <div className="flex items-center gap-2">
                             <Search className="h-3 w-3 text-purple-600" />
                             <div>
-                                <p className="text-xs text-purple-600 font-medium">Page {patients.current_page} of {patients.last_page}</p>
+                                <p className="text-xs font-medium text-purple-600">
+                                    Page {patients.current_page} of {patients.last_page}
+                                </p>
                                 <p className="text-sm font-semibold text-purple-700">{patients.per_page}/page</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white rounded border border-gray-200 overflow-hidden">
+                <div className="overflow-hidden rounded border border-gray-200 bg-white">
                     <table className="min-w-full">
                         <thead className="bg-gray-50">
                             <tr>
@@ -436,10 +429,8 @@ export default function Index({ patients, filters }: Props) {
                                 <tr key={patient.id} className="hover:bg-gray-50">
                                     <td className="px-3 py-2">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                                                <span className="text-xs font-medium text-blue-600">
-                                                    {patient.name.charAt(0).toUpperCase()}
-                                                </span>
+                                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
+                                                <span className="text-xs font-medium text-blue-600">{patient.name.charAt(0).toUpperCase()}</span>
                                             </div>
                                             <div>
                                                 <p className="text-xs font-medium text-gray-900">{patient.name}</p>
@@ -453,25 +444,23 @@ export default function Index({ patients, filters }: Props) {
                                                 <Phone className="h-2.5 w-2.5" />
                                                 {patient.phone}
                                             </div>
-                                            {patient.nid_card && (
-                                                <p className="text-xs text-gray-500">NID: {patient.nid_card}</p>
-                                            )}
-                                            {patient.email && (
-                                                <p className="text-xs text-gray-500 truncate max-w-32">{patient.email}</p>
-                                            )}
+                                            {patient.nid_card && <p className="text-xs text-gray-500">NID: {patient.nid_card}</p>}
+                                            {patient.email && <p className="max-w-32 truncate text-xs text-gray-500">{patient.email}</p>}
                                         </div>
                                     </td>
                                     <td className="px-3 py-2">
                                         <div className="space-y-0.5">
                                             <div className="flex items-center gap-1">
                                                 {patient.gender && (
-                                                    <span className={`px-1.5 py-0.5 text-xs font-medium rounded ${
-                                                        patient.gender === 'male'
-                                                            ? 'bg-blue-100 text-blue-700'
-                                                            : patient.gender === 'female'
-                                                            ? 'bg-pink-100 text-pink-700'
-                                                            : 'bg-gray-100 text-gray-700'
-                                                    }`}>
+                                                    <span
+                                                        className={`rounded px-1.5 py-0.5 text-xs font-medium ${
+                                                            patient.gender === 'male'
+                                                                ? 'bg-blue-100 text-blue-700'
+                                                                : patient.gender === 'female'
+                                                                  ? 'bg-pink-100 text-pink-700'
+                                                                  : 'bg-gray-100 text-gray-700'
+                                                        }`}
+                                                    >
                                                         {patient.gender === 'male' ? 'M' : patient.gender === 'female' ? 'F' : 'O'}
                                                     </span>
                                                 )}
@@ -480,7 +469,7 @@ export default function Index({ patients, filters }: Props) {
                                             {patient.address && (
                                                 <div className="flex items-center gap-1 text-xs text-gray-500">
                                                     <MapPin className="h-2.5 w-2.5 flex-shrink-0" />
-                                                    <span className="truncate max-w-24">{patient.address}</span>
+                                                    <span className="max-w-24 truncate">{patient.address}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -489,9 +478,9 @@ export default function Index({ patients, filters }: Props) {
                                         <div className="space-y-1">
                                             {patient.last_doctor ? (
                                                 <div className="flex items-center gap-1 text-xs text-gray-700">
-                                                    <Stethoscope className="h-2.5 w-2.5 text-blue-600 flex-shrink-0" />
-                                                    <span className="truncate max-w-28" title={patient.last_doctor}>
-                                                         {patient.last_doctor}
+                                                    <Stethoscope className="h-2.5 w-2.5 flex-shrink-0 text-blue-600" />
+                                                    <span className="max-w-28 truncate" title={patient.last_doctor}>
+                                                        {patient.last_doctor}
                                                     </span>
                                                 </div>
                                             ) : (
@@ -502,7 +491,7 @@ export default function Index({ patients, filters }: Props) {
                                             )}
 
                                             {patient.total_paid !== undefined && patient.total_paid > 0 ? (
-                                                <div className="flex items-center gap-1 text-xs text-green-700 font-medium">
+                                                <div className="flex items-center gap-1 text-xs font-medium text-green-700">
                                                     <DollarSign className="h-2.5 w-2.5 flex-shrink-0" />
                                                     <span>{formatCurrency(patient.total_paid)}</span>
                                                 </div>
@@ -522,31 +511,42 @@ export default function Index({ patients, filters }: Props) {
                                     </td>
                                     <td className="px-3 py-2">
                                         <div>
-                                            <p className="text-xs text-gray-600">{formatDate(patient.created_at)}</p>
-                                            {patient.registered_by && (
-                                                <p className="text-xs text-gray-500">by {patient.registered_by.name}</p>
-                                            )}
+                                            <p className="text-xs text-gray-600">{formatDate(patient.registration_date ?? patient.created_at)}</p>
+                                            {patient.registered_by && <p className="text-xs text-gray-500">by {patient.registered_by.name}</p>}
                                         </div>
                                     </td>
                                     <td className="px-3 py-2 text-right">
-                                        <div className="flex items-center gap-1 justify-end">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button
+                                                onClick={() => {
+                                                    window.open(route('patients.download-blank-prescription', patient.id), '_blank');
+                                                }}
+                                                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 hover:text-purple-800"
+                                            >
+                                                <Printer className="h-3 w-3" />
+                                                Print Rx
+                                            </button>
                                             <Link
                                                 href={`/patients/${patient.id}`}
-                                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                                                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 hover:text-blue-800"
                                             >
                                                 <Eye className="h-3 w-3" />
                                                 View
                                             </Link>
                                             <Link
                                                 href={`/patients/${patient.id}/edit`}
-                                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded"
+                                                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-800"
                                             >
                                                 <Edit className="h-3 w-3" />
                                                 Edit
                                             </Link>
                                             <button
                                                 onClick={() => {
-                                                    if (confirm(`Delete patient "${patient.name}"? This will permanently delete all visits, payments, and records. This cannot be undone.`)) {
+                                                    if (
+                                                        confirm(
+                                                            `Delete patient "${patient.name}"? This will permanently delete all visits, payments, and records. This cannot be undone.`,
+                                                        )
+                                                    ) {
                                                         router.delete(route('patients.destroy', patient.id), {
                                                             onError: (errors) => {
                                                                 const msg = Object.values(errors).join('\n');
@@ -555,7 +555,7 @@ export default function Index({ patients, filters }: Props) {
                                                         });
                                                     }
                                                 }}
-                                                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                                                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 hover:text-red-800"
                                             >
                                                 <Trash2 className="h-3 w-3" />
                                                 Delete
@@ -568,14 +568,14 @@ export default function Index({ patients, filters }: Props) {
                     </table>
 
                     {patients.data.length === 0 && (
-                        <div className="text-center py-8">
+                        <div className="py-8 text-center">
                             <Users className="mx-auto h-8 w-8 text-gray-400" />
                             <h3 className="mt-2 text-sm font-medium text-gray-900">No patients found</h3>
                             <p className="mt-1 text-xs text-gray-500">Get started by creating a new patient record.</p>
                             <div className="mt-4">
                                 <Link
                                     href="/patients/create"
-                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
+                                    className="inline-flex items-center gap-1 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
                                 >
                                     <Plus className="h-3 w-3" />
                                     Add Patient
@@ -586,11 +586,10 @@ export default function Index({ patients, filters }: Props) {
                 </div>
 
                 {patients.total > patients.per_page && (
-                    <div className="flex items-center justify-between mt-3">
+                    <div className="mt-3 flex items-center justify-between">
                         <div className="text-xs text-gray-700">
-                            Showing {((patients.current_page - 1) * patients.per_page) + 1} to{' '}
-                            {Math.min(patients.current_page * patients.per_page, patients.total)} of{' '}
-                            {patients.total} results
+                            Showing {(patients.current_page - 1) * patients.per_page + 1} to{' '}
+                            {Math.min(patients.current_page * patients.per_page, patients.total)} of {patients.total} results
                         </div>
                         <div className="flex gap-1">
                             {patients.links.map((link, index) => {
@@ -598,7 +597,7 @@ export default function Index({ patients, filters }: Props) {
                                     return (
                                         <span
                                             key={index}
-                                            className="px-2 py-1 text-xs text-gray-400 cursor-not-allowed"
+                                            className="cursor-not-allowed px-2 py-1 text-xs text-gray-400"
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                         />
                                     );
@@ -608,10 +607,8 @@ export default function Index({ patients, filters }: Props) {
                                     <button
                                         key={index}
                                         onClick={() => handlePaginationClick(link.url!)}
-                                        className={`px-2 py-1 text-xs font-medium rounded ${
-                                            link.active
-                                                ? 'bg-blue-600 text-white'
-                                                : 'text-gray-700 hover:bg-gray-100'
+                                        className={`rounded px-2 py-1 text-xs font-medium ${
+                                            link.active ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
                                         }`}
                                         dangerouslySetInnerHTML={{ __html: link.label }}
                                     />

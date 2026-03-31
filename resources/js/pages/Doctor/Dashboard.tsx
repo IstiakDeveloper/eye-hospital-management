@@ -1,13 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Head, router } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import {
-    User, Phone, Clock, CheckCircle, Eye, FileText,
-    Calendar, Activity, Users, Stethoscope, Timer,
-    Search, RefreshCw, ArrowRight, AlertCircle,
-    TrendingUp, BarChart3, UserCheck, FileCheck,
-    Play, Pause, X, Star, PenTool
-} from 'lucide-react';
+import { Head, router } from '@inertiajs/react';
+import { AlertCircle, CheckCircle, Clock, Eye, FileText, PenTool, Phone, RefreshCw, Search, Stethoscope, User, Users, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 
 // Type definitions
 interface Doctor {
@@ -65,15 +59,11 @@ interface Props {
     recentPrescriptions: RecentPrescription[];
 }
 
-const DoctorDashboard: React.FC<Props> = ({
-    doctor,
-    todaysActiveVisits,
-    todayStats,
-    recentPrescriptions
-}) => {
+const DoctorDashboard: React.FC<Props> = ({ doctor, todaysActiveVisits, todayStats, recentPrescriptions }) => {
     const [refreshing, setRefreshing] = useState(false);
-    const [selectedVisit, setSelectedVisit] = useState<ActiveVisit | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [visionDecisionVisit, setVisionDecisionVisit] = useState<ActiveVisit | null>(null);
+    const [visionDecisionBusy, setVisionDecisionBusy] = useState(false);
 
     // এইখানে add করুন ⬇️
     useEffect(() => {
@@ -92,11 +82,15 @@ const DoctorDashboard: React.FC<Props> = ({
         setRefreshing(true);
         router.reload({
             only: ['todaysActiveVisits', 'todayStats', 'recentPrescriptions'],
-            onFinish: () => setRefreshing(false)
+            onFinish: () => setRefreshing(false),
         });
     };
 
     const viewPatient = (visit: ActiveVisit): void => {
+        if (visit.payment_status === 'paid' && visit.vision_test_status !== 'completed' && visit.vision_test_status !== 'skipped') {
+            setVisionDecisionVisit(visit);
+            return;
+        }
         router.visit(route('doctor.view-patient', visit.patient_database_id));
     };
 
@@ -104,27 +98,65 @@ const DoctorDashboard: React.FC<Props> = ({
         router.visit(route('doctor.view-patient', visit.patient_database_id));
     };
 
+    const skipVisionTest = (visit: ActiveVisit): void => {
+        setVisionDecisionBusy(true);
+        router.post(
+            route('doctor.visits.vision-test.skip', visit.id),
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setVisionDecisionBusy(false);
+                    setVisionDecisionVisit(null);
+                    refreshDashboard();
+                },
+                onError: (errors) => {
+                    console.error('Failed to skip vision test:', errors);
+                },
+            },
+        );
+    };
+
+    const fillVisionTestNow = (visit: ActiveVisit): void => {
+        setVisionDecisionVisit(null);
+        router.visit(route('doctor.vision-tests.create', visit.patient_database_id));
+    };
+
     const completeVisit = (visit: ActiveVisit): void => {
-        router.post(route('doctor.complete-visit', visit.id), {}, {
-            onSuccess: () => {
-                refreshDashboard();
+        router.post(
+            route('doctor.complete-visit', visit.id),
+            {},
+            {
+                onSuccess: () => {
+                    refreshDashboard();
+                },
+                onError: (errors) => {
+                    console.error('Failed to complete visit:', errors);
+                },
             },
-            onError: (errors) => {
-                console.error('Failed to complete visit:', errors);
-            },
-        });
+        );
     };
 
     const getStatusColor = (status: string): string => {
         switch (status) {
-            case 'completed': return 'text-green-600 bg-green-100 border-green-200';
-            case 'prescription': return 'text-blue-600 bg-blue-100 border-blue-200';
-            case 'vision_test': return 'text-purple-600 bg-purple-100 border-purple-200';
-            case 'payment': return 'text-red-600 bg-red-100 border-red-200';
-            case 'paid': return 'text-green-600 bg-green-100 border-green-200';
-            case 'partial': return 'text-yellow-600 bg-yellow-100 border-yellow-200';
-            case 'pending': return 'text-red-600 bg-red-100 border-red-200';
-            default: return 'text-gray-600 bg-gray-100 border-gray-200';
+            case 'completed':
+                return 'text-green-600 bg-green-100 border-green-200';
+            case 'prescription':
+                return 'text-blue-600 bg-blue-100 border-blue-200';
+            case 'vision_test':
+                return 'text-purple-600 bg-purple-100 border-purple-200';
+            case 'payment':
+                return 'text-red-600 bg-red-100 border-red-200';
+            case 'paid':
+                return 'text-green-600 bg-green-100 border-green-200';
+            case 'partial':
+                return 'text-yellow-600 bg-yellow-100 border-yellow-200';
+            case 'pending':
+                return 'text-red-600 bg-red-100 border-red-200';
+            case 'skipped':
+                return 'text-amber-700 bg-amber-100 border-amber-200';
+            default:
+                return 'text-gray-600 bg-gray-100 border-gray-200';
         }
     };
 
@@ -136,11 +168,15 @@ const DoctorDashboard: React.FC<Props> = ({
         return 'bg-gray-500';
     };
 
+    const badge = (label: string, status: string) => (
+        <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusColor(status)}`}>{label}</span>
+    );
+
     const formatTime = (dateString: string): string => {
         return new Date(dateString).toLocaleTimeString('en-BD', {
             hour: '2-digit',
             minute: '2-digit',
-            hour12: true
+            hour12: true,
         });
     };
 
@@ -150,417 +186,259 @@ const DoctorDashboard: React.FC<Props> = ({
 
     const getGenderIcon = (gender?: string): string => {
         switch (gender?.toLowerCase()) {
-            case 'male': return '👨';
-            case 'female': return '👩';
-            default: return '👤';
+            case 'male':
+                return '👨';
+            case 'female':
+                return '👩';
+            default:
+                return '👤';
         }
     };
 
     const getStatusDisplay = (status: string): string => {
         switch (status) {
-            case 'payment': return 'Payment Pending';
-            case 'vision_test': return 'Vision Test';
-            case 'prescription': return 'Ready for Prescription';
-            case 'completed': return 'Completed';
-            default: return status;
+            case 'payment':
+                return 'Payment Pending';
+            case 'vision_test':
+                return 'Vision Test';
+            case 'prescription':
+                return 'Ready for Prescription';
+            case 'completed':
+                return 'Completed';
+            default:
+                return status;
         }
     };
 
     // Filter visits - only show active visits (not completed)
-    const filteredVisits = todaysActiveVisits.filter(visit =>
-        (visit.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            visit.patient_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            visit.visit_id.toLowerCase().includes(searchTerm.toLowerCase())) &&
-        visit.overall_status !== 'completed' // Only show active visits
+    const filteredVisits = todaysActiveVisits.filter(
+        (visit) =>
+            (visit.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                visit.patient_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                visit.visit_id.toLowerCase().includes(searchTerm.toLowerCase())) &&
+            visit.overall_status !== 'completed', // Only show active visits
     );
 
     return (
         <AdminLayout title="Doctor Dashboard">
             <Head title="Doctor Dashboard" />
 
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 p-6">
-                <div className="max-w-7xl mx-auto space-y-6">
-
-                    {/* Header */}
-                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl">
-                                    <Stethoscope className="h-8 w-8 text-white" />
-                                </div>
-                                <div>
-                                    <h1 className="text-2xl font-bold text-gray-900">Dr. {doctor.name}</h1>
-                                    <p className="text-gray-600">{doctor.specialization} • Fee: ৳{doctor.consultation_fee}</p>
-                                </div>
+            <div className="mx-auto max-w-7xl space-y-4">
+                {/* Compact header */}
+                <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600">
+                            <Stethoscope className="h-5 w-5 text-white" />
+                        </div>
+                        <div className="leading-tight">
+                            <div className="text-sm font-semibold text-gray-900">Dr. {doctor.name}</div>
+                            <div className="text-xs text-gray-600">
+                                {doctor.specialization} • Fee: ৳{doctor.consultation_fee}
                             </div>
-                            <div className="flex items-center gap-3">
-                                <div className="text-right">
-                                    <p className="text-sm text-gray-500">Today</p>
-                                    <p className="text-lg font-semibold text-gray-900">
-                                        {new Date().toLocaleDateString('en-BD', {
-                                            weekday: 'long',
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric'
-                                        })}
-                                    </p>
-                                </div>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
+                            <Users className="h-4 w-4 text-gray-500" />
+                            <span className="font-semibold">{filteredVisits.length}</span>
+                            <span>active</span>
+                            <span className="text-gray-400">•</span>
+                            <span className="font-semibold">{todayStats.pending_prescriptions}</span>
+                            <span>ready</span>
+                        </div>
+                        <button
+                            onClick={refreshDashboard}
+                            disabled={refreshing}
+                            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                        >
+                            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                {/* Search */}
+                <div className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:justify-between">
+                    <div className="relative w-full md:max-w-md">
+                        <Search className="absolute top-2.5 left-3 h-4 w-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search name / patient ID / visit ID"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full rounded-lg border border-gray-200 py-2 pr-3 pl-9 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        />
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                        {badge(`Completed: ${todayStats.completed_visits}`, 'completed')}
+                        {badge(`Prescribed: ${todayStats.prescriptions_written}`, 'prescription')}
+                    </div>
+                </div>
+
+                {/* Queue table */}
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                    <div className="grid grid-cols-12 gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600">
+                        <div className="col-span-1">SL</div>
+                        <div className="col-span-5">Patient</div>
+                        <div className="col-span-3">Status</div>
+                        <div className="col-span-3 text-right">Action</div>
+                    </div>
+                    {filteredVisits.length > 0 ? (
+                        <div className="divide-y divide-gray-100">
+                            {filteredVisits.map((visit, index) => {
+                                const canPrescribe =
+                                    visit.overall_status === 'prescription' &&
+                                    visit.payment_status === 'paid' &&
+                                    (visit.vision_test_status === 'completed' || visit.vision_test_status === 'skipped') &&
+                                    !visit.has_prescription;
+                                const canComplete = visit.overall_status === 'prescription' && visit.has_prescription;
+
+                                return (
+                                    <div key={visit.id} className="grid grid-cols-12 gap-2 px-3 py-3 text-sm">
+                                        <div className="col-span-1">
+                                            <div
+                                                className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-bold text-white ${getSerialColor(index, visit.overall_status)}`}
+                                            >
+                                                {visit.serial_number}
+                                            </div>
+                                        </div>
+
+                                        <div className="col-span-5 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <div className="truncate font-semibold text-gray-900">{visit.patient_name}</div>
+                                                <div className="text-base">{getGenderIcon(visit.patient_gender)}</div>
+                                            </div>
+                                            <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-600">
+                                                <span className="inline-flex items-center gap-1">
+                                                    <User className="h-3.5 w-3.5 text-gray-400" />
+                                                    {visit.patient_id}
+                                                </span>
+                                                <span className="inline-flex items-center gap-1">
+                                                    <Phone className="h-3.5 w-3.5 text-gray-400" />
+                                                    {visit.patient_phone}
+                                                </span>
+                                                <span className="inline-flex items-center gap-1">
+                                                    <Clock className="h-3.5 w-3.5 text-gray-400" />
+                                                    {formatTime(visit.visit_date)}
+                                                </span>
+                                                <span className="inline-flex items-center gap-1">
+                                                    <FileText className="h-3.5 w-3.5 text-gray-400" />
+                                                    {visit.visit_id}
+                                                </span>
+                                            </div>
+                                            {visit.chief_complaint && (
+                                                <div className="mt-1 line-clamp-1 text-xs text-gray-500">
+                                                    <span className="font-semibold text-gray-600">CC:</span> {visit.chief_complaint}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="col-span-3 flex flex-col gap-1">
+                                            <div className="flex flex-wrap gap-1">
+                                                {badge(visit.payment_status.toUpperCase(), visit.payment_status)}
+                                                {badge(visit.vision_test_status.toUpperCase(), visit.vision_test_status)}
+                                                {badge(getStatusDisplay(visit.overall_status), visit.overall_status)}
+                                            </div>
+                                            {visit.has_prescription && (
+                                                <div className="text-xs font-semibold text-green-700">✓ Prescription written</div>
+                                            )}
+                                        </div>
+
+                                        <div className="col-span-3 flex items-center justify-end gap-2">
+                                            <button
+                                                onClick={() => viewPatient(visit)}
+                                                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                            >
+                                                <Eye className="h-4 w-4" />
+                                                View
+                                            </button>
+                                            {canPrescribe && (
+                                                <button
+                                                    onClick={() => writePrescription(visit)}
+                                                    className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700"
+                                                >
+                                                    <PenTool className="h-4 w-4" />
+                                                    Prescribe
+                                                </button>
+                                            )}
+                                            {canComplete && (
+                                                <button
+                                                    onClick={() => completeVisit(visit)}
+                                                    className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+                                                >
+                                                    <CheckCircle className="h-4 w-4" />
+                                                    Done
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="p-10 text-center text-sm text-gray-600">
+                            <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
+                                <Users className="h-5 w-5 text-gray-500" />
+                            </div>
+                            {searchTerm ? 'No match found.' : 'No active visits in queue.'}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Vision decision modal */}
+            {visionDecisionVisit && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-lg rounded-2xl border border-gray-200 bg-white shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-gray-200 p-6">
+                            <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+                                <AlertCircle className="h-5 w-5 text-amber-600" />
+                                Vision test not done
+                            </h3>
+                            <button
+                                onClick={() => setVisionDecisionVisit(null)}
+                                className="rounded-lg p-2 transition-colors hover:bg-gray-100"
+                                disabled={visionDecisionBusy}
+                            >
+                                <X className="h-5 w-5 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4 p-6">
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                                <p className="text-sm text-gray-800">
+                                    Patient <span className="font-semibold">{visionDecisionVisit.patient_name}</span> (Visit:{' '}
+                                    <span className="font-medium">{visionDecisionVisit.visit_id}</span>) এখনও vision test করে নাই। আপনি এখন কী করবেন?
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3">
                                 <button
-                                    onClick={refreshDashboard}
-                                    disabled={refreshing}
-                                    className="p-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                                    onClick={() => skipVisionTest(visionDecisionVisit)}
+                                    disabled={visionDecisionBusy}
+                                    className="w-full rounded-xl bg-amber-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-amber-700"
                                 >
-                                    <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+                                    Skip vision test (blank)
+                                </button>
+                                <button
+                                    onClick={() => fillVisionTestNow(visionDecisionVisit)}
+                                    disabled={visionDecisionBusy}
+                                    className="w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+                                >
+                                    Fill vision test (Doctor)
+                                </button>
+                                <button
+                                    onClick={() => setVisionDecisionVisit(null)}
+                                    disabled={visionDecisionBusy}
+                                    className="w-full rounded-xl bg-gray-100 px-4 py-3 font-semibold text-gray-800 transition-colors hover:bg-gray-200"
+                                >
+                                    Cancel
                                 </button>
                             </div>
                         </div>
                     </div>
-
-                    {/* Stats Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-gray-600 text-sm">Active Visits</p>
-                                    <p className="text-2xl font-bold text-gray-900">{filteredVisits.length}</p>
-                                </div>
-                                <Users className="h-8 w-8 text-blue-500" />
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-gray-600 text-sm">Completed Today</p>
-                                    <p className="text-2xl font-bold text-gray-900">{todayStats.completed_visits}</p>
-                                </div>
-                                <CheckCircle className="h-8 w-8 text-green-500" />
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-gray-600 text-sm">Ready for Prescription</p>
-                                    <p className="text-2xl font-bold text-gray-900">{todayStats.pending_prescriptions}</p>
-                                </div>
-                                <PenTool className="h-8 w-8 text-purple-500" />
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-orange-500">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-gray-600 text-sm">Prescriptions Written</p>
-                                    <p className="text-2xl font-bold text-gray-900">{todayStats.prescriptions_written}</p>
-                                </div>
-                                <FileText className="h-8 w-8 text-orange-500" />
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-indigo-500">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-gray-600 text-sm">Today's Revenue</p>
-                                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(todayStats.total_revenue)}</p>
-                                </div>
-                                <TrendingUp className="h-8 w-8 text-indigo-500" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Main Content */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                        {/* Active Visits Queue */}
-                        <div className="lg:col-span-2 bg-white rounded-2xl shadow-xl border border-gray-100">
-                            <div className="p-6 border-b border-gray-200">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h2 className="text-xl font-bold text-gray-900">Active Patient Queue</h2>
-                                    <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
-                                        {filteredVisits.length} Active
-                                    </span>
-                                </div>
-
-                                {/* Search Bar */}
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search patient, visit ID..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="p-6">
-                                {filteredVisits.length > 0 ? (
-                                    <div className="space-y-4 max-h-96 overflow-y-auto">
-                                        {filteredVisits.map((visit, index) => (
-                                            <div
-                                                key={visit.id}
-                                                className={`p-4 border-2 rounded-xl transition-all duration-200 cursor-pointer ${selectedVisit?.id === visit.id
-                                                        ? 'border-blue-500 bg-blue-50'
-                                                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-                                                    }`}
-                                                onClick={() => setSelectedVisit(visit)}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-4">
-                                                        {/* Serial Number */}
-                                                        <div className="flex-shrink-0">
-                                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-white ${getSerialColor(index, visit.overall_status)}`}>
-                                                                {visit.serial_number}
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Patient Info */}
-                                                        <div className="flex-1">
-                                                            <div className="flex items-center gap-3 mb-2">
-                                                                <h3 className="text-lg font-bold text-gray-900">{visit.patient_name}</h3>
-                                                                <span className="text-xl">{getGenderIcon(visit.patient_gender)}</span>
-                                                                <span className={`text-xs font-medium px-3 py-1 rounded-full border ${getStatusColor(visit.overall_status)}`}>
-                                                                    {getStatusDisplay(visit.overall_status)}
-                                                                </span>
-                                                            </div>
-
-                                                            <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
-                                                                <div className="flex items-center gap-2">
-                                                                    <User className="h-4 w-4" />
-                                                                    <span>{visit.patient_id}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <Phone className="h-4 w-4" />
-                                                                    <span>{visit.patient_phone}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <Clock className="h-4 w-4" />
-                                                                    <span>{formatTime(visit.visit_date)}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <FileText className="h-4 w-4" />
-                                                                    <span>{visit.visit_id}</span>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Payment Status */}
-                                                            <div className="flex items-center gap-2 mb-2">
-                                                                <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(visit.payment_status)}`}>
-                                                                    Payment: {visit.payment_status.toUpperCase()}
-                                                                </span>
-                                                                <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(visit.vision_test_status)}`}>
-                                                                    Vision: {visit.vision_test_status.toUpperCase()}
-                                                                </span>
-                                                                {visit.has_prescription && (
-                                                                    <span className="px-2 py-1 bg-green-100 text-green-600 rounded text-xs font-medium">
-                                                                        ✓ Prescription Written
-                                                                    </span>
-                                                                )}
-                                                            </div>
-
-                                                            {/* Chief Complaint */}
-                                                            {visit.chief_complaint && (
-                                                                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                                                                    <p className="text-sm text-gray-700">
-                                                                        <span className="font-medium text-yellow-800">Chief Complaint:</span> {visit.chief_complaint}
-                                                                    </p>
-                                                                </div>
-                                                            )}
-
-                                                            <div className="mt-2 text-xs text-gray-500">
-                                                                Waiting: {visit.waiting_time}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Action Buttons */}
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                viewPatient(visit);
-                                                            }}
-                                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                            View
-                                                        </button>
-
-                                                        {/* Write Prescription Button */}
-                                                        {visit.overall_status === 'prescription' &&
-                                                            visit.payment_status === 'paid' &&
-                                                            visit.vision_test_status === 'completed' &&
-                                                            !visit.has_prescription && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        writePrescription(visit);
-                                                                    }}
-                                                                    className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
-                                                                >
-                                                                    <PenTool className="h-4 w-4" />
-                                                                    Prescribe
-                                                                </button>
-                                                            )}
-
-                                                        {/* Complete Visit Button */}
-                                                        {visit.overall_status === 'prescription' &&
-                                                            visit.has_prescription && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        completeVisit(visit);
-                                                                    }}
-                                                                    className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors flex items-center gap-2"
-                                                                >
-                                                                    <CheckCircle className="h-4 w-4" />
-                                                                    Complete
-                                                                </button>
-                                                            )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-12">
-                                        <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                                        <p className="text-gray-600 text-lg">No active visits</p>
-                                        <p className="text-gray-500 text-sm mt-1">
-                                            {searchTerm ? 'Try adjusting your search' : 'No patients in queue for prescription'}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Sidebar */}
-                        <div className="space-y-6">
-                            {/* Selected Visit Card */}
-                            {selectedVisit && (
-                                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-                                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                        <UserCheck className="h-5 w-5 text-blue-600" />
-                                        Current Patient
-                                    </h3>
-
-                                    <div className="text-center mb-4">
-                                        <div className={`w-16 h-16 rounded-xl flex items-center justify-center font-bold text-white text-xl mx-auto mb-3 ${getSerialColor(0, selectedVisit.overall_status)}`}>
-                                            {selectedVisit.serial_number}
-                                        </div>
-                                        <h4 className="text-lg font-bold text-gray-900">{selectedVisit.patient_name}</h4>
-                                        <p className="text-sm text-gray-600">{selectedVisit.patient_id}</p>
-                                        <p className="text-xs text-gray-500 mt-1">Visit: {selectedVisit.visit_id}</p>
-                                    </div>
-
-                                    <div className="space-y-3 mb-6">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-gray-600">Status:</span>
-                                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(selectedVisit.overall_status)}`}>
-                                                {getStatusDisplay(selectedVisit.overall_status)}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-gray-600">Payment:</span>
-                                            <span className={`text-xs font-medium ${selectedVisit.payment_status === 'paid' ? 'text-green-600' : 'text-red-600'}`}>
-                                                {selectedVisit.payment_status.toUpperCase()}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-gray-600">Vision Test:</span>
-                                            <span className={`text-xs font-medium ${selectedVisit.vision_test_status === 'completed' ? 'text-green-600' : 'text-yellow-600'}`}>
-                                                {selectedVisit.vision_test_status.toUpperCase()}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm text-gray-600">Amount:</span>
-                                            <span className="font-medium">{formatCurrency(selectedVisit.final_amount)}</span>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => viewPatient(selectedVisit)}
-                                            className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            <Eye className="h-4 w-4" />
-                                            View
-                                        </button>
-                                        {selectedVisit.overall_status === 'prescription' && !selectedVisit.has_prescription && (
-                                            <button
-                                                onClick={() => writePrescription(selectedVisit)}
-                                                className="flex-1 py-2 px-4 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                                            >
-                                                <PenTool className="h-4 w-4" />
-                                                Prescribe
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Recent Prescriptions */}
-                            <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
-                                <div className="p-6 border-b border-gray-200">
-                                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                                        <FileText className="h-5 w-5 text-green-600" />
-                                        Recent Prescriptions
-                                    </h3>
-                                </div>
-
-                                <div className="p-6">
-                                    {recentPrescriptions.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {recentPrescriptions.map((prescription) => (
-                                                <div key={prescription.id} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <h4 className="font-medium text-gray-900">{prescription.patient_name}</h4>
-                                                        <span className="text-xs text-gray-500">{prescription.created_at}</span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between">
-                                                        <p className="text-sm text-gray-600">{prescription.visit_id}</p>
-                                                        <p className="text-xs text-green-600 font-medium">
-                                                            {prescription.medicines_count} medicines
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-8">
-                                            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                                            <p className="text-gray-600">No recent prescriptions</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Quick Actions */}
-                            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
-                                <div className="space-y-3">
-                                    <button
-                                        onClick={() => router.visit(route('doctor.search-patients'))}
-                                        className="w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <Search className="h-5 w-5" />
-                                        Search Patients
-                                    </button>
-                                    <button
-                                        onClick={() => router.visit(route('doctor.performance'))}
-                                        className="w-full py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <BarChart3 className="h-5 w-5" />
-                                        Performance Report
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
-            </div>
+            )}
         </AdminLayout>
     );
 };

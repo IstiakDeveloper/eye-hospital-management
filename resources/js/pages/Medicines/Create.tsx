@@ -1,17 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Head, useForm } from '@inertiajs/react';
-import AdminLayout from '@/layouts/admin-layout';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import {
-    Card,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-    CardContent,
-    CardFooter
-} from '@/components/ui/card';
-import { Save, X, Pill, ChevronDown } from 'lucide-react';
+import AdminLayout from '@/layouts/admin-layout';
+import { Head, useForm } from '@inertiajs/react';
+import { ChevronDown, Pill, Save, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface MedicineCreateProps {
     types: string[];
@@ -55,9 +48,7 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
 
     useEffect(() => {
         if (data.type) {
-            const filtered = allTypes.filter(type =>
-                type.toLowerCase().includes(data.type.toLowerCase())
-            );
+            const filtered = allTypes.filter((type) => type.toLowerCase().includes(data.type.toLowerCase()));
             setFilteredTypes(filtered);
         } else {
             setFilteredTypes(allTypes);
@@ -66,9 +57,7 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
 
     useEffect(() => {
         if (data.manufacturer) {
-            const filtered = manufacturers.filter(manufacturer =>
-                manufacturer.toLowerCase().includes(data.manufacturer.toLowerCase())
-            );
+            const filtered = manufacturers.filter((manufacturer) => manufacturer.toLowerCase().includes(data.manufacturer.toLowerCase()));
             setFilteredManufacturers(filtered);
         } else {
             setFilteredManufacturers(manufacturers);
@@ -116,16 +105,16 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
         <AdminLayout title="Add New Medicine">
             <Head title="Add New Medicine" />
 
-            <div className="max-w-5xl mx-auto p-6">
-                <Card className="shadow-lg border-0 bg-white">
-                    <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
+            <div className="mx-auto max-w-5xl p-6">
+                <Card className="border-0 bg-white shadow-lg">
+                    <CardHeader className="border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
                         <CardTitle className="flex items-center text-xl font-semibold text-gray-800">
-                            <div className="p-2 bg-blue-500 rounded-lg mr-3">
+                            <div className="mr-3 rounded-lg bg-blue-500 p-2">
                                 <Pill className="h-6 w-6 text-white" />
                             </div>
                             Add New Medicine
                         </CardTitle>
-                        <CardDescription className="text-gray-600 mt-2">
+                        <CardDescription className="mt-2 text-gray-600">
                             Enter the medicine details below. Fields marked with * are required.
                         </CardDescription>
                     </CardHeader>
@@ -134,10 +123,8 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
                         <CardContent className="p-8">
                             {/* Basic Information Section */}
                             <div className="mb-8">
-                                <h3 className="text-lg font-medium text-gray-900 mb-6 pb-2 border-b border-gray-200">
-                                    Basic Information
-                                </h3>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <h3 className="mb-6 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900">Basic Information</h3>
+                                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                                     {/* Medicine Name */}
                                     <div className="space-y-2">
                                         <label htmlFor="name" className="block text-sm font-medium text-gray-700">
@@ -152,9 +139,7 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
                                             className="h-11"
                                             error={errors.name}
                                         />
-                                        {errors.name && (
-                                            <p className="text-sm text-red-600 mt-1">{errors.name}</p>
-                                        )}
+                                        {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
                                     </div>
 
                                     {/* Generic Name */}
@@ -171,19 +156,15 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
                                             className="h-11"
                                             error={errors.generic_name}
                                         />
-                                        {errors.generic_name && (
-                                            <p className="text-sm text-red-600 mt-1">{errors.generic_name}</p>
-                                        )}
+                                        {errors.generic_name && <p className="mt-1 text-sm text-red-600">{errors.generic_name}</p>}
                                     </div>
                                 </div>
                             </div>
 
                             {/* Category & Manufacturer Section */}
                             <div className="mb-8">
-                                <h3 className="text-lg font-medium text-gray-900 mb-6 pb-2 border-b border-gray-200">
-                                    Category & Manufacturer
-                                </h3>
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <h3 className="mb-6 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900">Category & Manufacturer</h3>
+                                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                                     {/* Medicine Type Combobox */}
                                     <div className="relative space-y-2" ref={dropdownRef}>
                                         <label htmlFor="type" className="block text-sm font-medium text-gray-700">
@@ -199,7 +180,7 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
                                                 onChange={handleInputChange}
                                                 onFocus={handleInputFocus}
                                                 placeholder="Type or select medicine type"
-                                                className={`block w-full h-11 px-4 py-2 rounded-lg border shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm pr-10 transition-colors ${
+                                                className={`block h-11 w-full rounded-lg border px-4 py-2 pr-10 shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm ${
                                                     errors.type ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300'
                                                 }`}
                                                 autoComplete="off"
@@ -214,14 +195,14 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
                                         </div>
 
                                         {isOpen && (
-                                            <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                                            <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
                                                 {filteredTypes.length > 0 ? (
                                                     filteredTypes.map((type, index) => (
                                                         <button
                                                             key={index}
                                                             type="button"
                                                             onClick={() => handleTypeSelect(type)}
-                                                            className="w-full text-left px-4 py-3 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none text-sm border-b border-gray-50 last:border-b-0 transition-colors"
+                                                            className="w-full border-b border-gray-50 px-4 py-3 text-left text-sm transition-colors last:border-b-0 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
                                                         >
                                                             {type}
                                                         </button>
@@ -234,9 +215,7 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
                                             </div>
                                         )}
 
-                                        {errors.type && (
-                                            <p className="text-sm text-red-600 mt-1">{errors.type}</p>
-                                        )}
+                                        {errors.type && <p className="mt-1 text-sm text-red-600">{errors.type}</p>}
                                     </div>
 
                                     {/* Manufacturer Combobox */}
@@ -254,8 +233,10 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
                                                 onChange={handleManufacturerChange}
                                                 onFocus={handleManufacturerFocus}
                                                 placeholder="Type or select manufacturer"
-                                                className={`block w-full h-11 px-4 py-2 rounded-lg border shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm pr-10 transition-colors ${
-                                                    errors.manufacturer ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300'
+                                                className={`block h-11 w-full rounded-lg border px-4 py-2 pr-10 shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm ${
+                                                    errors.manufacturer
+                                                        ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20'
+                                                        : 'border-gray-300'
                                                 }`}
                                                 autoComplete="off"
                                             />
@@ -264,19 +245,21 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
                                                 onClick={() => setIsManufacturerOpen(!isManufacturerOpen)}
                                                 className="absolute inset-y-0 right-0 flex items-center pr-3"
                                             >
-                                                <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isManufacturerOpen ? 'rotate-180' : ''}`} />
+                                                <ChevronDown
+                                                    className={`h-4 w-4 text-gray-400 transition-transform ${isManufacturerOpen ? 'rotate-180' : ''}`}
+                                                />
                                             </button>
                                         </div>
 
                                         {isManufacturerOpen && (
-                                            <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                                            <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
                                                 {filteredManufacturers.length > 0 ? (
                                                     filteredManufacturers.map((manufacturer, index) => (
                                                         <button
                                                             key={index}
                                                             type="button"
                                                             onClick={() => handleManufacturerSelect(manufacturer)}
-                                                            className="w-full text-left px-4 py-3 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none text-sm border-b border-gray-50 last:border-b-0 transition-colors"
+                                                            className="w-full border-b border-gray-50 px-4 py-3 text-left text-sm transition-colors last:border-b-0 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
                                                         >
                                                             {manufacturer}
                                                         </button>
@@ -289,18 +272,14 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
                                             </div>
                                         )}
 
-                                        {errors.manufacturer && (
-                                            <p className="text-sm text-red-600 mt-1">{errors.manufacturer}</p>
-                                        )}
+                                        {errors.manufacturer && <p className="mt-1 text-sm text-red-600">{errors.manufacturer}</p>}
                                     </div>
                                 </div>
                             </div>
 
                             {/* Additional Details Section */}
                             <div className="mb-8">
-                                <h3 className="text-lg font-medium text-gray-900 mb-6 pb-2 border-b border-gray-200">
-                                    Additional Details
-                                </h3>
+                                <h3 className="mb-6 border-b border-gray-200 pb-2 text-lg font-medium text-gray-900">Additional Details</h3>
                                 <div className="space-y-6">
                                     {/* Description */}
                                     <div className="space-y-2">
@@ -314,49 +293,40 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
                                             value={data.description}
                                             onChange={(e) => setData('description', e.target.value)}
                                             placeholder="Enter medicine description, usage instructions, or additional notes..."
-                                            className={`block w-full px-4 py-3 rounded-lg border shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm transition-colors resize-none ${
+                                            className={`block w-full resize-none rounded-lg border px-4 py-3 shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 sm:text-sm ${
                                                 errors.description ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300'
                                             }`}
                                         />
-                                        {errors.description && (
-                                            <p className="text-sm text-red-600 mt-1">{errors.description}</p>
-                                        )}
+                                        {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
                                     </div>
 
                                     {/* Active Status */}
                                     <div className="flex items-start space-x-3">
-                                        <div className="flex items-center h-5">
+                                        <div className="flex h-5 items-center">
                                             <input
                                                 id="is_active"
                                                 name="is_active"
                                                 type="checkbox"
                                                 checked={data.is_active}
                                                 onChange={(e) => setData('is_active', e.target.checked)}
-                                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2"
+                                                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
                                         <div className="text-sm">
                                             <label htmlFor="is_active" className="font-medium text-gray-900">
                                                 Active Status
                                             </label>
-                                            <p className="text-gray-500">
-                                                This medicine will be available for prescription when active.
-                                            </p>
+                                            <p className="text-gray-500">This medicine will be available for prescription when active.</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </CardContent>
 
-                        <CardFooter className="bg-gray-50 px-8 py-6 border-t border-gray-100">
-                            <div className="flex justify-between w-full">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    href={route('medicines.index')}
-                                    className="px-6 py-2 h-11"
-                                >
-                                    <X className="h-4 w-4 mr-2" />
+                        <CardFooter className="border-t border-gray-100 bg-gray-50 px-8 py-6">
+                            <div className="flex w-full justify-between">
+                                <Button type="button" variant="outline" href={route('medicines.index')} className="h-11 px-6 py-2">
+                                    <X className="mr-2 h-4 w-4" />
                                     Cancel
                                 </Button>
 
@@ -364,9 +334,9 @@ export default function MedicineCreate({ types, manufacturers }: MedicineCreateP
                                     type="submit"
                                     disabled={processing}
                                     isLoading={processing}
-                                    className="px-6 py-2 h-11 bg-blue-600 hover:bg-blue-700"
+                                    className="h-11 bg-blue-600 px-6 py-2 hover:bg-blue-700"
                                 >
-                                    <Save className="h-4 w-4 mr-2" />
+                                    <Save className="mr-2 h-4 w-4" />
                                     Save Medicine
                                 </Button>
                             </div>

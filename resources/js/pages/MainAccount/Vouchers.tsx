@@ -1,17 +1,7 @@
-import React, { useState } from 'react';
 import AdminLayout from '@/layouts/MainAccountLayout';
 import { Head, Link, router } from '@inertiajs/react';
-import {
-    FileText,
-    Filter,
-    Download,
-    Search,
-    Calendar,
-    ChevronLeft,
-    ChevronRight,
-    Eye,
-    RefreshCw
-} from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Download, Eye, FileText, Filter, Search } from 'lucide-react';
+import { useState } from 'react';
 
 interface Voucher {
     id: number;
@@ -87,25 +77,29 @@ export default function Vouchers({ vouchers, filters, filterOptions }: Props) {
     };
 
     const handleFilterChange = (key: string, value: string) => {
-        setLocalFilters(prev => ({
+        setLocalFilters((prev) => ({
             ...prev,
-            [key]: value
+            [key]: value,
         }));
     };
 
     const applyFilters = () => {
         router.get('/main-account/vouchers', localFilters, {
             preserveState: true,
-            replace: true
+            replace: true,
         });
     };
 
     const clearFilters = () => {
         setLocalFilters({});
-        router.get('/main-account/vouchers', {}, {
-            preserveState: true,
-            replace: true
-        });
+        router.get(
+            '/main-account/vouchers',
+            {},
+            {
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     const exportVouchers = () => {
@@ -121,16 +115,13 @@ export default function Vouchers({ vouchers, filters, filterOptions }: Props) {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
-                        <Link
-                            href="/main-account"
-                            className="flex items-center text-gray-600 hover:text-gray-900"
-                        >
-                            <ChevronLeft className="w-4 h-4 mr-1" />
+                        <Link href="/main-account" className="flex items-center text-gray-600 hover:text-gray-900">
+                            <ChevronLeft className="mr-1 h-4 w-4" />
                             Back to Dashboard
                         </Link>
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">Account Vouchers</h1>
-                            <p className="text-gray-600 mt-1">
+                            <p className="mt-1 text-gray-600">
                                 Showing {vouchers.from}-{vouchers.to} of {vouchers.total} vouchers
                             </p>
                         </div>
@@ -138,19 +129,18 @@ export default function Vouchers({ vouchers, filters, filterOptions }: Props) {
                     <div className="flex gap-3">
                         <button
                             onClick={() => setShowFilters(!showFilters)}
-                            className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors ${showFilters
-                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
+                            className={`inline-flex items-center rounded-lg px-4 py-2 transition-colors ${
+                                showFilters ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
                         >
-                            <Filter className="w-4 h-4 mr-2" />
+                            <Filter className="mr-2 h-4 w-4" />
                             Filters
                         </button>
                         <button
                             onClick={exportVouchers}
-                            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                            className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700"
                         >
-                            <Download className="w-4 h-4 mr-2" />
+                            <Download className="mr-2 h-4 w-4" />
                             Export CSV
                         </button>
                     </div>
@@ -158,115 +148,109 @@ export default function Vouchers({ vouchers, filters, filterOptions }: Props) {
 
                 {/* Filters */}
                 {showFilters && (
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Search
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">Search</label>
                                 <div className="relative">
-                                    <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                                    <Search className="absolute top-3 left-3 h-4 w-4 text-gray-400" />
                                     <input
                                         type="text"
                                         value={localFilters.search || ''}
                                         onChange={(e) => handleFilterChange('search', e.target.value)}
                                         placeholder="Search vouchers..."
-                                        className="pl-10 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 pl-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Voucher Type
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">Voucher Type</label>
                                 <select
                                     value={localFilters.voucher_type || ''}
                                     onChange={(e) => handleFilterChange('voucher_type', e.target.value)}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">All Types</option>
-                                    {filterOptions.voucher_types.map(type => (
-                                        <option key={type} value={type}>{type}</option>
+                                    {filterOptions.voucher_types.map((type) => (
+                                        <option key={type} value={type}>
+                                            {type}
+                                        </option>
                                     ))}
                                 </select>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Source Account
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">Source Account</label>
                                 <select
                                     value={localFilters.source_account || ''}
                                     onChange={(e) => handleFilterChange('source_account', e.target.value)}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">All Accounts</option>
-                                    {filterOptions.source_accounts.map(account => (
-                                        <option key={account} value={account}>{account}</option>
+                                    {filterOptions.source_accounts.map((account) => (
+                                        <option key={account} value={account}>
+                                            {account}
+                                        </option>
                                     ))}
                                 </select>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Transaction Type
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">Transaction Type</label>
                                 <select
                                     value={localFilters.source_transaction_type || ''}
                                     onChange={(e) => handleFilterChange('source_transaction_type', e.target.value)}
-                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">All Types</option>
-                                    {filterOptions.transaction_types.map(type => (
-                                        <option key={type} value={type}>{type}</option>
+                                    {filterOptions.transaction_types.map((type) => (
+                                        <option key={type} value={type}>
+                                            {type}
+                                        </option>
                                     ))}
                                 </select>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Date From
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">Date From</label>
                                 <div className="relative">
-                                    <Calendar className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                                    <Calendar className="absolute top-3 left-3 h-4 w-4 text-gray-400" />
                                     <input
                                         type="date"
                                         value={localFilters.date_from || ''}
                                         onChange={(e) => handleFilterChange('date_from', e.target.value)}
-                                        className="pl-10 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 pl-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Date To
-                                </label>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">Date To</label>
                                 <div className="relative">
-                                    <Calendar className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                                    <Calendar className="absolute top-3 left-3 h-4 w-4 text-gray-400" />
                                     <input
                                         type="date"
                                         value={localFilters.date_to || ''}
                                         onChange={(e) => handleFilterChange('date_to', e.target.value)}
-                                        className="pl-10 w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 pl-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-200">
+                        <div className="mt-6 flex justify-end gap-3 border-t border-gray-200 pt-4">
                             <button
                                 onClick={clearFilters}
-                                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                className="rounded-lg bg-gray-100 px-4 py-2 text-gray-700 transition-colors hover:bg-gray-200"
                             >
                                 Clear All
                             </button>
                             <button
                                 onClick={applyFilters}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                                className="flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
                             >
-                                <Search className="w-4 h-4 mr-2" />
+                                <Search className="mr-2 h-4 w-4" />
                                 Apply Filters
                             </button>
                         </div>
@@ -274,93 +258,81 @@ export default function Vouchers({ vouchers, filters, filterOptions }: Props) {
                 )}
 
                 {/* Vouchers Table */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-gray-50 border-b border-gray-200">
+                            <thead className="border-b border-gray-200 bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        SL
-                                    </th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">SL</th>
+                                    <th className="px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                                         Voucher Details
                                     </th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Date
-                                    </th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Type
-                                    </th>
-                                    <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Amount
-                                    </th>
-                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Account & Type
-                                    </th>
-                                    <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Date</th>
+                                    <th className="px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Type</th>
+                                    <th className="px-6 py-4 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Amount</th>
+                                    <th className="px-6 py-4 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Account & Type</th>
+                                    <th className="px-6 py-4 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
                                         Running Balance
                                     </th>
-                                    <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions
-                                    </th>
+                                    <th className="px-6 py-4 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="divide-y divide-gray-200 bg-white">
                                 {vouchers.data && vouchers.data.length > 0 ? (
                                     vouchers.data.map((voucher) => (
-                                        <tr key={voucher.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {voucher.sl_no}
-                                            </td>
+                                        <tr key={voucher.id} className="transition-colors hover:bg-gray-50">
+                                            <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">{voucher.sl_no}</td>
                                             <td className="px-6 py-4">
                                                 <div className="max-w-xs">
                                                     <div className="text-sm font-medium text-gray-900">{voucher.voucher_no}</div>
-                                                    <div className="text-sm text-gray-500 truncate" title={voucher.narration}>
+                                                    <div className="truncate text-sm text-gray-500" title={voucher.narration}>
                                                         {voucher.narration}
                                                     </div>
                                                     {voucher.source_voucher_no && (
-                                                        <div className="text-xs text-gray-400">
-                                                            Ref: {voucher.source_voucher_no}
-                                                        </div>
+                                                        <div className="text-xs text-gray-400">Ref: {voucher.source_voucher_no}</div>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
                                                 {new Date(voucher.date).toLocaleDateString('en-GB')}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${voucher.voucher_type === 'Credit'
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : 'bg-red-100 text-red-800'
-                                                    }`}>
+                                                <span
+                                                    className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                                                        voucher.voucher_type === 'Credit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                    }`}
+                                                >
                                                     {voucher.voucher_type}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <span className={`text-sm font-medium ${voucher.voucher_type === 'Credit' ? 'text-green-600' : 'text-red-600'
-                                                    }`}>
+                                            <td className="px-6 py-4 text-right whitespace-nowrap">
+                                                <span
+                                                    className={`text-sm font-medium ${
+                                                        voucher.voucher_type === 'Credit' ? 'text-green-600' : 'text-red-600'
+                                                    }`}
+                                                >
                                                     {voucher.formatted_amount || formatCurrency(voucher.amount)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="max-w-xs">
-                                                    <div className="text-sm text-gray-900 truncate" title={voucher.source_account_name}>
+                                                    <div className="truncate text-sm text-gray-900" title={voucher.source_account_name}>
                                                         {voucher.source_account_name}
                                                     </div>
-                                                    <div className="text-xs text-gray-500 truncate" title={voucher.transaction_type_name}>
+                                                    <div className="truncate text-xs text-gray-500" title={voucher.transaction_type_name}>
                                                         {voucher.transaction_type_name}
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 font-medium">
+                                            <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap text-gray-900">
                                                 {formatCurrency(voucher.running_balance)}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
                                                 <Link
                                                     href={`/main-account/vouchers/${voucher.id}`}
-                                                    className="inline-flex items-center text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                                                    className="inline-flex items-center rounded px-2 py-1 text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
                                                 >
-                                                    <Eye className="w-4 h-4 mr-1" />
+                                                    <Eye className="mr-1 h-4 w-4" />
                                                     View
                                                 </Link>
                                             </td>
@@ -370,11 +342,9 @@ export default function Vouchers({ vouchers, filters, filterOptions }: Props) {
                                     <tr>
                                         <td colSpan={8} className="px-6 py-12 text-center">
                                             <div className="flex flex-col items-center">
-                                                <FileText className="w-12 h-12 text-gray-400 mb-4" />
+                                                <FileText className="mb-4 h-12 w-12 text-gray-400" />
                                                 <p className="text-sm text-gray-500">No vouchers found</p>
-                                                <p className="text-xs text-gray-400 mt-1">
-                                                    Try adjusting your search criteria or filters
-                                                </p>
+                                                <p className="mt-1 text-xs text-gray-400">Try adjusting your search criteria or filters</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -385,10 +355,9 @@ export default function Vouchers({ vouchers, filters, filterOptions }: Props) {
 
                     {/* Pagination */}
                     {vouchers.last_page > 1 && (
-                        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                        <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-6 py-4">
                             <div className="text-sm text-gray-700">
-                                Showing <span className="font-medium">{vouchers.from}</span> to{' '}
-                                <span className="font-medium">{vouchers.to}</span> of{' '}
+                                Showing <span className="font-medium">{vouchers.from}</span> to <span className="font-medium">{vouchers.to}</span> of{' '}
                                 <span className="font-medium">{vouchers.total}</span> results
                             </div>
                             <div className="flex items-center space-x-2">
@@ -398,13 +367,14 @@ export default function Vouchers({ vouchers, filters, filterOptions }: Props) {
                                             <Link
                                                 key={index}
                                                 href={link.url || '#'}
-                                                className={`p-2 rounded-lg ${link.url
-                                                        ? 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                                                        : 'text-gray-300 cursor-not-allowed'
-                                                    }`}
+                                                className={`rounded-lg p-2 ${
+                                                    link.url
+                                                        ? 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                                                        : 'cursor-not-allowed text-gray-300'
+                                                }`}
                                                 preserveState
                                             >
-                                                <ChevronLeft className="w-4 h-4" />
+                                                <ChevronLeft className="h-4 w-4" />
                                             </Link>
                                         );
                                     }
@@ -413,13 +383,14 @@ export default function Vouchers({ vouchers, filters, filterOptions }: Props) {
                                             <Link
                                                 key={index}
                                                 href={link.url || '#'}
-                                                className={`p-2 rounded-lg ${link.url
-                                                        ? 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                                                        : 'text-gray-300 cursor-not-allowed'
-                                                    }`}
+                                                className={`rounded-lg p-2 ${
+                                                    link.url
+                                                        ? 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                                                        : 'cursor-not-allowed text-gray-300'
+                                                }`}
                                                 preserveState
                                             >
-                                                <ChevronRight className="w-4 h-4" />
+                                                <ChevronRight className="h-4 w-4" />
                                             </Link>
                                         );
                                     }
@@ -434,10 +405,9 @@ export default function Vouchers({ vouchers, filters, filterOptions }: Props) {
                                         <Link
                                             key={index}
                                             href={link.url || '#'}
-                                            className={`px-3 py-1 rounded-lg text-sm ${link.active
-                                                    ? 'bg-blue-600 text-white'
-                                                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                                                }`}
+                                            className={`rounded-lg px-3 py-1 text-sm ${
+                                                link.active ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+                                            }`}
                                             preserveState
                                         >
                                             {link.label}

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
-import { Plus, Edit, ToggleLeft, ToggleRight, TrendingUp, TrendingDown } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { Edit, Plus, ToggleLeft, ToggleRight, TrendingDown, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface Category {
     id: number;
@@ -22,32 +22,31 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [formData, setFormData] = useState({
         name: '',
-        is_active: true
+        is_active: true,
     });
 
     const handleSubmit = () => {
-        const route = modalType === 'income'
-            ? '/hospital-account/income-categories'
-            : '/hospital-account/categories';
+        const route = modalType === 'income' ? '/hospital-account/income-categories' : '/hospital-account/categories';
 
         if (editingCategory) {
-            const updateRoute = modalType === 'income'
-                ? `/hospital-account/income-categories/${editingCategory.id}`
-                : `/hospital-account/categories/${editingCategory.id}`;
+            const updateRoute =
+                modalType === 'income'
+                    ? `/hospital-account/income-categories/${editingCategory.id}`
+                    : `/hospital-account/categories/${editingCategory.id}`;
 
             router.put(updateRoute, formData, {
                 onSuccess: () => {
                     setShowModal(false);
                     setEditingCategory(null);
                     setFormData({ name: '', is_active: true });
-                }
+                },
             });
         } else {
             router.post(route, formData, {
                 onSuccess: () => {
                     setShowModal(false);
                     setFormData({ name: '', is_active: true });
-                }
+                },
             });
         }
     };
@@ -60,13 +59,11 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
     };
 
     const toggleStatus = (category: Category, type: 'expense' | 'income') => {
-        const route = type === 'income'
-            ? `/hospital-account/income-categories/${category.id}`
-            : `/hospital-account/categories/${category.id}`;
+        const route = type === 'income' ? `/hospital-account/income-categories/${category.id}` : `/hospital-account/categories/${category.id}`;
 
         router.put(route, {
             name: category.name,
-            is_active: !category.is_active
+            is_active: !category.is_active,
         });
     };
 
@@ -81,9 +78,9 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
         <HospitalAccountLayout title="Categories">
             {/* Income Categories Section */}
             <div className="mb-10">
-                <div className="flex justify-between items-center mb-6">
+                <div className="mb-6 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <TrendingUp className="w-6 h-6 text-green-600" />
+                        <TrendingUp className="h-6 w-6 text-green-600" />
                         <div>
                             <h2 className="text-xl font-semibold text-gray-900">Income Categories</h2>
                             <p className="text-gray-600">Manage your income categories</p>
@@ -91,44 +88,35 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
                     </div>
                     <button
                         onClick={() => openAddModal('income')}
-                        className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                        className="flex items-center rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
                     >
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="mr-2 h-4 w-4" />
                         Add Income Category
                     </button>
                 </div>
 
                 {/* Income Categories Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {incomeCategories.map((category) => (
-                        <div key={category.id} className="bg-white rounded-lg shadow-sm border border-green-100 p-6">
-                            <div className="flex justify-between items-start mb-4">
+                        <div key={category.id} className="rounded-lg border border-green-100 bg-white p-6 shadow-sm">
+                            <div className="mb-4 flex items-start justify-between">
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900">{category.name}</h3>
-                                    <p className="text-sm text-gray-600">
-                                        {category.transactions_count} transactions
-                                    </p>
+                                    <p className="text-sm text-gray-600">{category.transactions_count} transactions</p>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <button
-                                        onClick={() => handleEdit(category, 'income')}
-                                        className="p-1 text-gray-400 hover:text-green-600"
-                                    >
-                                        <Edit className="w-4 h-4" />
+                                    <button onClick={() => handleEdit(category, 'income')} className="p-1 text-gray-400 hover:text-green-600">
+                                        <Edit className="h-4 w-4" />
                                     </button>
                                     <button
                                         onClick={() => toggleStatus(category, 'income')}
                                         className={`p-1 ${category.is_active ? 'text-green-600' : 'text-gray-400'}`}
                                     >
-                                        {category.is_active ? (
-                                            <ToggleRight className="w-6 h-6" />
-                                        ) : (
-                                            <ToggleLeft className="w-6 h-6" />
-                                        )}
+                                        {category.is_active ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}
                                     </button>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between pt-4 border-t border-green-100">
+                            <div className="flex items-center justify-between border-t border-green-100 pt-4">
                                 <span className={`text-sm font-medium ${category.is_active ? 'text-green-600' : 'text-gray-400'}`}>
                                     {category.is_active ? 'Active' : 'Inactive'}
                                 </span>
@@ -140,9 +128,9 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
 
             {/* Expense Categories Section */}
             <div>
-                <div className="flex justify-between items-center mb-6">
+                <div className="mb-6 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <TrendingDown className="w-6 h-6 text-red-600" />
+                        <TrendingDown className="h-6 w-6 text-red-600" />
                         <div>
                             <h2 className="text-xl font-semibold text-gray-900">Expense Categories</h2>
                             <p className="text-gray-600">Manage your expense categories</p>
@@ -150,44 +138,35 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
                     </div>
                     <button
                         onClick={() => openAddModal('expense')}
-                        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        className="flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
                     >
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="mr-2 h-4 w-4" />
                         Add Expense Category
                     </button>
                 </div>
 
                 {/* Expense Categories Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {expenseCategories.map((category) => (
-                        <div key={category.id} className="bg-white rounded-lg shadow-sm border border-blue-100 p-6">
-                            <div className="flex justify-between items-start mb-4">
+                        <div key={category.id} className="rounded-lg border border-blue-100 bg-white p-6 shadow-sm">
+                            <div className="mb-4 flex items-start justify-between">
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900">{category.name}</h3>
-                                    <p className="text-sm text-gray-600">
-                                        {category.transactions_count} transactions
-                                    </p>
+                                    <p className="text-sm text-gray-600">{category.transactions_count} transactions</p>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <button
-                                        onClick={() => handleEdit(category, 'expense')}
-                                        className="p-1 text-gray-400 hover:text-blue-600"
-                                    >
-                                        <Edit className="w-4 h-4" />
+                                    <button onClick={() => handleEdit(category, 'expense')} className="p-1 text-gray-400 hover:text-blue-600">
+                                        <Edit className="h-4 w-4" />
                                     </button>
                                     <button
                                         onClick={() => toggleStatus(category, 'expense')}
                                         className={`p-1 ${category.is_active ? 'text-green-600' : 'text-gray-400'}`}
                                     >
-                                        {category.is_active ? (
-                                            <ToggleRight className="w-6 h-6" />
-                                        ) : (
-                                            <ToggleLeft className="w-6 h-6" />
-                                        )}
+                                        {category.is_active ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}
                                     </button>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between pt-4 border-t border-blue-100">
+                            <div className="flex items-center justify-between border-t border-blue-100 pt-4">
                                 <span className={`text-sm font-medium ${category.is_active ? 'text-green-600' : 'text-gray-400'}`}>
                                     {category.is_active ? 'Active' : 'Inactive'}
                                 </span>
@@ -199,19 +178,21 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
 
             {/* Modal */}
             {showModal && (
-                <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
-                    <div className="bg-white rounded-lg p-6 w-96">
-                        <h3 className="text-lg font-semibold mb-4">
-                            {editingCategory ? `Edit ${modalType === 'income' ? 'Income' : 'Expense'} Category` : `Add New ${modalType === 'income' ? 'Income' : 'Expense'} Category`}
+                <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
+                    <div className="w-96 rounded-lg bg-white p-6">
+                        <h3 className="mb-4 text-lg font-semibold">
+                            {editingCategory
+                                ? `Edit ${modalType === 'income' ? 'Income' : 'Expense'} Category`
+                                : `Add New ${modalType === 'income' ? 'Income' : 'Expense'} Category`}
                         </h3>
 
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Category Name</label>
+                            <label className="mb-2 block text-sm font-medium">Category Name</label>
                             <input
                                 type="text"
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className="w-full border rounded-lg px-3 py-2"
+                                className="w-full rounded-lg border px-3 py-2"
                                 placeholder="Enter category name"
                             />
                         </div>
@@ -232,7 +213,7 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
                             <button
                                 onClick={handleSubmit}
                                 disabled={!formData.name.trim()}
-                                className={`flex-1 ${modalType === 'income' ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'} text-white py-2 rounded-lg disabled:bg-gray-300`}
+                                className={`flex-1 ${modalType === 'income' ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'} rounded-lg py-2 text-white disabled:bg-gray-300`}
                             >
                                 {editingCategory ? 'Update' : 'Create'}
                             </button>
@@ -242,7 +223,7 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
                                     setEditingCategory(null);
                                     setFormData({ name: '', is_active: true });
                                 }}
-                                className="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400"
+                                className="flex-1 rounded-lg bg-gray-300 py-2 text-gray-700 hover:bg-gray-400"
                             >
                                 Cancel
                             </button>

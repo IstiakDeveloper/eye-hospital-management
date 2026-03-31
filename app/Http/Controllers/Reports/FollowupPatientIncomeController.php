@@ -28,9 +28,20 @@ class FollowupPatientIncomeController extends Controller
         }
 
         // Get followup patient visits with doctor info
-        $query = PatientVisit::with(['patient', 'selectedDoctor.user'])
+        $query = PatientVisit::with([
+            'patient',
+            'selectedDoctor.user',
+            'payments' => function ($paymentQuery) use ($fromDate, $toDate) {
+                $paymentQuery->where('amount', '>', 0)
+                    ->whereBetween('payment_date', [$fromDate, $toDate])
+                    ->orderBy('created_at', 'asc');
+            },
+        ])
             ->where('is_followup', true)
-            ->whereBetween('created_at', [$fromDate.' 00:00:00', $toDate.' 23:59:59']);
+            ->whereHas('payments', function ($paymentQuery) use ($fromDate, $toDate) {
+                $paymentQuery->where('amount', '>', 0)
+                    ->whereBetween('payment_date', [$fromDate, $toDate]);
+            });
 
         // Apply search filter
         if ($search) {
@@ -46,23 +57,26 @@ class FollowupPatientIncomeController extends Controller
             });
         }
 
-        // Order by date
+        // Order by transaction date (payment_date) then created_at
         $visits = $query->orderBy('created_at', 'asc')->get();
 
         // Format report data
         $reportData = $visits->map(function ($visit, $index) {
+            $firstPaymentInRange = $visit->payments->first();
+            $paidInRange = (float) $visit->payments->sum('amount');
+
             return [
                 'id' => $visit->id,
                 'sl' => $index + 1,
-                'visit_date' => $visit->created_at->format('d/m/Y'),
-                'visit_time' => $visit->created_at->format('h:i A'),
+                'visit_date' => ($firstPaymentInRange?->payment_date ?? $visit->created_at)->format('d/m/Y'),
+                'visit_time' => ($firstPaymentInRange?->created_at ?? $visit->created_at)->format('h:i A'),
                 'patient_name' => $visit->patient->name ?? 'N/A',
                 'patient_id' => $visit->patient->patient_id ?? 'N/A',
                 'patient_phone' => $visit->patient->phone ?? 'N/A',
                 'doctor_name' => $visit->selectedDoctor->user->name ?? 'N/A',
                 'followup_fee' => (float) $visit->doctor_fee,
                 'discount_amount' => (float) $visit->discount_amount,
-                'total_paid' => (float) $visit->total_paid,
+                'total_paid' => $paidInRange,
                 'total_due' => (float) $visit->total_due,
                 'final_amount' => (float) $visit->final_amount,
             ];
@@ -74,7 +88,7 @@ class FollowupPatientIncomeController extends Controller
             'total_followup_fee' => $visits->sum('doctor_fee'),
             'total_discount' => $visits->sum('discount_amount'),
             'total_final_amount' => $visits->sum('final_amount'),
-            'total_paid' => $visits->sum('total_paid'),
+            'total_paid' => $visits->sum(fn ($v) => $v->payments->sum('amount')),
             'total_due' => $visits->sum('total_due'),
         ];
 

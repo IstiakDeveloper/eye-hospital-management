@@ -1,14 +1,7 @@
-import React, { useState } from 'react';
-import { router } from '@inertiajs/react';
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
-import {
-    CreditCard,
-    TrendingUp,
-    TrendingDown,
-    BarChart3,
-    PlusCircle,
-    MinusCircle
-} from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { BarChart3, CreditCard, MinusCircle, PlusCircle, TrendingDown, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface DashboardProps {
     balance: number;
@@ -35,8 +28,8 @@ interface DashboardProps {
         description: string;
         date: string;
     }>;
-    expenseCategories: Array<{ id: number, name: string }>;
-    incomeCategories: Array<{ id: number, name: string }>;
+    expenseCategories: Array<{ id: number; name: string }>;
+    incomeCategories: Array<{ id: number; name: string }>;
     investorNames: string[];
 }
 
@@ -47,7 +40,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     recentFundTransactions,
     expenseCategories,
     incomeCategories,
-    investorNames
+    investorNames,
 }) => {
     const [fundInModal, setFundInModal] = useState(false);
     const [fundOutModal, setFundOutModal] = useState(false);
@@ -63,14 +56,14 @@ const Dashboard: React.FC<DashboardProps> = ({
         category: '',
         expense_category_id: '',
         income_category_id: '',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
     });
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short',
-            year: 'numeric'
+            year: 'numeric',
         });
     };
 
@@ -79,8 +72,10 @@ const Dashboard: React.FC<DashboardProps> = ({
             style: 'currency',
             currency: 'BDT',
             minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(amount).replace('BDT', '৳');
+            maximumFractionDigits: 2,
+        })
+            .format(amount)
+            .replace('BDT', '৳');
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -88,25 +83,25 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         // If expense category is selected, also set the category name
         if (name === 'expense_category_id') {
-            const selectedCategory = expenseCategories.find(cat => cat.id.toString() === value);
+            const selectedCategory = expenseCategories.find((cat) => cat.id.toString() === value);
             setFormData({
                 ...formData,
                 expense_category_id: value,
-                category: selectedCategory?.name || ''
+                category: selectedCategory?.name || '',
             });
         }
         // If income category is selected, also set the category name
         else if (name === 'income_category_id') {
-            const selectedCategory = incomeCategories.find(cat => cat.id.toString() === value);
+            const selectedCategory = incomeCategories.find((cat) => cat.id.toString() === value);
             setFormData({
                 ...formData,
                 income_category_id: value,
-                category: selectedCategory?.name || ''
+                category: selectedCategory?.name || '',
             });
         } else {
             setFormData({
                 ...formData,
-                [name]: value
+                [name]: value,
             });
         }
     };
@@ -120,42 +115,50 @@ const Dashboard: React.FC<DashboardProps> = ({
             category: '',
             expense_category_id: '',
             income_category_id: '',
-            date: new Date().toISOString().split('T')[0]
+            date: new Date().toISOString().split('T')[0],
         });
     };
 
     const handleFundIn = () => {
         const investorName = formData.investor_name || formData.purpose;
         setLoading(true);
-        router.post('/hospital-account/fund-in', {
-            amount: formData.amount,
-            purpose: investorName,
-            description: formData.description,
-            date: formData.date
-        }, {
-            onSuccess: () => {
-                setFundInModal(false);
-                resetForm();
+        router.post(
+            '/hospital-account/fund-in',
+            {
+                amount: formData.amount,
+                purpose: investorName,
+                description: formData.description,
+                date: formData.date,
             },
-            onFinish: () => setLoading(false)
-        });
+            {
+                onSuccess: () => {
+                    setFundInModal(false);
+                    resetForm();
+                },
+                onFinish: () => setLoading(false),
+            },
+        );
     };
 
     const handleFundOut = () => {
         const investorName = formData.investor_name || formData.purpose;
         setLoading(true);
-        router.post('/hospital-account/fund-out', {
-            amount: formData.amount,
-            purpose: investorName,
-            description: formData.description,
-            date: formData.date
-        }, {
-            onSuccess: () => {
-                setFundOutModal(false);
-                resetForm();
+        router.post(
+            '/hospital-account/fund-out',
+            {
+                amount: formData.amount,
+                purpose: investorName,
+                description: formData.description,
+                date: formData.date,
             },
-            onFinish: () => setLoading(false)
-        });
+            {
+                onSuccess: () => {
+                    setFundOutModal(false);
+                    resetForm();
+                },
+                onFinish: () => setLoading(false),
+            },
+        );
     };
 
     const handleExpense = () => {
@@ -165,7 +168,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             category: formData.category,
             expense_category_id: formData.expense_category_id || null,
             description: formData.description,
-            date: formData.date
+            date: formData.date,
         };
 
         setLoading(true);
@@ -174,7 +177,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 setExpenseModal(false);
                 resetForm();
             },
-            onFinish: () => setLoading(false)
+            onFinish: () => setLoading(false),
         });
     };
 
@@ -183,7 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             amount: formData.amount,
             category: formData.category,
             description: formData.description,
-            date: formData.date
+            date: formData.date,
         };
 
         setLoading(true);
@@ -192,45 +195,45 @@ const Dashboard: React.FC<DashboardProps> = ({
                 setOtherIncomeModal(false);
                 resetForm();
             },
-            onFinish: () => setLoading(false)
+            onFinish: () => setLoading(false),
         });
     };
 
     return (
         <HospitalAccountLayout title="Dashboard">
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
+                <div className="rounded-lg border bg-white p-6 shadow-sm">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-600">Current Balance</p>
                             <p className="text-2xl font-bold text-gray-900">{formatAmount(balance)}</p>
                         </div>
-                        <CreditCard className="w-8 h-8 text-blue-600" />
+                        <CreditCard className="h-8 w-8 text-blue-600" />
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
+                <div className="rounded-lg border bg-white p-6 shadow-sm">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-600">Monthly Income</p>
                             <p className="text-2xl font-bold text-green-600">{formatAmount(monthlyReport.income)}</p>
                         </div>
-                        <TrendingUp className="w-8 h-8 text-green-600" />
+                        <TrendingUp className="h-8 w-8 text-green-600" />
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
+                <div className="rounded-lg border bg-white p-6 shadow-sm">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-600">Monthly Expense</p>
                             <p className="text-2xl font-bold text-red-600">{formatAmount(monthlyReport.expense)}</p>
                         </div>
-                        <TrendingDown className="w-8 h-8 text-red-600" />
+                        <TrendingDown className="h-8 w-8 text-red-600" />
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
+                <div className="rounded-lg border bg-white p-6 shadow-sm">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-gray-600">Monthly Profit</p>
@@ -238,59 +241,60 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 {formatAmount(monthlyReport.profit)}
                             </p>
                         </div>
-                        <BarChart3 className="w-8 h-8 text-blue-600" />
+                        <BarChart3 className="h-8 w-8 text-blue-600" />
                     </div>
                 </div>
             </div>
 
             {/* Quick Actions */}
-            <div className="flex gap-4 mb-8">
+            <div className="mb-8 flex gap-4">
                 <button
                     onClick={() => setFundInModal(true)}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className="flex items-center rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
                 >
-                    <PlusCircle className="w-4 h-4 mr-2" />
+                    <PlusCircle className="mr-2 h-4 w-4" />
                     Fund In
                 </button>
                 <button
                     onClick={() => setFundOutModal(true)}
-                    className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    className="flex items-center rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
                 >
-                    <MinusCircle className="w-4 h-4 mr-2" />
+                    <MinusCircle className="mr-2 h-4 w-4" />
                     Fund Out
                 </button>
                 <button
                     onClick={() => setExpenseModal(true)}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
                 >
-                    <TrendingDown className="w-4 h-4 mr-2" />
+                    <TrendingDown className="mr-2 h-4 w-4" />
                     Add Expense
                 </button>
                 <button
                     onClick={() => setOtherIncomeModal(true)}
-                    className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                    className="flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
                 >
-                    <PlusCircle className="w-4 h-4 mr-2" />
+                    <PlusCircle className="mr-2 h-4 w-4" />
                     Other Income
                 </button>
             </div>
 
             {/* Recent Transactions */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-white rounded-lg shadow-sm border">
-                    <div className="p-6 border-b">
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                <div className="rounded-lg border bg-white shadow-sm">
+                    <div className="border-b p-6">
                         <h3 className="text-lg font-semibold">Recent Transactions</h3>
                     </div>
                     <div className="p-6">
                         {recentTransactions.map((transaction) => (
-                            <div key={transaction.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                            <div key={transaction.id} className="flex items-center justify-between border-b py-2 last:border-b-0">
                                 <div>
                                     <p className="font-medium">{transaction.category}</p>
-                                    <p className="text-sm text-gray-600 truncate max-w-xs">{transaction.description}</p>
+                                    <p className="max-w-xs truncate text-sm text-gray-600">{transaction.description}</p>
                                 </div>
                                 <div className="text-right">
                                     <p className={`font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                                        {transaction.type === 'income' ? '+' : '-'}{formatAmount(transaction.amount)}
+                                        {transaction.type === 'income' ? '+' : '-'}
+                                        {formatAmount(transaction.amount)}
                                     </p>
                                     <p className="text-sm text-gray-600">{formatDate(transaction.transaction_date)}</p>
                                 </div>
@@ -299,20 +303,21 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm border">
-                    <div className="p-6 border-b">
+                <div className="rounded-lg border bg-white shadow-sm">
+                    <div className="border-b p-6">
                         <h3 className="text-lg font-semibold">Recent Fund Transactions</h3>
                     </div>
                     <div className="p-6">
                         {recentFundTransactions.map((fund) => (
-                            <div key={fund.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                            <div key={fund.id} className="flex items-center justify-between border-b py-2 last:border-b-0">
                                 <div>
                                     <p className="font-medium">{fund.purpose}</p>
-                                    <p className="text-sm text-gray-600 truncate max-w-xs">{fund.description}</p>
+                                    <p className="max-w-xs truncate text-sm text-gray-600">{fund.description}</p>
                                 </div>
                                 <div className="text-right">
                                     <p className={`font-medium ${fund.type === 'fund_in' ? 'text-green-600' : 'text-red-600'}`}>
-                                        {fund.type === 'fund_in' ? '+' : '-'}{formatAmount(fund.amount)}
+                                        {fund.type === 'fund_in' ? '+' : '-'}
+                                        {formatAmount(fund.amount)}
                                     </p>
                                     <p className="text-sm text-gray-600">{formatDate(fund.date)}</p>
                                 </div>
@@ -324,28 +329,28 @@ const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Fund In Modal */}
             {fundInModal && (
-                <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
-                    <div className="bg-white rounded-lg p-6 w-96 max-w-lg mx-4">
-                        <h3 className="text-lg font-semibold mb-4">Add Fund</h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
+                    <div className="mx-4 w-96 max-w-lg rounded-lg bg-white p-6">
+                        <h3 className="mb-4 text-lg font-semibold">Add Fund</h3>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Amount *</label>
+                            <label className="mb-2 block text-sm font-medium">Amount *</label>
                             <input
                                 type="number"
                                 name="amount"
                                 value={formData.amount}
                                 onChange={handleInputChange}
                                 placeholder="Enter amount"
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 required
                             />
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Investor Name *</label>
+                            <label className="mb-2 block text-sm font-medium">Investor Name *</label>
                             <select
                                 name="investor_name"
                                 value={formData.investor_name}
                                 onChange={handleInputChange}
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 required
                             >
                                 <option value="">Select Investor</option>
@@ -363,30 +368,30 @@ const Dashboard: React.FC<DashboardProps> = ({
                                         value={formData.purpose}
                                         onChange={handleInputChange}
                                         placeholder="Or type new investor name"
-                                        className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
                             )}
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Date *</label>
+                            <label className="mb-2 block text-sm font-medium">Date *</label>
                             <input
                                 type="date"
                                 name="date"
                                 value={formData.date}
                                 onChange={handleInputChange}
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 required
                             />
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Description *</label>
+                            <label className="mb-2 block text-sm font-medium">Description *</label>
                             <textarea
                                 name="description"
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 placeholder="Enter description"
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 rows={3}
                                 required
                             />
@@ -395,14 +400,14 @@ const Dashboard: React.FC<DashboardProps> = ({
                             <button
                                 onClick={handleFundIn}
                                 disabled={!formData.amount || (!formData.investor_name && !formData.purpose) || !formData.description || loading}
-                                className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                className="flex-1 rounded-lg bg-green-600 py-2 text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                             >
                                 {loading ? 'Adding...' : 'Add Fund'}
                             </button>
                             <button
                                 onClick={() => setFundInModal(false)}
                                 disabled={loading}
-                                className="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600 disabled:opacity-50"
+                                className="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600 disabled:opacity-50"
                             >
                                 Cancel
                             </button>
@@ -413,11 +418,11 @@ const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Fund Out Modal */}
             {fundOutModal && (
-                <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
-                    <div className="bg-white rounded-lg p-6 w-96 max-w-lg mx-4">
-                        <h3 className="text-lg font-semibold mb-4">Withdraw Fund</h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
+                    <div className="mx-4 w-96 max-w-lg rounded-lg bg-white p-6">
+                        <h3 className="mb-4 text-lg font-semibold">Withdraw Fund</h3>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Amount *</label>
+                            <label className="mb-2 block text-sm font-medium">Amount *</label>
                             <input
                                 type="number"
                                 name="amount"
@@ -425,18 +430,18 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 onChange={handleInputChange}
                                 max={balance}
                                 placeholder="Enter amount"
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-500"
                                 required
                             />
-                            <p className="text-xs text-gray-500 mt-1">Available balance: {formatAmount(balance)}</p>
+                            <p className="mt-1 text-xs text-gray-500">Available balance: {formatAmount(balance)}</p>
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Investor Name *</label>
+                            <label className="mb-2 block text-sm font-medium">Investor Name *</label>
                             <select
                                 name="investor_name"
                                 value={formData.investor_name}
                                 onChange={handleInputChange}
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-500"
                                 required
                             >
                                 <option value="">Select Investor</option>
@@ -454,30 +459,30 @@ const Dashboard: React.FC<DashboardProps> = ({
                                         value={formData.purpose}
                                         onChange={handleInputChange}
                                         placeholder="Or type new investor name"
-                                        className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                        className="w-full rounded-lg border px-3 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-500"
                                     />
                                 </div>
                             )}
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Date *</label>
+                            <label className="mb-2 block text-sm font-medium">Date *</label>
                             <input
                                 type="date"
                                 name="date"
                                 value={formData.date}
                                 onChange={handleInputChange}
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-500"
                                 required
                             />
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Description *</label>
+                            <label className="mb-2 block text-sm font-medium">Description *</label>
                             <textarea
                                 name="description"
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 placeholder="Enter description"
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-500"
                                 rows={3}
                                 required
                             />
@@ -485,15 +490,21 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <div className="flex gap-2">
                             <button
                                 onClick={handleFundOut}
-                                disabled={!formData.amount || (!formData.investor_name && !formData.purpose) || !formData.description || parseFloat(formData.amount) > balance || loading}
-                                className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                disabled={
+                                    !formData.amount ||
+                                    (!formData.investor_name && !formData.purpose) ||
+                                    !formData.description ||
+                                    parseFloat(formData.amount) > balance ||
+                                    loading
+                                }
+                                className="flex-1 rounded-lg bg-red-600 py-2 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                             >
                                 {loading ? 'Processing...' : 'Withdraw'}
                             </button>
                             <button
                                 onClick={() => setFundOutModal(false)}
                                 disabled={loading}
-                                className="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600 disabled:opacity-50"
+                                className="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600 disabled:opacity-50"
                             >
                                 Cancel
                             </button>
@@ -504,11 +515,11 @@ const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Expense Modal */}
             {expenseModal && (
-                <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
-                    <div className="bg-white rounded-lg p-6 w-96 max-w-lg mx-4">
-                        <h3 className="text-lg font-semibold mb-4">Add Expense</h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
+                    <div className="mx-4 w-96 max-w-lg rounded-lg bg-white p-6">
+                        <h3 className="mb-4 text-lg font-semibold">Add Expense</h3>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Amount *</label>
+                            <label className="mb-2 block text-sm font-medium">Amount *</label>
                             <input
                                 type="number"
                                 name="amount"
@@ -516,18 +527,18 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 onChange={handleInputChange}
                                 max={balance}
                                 placeholder="Enter amount"
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 required
                             />
-                            <p className="text-xs text-gray-500 mt-1">Available balance: {formatAmount(balance)}</p>
+                            <p className="mt-1 text-xs text-gray-500">Available balance: {formatAmount(balance)}</p>
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Category *</label>
+                            <label className="mb-2 block text-sm font-medium">Category *</label>
                             <select
                                 name="expense_category_id"
                                 value={formData.expense_category_id}
                                 onChange={handleInputChange}
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 required
                             >
                                 <option value="">Select Category</option>
@@ -539,24 +550,24 @@ const Dashboard: React.FC<DashboardProps> = ({
                             </select>
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Date *</label>
+                            <label className="mb-2 block text-sm font-medium">Date *</label>
                             <input
                                 type="date"
                                 name="date"
                                 value={formData.date}
                                 onChange={handleInputChange}
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 required
                             />
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Description *</label>
+                            <label className="mb-2 block text-sm font-medium">Description *</label>
                             <textarea
                                 name="description"
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 placeholder="Enter description"
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                                 rows={3}
                                 required
                             />
@@ -564,15 +575,21 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <div className="flex gap-2">
                             <button
                                 onClick={handleExpense}
-                                disabled={!formData.amount || !formData.expense_category_id || !formData.description || parseFloat(formData.amount) > balance || loading}
-                                className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                disabled={
+                                    !formData.amount ||
+                                    !formData.expense_category_id ||
+                                    !formData.description ||
+                                    parseFloat(formData.amount) > balance ||
+                                    loading
+                                }
+                                className="flex-1 rounded-lg bg-blue-600 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                             >
                                 {loading ? 'Adding...' : 'Add Expense'}
                             </button>
                             <button
                                 onClick={() => setExpenseModal(false)}
                                 disabled={loading}
-                                className="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600 disabled:opacity-50"
+                                className="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600 disabled:opacity-50"
                             >
                                 Cancel
                             </button>
@@ -582,32 +599,32 @@ const Dashboard: React.FC<DashboardProps> = ({
             )}
 
             {otherIncomeModal && (
-                <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
-                    <div className="bg-white rounded-lg p-6 w-96 max-w-lg mx-4">
-                        <h3 className="text-lg font-semibold mb-4">Add Other Income</h3>
+                <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
+                    <div className="mx-4 w-96 max-w-lg rounded-lg bg-white p-6">
+                        <h3 className="mb-4 text-lg font-semibold">Add Other Income</h3>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Amount *</label>
+                            <label className="mb-2 block text-sm font-medium">Amount *</label>
                             <input
                                 type="number"
                                 name="amount"
                                 value={formData.amount}
                                 onChange={handleInputChange}
                                 placeholder="Enter amount"
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                                 required
                             />
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Income Category *</label>
+                            <label className="mb-2 block text-sm font-medium">Income Category *</label>
                             <select
                                 name="income_category_id"
                                 value={formData.income_category_id}
                                 onChange={handleInputChange}
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                                 required
                             >
                                 <option value="">Select Income Category</option>
-                                {incomeCategories.map(category => (
+                                {incomeCategories.map((category) => (
                                     <option key={category.id} value={category.id}>
                                         {category.name}
                                     </option>
@@ -615,24 +632,24 @@ const Dashboard: React.FC<DashboardProps> = ({
                             </select>
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Date *</label>
+                            <label className="mb-2 block text-sm font-medium">Date *</label>
                             <input
                                 type="date"
                                 name="date"
                                 value={formData.date}
                                 onChange={handleInputChange}
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                                 required
                             />
                         </div>
                         <div className="mb-4">
-                            <label className="block text-sm font-medium mb-2">Description *</label>
+                            <label className="mb-2 block text-sm font-medium">Description *</label>
                             <textarea
                                 name="description"
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 placeholder="Enter description"
-                                className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full rounded-lg border px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
                                 rows={3}
                                 required
                             />
@@ -642,14 +659,14 @@ const Dashboard: React.FC<DashboardProps> = ({
                             <button
                                 onClick={handleOtherIncome}
                                 disabled={!formData.amount || !formData.income_category_id || !formData.description || loading}
-                                className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                className="flex-1 rounded-lg bg-indigo-600 py-2 text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                             >
                                 {loading ? 'Adding...' : 'Add Income'}
                             </button>
                             <button
                                 onClick={() => setOtherIncomeModal(false)}
                                 disabled={loading}
-                                className="flex-1 bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600 disabled:opacity-50"
+                                className="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600 disabled:opacity-50"
                             >
                                 Cancel
                             </button>

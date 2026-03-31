@@ -57,7 +57,7 @@ class PatientVisit extends Model
         parent::boot();
 
         static::creating(function ($visit) {
-            if (!$visit->visit_id) {
+            if (! $visit->visit_id) {
                 $visit->visit_id = static::generateVisitId();
             }
 
@@ -85,7 +85,7 @@ class PatientVisit extends Model
 
         $sequence = $lastVisit ? (intval(substr($lastVisit->visit_id, -4)) + 1) : 1;
 
-        return $prefix . $date . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        return $prefix.$date.str_pad($sequence, 4, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -105,8 +105,9 @@ class PatientVisit extends Model
      */
     private function calculateDiscount()
     {
-        if (!$this->discount_value || $this->discount_value <= 0) {
+        if (! $this->discount_value || $this->discount_value <= 0) {
             $this->discount_amount = 0;
+
             return;
         }
 
@@ -122,12 +123,12 @@ class PatientVisit extends Model
      */
     private function getDoctorFee()
     {
-        if (!$this->selected_doctor_id) {
+        if (! $this->selected_doctor_id) {
             return 0;
         }
 
         $doctor = Doctor::find($this->selected_doctor_id);
-        if (!$doctor) {
+        if (! $doctor) {
             return 0;
         }
 
@@ -174,6 +175,33 @@ class PatientVisit extends Model
         return $this->hasMany(Appointment::class, 'visit_id');
     }
 
+    public function ensureAppointmentForSelectedDoctor(int $createdByUserId): ?Appointment
+    {
+        if (! $this->selected_doctor_id) {
+            return null;
+        }
+
+        $existing = Appointment::query()
+            ->where('visit_id', $this->id)
+            ->where('doctor_id', $this->selected_doctor_id)
+            ->whereDate('appointment_date', today())
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return Appointment::create([
+            'patient_id' => $this->patient_id,
+            'doctor_id' => $this->selected_doctor_id,
+            'visit_id' => $this->id,
+            'appointment_date' => today(),
+            'appointment_time' => now()->format('H:i'),
+            'status' => 'pending',
+            'created_by' => $createdByUserId,
+        ]);
+    }
+
     // ============================================
     // STATUS METHODS
     // ============================================
@@ -202,6 +230,22 @@ class PatientVisit extends Model
         ]);
     }
 
+    public function skipVisionTest(?int $skippedByUserId = null): void
+    {
+        $notes = $this->visit_notes ? trim($this->visit_notes) : '';
+        $append = 'Vision test skipped by doctor.';
+        if ($skippedByUserId) {
+            $append .= " (user_id: {$skippedByUserId})";
+        }
+
+        $this->update([
+            'vision_test_status' => 'skipped',
+            'overall_status' => 'prescription',
+            'vision_test_completed_at' => now(),
+            'visit_notes' => $notes ? ($notes."\n".$append) : $append,
+        ]);
+    }
+
     /**
      * Mark prescription as completed
      */
@@ -224,7 +268,6 @@ class PatientVisit extends Model
             $this->overall_status === 'vision_test';
     }
 
-
     // ============================================
     // SCOPES
     // ============================================
@@ -238,7 +281,7 @@ class PatientVisit extends Model
 
     public function scopeReadyForPrescription($query)
     {
-        return $query->where('vision_test_status', 'completed')
+        return $query->whereIn('vision_test_status', ['completed', 'skipped'])
             ->where('prescription_status', 'pending')
             ->where('overall_status', 'prescription');
     }
@@ -280,10 +323,6 @@ class PatientVisit extends Model
             $this->updateQuietly(['payment_status' => 'pending']);
         }
     }
-
-
-
-
 
     public function getFormattedVisitDateAttribute()
     {

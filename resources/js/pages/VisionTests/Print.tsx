@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
 import { Head } from '@inertiajs/react';
+import { useEffect } from 'react';
 
 interface VisionTest {
     id: string | number;
@@ -72,7 +72,6 @@ interface Props {
 }
 
 export default function VisionTestPrint({ visionTest, qrCodeBase64, isBlankReport = false, hospitalInfo }: Props) {
-
     useEffect(() => {
         // Auto print when page loads
         window.print();
@@ -98,16 +97,19 @@ export default function VisionTestPrint({ visionTest, qrCodeBase64, isBlankRepor
         return new Date(dateString).toLocaleTimeString('en-GB', {
             hour: '2-digit',
             minute: '2-digit',
-            hour12: true
+            hour12: true,
         });
     };
 
     const getGenderInBangla = (gender: string) => {
         switch (gender) {
-            case 'male': return 'পুরুষ';
-            case 'female': return 'মহিলা';
-            default: return gender;
-        };
+            case 'male':
+                return 'পুরুষ';
+            case 'female':
+                return 'মহিলা';
+            default:
+                return gender;
+        }
     };
 
     return (
@@ -472,34 +474,29 @@ export default function VisionTestPrint({ visionTest, qrCodeBase64, isBlankRepor
                 <div className="title-section">
                     <div className="title-left">
                         <div>{isBlankReport ? '__/__/____' : formatDate(visionTest.test_date)}</div>
-                        <div style={{ fontSize: '8px', color: '#666' }}>
-                            {isBlankReport ? '__:__ __' : formatTime(visionTest.test_date)}
-                        </div>
+                        <div style={{ fontSize: '8px', color: '#666' }}>{isBlankReport ? '__:__ __' : formatTime(visionTest.test_date)}</div>
                     </div>
 
-                    <div className="title-center">
-                        Particulars of Patient
-                    </div>
+                    <div className="title-center">Particulars of Patient</div>
 
                     <div className="title-right">
                         {qrCodeBase64 ? (
-                            <img
-                                src={`data:image/png;base64,${qrCodeBase64}`}
-                                className="qr-code"
-                                alt="Patient QR Code"
-                            />
+                            <img src={`data:image/png;base64,${qrCodeBase64}`} className="qr-code" alt="Patient QR Code" />
                         ) : (
-                            <div className="qr-code" style={{
-                                border: '2px solid #000',
-                                background: '#fff',
-                                fontSize: '4px',
-                                padding: '2mm',
-                                textAlign: 'center',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexDirection: 'column'
-                            }}>
+                            <div
+                                className="qr-code"
+                                style={{
+                                    border: '2px solid #000',
+                                    background: '#fff',
+                                    fontSize: '4px',
+                                    padding: '2mm',
+                                    textAlign: 'center',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexDirection: 'column',
+                                }}
+                            >
                                 <div style={{ fontWeight: 'bold' }}>NO QR</div>
                                 <div style={{ fontSize: '2px' }}>{visionTest.patient.patient_id}</div>
                             </div>
@@ -512,9 +509,7 @@ export default function VisionTestPrint({ visionTest, qrCodeBase64, isBlankRepor
                     <tbody>
                         <tr>
                             <td className="patient-label">Invoice:</td>
-                            <td className="patient-value">
-                                {isBlankReport ? 'DEMO-000000' : String(visionTest.id).padStart(6, '0')}
-                            </td>
+                            <td className="patient-value">{isBlankReport ? 'DEMO-000000' : String(visionTest.id).padStart(6, '0')}</td>
                             <td style={{ width: '10mm' }}></td>
                             <td className="patient-label">Patient ID:</td>
                             <td className="patient-value">{visionTest.patient.patient_id}</td>
@@ -528,18 +523,14 @@ export default function VisionTestPrint({ visionTest, qrCodeBase64, isBlankRepor
                         </tr>
                         <tr>
                             <td className="patient-label">Age:</td>
-                            <td className="patient-value">
-                                {visionTest.patient.age ? `${visionTest.patient.age} years` : ''}
-                            </td>
+                            <td className="patient-value">{visionTest.patient.age ? `${visionTest.patient.age} years` : ''}</td>
                             <td style={{ width: '10mm' }}></td>
                             <td className="patient-label">Guardian:</td>
                             <td className="patient-value"></td>
                         </tr>
                         <tr>
                             <td className="patient-label">Gender:</td>
-                            <td className="patient-value">
-                                {visionTest.patient.gender}
-                            </td>
+                            <td className="patient-value">{visionTest.patient.gender}</td>
                             <td style={{ width: '10mm' }}></td>
                             <td className="patient-label">Mobile:</td>
                             <td className="patient-value">{visionTest.patient.phone}</td>
@@ -555,9 +546,7 @@ export default function VisionTestPrint({ visionTest, qrCodeBase64, isBlankRepor
 
                 {/* Complaints */}
                 <div className="section-title">Complaints:</div>
-                <div className="section-box">
-                    {isBlankReport ? '' : visionTest.complains || ''}
-                </div>
+                <div className="section-box">{isBlankReport ? '' : visionTest.complains || ''}</div>
 
                 {/* Physical Examination Table */}
                 <table className="data-table">
@@ -706,50 +695,50 @@ export default function VisionTestPrint({ visionTest, qrCodeBase64, isBlankRepor
                     <tbody>
                         <tr>
                             <td style={{ width: '33.33%' }}>
-                                <span className={`checkbox ${(!isBlankReport && visionTest.is_one_eyed) ? 'checked' : ''}`}>
-                                    {(!isBlankReport && visionTest.is_one_eyed) ? '✔' : ''}
+                                <span className={`checkbox ${!isBlankReport && visionTest.is_one_eyed ? 'checked' : ''}`}>
+                                    {!isBlankReport && visionTest.is_one_eyed ? '✔' : ''}
                                 </span>
                                 One Eyed
                             </td>
                             <td style={{ width: '33.33%' }}>
-                                <span className={`checkbox ${(!isBlankReport && visionTest.is_cardiac) ? 'checked' : ''}`}>
-                                    {(!isBlankReport && visionTest.is_cardiac) ? '✔' : ''}
+                                <span className={`checkbox ${!isBlankReport && visionTest.is_cardiac ? 'checked' : ''}`}>
+                                    {!isBlankReport && visionTest.is_cardiac ? '✔' : ''}
                                 </span>
                                 Cardiac
                             </td>
                             <td style={{ width: '33.33%' }}>
-                                <span className={`checkbox ${(!isBlankReport && visionTest.is_hypertensive) ? 'checked' : ''}`}>
-                                    {(!isBlankReport && visionTest.is_hypertensive) ? '✔' : ''}
+                                <span className={`checkbox ${!isBlankReport && visionTest.is_hypertensive ? 'checked' : ''}`}>
+                                    {!isBlankReport && visionTest.is_hypertensive ? '✔' : ''}
                                 </span>
                                 Hypertension
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <span className={`checkbox ${(!isBlankReport && visionTest.is_diabetic) ? 'checked' : ''}`}>
-                                    {(!isBlankReport && visionTest.is_diabetic) ? '✔' : ''}
+                                <span className={`checkbox ${!isBlankReport && visionTest.is_diabetic ? 'checked' : ''}`}>
+                                    {!isBlankReport && visionTest.is_diabetic ? '✔' : ''}
                                 </span>
                                 Diabetes
                             </td>
                             <td>
-                                <span className={`checkbox ${(!isBlankReport && visionTest.is_asthmatic) ? 'checked' : ''}`}>
-                                    {(!isBlankReport && visionTest.is_asthmatic) ? '✔' : ''}
+                                <span className={`checkbox ${!isBlankReport && visionTest.is_asthmatic ? 'checked' : ''}`}>
+                                    {!isBlankReport && visionTest.is_asthmatic ? '✔' : ''}
                                 </span>
                                 Asthma
                             </td>
                             <td>
-                                <span className={`checkbox ${(!isBlankReport && visionTest.is_thyroid) ? 'checked' : ''}`}>
-                                    {(!isBlankReport && visionTest.is_thyroid) ? '✔' : ''}
+                                <span className={`checkbox ${!isBlankReport && visionTest.is_thyroid ? 'checked' : ''}`}>
+                                    {!isBlankReport && visionTest.is_thyroid ? '✔' : ''}
                                 </span>
                                 Thyroid
                             </td>
                         </tr>
                         <tr>
                             <td colSpan={3}>
-                                <span className={`checkbox ${(!isBlankReport && visionTest.other_conditions) ? 'checked' : ''}`}>
-                                    {(!isBlankReport && visionTest.other_conditions) ? '✔' : ''}
+                                <span className={`checkbox ${!isBlankReport && visionTest.other_conditions ? 'checked' : ''}`}>
+                                    {!isBlankReport && visionTest.other_conditions ? '✔' : ''}
                                 </span>
-                                Others: {isBlankReport ? '________________________' : (visionTest.other_conditions || '________________________')}
+                                Others: {isBlankReport ? '________________________' : visionTest.other_conditions || '________________________'}
                             </td>
                         </tr>
                     </tbody>
@@ -775,13 +764,9 @@ export default function VisionTestPrint({ visionTest, qrCodeBase64, isBlankRepor
                             </td>
                             <td className="signature-right">
                                 <div className="examiner-info">
-                                    <div className="examiner-name">
-                                        {isBlankReport ? '___________________' : visionTest.performedBy.name}
-                                    </div>
+                                    <div className="examiner-name">{isBlankReport ? '___________________' : visionTest.performedBy.name}</div>
                                     <div className="examiner-title">Vision Test Examiner</div>
-                                    <div className="examiner-date">
-                                        Date: {isBlankReport ? '__________' : formatDate(visionTest.test_date)}
-                                    </div>
+                                    <div className="examiner-date">Date: {isBlankReport ? '__________' : formatDate(visionTest.test_date)}</div>
                                 </div>
                                 <div className="signature-line"></div>
                                 <div className="signature-label">Examiner Signature & Seal</div>
@@ -791,13 +776,16 @@ export default function VisionTestPrint({ visionTest, qrCodeBase64, isBlankRepor
                 </table>
 
                 {/* Print Button for Screen View */}
-                <div className="no-print" style={{
-                    textAlign: 'center',
-                    marginTop: '20px',
-                    padding: '20px',
-                    background: '#f8f9fa',
-                    borderRadius: '8px'
-                }}>
+                <div
+                    className="no-print"
+                    style={{
+                        textAlign: 'center',
+                        marginTop: '20px',
+                        padding: '20px',
+                        background: '#f8f9fa',
+                        borderRadius: '8px',
+                    }}
+                >
                     <button
                         onClick={() => window.print()}
                         style={{
@@ -807,7 +795,7 @@ export default function VisionTestPrint({ visionTest, qrCodeBase64, isBlankRepor
                             border: 'none',
                             borderRadius: '5px',
                             fontSize: '14px',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
                         }}
                     >
                         🖨️ Print Again
@@ -823,7 +811,7 @@ export default function VisionTestPrint({ visionTest, qrCodeBase64, isBlankRepor
                             border: 'none',
                             borderRadius: '5px',
                             fontSize: '14px',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
                         }}
                     >
                         ← Go Back

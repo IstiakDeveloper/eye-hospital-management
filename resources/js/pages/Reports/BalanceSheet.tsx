@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { Head, router } from '@inertiajs/react';
-import MainAccountLayout from '@/layouts/MainAccountLayout';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Calendar, Download, Printer, TrendingUp } from 'lucide-react';
+import MainAccountLayout from '@/layouts/MainAccountLayout';
+import { Head, router } from '@inertiajs/react';
+import { Calendar, Download, Printer } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface BalanceSheetProps {
     asOnDate: string;
@@ -80,23 +80,27 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
     totalExpenditure,
     houseRentAdjustment,
     balanceDifference,
-    actualTotalAssets
+    actualTotalAssets,
 }) => {
     const [selectedDate, setSelectedDate] = useState(filters.as_on_date);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-IN', {
             minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            maximumFractionDigits: 2,
         }).format(amount);
     };
 
     const handleDateChange = (date: string) => {
         setSelectedDate(date);
-        router.get('/reports/balance-sheet', { as_on_date: date }, {
-            preserveState: true,
-            preserveScroll: true,
-        });
+        router.get(
+            '/reports/balance-sheet',
+            { as_on_date: date },
+            {
+                preserveState: true,
+                preserveScroll: true,
+            },
+        );
     };
 
     const handlePrint = () => {
@@ -111,7 +115,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
         return new Date(dateString).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short',
-            year: 'numeric'
+            year: 'numeric',
         });
     };
 
@@ -121,18 +125,18 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
 
             {/* Header Section - No Print */}
             <div className="no-print mb-6 px-6 pt-6">
-                <div className="flex justify-between items-center mb-4">
+                <div className="mb-4 flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold">Balance Sheet</h1>
-                        <p className="text-gray-600 mt-1">Statement of Financial Position</p>
+                        <p className="mt-1 text-gray-600">Statement of Financial Position</p>
                     </div>
                     <div className="flex gap-2">
                         <Button onClick={handlePrint} variant="outline" size="sm">
-                            <Printer className="w-4 h-4 mr-2" />
+                            <Printer className="mr-2 h-4 w-4" />
                             Print
                         </Button>
                         <Button onClick={handleExport} variant="outline" size="sm">
-                            <Download className="w-4 h-4 mr-2" />
+                            <Download className="mr-2 h-4 w-4" />
                             Export
                         </Button>
                     </div>
@@ -141,9 +145,9 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                 {/* Filter Section */}
                 <Card>
                     <CardContent className="pt-6">
-                        <div className="flex gap-4 items-end">
+                        <div className="flex items-end gap-4">
                             <div className="flex-1">
-                                <label className="block text-sm font-medium mb-2">As on Date</label>
+                                <label className="mb-2 block text-sm font-medium">As on Date</label>
                                 <Input
                                     type="date"
                                     value={selectedDate}
@@ -152,7 +156,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                                 />
                             </div>
                             <Button onClick={() => handleDateChange(selectedDate)}>
-                                <Calendar className="w-4 h-4 mr-2" />
+                                <Calendar className="mr-2 h-4 w-4" />
                                 Apply Filter
                             </Button>
                         </div>
@@ -161,196 +165,220 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
             </div>
 
             {/* Report Content - Printable */}
-            <div className="bg-white shadow-lg rounded-lg print-section" style={{ padding: '40px' }}>
-                    {/* Report Header */}
-                    <div className="mb-4">
-                        <div className="text-center mb-2">
-                            <h1 className="text-xl font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
-                            <p className="text-sm">Circuit House Adjacent, Main Road, Naogaon.</p>
-                        </div>
-                        <h2 className="text-lg font-bold text-center mt-4">Statement of Financial Position</h2>
-                        <p className="text-sm text-right">
-                            Date: {formatDate(asOnDate)}
-                        </p>
+            <div className="print-section rounded-lg bg-white shadow-lg" style={{ padding: '40px' }}>
+                {/* Report Header */}
+                <div className="mb-4">
+                    <div className="mb-2 text-center">
+                        <h1 className="text-xl font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                        <p className="text-sm">Circuit House Adjacent, Main Road, Naogaon.</p>
                     </div>
+                    <h2 className="mt-4 text-center text-lg font-bold">Statement of Financial Position</h2>
+                    <p className="text-right text-sm">Date: {formatDate(asOnDate)}</p>
+                </div>
 
-                    {/* Main Report Table */}
-                    <table className="w-full border-collapse" style={{ fontSize: '14px' }}>
-                        <thead>
-                            <tr>
-                                <th colSpan={3} className="border border-gray-800 bg-gray-200 px-2 py-2 text-center font-bold">
-                                    Fund & Liabilities
-                                </th>
-                                <th colSpan={3} className="border-l-2 border-t border-r border-b border-gray-800 bg-gray-200 px-2 py-2 text-center font-bold">
-                                    Property & Assets
-                                </th>
-                            </tr>
-                            <tr>
-                                <th className="border border-gray-800 bg-gray-100 px-2 py-1 text-center text-xs" style={{ width: '40px' }}>SL</th>
-                                <th className="border border-gray-800 bg-gray-100 px-2 py-1 text-left text-xs" style={{ width: '200px' }}>Particulars</th>
-                                <th className="border border-gray-800 bg-gray-100 px-2 py-1 text-right text-xs" style={{ width: '100px' }}>Current Month</th>
-                                <th className="border-l-2 border-t border-r border-b border-gray-800 bg-gray-100 px-2 py-1 text-center text-xs" style={{ width: '40px' }}>SL</th>
-                                <th className="border border-gray-800 bg-gray-100 px-2 py-1 text-left text-xs" style={{ width: '200px' }}>Particulars</th>
-                                <th className="border border-gray-800 bg-gray-100 px-2 py-1 text-right text-xs" style={{ width: '100px' }}>Current Month</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {/* Row 1 - Total Fund */}
-                            <tr>
-                                <td className="border border-gray-800 px-2 py-1 text-center text-xs">1</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Total Fund</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(fund)}</td>
-                                <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">1</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Bank Balance</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(bankBalance)}</td>
-                            </tr>
+                {/* Main Report Table */}
+                <table className="w-full border-collapse" style={{ fontSize: '14px' }}>
+                    <thead>
+                        <tr>
+                            <th colSpan={3} className="border border-gray-800 bg-gray-200 px-2 py-2 text-center font-bold">
+                                Fund & Liabilities
+                            </th>
+                            <th
+                                colSpan={3}
+                                className="border-t border-r border-b border-l-2 border-gray-800 bg-gray-200 px-2 py-2 text-center font-bold"
+                            >
+                                Property & Assets
+                            </th>
+                        </tr>
+                        <tr>
+                            <th className="border border-gray-800 bg-gray-100 px-2 py-1 text-center text-xs" style={{ width: '40px' }}>
+                                SL
+                            </th>
+                            <th className="border border-gray-800 bg-gray-100 px-2 py-1 text-left text-xs" style={{ width: '200px' }}>
+                                Particulars
+                            </th>
+                            <th className="border border-gray-800 bg-gray-100 px-2 py-1 text-right text-xs" style={{ width: '100px' }}>
+                                Current Month
+                            </th>
+                            <th
+                                className="border-t border-r border-b border-l-2 border-gray-800 bg-gray-100 px-2 py-1 text-center text-xs"
+                                style={{ width: '40px' }}
+                            >
+                                SL
+                            </th>
+                            <th className="border border-gray-800 bg-gray-100 px-2 py-1 text-left text-xs" style={{ width: '200px' }}>
+                                Particulars
+                            </th>
+                            <th className="border border-gray-800 bg-gray-100 px-2 py-1 text-right text-xs" style={{ width: '100px' }}>
+                                Current Month
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {/* Row 1 - Total Fund */}
+                        <tr>
+                            <td className="border border-gray-800 px-2 py-1 text-center text-xs">1</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Total Fund</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(fund)}</td>
+                            <td className="border-t border-r border-b border-l-2 border-gray-800 px-2 py-1 text-center text-xs">1</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Bank Balance</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(bankBalance)}</td>
+                        </tr>
 
-                            {/* Row 2 - Surplus/(Deficit) */}
-                            <tr>
-                                <td className="border border-gray-800 px-2 py-1 text-center text-xs">2</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Surplus/(Deficit)</td>
-                                <td className={`border border-gray-800 px-2 py-1 text-right text-xs font-semibold }`}>{formatCurrency(netProfit)}</td>
-                                <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">2</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Optics Stock Value</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(opticsStockValue)}</td>
-                            </tr>
+                        {/* Row 2 - Surplus/(Deficit) */}
+                        <tr>
+                            <td className="border border-gray-800 px-2 py-1 text-center text-xs">2</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Surplus/(Deficit)</td>
+                            <td className={`} border border-gray-800 px-2 py-1 text-right text-xs font-semibold`}>{formatCurrency(netProfit)}</td>
+                            <td className="border-t border-r border-b border-l-2 border-gray-800 px-2 py-1 text-center text-xs">2</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Optics Stock Value</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(opticsStockValue)}</td>
+                        </tr>
 
-                            {/* Row 3 - Optics Vendor Due */}
-                            <tr>
-                                <td className="border border-gray-800 px-2 py-1 text-center text-xs">3</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Optics Vendor Due</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(opticsVendorDue)}</td>
-                                <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">3</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Medicine Stock Value</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(medicineStockValue)}</td>
-                            </tr>
+                        {/* Row 3 - Optics Vendor Due */}
+                        <tr>
+                            <td className="border border-gray-800 px-2 py-1 text-center text-xs">3</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Optics Vendor Due</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(opticsVendorDue)}</td>
+                            <td className="border-t border-r border-b border-l-2 border-gray-800 px-2 py-1 text-center text-xs">3</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Medicine Stock Value</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(medicineStockValue)}</td>
+                        </tr>
 
-                            {/* Row 4 - Medicine Vendor Due */}
-                            <tr>
-                                <td className="border border-gray-800 px-2 py-1 text-center text-xs">4</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Medicine Vendor Due</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(medicineVendorDue)}</td>
-                                <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">4</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Advance House Rent (2nd & 3rd Floor)</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(advanceHouseRent2And3)}</td>
-                            </tr>
+                        {/* Row 4 - Medicine Vendor Due */}
+                        <tr>
+                            <td className="border border-gray-800 px-2 py-1 text-center text-xs">4</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Medicine Vendor Due</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(medicineVendorDue)}</td>
+                            <td className="border-t border-r border-b border-l-2 border-gray-800 px-2 py-1 text-center text-xs">4</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Advance House Rent (2nd & 3rd Floor)</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(advanceHouseRent2And3)}</td>
+                        </tr>
 
-                            {/* Row 5 - Advance House Rent 4th Floor */}
-                            <tr>
-                                <td className="border border-gray-800 px-2 py-1 text-center text-xs">5</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Asset Vendor Due</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(assetPurchaseDue)}</td>
-                                <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">5</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Advance House Rent (4th Floor)</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(advanceHouseRent4)}</td>
-                            </tr>
+                        {/* Row 5 - Advance House Rent 4th Floor */}
+                        <tr>
+                            <td className="border border-gray-800 px-2 py-1 text-center text-xs">5</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Asset Vendor Due</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(assetPurchaseDue)}</td>
+                            <td className="border-t border-r border-b border-l-2 border-gray-800 px-2 py-1 text-center text-xs">5</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Advance House Rent (4th Floor)</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(advanceHouseRent4)}</td>
+                        </tr>
 
-                            {/* Row 6 - Empty vs Fixed Asset */}
-                            <tr>
-                                <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs"></td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
-                                <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">6</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Fixed Asset</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(fixedAssets)}</td>
-                            </tr>
+                        {/* Row 6 - Empty vs Fixed Asset */}
+                        <tr>
+                            <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs"></td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
+                            <td className="border-t border-r border-b border-l-2 border-gray-800 px-2 py-1 text-center text-xs">6</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Fixed Asset</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(fixedAssets)}</td>
+                        </tr>
 
-                            {/* Row 7 - Empty vs House Security */}
-                            <tr>
-                                <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs"></td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
-                                <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">7</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">House Security</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(houseSecurity)}</td>
-                            </tr>
+                        {/* Row 7 - Empty vs House Security */}
+                        <tr>
+                            <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs"></td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
+                            <td className="border-t border-r border-b border-l-2 border-gray-800 px-2 py-1 text-center text-xs">7</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">House Security</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(houseSecurity)}</td>
+                        </tr>
 
-                            {/* Row 8 - Empty left side */}
-                            <tr>
-                                <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs"></td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
-                                <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">8</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Optics Sale Due</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(opticsSaleDue)}</td>
-                            </tr>
+                        {/* Row 8 - Empty left side */}
+                        <tr>
+                            <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs"></td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
+                            <td className="border-t border-r border-b border-l-2 border-gray-800 px-2 py-1 text-center text-xs">8</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Optics Sale Due</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(opticsSaleDue)}</td>
+                        </tr>
 
-                            {/* Row 9 - Empty left side */}
-                            <tr>
-                                <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs"></td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
-                                <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">9</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Medicine Sale Due</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(medicineSaleDue)}</td>
-                            </tr>
+                        {/* Row 9 - Empty left side */}
+                        <tr>
+                            <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs"></td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
+                            <td className="border-t border-r border-b border-l-2 border-gray-800 px-2 py-1 text-center text-xs">9</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Medicine Sale Due</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(medicineSaleDue)}</td>
+                        </tr>
 
-                            {/* Row 10 - Empty left side */}
-                            <tr>
-                                <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs"></td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
-                                <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-1 text-center text-xs">10</td>
-                                <td className="border border-gray-800 px-2 py-1 text-xs">Operation Due</td>
-                                <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(operationDue)}</td>
-                            </tr>
+                        {/* Row 10 - Empty left side */}
+                        <tr>
+                            <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs"></td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs"></td>
+                            <td className="border-t border-r border-b border-l-2 border-gray-800 px-2 py-1 text-center text-xs">10</td>
+                            <td className="border border-gray-800 px-2 py-1 text-xs">Operation Due</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(operationDue)}</td>
+                        </tr>
 
-                            {/* Total Row */}
-                            <tr className="font-bold bg-gray-200">
-                                <td colSpan={2} className="border border-gray-800 px-2 py-2 text-center text-xs">
-                                    Total:
-                                </td>
-                                <td className="border border-gray-800 px-2 py-2 text-right text-xs">
-                                    {formatCurrency(totalLiabilitiesAndFund)}
-                                </td>
-                                <td className="border-l-2 border-t border-r border-b border-gray-800 px-2 py-2"></td>
-                                <td className="border border-gray-800 px-2 py-2 text-center text-xs">
-                                    Total:
-                                </td>
-                                <td className="border border-gray-800 px-2 py-2 text-right text-xs">
-                                    {formatCurrency(totalAssets)}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                        {/* Total Row */}
+                        <tr className="bg-gray-200 font-bold">
+                            <td colSpan={2} className="border border-gray-800 px-2 py-2 text-center text-xs">
+                                Total:
+                            </td>
+                            <td className="border border-gray-800 px-2 py-2 text-right text-xs">{formatCurrency(totalLiabilitiesAndFund)}</td>
+                            <td className="border-t border-r border-b border-l-2 border-gray-800 px-2 py-2"></td>
+                            <td className="border border-gray-800 px-2 py-2 text-center text-xs">Total:</td>
+                            <td className="border border-gray-800 px-2 py-2 text-right text-xs">{formatCurrency(totalAssets)}</td>
+                        </tr>
+                    </tbody>
+                </table>
 
-                    {/* Debug Information */}
-                    {balanceDifference !== 0 && (
-                        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded">
-                            <h3 className="font-bold text-sm text-yellow-800 mb-2">⚠️ Balance Sheet Difference Detected</h3>
-                            <div className="text-xs space-y-1">
-                                <p><strong>Actual Total Assets:</strong> {formatCurrency(actualTotalAssets)}</p>
-                                <p><strong>Total Liabilities & Fund:</strong> {formatCurrency(totalLiabilitiesAndFund)}</p>
-                                <p className="text-red-600 font-bold"><strong>Difference:</strong> {formatCurrency(balanceDifference)}</p>
-                                <div className="mt-2 pt-2 border-t border-yellow-300">
-                                    <p><strong>Total Income:</strong> {formatCurrency(totalIncome)}</p>
-                                    <p><strong>Total Expenditure:</strong> {formatCurrency(totalExpenditure)}</p>
-                                    <p><strong>House Rent Adjustment:</strong> {formatCurrency(houseRentAdjustment)}</p>
-                                    <p><strong>Net Profit Calculated:</strong> {formatCurrency(netProfit)}</p>
-                                </div>
+                {/* Debug Information */}
+                {balanceDifference !== 0 && (
+                    <div className="mt-6 rounded border border-yellow-200 bg-yellow-50 p-4">
+                        <h3 className="mb-2 text-sm font-bold text-yellow-800">⚠️ Balance Sheet Difference Detected</h3>
+                        <div className="space-y-1 text-xs">
+                            <p>
+                                <strong>Actual Total Assets:</strong> {formatCurrency(actualTotalAssets)}
+                            </p>
+                            <p>
+                                <strong>Total Liabilities & Fund:</strong> {formatCurrency(totalLiabilitiesAndFund)}
+                            </p>
+                            <p className="font-bold text-red-600">
+                                <strong>Difference:</strong> {formatCurrency(balanceDifference)}
+                            </p>
+                            <div className="mt-2 border-t border-yellow-300 pt-2">
+                                <p>
+                                    <strong>Total Income:</strong> {formatCurrency(totalIncome)}
+                                </p>
+                                <p>
+                                    <strong>Total Expenditure:</strong> {formatCurrency(totalExpenditure)}
+                                </p>
+                                <p>
+                                    <strong>House Rent Adjustment:</strong> {formatCurrency(houseRentAdjustment)}
+                                </p>
+                                <p>
+                                    <strong>Net Profit Calculated:</strong> {formatCurrency(netProfit)}
+                                </p>
                             </div>
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {/* Signatures */}
-                    <div className="mt-16 grid grid-cols-3 gap-8">
-                        <div className="text-center">
-                            <div className="border-t-2 border-gray-800 pt-2 mt-16">
-                                <p className="font-semibold text-sm">Prepared By</p>
-                            </div>
+                {/* Signatures */}
+                <div className="mt-16 grid grid-cols-3 gap-8">
+                    <div className="text-center">
+                        <div className="mt-16 border-t-2 border-gray-800 pt-2">
+                            <p className="text-sm font-semibold">Prepared By</p>
                         </div>
-                        <div className="text-center">
-                            <div className="border-t-2 border-gray-800 pt-2 mt-16">
-                                <p className="font-semibold text-sm">Checked By</p>
-                            </div>
+                    </div>
+                    <div className="text-center">
+                        <div className="mt-16 border-t-2 border-gray-800 pt-2">
+                            <p className="text-sm font-semibold">Checked By</p>
                         </div>
-                        <div className="text-center">
-                            <div className="border-t-2 border-gray-800 pt-2 mt-16">
-                                <p className="font-semibold text-sm">Approved By</p>
-                            </div>
+                    </div>
+                    <div className="text-center">
+                        <div className="mt-16 border-t-2 border-gray-800 pt-2">
+                            <p className="text-sm font-semibold">Approved By</p>
                         </div>
                     </div>
                 </div>
+            </div>
 
             {/* Print Styles */}
             <style>{`
