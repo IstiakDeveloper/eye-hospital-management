@@ -488,4 +488,49 @@ class Medicine extends Model
             'cost' => (float) $cost,
         ];
     }
+
+    /**
+     * Set standard_sale_price from the newest stock row (highest id) for one medicine.
+     * Uses id (not created_at) so imported rows with null timestamps still resolve correctly.
+     */
+    public static function syncStandardSalePriceFromLatestStock(int $medicineId): void
+    {
+        $latest = MedicineStock::where('medicine_id', $medicineId)
+            ->orderByDesc('id')
+            ->first();
+
+        if ($latest) {
+            \DB::table('medicines')->where('id', $medicineId)->update([
+                'standard_sale_price' => $latest->sale_price,
+                'updated_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Copy sale_price from each medicine's latest stock batch (by max stock id) into medicines.standard_sale_price.
+     */
+    public static function syncAllStandardSalePricesFromLatestStock(): int
+    {
+        $sub = \DB::table('medicine_stocks')
+            ->select('medicine_id', \DB::raw('MAX(id) as id'))
+            ->groupBy('medicine_id');
+
+        $rows = \DB::table('medicine_stocks as ms')
+            ->joinSub($sub, 't', function ($join) {
+                $join->on('ms.medicine_id', '=', 't.medicine_id')
+                    ->on('ms.id', '=', 't.id');
+            })
+            ->select('ms.medicine_id', 'ms.sale_price')
+            ->get();
+
+        foreach ($rows as $row) {
+            \DB::table('medicines')->where('id', $row->medicine_id)->update([
+                'standard_sale_price' => $row->sale_price,
+                'updated_at' => now(),
+            ]);
+        }
+
+        return $rows->count();
+    }
 }

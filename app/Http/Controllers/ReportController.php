@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Doctor;
 use App\Models\Patient;
+use App\Models\PatientVisit;
 use App\Models\Prescription;
 use App\Models\VisionTest;
 use Carbon\Carbon;
@@ -21,21 +22,30 @@ class ReportController extends Controller
 
     public function patients(Request $request)
     {
-        $query = Patient::with(['registeredBy'])
-            ->select('id', 'patient_id', 'name', 'address', 'phone', 'email', 'gender', 'date_of_birth', 'registered_by', 'created_at');
-
-        // Date range filter
-        if ($request->filled('start_date')) {
-            $query->whereDate('created_at', '>=', $request->start_date);
-        }
-        if ($request->filled('end_date')) {
-            $query->whereDate('created_at', '<=', $request->end_date);
+        $today = Carbon::today()->toDateString();
+        $startDate = $request->input('start_date') ?: $today;
+        $endDate = $request->input('end_date') ?: $startDate;
+        if ($startDate > $endDate) {
+            [$startDate, $endDate] = [$endDate, $startDate];
         }
 
-        // Gender filter
+        $baseQuery = PatientVisit::query()
+            ->whereDate('created_at', '>=', $startDate)
+            ->whereDate('created_at', '<=', $endDate);
+
         if ($request->filled('gender')) {
-            $query->where('gender', $request->gender);
+            $baseQuery->whereHas('patient', function ($q) use ($request) {
+                $q->where('gender', $request->gender);
+            });
         }
+
+        $summary = [
+            'total_visits' => (clone $baseQuery)->count(),
+            'new_visits' => (clone $baseQuery)->where('is_followup', false)->count(),
+            'followup_visits' => (clone $baseQuery)->where('is_followup', true)->count(),
+            'total_fee' => (float) (clone $baseQuery)->sum('final_amount'),
+            'total_paid' => (float) (clone $baseQuery)->sum('total_paid'),
+        ];
 
         $perPage = (int) $request->get('per_page', 50);
         $allowed = [25, 50, 100, 200];
@@ -43,13 +53,26 @@ class ReportController extends Controller
             $perPage = 50;
         }
 
-        $patients = $query->orderBy('created_at', 'desc')
+        $visits = (clone $baseQuery)
+            ->with([
+                'patient:id,patient_id,name,address,phone,gender,date_of_birth,registered_by',
+                'patient.registeredBy:id,name',
+                'selectedDoctor.user:id,name',
+                'createdBy:id,name',
+            ])
+            ->orderBy('created_at', 'desc')
             ->paginate($perPage)
             ->withQueryString();
 
         return Inertia::render('Reports/Patients', [
-            'patients' => $patients,
-            'filters' => $request->only(['start_date', 'end_date', 'gender', 'per_page']),
+            'visits' => $visits,
+            'summary' => $summary,
+            'filters' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'gender' => $request->input('gender'),
+                'per_page' => $perPage,
+            ],
         ]);
     }
 

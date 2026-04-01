@@ -93,9 +93,8 @@ export default function EditStock({ stock, medicines, vendors }: EditStockProps)
         quantity: stock.quantity ? stock.quantity.toString() : '',
         // Consistent with addStock: send total_price (not unit buy_price).
         total_price: stock.total_purchase_amount !== undefined ? stock.total_purchase_amount.toString() : '',
-        // Keep hidden sale_price in sync with medicine's standard sale price.
-        // (Even though UI hides it, backend validation requires it.)
-        sale_price: (stock.medicine?.standard_sale_price ?? stock.sale_price ?? 0).toString(),
+        // Hidden field: batch sale_price (drives standard_sale_price on save via latest-batch sync).
+        sale_price: (stock.sale_price ?? stock.medicine?.standard_sale_price ?? 0).toString(),
         paid_amount: stock.paid_amount ? stock.paid_amount.toString() : '0',
         payment_method: stock.payment_method || 'credit',
         cheque_no: stock.cheque_no || '',

@@ -174,7 +174,9 @@ export default function Stock({ stocks, companyNames, lowStockMedicines, expirin
                         <button
                             type="button"
                             onClick={() => {
-                                const ok = window.confirm('Sync all stock sale prices with medicine sale prices?');
+                                const ok = window.confirm(
+                                    'Update each medicine standard sale price from its latest stock batch sale price?',
+                                );
                                 if (!ok) return;
                                 setSyncingSalePrices(true);
                                 router.post(
@@ -189,7 +191,7 @@ export default function Stock({ stocks, companyNames, lowStockMedicines, expirin
                             }}
                             disabled={syncingSalePrices}
                             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            title="Sync stock sale prices"
+                            title="Copy latest batch sale price into medicine standard price"
                         >
                             <RefreshCw className="h-4 w-4" />
                             {syncingSalePrices ? 'Syncing...' : 'Sync Sale Prices'}

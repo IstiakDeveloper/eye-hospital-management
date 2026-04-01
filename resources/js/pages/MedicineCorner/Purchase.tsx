@@ -129,9 +129,8 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
         setData({
             ...data,
             medicine_id: medicine.id.toString(),
-            // Use the editable standard sale price (not latest stock sale price)
-            // so that "Medicine list -> sale price edit" affects new purchases.
-            sale_price: medicine.standard_sale_price.toString(),
+            // Default new batch sale from latest stock when available, else list standard.
+            sale_price: (medicine.latest_sale_price ?? medicine.standard_sale_price).toString(),
         });
         setSearchTerm('');
         setShowMedicineDropdown(false);

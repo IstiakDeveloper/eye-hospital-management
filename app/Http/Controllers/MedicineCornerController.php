@@ -162,6 +162,7 @@ class MedicineCornerController extends Controller
             ->get();
 
         $totalStockValue = (clone $filteredStocksQuery)
+            ->reorder()
             ->selectRaw('SUM(available_quantity * buy_price) as total')
             ->value('total') ?? 0;
 
@@ -645,6 +646,7 @@ class MedicineCornerController extends Controller
             'expiry_date' => 'nullable|date|after:today', // ✅ Optional
             'quantity' => 'required|integer|min:1',
             'total_price' => 'required|numeric|min:0',
+            'sale_price' => 'nullable|numeric|min:0',
             'paid_amount' => 'nullable|numeric|min:0',
             'payment_method' => 'nullable|string|in:cash,bank_transfer,cheque,credit',
             'cheque_no' => 'nullable|string|max:255',
@@ -700,6 +702,10 @@ class MedicineCornerController extends Controller
                 'created_by' => auth()->id(),
             ]);
 
+            $batchSalePrice = $request->filled('sale_price')
+                ? (float) $request->sale_price
+                : (float) $medicine->standard_sale_price;
+
             // Create medicine stock with calculated unit price
             $stock = MedicineStock::create([
                 'medicine_id' => $request->medicine_id,
@@ -709,8 +715,7 @@ class MedicineCornerController extends Controller
                 'quantity' => $request->quantity,
                 'available_quantity' => $request->quantity,
                 'buy_price' => $unitPrice, // ✅ Use calculated unit price
-                // Always keep stock sale price in sync with medicine's standard sale price.
-                'sale_price' => $medicine->standard_sale_price,
+                'sale_price' => $batchSalePrice,
                 'purchase_date' => now()->toDateString(),
                 'notes' => $request->notes,
                 'added_by' => auth()->id(),
@@ -767,6 +772,8 @@ class MedicineCornerController extends Controller
             // Update medicine totals
             $medicine->updateTotalStock();
             // ✅ No need to call updateAverageBuyPrice() again - already updated above
+
+            Medicine::syncStandardSalePriceFromLatestStock((int) $medicine->id);
 
             DB::commit();
 
@@ -966,8 +973,8 @@ class MedicineCornerController extends Controller
     }
 
     /**
-     * Update medicine sale price (standard_sale_price)
-     * and keep existing medicine_stocks.sale_price in sync.
+     * Update medicine list "standard" sale price (does not overwrite per-batch stock sale prices).
+     * Use "Sync from stock" to copy latest batch sale price into this field.
      */
     public function updateSalePrice(Request $request, Medicine $medicine)
     {
@@ -979,43 +986,29 @@ class MedicineCornerController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        DB::beginTransaction();
         try {
             $medicine->update([
                 'standard_sale_price' => $request->standard_sale_price,
             ]);
 
-            // Keep all existing batch sale prices aligned with the medicine sale price.
-            $affected = MedicineStock::where('medicine_id', $medicine->id)->update([
-                'sale_price' => $request->standard_sale_price,
-            ]);
-
-            DB::commit();
-
-            return redirect()->back()->with(
-                'success',
-                "Sale price updated successfully. Synced {$affected} stock batch sale price(s)."
-            );
+            return redirect()->back()->with('success', 'Sale price updated successfully.');
         } catch (\Exception $e) {
-            DB::rollBack();
-
             return redirect()->back()->with('error', 'Failed to update sale price: '.$e->getMessage());
         }
     }
 
     /**
-     * Sync all medicine stock sale prices with medicine standard sale price.
-     * This is a safety button for UI.
+     * Set each medicine's standard_sale_price from its latest stock batch (by created_at, then id).
+     * Per-batch sale_price is treated as the source of truth.
      */
     public function syncStockSalePrices()
     {
-        DB::table('medicine_stocks')
-            ->join('medicines', 'medicine_stocks.medicine_id', '=', 'medicines.id')
-            ->update([
-                'medicine_stocks.sale_price' => DB::raw('medicines.standard_sale_price'),
-            ]);
+        $updated = Medicine::syncAllStandardSalePricesFromLatestStock();
 
-        return redirect()->back()->with('success', 'Sale prices synced successfully');
+        return redirect()->back()->with(
+            'success',
+            "Standard sale prices updated from the latest stock batch for {$updated} medicine(s)."
+        );
     }
 
     /**
@@ -2035,6 +2028,7 @@ class MedicineCornerController extends Controller
             'quantity' => 'required|integer|min:1',
             // Edit uses the same input style as addStock: quantity + total_price (not unit price).
             'total_price' => 'required|numeric|min:0',
+            'sale_price' => 'required|numeric|min:0',
             'paid_amount' => 'nullable|numeric|min:0',
             'payment_method' => 'nullable|string|in:cash,bank_transfer,cheque,credit',
             'cheque_no' => 'nullable|string|max:255',
@@ -2143,7 +2137,7 @@ class MedicineCornerController extends Controller
                 ]);
             }
 
-            // Update medicine stock
+            // Update medicine stock (per-batch sale_price is source of truth for standard_sale_price sync)
             $stock->update([
                 'medicine_id' => $request->medicine_id,
                 'vendor_id' => $newVendor->id,
@@ -2152,8 +2146,7 @@ class MedicineCornerController extends Controller
                 'quantity' => $request->quantity,
                 'available_quantity' => $stock->available_quantity + $quantityDifference,
                 'buy_price' => $unitPrice,
-                // Always keep stock sale price in sync with medicine's standard sale price.
-                'sale_price' => $newMedicine->standard_sale_price,
+                'sale_price' => (float) $request->sale_price,
                 'notes' => $request->notes,
                 'updated_by' => auth()->id(),
             ]);
@@ -2269,6 +2262,11 @@ class MedicineCornerController extends Controller
             }
             $newMedicine->updateTotalStock();
             $newMedicine->updateAverageBuyPrice();
+
+            Medicine::syncStandardSalePriceFromLatestStock((int) $request->medicine_id);
+            if ($oldMedicine && $oldMedicine->id !== (int) $request->medicine_id) {
+                Medicine::syncStandardSalePriceFromLatestStock((int) $oldMedicine->id);
+            }
 
             DB::commit();
 
