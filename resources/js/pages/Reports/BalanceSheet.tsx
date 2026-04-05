@@ -63,7 +63,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
     houseSecurity,
     opticsSaleDue,
     medicineSaleDue,
-    operationDue,
+    operationDue: _operationDueIgnored,
     reconciliationAdjustment,
     totalAssets,
     opticsVendorDue,
@@ -305,7 +305,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                             <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(medicineSaleDue)}</td>
                         </tr>
 
-                        {/* Row 10 - Empty left side */}
+                        {/* Row 10 — Operation Due (commented out; see BalanceSheetController)
                         <tr>
                             <td className="border border-gray-800 px-2 py-1 text-center text-xs"></td>
                             <td className="border border-gray-800 px-2 py-1 text-xs"></td>
@@ -314,6 +314,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                             <td className="border border-gray-800 px-2 py-1 text-xs">Operation Due</td>
                             <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(operationDue)}</td>
                         </tr>
+                        */}
 
                         {/* Total Row */}
                         <tr className="bg-gray-200 font-bold">

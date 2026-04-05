@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Doctor;
 use App\Models\Operation;
-use App\Models\OperationAccount;
 use App\Models\OperationBooking;
 use App\Models\OperationPayment;
 use App\Models\Patient;
@@ -53,7 +52,7 @@ class OperationBookingController extends Controller
             });
         }
 
-        $bookings = $query->paginate(20);
+        $bookings = $query->paginate(20)->withQueryString();
 
         $authUser = auth()->user();
 
@@ -75,7 +74,7 @@ class OperationBookingController extends Controller
                 'confirm' => $authUser->hasPermission('operation-bookings.confirm'),
                 'complete' => $authUser->hasPermission('operation-bookings.complete'),
                 'cancel' => $authUser->hasPermission('operation-bookings.cancel'),
-            ]
+            ],
         ]);
     }
 
@@ -104,7 +103,7 @@ class OperationBookingController extends Controller
                 'payment' => $authUser->hasPermission('operation-bookings.payment'),
                 'confirm' => $authUser->hasPermission('operation-bookings.confirm'),
                 'complete' => $authUser->hasPermission('operation-bookings.complete'),
-            ]
+            ],
         ]);
     }
 
@@ -239,10 +238,11 @@ class OperationBookingController extends Controller
             DB::commit();
 
             return redirect()->route('operation-bookings.show', $booking->id)
-                ->with('success', 'Operation booked successfully! Booking No: ' . $booking->booking_no);
+                ->with('success', 'Operation booked successfully! Booking No: '.$booking->booking_no);
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withInput()->with('error', 'Failed to create booking: ' . $e->getMessage());
+
+            return back()->withInput()->with('error', 'Failed to create booking: '.$e->getMessage());
         }
     }
 
@@ -258,7 +258,7 @@ class OperationBookingController extends Controller
             'operation',
             'bookedBy',
             'performedBy',
-            'payments.receivedBy'
+            'payments.receivedBy',
         ]);
 
         $authUser = auth()->user();
@@ -274,7 +274,7 @@ class OperationBookingController extends Controller
                 'complete' => $authUser->hasPermission('operation-bookings.complete'),
                 'cancel' => $authUser->hasPermission('operation-bookings.cancel'),
                 'reschedule' => $authUser->hasPermission('operation-bookings.reschedule'),
-            ]
+            ],
         ]);
     }
 
@@ -430,14 +430,15 @@ class OperationBookingController extends Controller
             DB::commit();
 
             $message = $paymentDifference != 0
-                ? 'Booking updated successfully! Hospital Account adjusted by ৳' . abs($paymentDifference)
+                ? 'Booking updated successfully! Hospital Account adjusted by ৳'.abs($paymentDifference)
                 : 'Booking updated successfully!';
 
             return redirect()->route('operation-bookings.show', $operationBooking->id)
                 ->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withInput()->with('error', 'Failed to update booking: ' . $e->getMessage());
+
+            return back()->withInput()->with('error', 'Failed to update booking: '.$e->getMessage());
         }
     }
 
@@ -506,7 +507,8 @@ class OperationBookingController extends Controller
             return back()->with('success', 'Payment recorded successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Failed to record payment: ' . $e->getMessage());
+
+            return back()->with('error', 'Failed to record payment: '.$e->getMessage());
         }
     }
 
@@ -531,7 +533,7 @@ class OperationBookingController extends Controller
      */
     public function complete(Request $request, OperationBooking $operationBooking)
     {
-        if (!in_array($operationBooking->status, ['scheduled', 'confirmed'])) {
+        if (! in_array($operationBooking->status, ['scheduled', 'confirmed'])) {
             return back()->with('error', 'Only scheduled or confirmed bookings can be completed!');
         }
 
@@ -564,7 +566,8 @@ class OperationBookingController extends Controller
             return back()->with('success', 'Booking cancelled successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Failed to cancel booking: ' . $e->getMessage());
+
+            return back()->with('error', 'Failed to cancel booking: '.$e->getMessage());
         }
     }
 
@@ -606,7 +609,7 @@ class OperationBookingController extends Controller
             'doctor.user',
             'operation',
             'bookedBy',
-            'payments.receivedBy'
+            'payments.receivedBy',
         ]);
 
         return Inertia::render('OperationBookings/Receipt', [

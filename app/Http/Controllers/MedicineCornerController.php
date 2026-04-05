@@ -986,13 +986,27 @@ class MedicineCornerController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
+        DB::beginTransaction();
         try {
+            $newPrice = (float) $request->standard_sale_price;
+
             $medicine->update([
-                'standard_sale_price' => $request->standard_sale_price,
+                'standard_sale_price' => $newPrice,
             ]);
 
-            return redirect()->back()->with('success', 'Sale price updated successfully.');
+            $affected = MedicineStock::where('medicine_id', $medicine->id)->update([
+                'sale_price' => $newPrice,
+            ]);
+
+            DB::commit();
+
+            return redirect()->back()->with(
+                'success',
+                "Sale price updated successfully. Synced {$affected} stock batch sale price(s)."
+            );
         } catch (\Exception $e) {
+            DB::rollBack();
+
             return redirect()->back()->with('error', 'Failed to update sale price: '.$e->getMessage());
         }
     }

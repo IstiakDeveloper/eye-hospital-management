@@ -9,7 +9,7 @@ use App\Models\FixedAsset;
 use App\Models\Glasses;
 use App\Models\LensType;
 use App\Models\Medicine;
-use App\Models\OperationBooking;
+// use App\Models\OperationBooking; // only needed if Operation Due is included on BS again
 use App\Models\OpticsSale;
 use App\Models\OpticsVendor;
 use Illuminate\Http\Request;
@@ -313,12 +313,15 @@ class BalanceSheetController extends Controller
         // Including it separately would be double-counting.
         $medicineSaleDue = 0;
 
-        // Operation Due - Only for COMPLETED operations (service already provided)
-        // Scheduled/Pending operations are not assets yet (advance is unearned revenue)
-        $operationDue = OperationBooking::where('due_amount', '>', 0)
-            ->whereDate('created_at', '<=', $asOnDate)
-            ->where('status', 'completed') // Only completed operations
-            ->sum('due_amount');
+        // Operation Due — commented out: receivable without matching accrued income in Surplus
+        // inflated Assets vs Fund+Net Profit; cash/posted transactions already drive bank & I&E.
+        // $operationDue = OperationBooking::where('due_amount', '>', 0)
+        //     ->whereDate('created_at', '<=', $asOnDate)
+        //     ->where('status', 'completed')
+        //     ->sum('due_amount');
+        $operationDue = 0;
+
+        // Asset totals below omit + $operationDue (restore with query block if Operation Due is shown again)
 
         $totalAssets = $bankBalance
             + $medicineStockValue
@@ -328,8 +331,7 @@ class BalanceSheetController extends Controller
             + $fixedAssets
             + $houseSecurity
             + $opticsSaleDue
-            + $medicineSaleDue
-            + $operationDue;
+            + $medicineSaleDue;
 
         // ==================== LIABILITIES ====================
 
@@ -448,8 +450,7 @@ class BalanceSheetController extends Controller
             + $fixedAssets
             + $houseSecurity
             + $opticsSaleDue
-            + $medicineSaleDue
-            + $operationDue;
+            + $medicineSaleDue;
 
         // Total Liabilities + Fund + Net Profit should equal Total Assets
         $totalLiabilitiesAndFund = $totalLiabilities + $fund + $netProfit;

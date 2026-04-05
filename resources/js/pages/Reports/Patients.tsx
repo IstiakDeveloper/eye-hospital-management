@@ -139,7 +139,10 @@ const PatientsReport: React.FC<Props> = ({ visits, summary, filters }) => {
         );
     };
 
-    const pdfColumns = useMemo(() => ['SL', 'Date', 'Patient ID', 'Name', 'Mobile', 'Type', 'Fee', 'Doctor', 'Received by'], []);
+    const pdfColumns = useMemo(
+        () => ['SL', 'Date', 'Patient ID', 'Name', 'Address', 'Mobile', 'Gender', 'Age', 'Type', 'Fee', 'Doctor', 'Received by'],
+        [],
+    );
 
     const pdfRows = useMemo(() => {
         return visits.data.map((v, idx) => [
@@ -147,7 +150,10 @@ const PatientsReport: React.FC<Props> = ({ visits, summary, filters }) => {
             formatDhakaDate(v.created_at),
             v.patient.patient_id,
             v.patient.name || 'N/A',
+            v.patient.address || 'N/A',
             v.patient.phone || 'N/A',
+            formatGender(v.patient.gender),
+            String(calculateAge(v.patient.date_of_birth)),
             visitTypeLabel(v.is_followup),
             formatCurrencyPdf(v.final_amount),
             v.selected_doctor?.user?.name || '—',
@@ -193,7 +199,7 @@ const PatientsReport: React.FC<Props> = ({ visits, summary, filters }) => {
         const tableStartY = summaryStartY + summaryLines.length * lineHeight + 10;
 
         // Scale column widths to fully occupy the portrait page width.
-        const baseColWidths = [18, 52, 50, 96, 58, 42, 46, 80, 70];
+        const baseColWidths = [18, 42, 40, 64, 70, 46, 36, 24, 34, 40, 56, 50];
         const baseTotal = baseColWidths.reduce((a, b) => a + b, 0);
         const scale = contentWidth / baseTotal;
         const colWidths = baseColWidths.map((w) => Math.floor(w * scale));
@@ -231,11 +237,14 @@ const PatientsReport: React.FC<Props> = ({ visits, summary, filters }) => {
                 1: { cellWidth: colWidths[1] }, // Date
                 2: { cellWidth: colWidths[2] }, // Patient ID
                 3: { cellWidth: colWidths[3] }, // Name
-                4: { cellWidth: colWidths[4] }, // Mobile
-                5: { cellWidth: colWidths[5] }, // Type
-                6: { cellWidth: colWidths[6] }, // Fee
-                7: { cellWidth: colWidths[7] }, // Doctor
-                8: { cellWidth: colWidths[8] }, // Received by
+                4: { cellWidth: colWidths[4] }, // Address
+                5: { cellWidth: colWidths[5] }, // Mobile
+                6: { cellWidth: colWidths[6] }, // Gender
+                7: { cellWidth: colWidths[7] }, // Age
+                8: { cellWidth: colWidths[8] }, // Type
+                9: { cellWidth: colWidths[9] }, // Fee
+                10: { cellWidth: colWidths[10] }, // Doctor
+                11: { cellWidth: colWidths[11] }, // Received by
             },
         });
 

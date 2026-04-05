@@ -85,16 +85,6 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     const userRole = auth.user.role.name;
     const userPermissions = auth.user.permissions || [];
 
-    // Debug: Log permissions to console
-    React.useEffect(() => {
-        console.log('🔐 User Permissions Debug:', {
-            role: userRole,
-            totalPermissions: userPermissions.length,
-            permissions: userPermissions,
-            hasWildcard: userPermissions.includes('*'),
-        });
-    }, [userRole, userPermissions]);
-
     // Prevent mouse-wheel from changing <input type="number"> values.
     // (Browser default: wheel increments/decrements number inputs.)
     React.useEffect(() => {
@@ -113,6 +103,27 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
         return () => document.removeEventListener('wheel', onWheel as EventListener);
     }, []);
 
+    React.useEffect(() => {
+        const updateBodyScrollLock = () => {
+            if (typeof document === 'undefined') {
+                return;
+            }
+            if (window.innerWidth < 768 && sidebarOpen) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        };
+
+        updateBodyScrollLock();
+        window.addEventListener('resize', updateBodyScrollLock);
+
+        return () => {
+            window.removeEventListener('resize', updateBodyScrollLock);
+            document.body.style.overflow = '';
+        };
+    }, [sidebarOpen]);
+
     // Note: do not force `body/html` overflow here.
     // Some pages rely on natural document flow; forcing overflow hidden can make the page appear blank.
 
@@ -120,12 +131,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     const hasPermission = (permission: string): boolean => {
         // Super Admin has all permissions (indicated by wildcard)
         if (userPermissions.includes('*')) return true;
-        const result = userPermissions.includes(permission);
-        // Debug specific permission checks
-        if (!result && typeof window !== 'undefined') {
-            console.log(`❌ Permission denied: ${permission}`);
-        }
-        return result;
+        return userPermissions.includes(permission);
     };
 
     // Check any permission
@@ -1250,21 +1256,28 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     };
 
     return (
-        <div className="flex min-h-screen bg-slate-50">
+        <div className="admin-layout-root flex h-dvh min-h-0 w-full max-w-full flex-row overflow-hidden bg-slate-50">
             {/* Flash Messages */}
             <FlashMessages />
 
             {/* Mobile sidebar backdrop */}
-            {sidebarOpen && <div className="bg-opacity-50 fixed inset-0 z-40 bg-gray-900 backdrop-blur-sm md:hidden" onClick={toggleSidebar}></div>}
+            {sidebarOpen && (
+                <button
+                    type="button"
+                    aria-label="Close menu"
+                    className="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm md:hidden"
+                    onClick={toggleSidebar}
+                />
+            )}
 
             {/* Sidebar */}
-            <div
-                className={`fixed inset-y-0 left-0 z-50 flex transform flex-col border-r border-gray-200 bg-white shadow-xl transition-all duration-300 ease-in-out ${
+            <aside
+                className={`admin-sidebar fixed inset-y-0 left-0 z-50 flex h-dvh max-h-dvh min-h-0 w-[min(100vw-3rem,18rem)] transform flex-col border-r border-gray-200/80 bg-white shadow-xl transition-transform duration-300 ease-out sm:w-72 ${
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-                } w-72 md:static md:z-auto md:flex-shrink-0 md:translate-x-0`}
+                } md:static md:z-auto md:flex-shrink-0 md:translate-x-0`}
             >
                 {/* Logo */}
-                <div className="flex h-16 items-center justify-between border-b border-gray-200 bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+                <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 sm:px-6">
                     <Link href={route(getDashboardRoute())} className="flex items-center">
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white">
                             <Eye className="h-5 w-5 text-blue-600" />
@@ -1272,7 +1285,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                         <span className="ml-3 text-xl font-bold text-white">Eye Hospital</span>
                     </Link>
                     <button
-                        className="hover:bg-opacity-20 rounded-lg p-2 text-white transition-colors hover:bg-white md:hidden"
+                        type="button"
+                        className="rounded-lg p-2 text-white transition-colors hover:bg-white/15 md:hidden"
                         onClick={toggleSidebar}
                     >
                         <X className="h-5 w-5" />
@@ -1280,7 +1294,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 </div>
 
                 {/* User Info Card */}
-                <div className="border-b border-gray-200 bg-gray-50 p-4">
+                <div className="shrink-0 border-b border-gray-200 bg-gray-50/90 p-4">
                     <div className="flex items-center space-x-3">
                         <div className="flex-shrink-0">
                             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-lg font-bold text-white shadow-lg">
@@ -1299,10 +1313,11 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                     </div>
                 </div>
 
-                {/* Navigation - Updated section with role filtering */}
-                <div className="flex-1 overflow-y-auto py-4">
+                {/* Navigation — scrollable region (min-h-0 fixes flex overflow) */}
+                <div className="admin-sidebar-scroll flex min-h-0 flex-1 flex-col overflow-hidden">
+                    <div className="flex-1 overflow-y-auto overscroll-y-contain py-4">
                     {/* Main Navigation */}
-                    <div className="px-4">
+                    <div className="px-3 sm:px-4">
                         <p className="mb-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">Main Menu</p>
                         <nav className="space-y-1">
                             {navigationItems
@@ -1808,7 +1823,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
 
                     {/* Admin Section - Permission-based, NOT role-based */}
                     {adminNavigation.length > 0 && (
-                        <div className="mt-8 px-4">
+                        <div className="mt-8 px-3 sm:px-4">
                             <p className="mb-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">Administration</p>
                             <nav className="space-y-1">
                                 {adminNavigation
@@ -1840,32 +1855,35 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                             </nav>
                         </div>
                     )}
+                    </div>
                 </div>
 
                 {/* Quick Actions removed for cleaner admin sidebar */}
-            </div>
+            </aside>
 
             {/* Main content */}
-            <div className="flex flex-1 flex-col">
+            <div className="flex min-w-0 flex-1 flex-col overflow-hidden md:min-h-0">
                 {/* Top navigation */}
-                <header className="z-10 border-b border-gray-200 bg-white shadow-sm">
-                    <div className="flex h-16 items-center justify-between px-4 py-3">
-                        <div className="flex items-center space-x-4">
+                <header className="admin-header z-10 shrink-0 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/80">
+                    <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:flex-nowrap sm:px-6">
+                        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
                             <button
                                 type="button"
-                                className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 md:hidden"
+                                className="shrink-0 rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 md:hidden"
                                 onClick={toggleSidebar}
                             >
                                 <Menu className="h-6 w-6" />
                             </button>
 
-                            <div>
-                                <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
-                                <p className="text-sm text-gray-500">Welcome back, {auth.user.name.split(' ')[0]}</p>
+                            <div className="min-w-0">
+                                <h1 className="truncate text-lg font-semibold text-gray-900 sm:text-xl">{title}</h1>
+                                <p className="truncate text-xs text-gray-500 sm:text-sm">
+                                    Welcome back, {auth.user.name.split(' ')[0]}
+                                </p>
                             </div>
                         </div>
 
-                        <div className="flex items-center space-x-3">
+                        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
                             {/* Search */}
                             <button className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100">
                                 <Search className="h-5 w-5" />
@@ -1883,7 +1901,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 </button>
 
                                 {notificationsOpen && (
-                                    <div className="ring-opacity-5 absolute right-0 z-50 mt-2 w-80 rounded-lg bg-white shadow-lg ring-1 ring-black">
+                                    <div className="ring-opacity-5 absolute right-0 z-50 mt-2 w-[min(100vw-2rem,20rem)] max-w-[calc(100vw-2rem)] rounded-lg bg-white shadow-lg ring-1 ring-black sm:w-80">
                                         <div className="border-b border-gray-200 p-4">
                                             <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
                                         </div>
@@ -1908,7 +1926,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 </button>
 
                                 {userMenuOpen && (
-                                    <div className="ring-opacity-5 absolute right-0 z-50 mt-2 w-48 rounded-lg bg-white shadow-lg ring-1 ring-black">
+                                    <div className="ring-opacity-5 absolute right-0 z-50 mt-2 w-48 max-w-[calc(100vw-2rem)] rounded-lg bg-white shadow-lg ring-1 ring-black">
                                         <div className="py-1">
                                             <Link
                                                 href={route('profile.edit')}
@@ -1941,24 +1959,24 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 </header>
 
                 {/* Page content */}
-                <main className="flex-1 bg-slate-50">
-                    <div className="p-6">{children}</div>
+                <main className="admin-main-scroll flex-1 overflow-y-auto overflow-x-hidden bg-slate-50">
+                    <div className="mx-auto w-full max-w-[1600px] p-4 sm:p-6">{children}</div>
                 </main>
             </div>
 
             {/* Print Styles */}
             <style>{`
                 @media print {
-                    /* Hide sidebar, header, and navigation */
-                    .fixed.inset-y-0.left-0,
-                    header {
+                    .admin-sidebar,
+                    .admin-header {
                         display: none !important;
                     }
 
-                    /* Make main content full width */
-                    .h-screen.flex {
+                    .admin-layout-root {
                         display: block !important;
                         height: auto !important;
+                        min-height: 0 !important;
+                        overflow: visible !important;
                     }
 
                     main {
@@ -1967,6 +1985,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                     }
 
                     main > div {
+                        max-width: none !important;
                         padding: 0 !important;
                     }
                 }

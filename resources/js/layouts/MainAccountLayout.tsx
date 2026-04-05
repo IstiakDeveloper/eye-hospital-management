@@ -107,15 +107,15 @@ const MainAccountLayout: React.FC<MainAccountLayoutProps> = ({ children, title =
             <div className="min-h-screen bg-gray-50">
                 {/* Horizontal Tab Navigation */}
                 <div className="no-print border-b border-gray-200 bg-white shadow-sm">
-                    <div className="px-6">
-                        <div className="flex items-center space-x-1 overflow-x-auto">
+                    <div className="px-4 py-1 sm:px-6">
+                        <div className="flex flex-wrap items-stretch gap-x-1 gap-y-1">
                             {navigation.map((item) => {
                                 const Icon = item.icon;
                                 return (
                                     <Link
                                         key={item.name}
                                         href={item.href}
-                                        className={`flex items-center border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                                        className={`flex items-center whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors sm:px-4 sm:py-3 ${
                                             item.current
                                                 ? 'border-blue-600 text-blue-600'
                                                 : 'border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900'
