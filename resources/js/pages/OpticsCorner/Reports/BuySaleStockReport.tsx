@@ -94,9 +94,8 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
     const [search, setSearch] = useState(filters.search || '');
     const [itemType, setItemType] = useState(filters.item_type);
 
-    // sale_cash and sale_due come directly from backend (already correctly calculated)
-    // sale_cash = proportioned advance_payment (actual cash at sale time, matches bank)
-    // sale_due = current due_amount (what's still outstanding)
+    // sale_cash: cash received in this period (optics_sale_payments in range), allocated per line; matches Hospital Optics Income when posted.
+    // sale_due (TOTAL row): receivable snapshot as-of toDate (matches Balance Sheet).
     const reportData = rawReportData;
 
     // Add only_fitting_charge and previous due receive to relevant totals fields
@@ -730,6 +729,8 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                                         <td className="border border-gray-300 bg-purple-50 px-1 py-3 text-center text-sm text-gray-500">-</td>
                                         <td className="border border-gray-300 bg-purple-50 px-2 py-3 text-right text-sm text-gray-500">-</td>
                                     </tr>
+
+                                    {/* (Removed) Optics due as-on row — now shown via TOTAL.sale_due */}
 
                                     {/* Grand Cash Total Row */}
                                     <tr className="bg-emerald-100 text-xs font-bold">

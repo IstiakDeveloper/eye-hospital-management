@@ -12,6 +12,7 @@ use App\Models\Medicine;
 // use App\Models\OperationBooking; // only needed if Operation Due is included on BS again
 use App\Models\OpticsSale;
 use App\Models\OpticsVendor;
+use App\Support\IncomeExpenditureCumulativeCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -41,138 +42,18 @@ class BalanceSheetController extends Controller
         // Fund = Total Fund In - Total Fund Out
         $fund = $totalFundIn - $totalFundOut;
 
-        // ==================== CALCULATE NET PROFIT FROM INCOME & EXPENDITURE (SAME AS INCOME & EXPENDITURE REPORT) ====================
+        // ==================== CALCULATE NET PROFIT (SAME RULES AS INCOME & EXPENDITURE CUMULATIVE TO as_on_date) ====================
 
-        // For Balance Sheet, we need cumulative from beginning to asOnDate (EXACTLY same as Income & Expenditure)
         $toDate = $asOnDate;
+        $ieTotals = IncomeExpenditureCumulativeCalculator::totalsToDate($toDate);
+        $totalIncome = $ieTotals['total_income'];
+        $totalExpenditure = $ieTotals['total_expenditure'];
+        $houseRentAdjustment = $ieTotals['house_rent_adjustment'];
+        $netProfit = $ieTotals['net_profit'];
 
-        // Calculate Income - EXACTLY same logic as Income & Expenditure cumulative
-        $incomeCategories = \App\Models\HospitalIncomeCategory::orderBy('name')->get();
-        $totalIncome = 0;
-
-        foreach ($incomeCategories as $category) {
-            // Special handling for Medicine Income and Optics Income - show PROFIT only, not total sales
-            if (in_array($category->name, ['Medicine Income', 'Optics Income'])) {
-                if ($category->name === 'Medicine Income') {
-                    // Calculate medicine profit - cumulative from beginning to toDate
-                    // Total Sales - Total Cost = Profit (up to toDate)
-                    $salesData = DB::table('medicine_sales')
-                        ->where('sale_date', '<=', $toDate)
-                        ->sum('total_amount');
-
-                    $costData = DB::table('medicine_sale_items')
-                        ->join('medicine_sales', 'medicine_sale_items.medicine_sale_id', '=', 'medicine_sales.id')
-                        ->where('medicine_sales.sale_date', '<=', $toDate)
-                        ->sum(DB::raw('medicine_sale_items.quantity * medicine_sale_items.buy_price'));
-
-                    $profit = $salesData - $costData;
-
-                    // Get ONLY manual/genuine income (exclude sale entries)
-                    $manualIncome = \App\Models\HospitalTransaction::where('income_category_id', $category->id)
-                        ->where('transaction_date', '<=', $toDate)
-                        ->where('description', 'NOT LIKE', '%Medicine Sale:%')
-                        ->sum('amount');
-
-                    $cumulative = $manualIncome + $profit;
-                    $totalIncome += $cumulative;
-                } else {
-                    // Optics Income - Calculate profit from beginning to toDate
-                    // Get all profit (from beginning to toDate)
-                    $glassesData = \App\Models\Glasses::getBuySaleStockReport('1900-01-01', $toDate);
-                    $lensTypesData = \App\Models\LensType::getBuySaleStockReport('1900-01-01', $toDate);
-                    $completeGlassesData = \App\Models\CompleteGlasses::getBuySaleStockReport('1900-01-01', $toDate);
-
-                    $itemsProfit = collect($glassesData)->sum('total_profit')
-                                 + collect($lensTypesData)->sum('total_profit')
-                                 + collect($completeGlassesData)->sum('total_profit');
-
-                    // Add only fitting charge (all up to toDate)
-                    $onlyFittingCharge = DB::table('optics_sales')
-                        ->whereNotExists(function ($query) {
-                            $query->select(DB::raw(1))
-                                ->from('optics_sale_items')
-                                ->whereColumn('optics_sale_items.optics_sale_id', 'optics_sales.id');
-                        })
-                        ->where('glass_fitting_price', '>', 0)
-                        ->where('created_at', '<=', $toDate.' 23:59:59')
-                        ->whereNull('deleted_at')
-                        ->sum('glass_fitting_price');
-
-                    $profit = $itemsProfit + $onlyFittingCharge;
-
-                    // Get ONLY manual/genuine income (exclude sale-related payments)
-                    $manualIncome = \App\Models\HospitalTransaction::where('income_category_id', $category->id)
-                        ->where('transaction_date', '<=', $toDate)
-                        ->where('description', 'NOT LIKE', '%Advance Payment%')
-                        ->where('description', 'NOT LIKE', '%Due Payment%')
-                        ->where('description', 'NOT LIKE', '%Invoice:%')
-                        ->sum('amount');
-
-                    $cumulative = $manualIncome + $profit;
-                    $totalIncome += $cumulative;
-                }
-            } else {
-                // Regular income categories - get from HospitalTransaction
-                // Cumulative amount (from beginning to toDate)
-                $cumulative = \App\Models\HospitalTransaction::where('income_category_id', $category->id)
-                    ->where('transaction_date', '<=', $toDate)
-                    ->sum('amount');
-
-                $totalIncome += $cumulative;
-            }
-        }
-
-        // Calculate Expenditure - EXACTLY same logic as Income & Expenditure cumulative
-        // Exclude capital expenditures and purchase/payment categories (not operational expenses)
-        $excludeCategories = [
-            'Fixed Asset Purchase',
-            'Fixed Asset Vendor Payment',
-            'Medicine Purchase',
-            'Medicine Vendor Payment',
-            'Optics Purchase',
-            'Optics Vendor Payment',
-            'House Security',
-        ];
-
-        $expenseCategories = \App\Models\HospitalExpenseCategory::whereNotIn('name', $excludeCategories)
-            ->orderBy('name')
-            ->get();
-
-        $totalExpenditure = 0;
-
-        foreach ($expenseCategories as $category) {
-            // Cumulative amount (from beginning to toDate)
-            $cumulative = \App\Models\HospitalTransaction::where('expense_category_id', $category->id)
-                ->where('transaction_date', '<=', $toDate)
-                ->sum('amount');
-
-            $totalExpenditure += abs($cumulative);
-        }
-
-        // Add House Rent (Adjustment) from Advance Rent Deductions - by month/year (not deduction_date)
         $asOnMonth = (int) date('n', strtotime($asOnDate));
         $asOnYear = (int) date('Y', strtotime($asOnDate));
         $periodEndCumulative = $asOnYear * 100 + $asOnMonth;
-        $houseRentAdjustment = \App\Models\AdvanceHouseRentDeduction::whereRaw('(year * 100 + month) <= ?', [$periodEndCumulative])
-            ->sum('amount');
-
-        $totalExpenditure += $houseRentAdjustment;
-
-        // Add special expenses without category_id (excluding Fixed Asset and Advance House Rent related)
-        $specialExpenses = DB::table('hospital_transactions')
-            ->whereNull('expense_category_id')
-            ->whereNull('income_category_id')
-            ->where('amount', '<', 0)
-            ->where('description', 'NOT LIKE', '%Fixed Asset%')
-            ->where('description', 'NOT LIKE', '%Asset Purchase%')
-            ->where('description', 'NOT LIKE', '%Advance House Rent%')
-            ->where('transaction_date', '<=', $toDate)
-            ->sum(DB::raw('ABS(amount)'));
-
-        $totalExpenditure += $specialExpenses;
-
-        // Net Profit/Loss (Surplus/Deficit) = Income - Expenditure (EXACTLY same as Income & Expenditure cumulative)
-        $netProfit = $totalIncome - $totalExpenditure;
 
         // ==================== ASSETS ====================
 
@@ -276,37 +157,9 @@ class BalanceSheetController extends Controller
             ->sum(DB::raw('ABS(hospital_transactions.amount)'));
 
         // 6. Customer Dues (Receivables) - DATE-WISE
-        // Optics Sale Due - Calculate based on payments up to asOnDate
-        $opticsSales = OpticsSale::whereDate('created_at', '<=', $asOnDate)
-            ->whereNull('deleted_at')
-            ->get(['id', 'total_amount', 'advance_payment']);
-
-        $opticsSaleDue = 0;
-        foreach ($opticsSales as $sale) {
-            // Get payments from payment table up to asOnDate
-            $paymentsUpToDate = DB::table('optics_sale_payments')
-                ->where('optics_sale_id', $sale->id)
-                ->whereDate('created_at', '<=', $asOnDate)
-                ->sum('amount');
-
-            // Check if advance payment is recorded in payment table
-            $advanceInTable = DB::table('optics_sale_payments')
-                ->where('optics_sale_id', $sale->id)
-                ->where('notes', 'like', '%Advance%')
-                ->whereDate('created_at', '<=', $asOnDate)
-                ->sum('amount');
-
-            // Calculate total paid correctly
-            // If advance is in payment table, use only payment table (newer sales)
-            // If advance is NOT in payment table, use advance_payment field + other payments (older sales)
-            $totalPaid = $advanceInTable > 0 ? $paymentsUpToDate : ($sale->advance_payment + $paymentsUpToDate);
-
-            // Due = Total - Total Paid
-            $dueAsOnDate = $sale->total_amount - $totalPaid;
-            if ($dueAsOnDate > 0) {
-                $opticsSaleDue += $dueAsOnDate;
-            }
-        }
+        // Optics Sale Due: outstanding as of end of asOnDate (payments counted only up to that datetime).
+        // Stored due_amount is *current* balance and is wrong for past "as on" dates after later payments — use OpticsSale::sumOutstandingDueAsOf.
+        $opticsSaleDue = OpticsSale::sumOutstandingDueAsOf($asOnDate);
 
         // Medicine Sale Due = 0 because hospital_transactions records the full total_amount
         // at time of sale (not just cash received), so it's already included in bankBalance.
@@ -452,25 +305,22 @@ class BalanceSheetController extends Controller
             + $opticsSaleDue
             + $medicineSaleDue;
 
-        // Total Liabilities + Fund + Net Profit should equal Total Assets
+        // Total Liabilities + Fund + Net Profit (I&E basis) — may not equal total assets (mixed measurement bases).
         $totalLiabilitiesAndFund = $totalLiabilities + $fund + $netProfit;
 
-        // Raw difference before any reconciliation (for precise debugging)
+        // Gap = Assets − (Liabilities + Fund + Surplus). Surplus = Income − Expenditure using I&E rules
+        // (medicine/optics profit, not cash). Bank and stock use other rules, so the gap is usually non-zero
+        // and is not automatically an error in IncomeExpenditureController or stock tables.
         $rawBalanceDifference = $actualTotalAssets - $totalLiabilitiesAndFund;
 
-        // By default, show actual totals
         $reconciliationAdjustment = 0.0;
         $totalAssets = $actualTotalAssets;
 
-        // If the gap is only a tiny rounding/float difference (e.g. -0.07),
-        // apply a small reconciliation so the report balances visually.
         if (abs($rawBalanceDifference) > 0 && abs($rawBalanceDifference) <= 0.10) {
-            // Round the tiny difference to 2 decimals and adjust assets
             $reconciliationAdjustment = round($rawBalanceDifference, 2);
             $totalAssets = $actualTotalAssets - $reconciliationAdjustment;
         }
 
-        // Final difference after any reconciliation
         $balanceDifference = $totalAssets - $totalLiabilitiesAndFund;
 
         // Debug information
@@ -527,7 +377,7 @@ class BalanceSheetController extends Controller
 
             // Fund & Profit (both separate)
             'fund' => $fund, // Fund In - Fund Out
-            'netProfit' => $netProfit, // Income - Expenditure (excluding Fixed Asset Purchase)
+            'netProfit' => $netProfit,
             'totalLiabilitiesAndFund' => $totalLiabilitiesAndFund,
 
             // Debug data for display

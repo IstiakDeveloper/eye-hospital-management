@@ -527,9 +527,11 @@ class OpticsSellerDashboardController extends Controller
 
             DB::commit();
 
+            $sale->refresh();
+
             $responseMessage = "Sale completed successfully! Invoice: {$sale->invoice_number} | Total: ৳".number_format($totalAmount, 2);
-            if ($dueAmount > 0) {
-                $responseMessage .= ' | Due: ৳'.number_format($dueAmount, 2);
+            if ($sale->due_amount > 0) {
+                $responseMessage .= ' | Due: ৳'.number_format((float) $sale->due_amount, 2);
             }
 
             return redirect()->back()->with('success', $responseMessage);
@@ -798,11 +800,8 @@ class OpticsSellerDashboardController extends Controller
                 'received_by' => auth()->user()->id,
             ]);
 
-            // Update sale due amount
-            $newDueAmount = $sale->due_amount - $validated['amount'];
-            $sale->update([
-                'due_amount' => $newDueAmount,
-            ]);
+            $sale->refresh();
+            $newDueAmount = (float) $sale->due_amount;
 
             // Record income in OpticsAccount
             $description = "Due Payment - Invoice: {$sale->invoice_number} | Customer: {$sale->customer_name}";

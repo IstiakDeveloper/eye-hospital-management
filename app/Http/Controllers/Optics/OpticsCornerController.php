@@ -768,6 +768,7 @@ class OpticsCornerController extends Controller
     // =============== SALES MANAGEMENT ===============
     public function sales()
     {
+        // Option A: treat stored due_amount as the source of truth.
         $query = OpticsSale::with(['patient', 'seller', 'payments'])
             ->withCount('items');
 
@@ -1046,9 +1047,11 @@ class OpticsCornerController extends Controller
 
             DB::commit();
 
+            $sale->refresh();
+
             $responseMessage = "Sale completed successfully! Invoice: {$sale->invoice_number} | Total: ৳".number_format($totalAmount, 2);
-            if ($dueAmount > 0) {
-                $responseMessage .= ' | Due: ৳'.number_format($dueAmount, 2);
+            if ($sale->due_amount > 0) {
+                $responseMessage .= ' | Due: ৳'.number_format((float) $sale->due_amount, 2);
             }
 
             return redirect()->route('optics.sales')->with('success', $responseMessage);
@@ -1309,9 +1312,11 @@ class OpticsCornerController extends Controller
 
             DB::commit();
 
+            $sale->refresh();
+
             $responseMessage = "Sale updated successfully! Invoice: {$sale->invoice_number} | Total: ৳".number_format($totalAmount, 2);
-            if ($dueAmount > 0) {
-                $responseMessage .= ' | Due: ৳'.number_format($dueAmount, 2);
+            if ($sale->due_amount > 0) {
+                $responseMessage .= ' | Due: ৳'.number_format((float) $sale->due_amount, 2);
             }
 
             return redirect()->route('optics.sales')->with('success', $responseMessage);

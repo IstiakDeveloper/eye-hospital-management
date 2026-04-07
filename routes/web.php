@@ -957,6 +957,11 @@ Route::middleware(['auth'])->prefix('optics')->name('optics.')->group(function (
     // Buy-Sale-Stock Report
     Route::get('/reports/buy-sale-stock', [OpticsReportController::class, 'buySaleStockReport'])->name('reports.buy-sale-stock')->middleware('permission:optics.reports.buy-sale-stock');
     Route::get('/reports/buy-sale-stock/export', [OpticsReportController::class, 'exportBuySaleStockReport'])->name('reports.buy-sale-stock.export')->middleware('permission:optics.reports.buy-sale-stock');
+
+    // Optics Due Monthly Ledger
+    Route::get('/reports/optics-due-ledger', [OpticsReportController::class, 'opticsDueMonthlyLedger'])
+        ->name('reports.optics-due-ledger')
+        ->middleware('permission:optics.reports.buy-sale-stock');
 });
 
 Route::prefix('medical-tests')->name('medical-tests.')->middleware(['auth', 'permission:medical-tests.view'])->group(function () {

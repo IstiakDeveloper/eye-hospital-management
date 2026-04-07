@@ -63,6 +63,13 @@ const MainAccountLayout: React.FC<MainAccountLayoutProps> = ({ children, title =
             permission: 'optics.reports.buy-sale-stock',
         },
         {
+            name: 'Optics Due Ledger',
+            href: '/optics/reports/optics-due-ledger',
+            icon: Eye,
+            current: route().current('optics.reports.optics-due-ledger'),
+            permission: 'optics.reports.buy-sale-stock',
+        },
+        {
             name: 'Medical Test Income',
             href: '/hospital-account/reports/medical-test-income',
             icon: TestTube,

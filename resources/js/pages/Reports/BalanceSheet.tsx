@@ -229,7 +229,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                         <tr>
                             <td className="border border-gray-800 px-2 py-1 text-center text-xs">2</td>
                             <td className="border border-gray-800 px-2 py-1 text-xs">Surplus/(Deficit)</td>
-                            <td className={`} border border-gray-800 px-2 py-1 text-right text-xs font-semibold`}>{formatCurrency(netProfit)}</td>
+                            <td className="border border-gray-800 px-2 py-1 text-right text-xs font-semibold">{formatCurrency(netProfit)}</td>
                             <td className="border-t border-r border-b border-l-2 border-gray-800 px-2 py-1 text-center text-xs">2</td>
                             <td className="border border-gray-800 px-2 py-1 text-xs">Optics Stock Value</td>
                             <td className="border border-gray-800 px-2 py-1 text-right text-xs">{formatCurrency(opticsStockValue)}</td>
@@ -330,7 +330,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                 </table>
 
                 {/* Debug Information */}
-                {balanceDifference !== 0 && (
+                {Math.abs(balanceDifference) >= 0.01 && (
                     <div className="mt-6 rounded border border-yellow-200 bg-yellow-50 p-4">
                         <h3 className="mb-2 text-sm font-bold text-yellow-800">⚠️ Balance Sheet Difference Detected</h3>
                         <div className="space-y-1 text-xs">

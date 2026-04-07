@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\OpticsBuySaleStockMetrics;
+use App\Support\OpticsWeightedAverageStock;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -73,42 +75,21 @@ class LensType extends Model
     }
 
     /**
-     * Get cumulative stock value from beginning till a specific date
-     * Formula: Total Purchases - Total COGS
+     * Get cumulative stock quantity and value up to end of day $tillDate using chronological
+     * weighted-average cost from stock_movements.
      */
-    public function getCumulativeStockValue($tillDate)
+    public function getCumulativeStockValue($tillDate): array
     {
-        // Get all purchases till date from stock_movements (inclusive)
-        $totalPurchases = \DB::table('stock_movements')
-            ->where('item_type', 'lens_types')
-            ->where('item_id', $this->id)
-            ->whereIn('movement_type', ['purchase', 'adjustment', 'return'])
-            ->where('created_at', '<=', $tillDate.' 23:59:59')
-            ->sum('total_amount');
-
-        // Get all sales till date (inclusive)
-        $totalSalesQty = \DB::table('optics_sale_items')
-            ->join('optics_sales', 'optics_sale_items.optics_sale_id', '=', 'optics_sales.id')
-            ->whereIn('optics_sale_items.item_type', ['lens', 'lens_types'])
-            ->where('optics_sale_items.item_id', $this->id)
-            ->where('optics_sales.created_at', '<=', $tillDate.' 23:59:59')
-            ->whereNull('optics_sales.deleted_at')
-            ->sum('optics_sale_items.quantity');
-
-        // Calculate COGS
-        $totalCOGS = $totalSalesQty * $this->price;
-
-        // Get quantity
-        $totalPurchaseQty = \DB::table('stock_movements')
-            ->where('item_type', 'lens_types')
-            ->where('item_id', $this->id)
-            ->whereIn('movement_type', ['purchase', 'adjustment', 'return'])
-            ->where('created_at', '<=', $tillDate.' 23:59:59')
-            ->sum(\DB::raw('ABS(quantity)'));
+        $state = OpticsWeightedAverageStock::cumulativeStockValueReconciled(
+            'lens_types',
+            $this->id,
+            $tillDate,
+            (float) ($this->price ?? 0),
+        );
 
         return [
-            'quantity' => $totalPurchaseQty - $totalSalesQty,
-            'value' => $totalPurchases - $totalCOGS,
+            'quantity' => (int) round($state['quantity']),
+            'value' => round($state['value'], 2),
         ];
     }
 
@@ -157,16 +138,13 @@ class LensType extends Model
             $saleDue = $salesData['due'];
             $saleCash = $salesData['cash'];
 
-            // Calculate available stock = Before Stock + Buy - Sale
-            $availableQty = $beforeStockQty + $buyQty - $saleQty;
+            $endStockData = $lens->getCumulativeStockValue($toDate);
+            $availableQty = $endStockData['quantity'];
+            $availableValue = $endStockData['value'];
 
-            // Profit calculation
-            $purchaseCostForSoldItems = $saleQty * $buyPrice;
-            $totalProfit = $saleTotal - $purchaseCostForSoldItems;
-
-            // Available Value = Before + Buy - COGS (NO ROUNDING for continuity)
-            $availableValue = $beforeStockValue + $buyValue - $purchaseCostForSoldItems;
-            $profitPerUnit = $saleQty > 0 ? ($salePrice - $buyPrice) : 0;
+            $cogsInPeriod = $beforeStockValue + $buyValue - $availableValue;
+            $totalProfit = $saleTotal - $cogsInPeriod;
+            $profitPerUnit = $saleQty > 0 ? (($saleTotal - $cogsInPeriod) / $saleQty) : 0;
 
             return [
                 'id' => $lens->id,
@@ -176,7 +154,7 @@ class LensType extends Model
 
                 // Before stock information - raw values for continuity (cast to prevent null)
                 'before_stock_qty' => (int) $beforeStockQty,
-                'before_stock_price' => (float) ($buyPrice > 0 ? $buyPrice : ($lens->price ?? 0)),
+                'before_stock_price' => (float) ($beforeStockQty > 0 ? $beforeStockValue / $beforeStockQty : ($buyPrice > 0 ? $buyPrice : ($lens->price ?? 0))),
                 'before_stock_value' => (float) $beforeStockValue,
 
                 // Buy information - raw values (cast to prevent null)
@@ -272,7 +250,6 @@ class LensType extends Model
                 'optics_sales.id as sale_id',
                 'optics_sales.total_amount',
                 'optics_sales.advance_payment',
-                'optics_sales.due_amount',
                 'optics_sales.glass_fitting_price'
             )
             ->get();
@@ -317,24 +294,14 @@ class LensType extends Model
 
         $total = $subtotal - $discount + $fittingCharge;
 
-        // Calculate due amount proportionally for this specific item
-        // 'due' = current due_amount (what's still outstanding)
-        // 'cash' = total - due (all cash ever collected: advance + subsequent due payments)
-        $due = 0;
-        foreach ($uniqueSales as $sale) {
-            $saleItemsTotal = DB::table('optics_sale_items')
-                ->where('optics_sale_id', $sale->sale_id)
-                ->sum('total_price');
-
-            $thisItemTotal = $sales->where('sale_id', $sale->sale_id)->sum('total_price');
-
-            if ($saleItemsTotal > 0) {
-                $itemPortion = $thisItemTotal / $saleItemsTotal;
-                $due += ($sale->due_amount ?? 0) * $itemPortion;
-            }
-        }
-
-        $cash = $total - $due;
+        $metrics = OpticsBuySaleStockMetrics::allocatedDueAndPeriodCash(
+            $uniqueSales,
+            $sales,
+            $fromDate,
+            $toDate,
+        );
+        $due = $metrics['due'];
+        $cash = $metrics['cash'];
 
         return [
             'quantity' => $quantity,

@@ -342,6 +342,13 @@ export default function Reports({ currentMonth, lastMonth, topSellingFrames, low
                             <Calendar className="mx-auto mb-2 h-6 w-6" />
                             <p className="text-sm font-medium">Account Statement</p>
                         </Link>
+                        <Link
+                            href={route('optics.reports.optics-due-ledger')}
+                            className="bg-opacity-20 hover:bg-opacity-30 rounded-lg bg-white p-4 text-center transition-colors"
+                        >
+                            <Calendar className="mx-auto mb-2 h-6 w-6" />
+                            <p className="text-sm font-medium">Due Ledger</p>
+                        </Link>
                     </div>
                 </div>
             </div>
