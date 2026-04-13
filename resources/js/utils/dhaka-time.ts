@@ -56,3 +56,34 @@ export function formatDhakaDateTime(value: DateInput): string {
         hour12: true,
     });
 }
+
+/**
+ * Whole years between DOB and a reference date using Asia/Dhaka calendar dates
+ * (avoids UTC midnight shifting YYYY-MM-DD birthdates).
+ */
+export function getAgeFromDateOfBirth(dob: DateInput, asOf: DateInput = new Date()): number | null {
+    const birth = toDhakaDate(dob);
+    const ref = toDhakaDate(asOf);
+    if (!birth || !ref) {
+        return null;
+    }
+
+    const ymd = (d: Date) => {
+        const s = new Intl.DateTimeFormat('en-CA', {
+            timeZone: DHAKA_TIMEZONE,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        }).format(d);
+        const [y, m, day] = s.split('-').map(Number);
+        return { y, m, day };
+    };
+
+    const b = ymd(birth);
+    const t = ymd(ref);
+    let age = t.y - b.y;
+    if (t.m < b.m || (t.m === b.m && t.day < b.day)) {
+        age -= 1;
+    }
+    return age >= 0 ? age : null;
+}

@@ -10,6 +10,7 @@ use App\Models\Prescription;
 use App\Models\PrescriptionGlasses;
 use App\Models\PrescriptionMedicine;
 use App\Models\User;
+use App\Models\VisionTest;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -864,6 +865,38 @@ class PrescriptionController extends Controller
                 'has_glasses' => $prescription->prescriptionGlasses->count() > 0,
             ]);
 
+            // Vision test for pre-printed pad (left column): same visit first, else latest for patient
+            $visionTestModel = null;
+            if ($prescription->visit_id) {
+                $visionTestModel = VisionTest::where('visit_id', $prescription->visit_id)
+                    ->orderByDesc('test_date')
+                    ->first();
+            }
+            if ($visionTestModel === null) {
+                $visionTestModel = VisionTest::where('patient_id', $prescription->patient_id)
+                    ->orderByDesc('test_date')
+                    ->first();
+            }
+
+            $visionTestPayload = null;
+            if ($visionTestModel !== null) {
+                $visionTestPayload = [
+                    'test_date' => $visionTestModel->test_date?->format('Y-m-d'),
+                    'complains' => $visionTestModel->complains,
+                    'right_eye_vision_without_glass' => $visionTestModel->right_eye_vision_without_glass,
+                    'left_eye_vision_without_glass' => $visionTestModel->left_eye_vision_without_glass,
+                    'right_eye_vision_with_glass' => $visionTestModel->right_eye_vision_with_glass,
+                    'left_eye_vision_with_glass' => $visionTestModel->left_eye_vision_with_glass,
+                    'right_eye_iop' => $visionTestModel->right_eye_iop,
+                    'left_eye_iop' => $visionTestModel->left_eye_iop,
+                    'blood_pressure' => $visionTestModel->blood_pressure,
+                    'blood_sugar' => $visionTestModel->blood_sugar,
+                    'urine_sugar' => $visionTestModel->urine_sugar,
+                    'right_eye_fundus' => $visionTestModel->right_eye_fundus,
+                    'left_eye_fundus' => $visionTestModel->left_eye_fundus,
+                ];
+            }
+
             // Return Inertia response with data for React component
             return Inertia::render('Prescriptions/Print', [
                 'prescription' => [
@@ -872,6 +905,7 @@ class PrescriptionController extends Controller
                         'id' => $prescription->patient->id,
                         'patient_id' => $prescription->patient->patient_id,
                         'name' => $prescription->patient->name,
+                        'date_of_birth' => $prescription->patient->date_of_birth?->format('Y-m-d'),
                         'age' => $prescription->patient->age,
                         'gender' => $prescription->patient->gender,
                         'phone' => $prescription->patient->phone,
@@ -894,6 +928,7 @@ class PrescriptionController extends Controller
                     'notes' => $prescription->notes,
                     'followup_date' => $prescription->followup_date,
                     'created_at' => $prescription->created_at->format('Y-m-d H:i:s'),
+                    'vision_test' => $visionTestPayload,
                     'medicines' => $prescription->prescriptionMedicines->map(function ($medicine) {
                         return [
                             'id' => $medicine->id,
@@ -907,13 +942,19 @@ class PrescriptionController extends Controller
                     'glasses' => $prescription->prescriptionGlasses->map(function ($glass) {
                         return [
                             'id' => $glass->id,
-                            'eye' => $glass->eye,
-                            'sphere' => $glass->sphere,
-                            'cylinder' => $glass->cylinder,
-                            'axis' => $glass->axis,
-                            'addition' => $glass->addition,
-                            'prism' => $glass->prism,
-                            'notes' => $glass->notes,
+                            'prescription_type' => $glass->prescription_type,
+                            'right_eye_sphere' => $glass->right_eye_sphere,
+                            'right_eye_cylinder' => $glass->right_eye_cylinder,
+                            'right_eye_axis' => $glass->right_eye_axis,
+                            'right_eye_add' => $glass->right_eye_add,
+                            'left_eye_sphere' => $glass->left_eye_sphere,
+                            'left_eye_cylinder' => $glass->left_eye_cylinder,
+                            'left_eye_axis' => $glass->left_eye_axis,
+                            'left_eye_add' => $glass->left_eye_add,
+                            'pupillary_distance' => $glass->pupillary_distance,
+                            'segment_height' => $glass->segment_height,
+                            'optical_center_height' => $glass->optical_center_height,
+                            'special_instructions' => $glass->special_instructions,
                         ];
                     }),
                 ],
@@ -924,6 +965,8 @@ class PrescriptionController extends Controller
                     'glasses_count' => $prescription->prescriptionGlasses->count(),
                     'filename' => 'prescription-'.$prescription->patient->patient_id.'-'.
                         $prescription->created_at->format('Y-m-d').'.pdf',
+                    // Pre-printed A4 pad: header/footer already on paper — only print clinical content in the body area.
+                    'preprinted_pad' => true,
                 ],
                 'user' => [
                     'name' => $user->name,
@@ -967,6 +1010,7 @@ class PrescriptionController extends Controller
                         'id' => $patient->id,
                         'patient_id' => $patient->patient_id,
                         'name' => $patient->name,
+                        'date_of_birth' => $patient->date_of_birth?->format('Y-m-d'),
                         'age' => $patient->age,
                         'gender' => $patient->gender,
                         'phone' => $patient->phone,
