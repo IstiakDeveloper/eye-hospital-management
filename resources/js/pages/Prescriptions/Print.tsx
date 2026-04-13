@@ -1,6 +1,6 @@
 import { formatDhakaDate, formatDhakaDateTime } from '@/utils/dhaka-time';
 import { Head } from '@inertiajs/react';
-import { useEffect } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 
 // Types based on your controller data structure
 interface Patient {
@@ -144,6 +144,18 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
         const dt = formatDhakaDateTime(dateString);
         return dt.includes(', ') ? dt.split(', ')[1] : dt;
     };
+
+    const formatGenderDisplay = (g?: string) => {
+        if (!g) return '';
+        const lower = g.toLowerCase();
+        if (lower === 'male') return 'Male';
+        if (lower === 'female') return 'Female';
+        if (lower === 'other') return 'Other';
+        return g.charAt(0).toUpperCase() + g.slice(1);
+    };
+
+    const blankVisionRows = ['V/A (Unaided)', 'V/A ē P.H', 'V/A (Aided)', 'IOP', 'SPT'];
+    const blankAnteriorRows = ['Lid', 'Conjunctiva', 'Cornea', 'A.Chamber', 'Iris', 'Pupil', 'lens', 'Ocular movements'];
 
     const formatSphereValue = (value?: number) => {
         if (!value) return '-';
@@ -334,6 +346,17 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                     min-height: 8mm;
                     padding: 1mm;
                     width: 98.7%;
+                }
+
+                /* No border (screen + print) — avoid reusing .section-box so global CSS cannot win */
+                .diagnosis-section-body {
+                    min-height: 8mm;
+                    padding: 1mm 0;
+                    width: 100%;
+                    border: 0 !important;
+                    border-style: none !important;
+                    outline: none !important;
+                    box-shadow: none !important;
                 }
 
                 /* Medicine Table */
@@ -570,6 +593,13 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                         display: none !important;
                     }
 
+                    .diagnosis-section-body {
+                        border: 0 !important;
+                        border-style: none !important;
+                        outline: none !important;
+                        box-shadow: none !important;
+                    }
+
                     @page {
                         margin: 5mm;
                     }
@@ -590,9 +620,10 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
 
                 /* Blank prescription (compact colored header + left panel + blank writing area) */
                 .blank-prescription-container {
-                    max-width: 200mm;
+                    max-width: 210mm;
                     margin: 0 auto;
                     padding: 0;
+                    box-sizing: border-box;
                 }
 
                 .blank-prescription-page {
@@ -770,6 +801,381 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                     break-inside: avoid;
                 }
 
+                /* ─── Official blank template (matches hospital print form) ─── */
+                /* Uniform gutters; A4 content column ≈ 210mm − page padding */
+                .tpl-blank-page {
+                    --tpl-pad-x: 4mm;
+                    --tpl-pad-y: 3mm;
+                    --tpl-inner-pad: 2.5mm;
+                    position: relative;
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 287mm;
+                    width: 100%;
+                    max-width: 210mm;
+                    margin: 0 auto;
+                    padding: var(--tpl-pad-y) var(--tpl-pad-x);
+                    background: #fff;
+                    color: #000;
+                    font-size: 8.5px;
+                    line-height: 1.25;
+                    box-sizing: border-box;
+                    border: 1px solid #000;
+                }
+
+                .tpl-page-watermark {
+                    position: absolute;
+                    inset: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    pointer-events: none;
+                    z-index: 0;
+                }
+
+                .tpl-page-watermark img {
+                    width: min(100mm, 48vw);
+                    max-width: 100%;
+                    height: auto;
+                    object-fit: contain;
+                    opacity: 0.18;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+
+                .tpl-blank-layer {
+                    position: relative;
+                    z-index: 1;
+                }
+
+                .tpl-blank-main {
+                    flex: 1 1 auto;
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 0;
+                }
+
+                .tpl-header {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    padding: 1mm 0 3mm 0;
+                    margin: 0;
+                    border-bottom: 2px solid #000;
+                    flex-shrink: 0;
+                    background: #fff;
+                }
+
+                .tpl-header-brand {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 3mm;
+                }
+
+                .tpl-logo {
+                    width: 20mm;
+                    height: 20mm;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .tpl-logo img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
+                }
+
+                .tpl-header-text {
+                    text-align: center;
+                }
+
+                .tpl-hospital-name {
+                    font-size: 15px;
+                    font-weight: 700;
+                    margin-bottom: 1mm;
+                }
+
+                .tpl-header-line {
+                    font-size: 9.5px;
+                    margin-bottom: 0.5mm;
+                }
+
+                .tpl-doc-title {
+                    font-size: 13px;
+                    font-weight: 700;
+                    margin-top: 2mm;
+                    letter-spacing: 0.5px;
+                }
+
+                .tpl-patient-wrap {
+                    padding: var(--tpl-inner-pad) 0;
+                    margin: 0;
+                    border-bottom: 1px solid #000;
+                    flex-shrink: 0;
+                    background: #fff;
+                }
+
+                .tpl-p-row {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: baseline;
+                    gap: 1mm 3mm;
+                    margin-bottom: 1.5mm;
+                }
+
+                .tpl-p-row:last-child {
+                    margin-bottom: 0;
+                }
+
+                .tpl-field {
+                    display: inline-flex;
+                    align-items: baseline;
+                    gap: 1mm;
+                    flex: 1 1 auto;
+                }
+
+                .tpl-field-grow {
+                    flex: 2 1 45%;
+                }
+
+                .tpl-field-sm {
+                    flex: 0 1 auto;
+                    min-width: 18mm;
+                }
+
+                .tpl-label {
+                    font-weight: 700;
+                    white-space: nowrap;
+                }
+
+                .tpl-line {
+                    flex: 1;
+                    min-width: 12mm;
+                    border-bottom: 1px solid #000;
+                    min-height: 3.2mm;
+                }
+
+                .tpl-push {
+                    margin-left: auto;
+                }
+
+                .tpl-cc-box {
+                    box-sizing: border-box;
+                    width: 100%;
+                    border: 1px solid #000;
+                    border-top: none;
+                    padding: var(--tpl-inner-pad) var(--tpl-inner-pad);
+                    min-height: 9mm;
+                    display: flex;
+                    gap: 2mm;
+                    margin: 0;
+                    flex-shrink: 0;
+                    background: #fff;
+                }
+
+                .tpl-split {
+                    box-sizing: border-box;
+                    width: 100%;
+                    flex: 1 1 auto;
+                    display: grid;
+                    grid-template-columns: 1fr 2fr;
+                    grid-template-rows: minmax(0, 1fr);
+                    margin: 0;
+                    padding: 0;
+                    border: 1px solid #000;
+                    border-top: none;
+                    min-height: 0;
+                    align-self: stretch;
+                }
+
+                .tpl-col-left {
+                    box-sizing: border-box;
+                    border-right: 3px solid #000;
+                    padding: var(--tpl-inner-pad);
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2mm;
+                    min-height: 0;
+                    align-self: stretch;
+                    height: 100%;
+                    background: transparent;
+                }
+
+                .tpl-left-tables-grow {
+                    flex: 1 1 auto;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2mm;
+                    min-height: 0;
+                }
+
+                .tpl-table-grow-wrap {
+                    flex: 1 1 0;
+                    min-height: 22mm;
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .tpl-table-grow-wrap--vitals {
+                    flex: 0 0 auto;
+                }
+
+                .tpl-clinical-table.tpl-stretch {
+                    flex: 1;
+                    height: 100%;
+                    width: 100%;
+                    table-layout: fixed;
+                }
+
+                .tpl-clinical-table.tpl-stretch tbody {
+                    height: 100%;
+                }
+
+                .tpl-clinical-table.tpl-stretch tbody tr {
+                    height: calc(100% / var(--tpl-rows, 1));
+                }
+
+                .tpl-clinical-table.tpl-stretch td {
+                    vertical-align: top;
+                    padding: 2mm 1mm;
+                    min-height: 7mm;
+                }
+
+                .tpl-col-right {
+                    box-sizing: border-box;
+                    position: relative;
+                    padding: var(--tpl-inner-pad);
+                    min-height: 0;
+                    align-self: stretch;
+                    height: 100%;
+                    background: transparent;
+                }
+
+                .tpl-rx-symbol {
+                    position: relative;
+                    z-index: 1;
+                    font-family: 'Times New Roman', Times, serif;
+                    font-size: 38px;
+                    font-weight: 700;
+                    line-height: 1;
+                    margin-bottom: 2mm;
+                    color: #000;
+                }
+
+                .tpl-clinical-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 8px;
+                }
+
+                .tpl-clinical-table th,
+                .tpl-clinical-table td {
+                    border: 1px solid #000;
+                    padding: 0.8mm 1mm;
+                    vertical-align: middle;
+                }
+
+                .tpl-clinical-table th {
+                    font-weight: 700;
+                    text-align: center;
+                }
+
+                .tpl-clinical-table .tpl-c-label {
+                    font-weight: 700;
+                    width: 32%;
+                }
+
+                .tpl-vitals {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 8px;
+                }
+
+                .tpl-vitals td {
+                    border: 1px solid #000;
+                    padding: 1mm;
+                }
+
+                .tpl-vitals .tpl-v-lab {
+                    font-weight: 700;
+                    width: 18mm;
+                }
+
+                .tpl-fundus {
+                    border: 1px solid #000;
+                    padding: 1mm 2mm;
+                    min-height: 22mm;
+                    flex-shrink: 0;
+                }
+
+                .tpl-diagnosis {
+                    border: none !important;
+                    outline: none !important;
+                    box-shadow: none !important;
+                    padding: 1mm 2mm 1mm 0;
+                    min-height: 34mm;
+                    flex-shrink: 0;
+                }
+
+                .tpl-fundus-label,
+                .tpl-diagnosis-label {
+                    font-weight: 700;
+                    margin-bottom: 1mm;
+                }
+
+                .tpl-footer {
+                    flex-shrink: 0;
+                    background: #fff;
+                }
+
+                .tpl-footer-gold {
+                    height: 3.5mm;
+                    background: #e8b923;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+
+                .tpl-footer-bn {
+                    background: #000;
+                    color: #fff;
+                    text-align: center;
+                    padding: 2mm 3mm;
+                    font-size: 9.5px;
+                    font-weight: 600;
+                    line-height: 1.35;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+
+                @media print {
+                    .tpl-blank-page {
+                        font-size: 8px;
+                        min-height: 287mm;
+                        max-width: none;
+                        width: 100%;
+                    }
+
+                    .tpl-page-watermark img {
+                        width: 100mm;
+                        max-width: 55%;
+                        opacity: 0.2;
+                    }
+
+                    .tpl-diagnosis {
+                        border: none !important;
+                        outline: none !important;
+                        box-shadow: none !important;
+                    }
+
+                    .blank-prescription-container {
+                        max-width: none;
+                        width: 100%;
+                        margin: 0;
+                    }
+                }
+
                 /* Normal prescription should look plain (minimal borders) */
                 .plain-prescription {
                     border: none !important;
@@ -796,7 +1202,6 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                     border-left: none;
                 }
 
-                .plain-prescription .diagnosis-section .section-box,
                 .plain-prescription .notes-section .notes-box {
                     border: none;
                 }
@@ -925,7 +1330,7 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                             {/* Diagnosis */}
                             <div className="diagnosis-section">
                                 <div className="section-label">Medical Diagnosis:</div>
-                                <div className="section-box">{isBlankPrescription ? '' : prescription.diagnosis || ''}</div>
+                                <div className="diagnosis-section-body">{isBlankPrescription ? '' : prescription.diagnosis || ''}</div>
                             </div>
 
                             {/* Medicines */}
@@ -1169,102 +1574,182 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                 </div>
             </div>
 
-            {/* Blank prescription */}
+            {/* Blank prescription — hospital official layout (OPD print form) */}
             {isBlankPrescription && (
                 <div className="blank-prescription-container">
-                    <div className="blank-prescription-page">
-                        <div className="blank-header">
-                            <div className="blank-header-inner">
-                                <div className="blank-logo">
-                                    <img src="/logo.png" alt="Hospital Logo" />
+                    <div className="tpl-blank-page">
+                        <div className="tpl-page-watermark" aria-hidden>
+                            <img src="/logo.png" alt="" width={280} height={280} decoding="async" />
+                        </div>
+
+                        <header className="tpl-header tpl-blank-layer">
+                            <div className="tpl-header-brand">
+                                <div className="tpl-logo">
+                                    <img src="/logo.png" alt="" />
                                 </div>
-                                <div className="blank-hospital-title">
-                                    <div className="p">মৌসুমি (এনজিও) ও অংশীজনের যৌথ উদ্যোগে পরিচালিত</div>
-                                    <div className="h1">
-                                        নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল <span className="sub">এন্ড ফ্যাকো সেন্টার</span>
+                                <div className="tpl-header-text">
+                                    <div className="tpl-hospital-name">Mousumi Eye Hospital</div>
+                                    <div className="tpl-header-line">Nearest Circuit house. Main Road, Naogaon</div>
+                                    <div className="tpl-header-line">Hotline : 01307-885566, 01334-925910</div>
+                                    <div className="tpl-doc-title">Prescription</div>
+                                </div>
+                            </div>
+                        </header>
+
+                        <div className="tpl-blank-main tpl-blank-layer">
+                        <section className="tpl-patient-wrap">
+                            <div className="tpl-p-row" style={{ justifyContent: 'space-between' }}>
+                                <div className="tpl-field tpl-field-grow" style={{ maxWidth: '48%' }}>
+                                    <span className="tpl-label">Patient ID-</span>
+                                    <span className="tpl-line">{prescription.patient.patient_id}</span>
+                                </div>
+                                <div className="tpl-field" style={{ maxWidth: '42%' }}>
+                                    <span className="tpl-label">Date :</span>
+                                    <span className="tpl-line">{formatDate(prescription.created_at)}</span>
+                                </div>
+                            </div>
+                            <div
+                                className="tpl-p-row"
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '1.15fr 1fr 0.42fr 0.42fr',
+                                    gap: '2mm',
+                                    alignItems: 'end',
+                                }}
+                            >
+                                <div className="tpl-field" style={{ flex: 'unset', minWidth: 0 }}>
+                                    <span className="tpl-label">Name :</span>
+                                    <span className="tpl-line">{prescription.patient.name}</span>
+                                </div>
+                                <div className="tpl-field" style={{ flex: 'unset', minWidth: 0 }}>
+                                    <span className="tpl-label">Guardian Name:</span>
+                                    <span className="tpl-line" />
+                                </div>
+                                <div className="tpl-field tpl-field-sm" style={{ flex: 'unset' }}>
+                                    <span className="tpl-label">Age :</span>
+                                    <span className="tpl-line">{prescription.patient.age != null ? String(prescription.patient.age) : ''}</span>
+                                </div>
+                                <div className="tpl-field tpl-field-sm" style={{ flex: 'unset' }}>
+                                    <span className="tpl-label">Gender :</span>
+                                    <span className="tpl-line">{formatGenderDisplay(prescription.patient.gender)}</span>
+                                </div>
+                            </div>
+                            <div className="tpl-p-row">
+                                <div className="tpl-field tpl-field-grow">
+                                    <span className="tpl-label">Address :</span>
+                                    <span className="tpl-line">{prescription.patient.address || ''}</span>
+                                </div>
+                                <div className="tpl-field" style={{ minWidth: '38%' }}>
+                                    <span className="tpl-label">Mobile No-</span>
+                                    <span className="tpl-line">{prescription.patient.phone || ''}</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div className="tpl-cc-box">
+                            <span className="tpl-label">CC :</span>
+                            <span className="tpl-line" style={{ minHeight: '5mm' }} />
+                        </div>
+
+                        <div className="tpl-split">
+                            <div className="tpl-col-left">
+                                <div className="tpl-left-tables-grow">
+                                    <div
+                                        className="tpl-table-grow-wrap"
+                                        style={{ '--tpl-rows': blankVisionRows.length } as CSSProperties}
+                                    >
+                                        <table className="tpl-clinical-table tpl-stretch">
+                                            <thead>
+                                                <tr>
+                                                    <th />
+                                                    <th>R/E</th>
+                                                    <th>L/E</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {blankVisionRows.map((label) => (
+                                                    <tr key={label}>
+                                                        <td className="tpl-c-label">{label}</td>
+                                                        <td />
+                                                        <td />
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                    <div className="p">মেইন রোড, মৎস্য অফিসের পাশে, নওগাঁ সদর, নওগাঁ।</div>
-                                    <div className="p">মোবাইলঃ ০১৩০৭-৮৮৫৫৬৬</div>
+
+                                    <div className="tpl-table-grow-wrap tpl-table-grow-wrap--vitals">
+                                        <table className="tpl-vitals">
+                                            <tbody>
+                                                <tr>
+                                                    <td className="tpl-v-lab">BP</td>
+                                                    <td>
+                                                        <span
+                                                            className="tpl-line"
+                                                            style={{ display: 'inline-block', minWidth: '55%', verticalAlign: 'baseline' }}
+                                                        />
+                                                        <span style={{ marginLeft: '2mm' }}>mm of Hg</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="tpl-v-lab">RBS</td>
+                                                    <td>
+                                                        <span
+                                                            className="tpl-line"
+                                                            style={{ display: 'inline-block', minWidth: '55%', verticalAlign: 'baseline' }}
+                                                        />
+                                                        <span style={{ marginLeft: '2mm' }}>mmol/L</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div
+                                        className="tpl-table-grow-wrap"
+                                        style={{ '--tpl-rows': blankAnteriorRows.length } as CSSProperties}
+                                    >
+                                        <table className="tpl-clinical-table tpl-stretch">
+                                            <thead>
+                                                <tr>
+                                                    <th />
+                                                    <th>R/E</th>
+                                                    <th>L/E</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {blankAnteriorRows.map((label) => (
+                                                    <tr key={label}>
+                                                        <td className="tpl-c-label">{label}</td>
+                                                        <td />
+                                                        <td />
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div className="tpl-fundus">
+                                    <div className="tpl-fundus-label">Fundus :</div>
+                                </div>
+                                <div className="tpl-diagnosis">
+                                    <div className="tpl-diagnosis-label">Diagnosis :</div>
                                 </div>
                             </div>
 
-                            <div className="blank-patient-grid">
-                                <div>
-                                    <span className="blank-label">রোগীর নাম:</span> <span className="blank-value">{prescription.patient.name}</span>
-                                </div>
-                                <div>
-                                    <span className="blank-label">আইডি:</span> <span className="blank-value">{prescription.patient.patient_id}</span>
-                                </div>
-                                <div>
-                                    <span className="blank-label">ফোন:</span> <span className="blank-value">{prescription.patient.phone || ''}</span>
-                                </div>
-                                <div>
-                                    <span className="blank-label">তারিখ:</span> <span className="blank-value">{formatDhakaDate(new Date())}</span>
-                                </div>
-
-                                <div style={{ gridColumn: '1 / span 2' }}>
-                                    <span className="blank-label">ঠিকানা:</span>{' '}
-                                    <span className="blank-value">{prescription.patient.address || ''}</span>
-                                </div>
-                                <div>
-                                    <span className="blank-label">বয়স:</span>{' '}
-                                    <span className="blank-value">{prescription.patient.age ? `${prescription.patient.age} বছর` : ''}</span>
-                                </div>
-                                <div>
-                                    <span className="blank-label">লিঙ্গ:</span>{' '}
-                                    <span className="blank-pill">
-                                        {prescription.patient.gender === 'male'
-                                            ? 'পুরুষ'
-                                            : prescription.patient.gender === 'female'
-                                              ? 'মহিলা'
-                                              : prescription.patient.gender || ''}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="blank-main">
-                            <div className="blank-left">
-                                <div className="blank-panel">
-                                    <div className="blank-panel-title">Vision</div>
-                                    <table className="blank-rele-grid">
-                                        <tbody>
-                                            <tr>
-                                                <td style={{ width: '12mm' }}>RE</td>
-                                                <td className="blank-empties" />
-                                            </tr>
-                                            <tr>
-                                                <td>LE</td>
-                                                <td className="blank-empties" />
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div className="blank-panel">
-                                    <div className="blank-panel-title">IOP</div>
-                                    <table className="blank-rele-grid">
-                                        <tbody>
-                                            <tr>
-                                                <td style={{ width: '12mm' }}>RE</td>
-                                                <td className="blank-empties" />
-                                            </tr>
-                                            <tr>
-                                                <td>LE</td>
-                                                <td className="blank-empties" />
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <div className="blank-right">
-                                {/* Entire area blank for handwriting */}
-                                <div className="blank-writing-area">
-                                    <div className="blank-rx-mark">℞</div>
-                                </div>
+                            <div className="tpl-col-right">
+                                <div className="tpl-rx-symbol">℞</div>
                             </div>
                         </div>
+                        </div>
+
+                        <footer className="tpl-footer tpl-blank-layer">
+                            <div className="tpl-footer-gold" />
+                            <div className="tpl-footer-bn">
+                                শুক্রবার সহ প্রতিদিন হাসপাতাল খোলা সকাল ০৯.০০ মিঃ হতে ০৫.৩০মিঃ পর্যন্ত।
+                            </div>
+                        </footer>
                     </div>
 
                     <div
