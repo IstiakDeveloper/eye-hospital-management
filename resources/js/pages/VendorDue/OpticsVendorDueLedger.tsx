@@ -145,7 +145,7 @@ const OpticsVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors, fil
                 {/* Print Header */}
                 <div className="print-header mb-3 p-4">
                     <div className="mb-1 text-center">
-                        <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                        <h1 className="text-base font-bold">Mousumi Eye Hospital</h1>
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                         <h2 className="text-sm font-bold">Optics Vendor Due Ledger</h2>

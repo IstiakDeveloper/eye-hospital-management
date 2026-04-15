@@ -398,7 +398,7 @@ class MedicineAccountController extends Controller
             'transactions' => $transactions,
             'total_amount' => number_format($totalAmount, 2),
             'amount_in_words' => $amountInWords,
-            'hospital_name' => 'Naogaon Islamia Eye Hospital and Phaco Center',
+            'hospital_name' => 'Mousumi Eye Hospital',
             'hospital_location' => 'Naogaon',
         ]);
     }

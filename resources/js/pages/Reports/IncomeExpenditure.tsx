@@ -120,7 +120,7 @@ const IncomeExpenditure: React.FC<IncomeExpenditureProps> = ({ incomes, expenses
                     {/* Report Header */}
                     <div className="mb-1">
                         <div className="mb-0 text-center">
-                            <h1 className="mb-0 text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                            <h1 className="mb-0 text-base font-bold">Mousumi Eye Hospital</h1>
                             <p className="mb-0 text-xs">Circuit House Adjacent, Main Road, Naogaon.</p>
                         </div>
                         <h2 className="mt-1 mb-1 text-center text-sm">Statement of Comprehensive Income & Expenditure</h2>

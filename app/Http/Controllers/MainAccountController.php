@@ -267,7 +267,7 @@ class MainAccountController extends Controller
             'vouchers' => $vouchers,
             'total_amount' => number_format($totalAmount, 2),
             'amount_in_words' => $amountInWords,
-            'hospital_name' => 'Naogaon Islamia Eye Hospital and Phaco Center',
+            'hospital_name' => 'Mousumi Eye Hospital',
             'hospital_location' => 'Naogaon',
         ]);
     }
@@ -311,7 +311,7 @@ class MainAccountController extends Controller
             'vouchers' => $vouchers,
             'total_amount' => number_format($totalAmount, 2),
             'amount_in_words' => $amountInWords,
-            'hospital_name' => 'Naogaon Islamia Eye Hospital and Phaco Center',
+            'hospital_name' => 'Mousumi Eye Hospital',
             'hospital_location' => 'Naogaon',
         ]);
     }
@@ -352,7 +352,7 @@ class MainAccountController extends Controller
             'vouchers' => $vouchers,
             'total_amount' => number_format($totalAmount, 2),
             'amount_in_words' => $amountInWords,
-            'hospital_name' => 'Naogaon Islamia Eye Hospital and Phaco Center',
+            'hospital_name' => 'Mousumi Eye Hospital',
             'hospital_location' => 'Naogaon',
         ]);
     }
@@ -640,7 +640,7 @@ class MainAccountController extends Controller
             'formattedNetChange' => number_format($netChange, 2),
             'formattedTotalReceipts' => number_format($totalReceipts, 2),
             'formattedTotalPayments' => number_format($totalPayments, 2),
-            'hospital_name' => 'Naogaon Islamia Eye Hospital and Phaco Center',
+            'hospital_name' => 'Mousumi Eye Hospital',
             'hospital_location' => 'Naogaon',
         ]);
     }
@@ -883,7 +883,7 @@ class MainAccountController extends Controller
             'formattedCumulativeTotalIncome' => number_format($cumulativeTotalIncome, 2),
             'formattedCumulativeTotalExpenditure' => number_format($cumulativeTotalExpenditure, 2),
             'formattedCumulativeNetSurplusDeficit' => number_format($cumulativeNetSurplusDeficit, 2),
-            'hospital_name' => 'Naogaon Islamia Eye Hospital and Phaco Center',
+            'hospital_name' => 'Mousumi Eye Hospital',
             'hospital_location' => 'Naogaon',
         ]);
     }
@@ -1101,7 +1101,7 @@ class MainAccountController extends Controller
             'formattedInitialCapital' => number_format($initialCapital, 2),
             'formattedRetainedEarnings' => number_format($retainedEarnings, 2),
 
-            'hospital_name' => 'Naogaon Islamia Eye Hospital and Phaco Center',
+            'hospital_name' => 'Mousumi Eye Hospital',
             'hospital_location' => 'Naogaon',
         ]);
     }

@@ -397,7 +397,7 @@ export default function MedicalTestIncomeReport({ reportData, totals, filters }:
                             {/* Print Header */}
                             <div className="print-header mb-3">
                                 <div className="mb-2 text-center">
-                                    <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                                    <h1 className="text-base font-bold">Mousumi Eye Hospital</h1>
                                     <h2 className="mt-1 text-sm font-semibold">Hospital Corner - Medical Test Income Report</h2>
                                 </div>
                                 <div className="mt-2 flex items-center justify-between">

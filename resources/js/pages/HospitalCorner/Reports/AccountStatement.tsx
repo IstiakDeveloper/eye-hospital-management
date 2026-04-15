@@ -204,7 +204,7 @@ export default function AccountStatement({ transactions, summary, openingBalance
                         {/* Print Header - Hidden on screen, visible on print */}
                         <div className="print-header-new">
                             <div className="header-title">
-                                <h1>Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                                <h1>Mousumi Eye Hospital</h1>
                                 <h2>Hospital Account Statement</h2>
                                 <p>
                                     Period: {formatDhakaDate(fromDate, { day: '2-digit', month: 'short', year: 'numeric' })} to{' '}

@@ -186,7 +186,7 @@ export default function OperationIncomeReport({ reportData, summary, filters }: 
                             {/* Print Header */}
                             <div className="print-header mb-3">
                                 <div className="mb-2 text-center">
-                                    <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                                    <h1 className="text-base font-bold">Mousumi Eye Hospital</h1>
                                     <h2 className="mt-1 text-sm font-semibold">Operation Corner - Operation Income Receipt Report</h2>
                                 </div>
                                 <div className="mt-2 flex items-center justify-between">

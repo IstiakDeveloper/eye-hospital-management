@@ -106,7 +106,7 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
                         {/* Print Header - Hidden on screen, visible on print */}
                         <div className="print-header-new mb-3">
                             <div className="mb-1 text-center">
-                                <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                                <h1 className="text-base font-bold">Mousumi Eye Hospital</h1>
                             </div>
                             <div className="mt-2 flex items-center justify-between">
                                 <h2 className="text-sm font-bold">Hospital Daily Statement</h2>

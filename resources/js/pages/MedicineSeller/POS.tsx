@@ -334,7 +334,7 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
         if (!showInvoice || !completedSale) return null;
 
         const companyInfo = {
-            name: 'Naogaon Islamia Eye Hospital & Phaco Centre',
+            name: 'Mousumi Eye Hospital',
             address: 'Adjacent Circuit House, Main Road, Naogaon',
             phone: '01307-885566, 01334-925910',
             email: 'niehpc@gmail.com',

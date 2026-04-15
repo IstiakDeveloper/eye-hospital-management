@@ -245,7 +245,7 @@ const ProfessionalQRCode: React.FC<{ patient: Patient; size?: number; csrfToken?
             patient_id: patient.patient_id,
             name: patient.name,
             phone: patient.phone,
-            hospital: 'Naogaon Islamia Eye Hospital',
+            hospital: 'Mousumi Eye Hospital',
             url: `${window.location.origin}/patient/${patient.patient_id}`,
             generated_at: new Date().toISOString(),
         });
@@ -507,7 +507,7 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
                             <Building className="h-6 w-6 text-white" />
                         </div>
                         <div className="text-left">
-                            <h1 className="text-xl leading-tight font-bold text-gray-900">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+                            <h1 className="text-xl leading-tight font-bold text-gray-900">Mousumi Eye Hospital</h1>
                         </div>
                     </div>
 
@@ -721,7 +721,7 @@ const PatientReceipt: React.FC<Props> = ({ patient, visit, payment, csrfToken })
                 {/* Footer - Fixed Position */}
                 <div className="print-footer border-t border-gray-300 pt-3">
                     <div className="flex items-center justify-between text-xs">
-                        <div className="font-medium text-gray-600">Thank you for choosing Naogaon Islamia Eye Hospital</div>
+                        <div className="font-medium text-gray-600">Thank you for choosing Mousumi Eye Hospital</div>
                         <div className="text-gray-500">
                             Generated: {formatDate(new Date())} at {formatTime(new Date())}
                         </div>

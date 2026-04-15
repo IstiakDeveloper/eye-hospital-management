@@ -478,7 +478,7 @@
                             @endif
                         </td>
                         <td class="info-cell">
-                            <div class="hospital-name">Naogaon Islamia Chakkhu Hospital and Phaco Center</div>
+                            <div class="hospital-name">Mousumi Eye Hospital</div>
                             <div class="hospital-address">Main Road, Beside of Naogaon Fisheries Building, Naogaon
                                 Sadar, Naogaon</div>
                             <div class="hospital-contact">Mobile: 01307-885566; Email: niehpc@gamil.com</div>

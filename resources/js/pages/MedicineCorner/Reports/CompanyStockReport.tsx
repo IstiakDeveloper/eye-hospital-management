@@ -159,7 +159,7 @@ export default function CompanyStockReport({ reportData, totals, filters }: Prop
                 {/* Report Table */}
                 <div className="report-section overflow-x-auto rounded-lg bg-white shadow">
                     <div className="print-header p-4 pb-2">
-                        <h1 className="text-center text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center - Medicine Corner</h1>
+                        <h1 className="text-center text-base font-bold">Mousumi Eye Hospital - Medicine Corner</h1>
                         <div className="mt-1 flex justify-between text-sm">
                             <span className="font-semibold">Company-wise Stock Report</span>
                             <span>

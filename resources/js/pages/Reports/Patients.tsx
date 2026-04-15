@@ -73,7 +73,7 @@ const PatientsReport: React.FC<Props> = ({ visits, summary, filters }) => {
 
     const hospitalHeader = useMemo(
         () => ({
-            name: 'Naogaon Islamia Eye Hospital & Phaco Center',
+            name: 'Mousumi Eye Hospital',
             contact: 'Mobile: 01307-885566',
         }),
         [],

@@ -346,7 +346,7 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
                     {/* Print Header */}
                     <div className="print-header mb-3">
                         <div className="mb-1 text-center">
-                            <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center - Optics Corner</h1>
+                            <h1 className="text-base font-bold">Mousumi Eye Hospital - Optics Corner</h1>
                         </div>
                         <div className="mt-2 flex items-center justify-between">
                             <h2 className="text-sm font-bold">Buy-Sale-Stock Report</h2>

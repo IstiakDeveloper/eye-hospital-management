@@ -193,7 +193,7 @@ const BankReport: React.FC<BankReportProps> = ({ bankData, month, year, monthNam
                 <div className="print-area">
                     {/* Report Header - Enhanced for Print */}
                     <div className="print-header mb-4 text-center">
-                        <h1 className="text-2xl font-bold print:text-xl">Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                        <h1 className="text-2xl font-bold print:text-xl">Mousumi Eye Hospital</h1>
                         <p className="text-lg print:text-base">Naogaon</p>
                         <h2 className="text-xl font-bold print:text-lg">Bank Report - {monthName}</h2>
                     </div>

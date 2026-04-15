@@ -169,7 +169,7 @@ const BalanceSheet: React.FC<BalanceSheetProps> = ({
                 {/* Report Header */}
                 <div className="mb-4">
                     <div className="mb-2 text-center">
-                        <h1 className="text-xl font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                        <h1 className="text-xl font-bold">Mousumi Eye Hospital</h1>
                         <p className="text-sm">Circuit House Adjacent, Main Road, Naogaon.</p>
                     </div>
                     <h2 className="mt-4 text-center text-lg font-bold">Statement of Financial Position</h2>

@@ -244,7 +244,7 @@ export default function CompanyMedicineStockReport({ reportData, allManufacturer
                 {/* Report */}
                 <div className="report-section space-y-3">
                     <div className="print-header mb-3">
-                        <h1 className="text-center text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center - Medicine Corner</h1>
+                        <h1 className="text-center text-base font-bold">Mousumi Eye Hospital - Medicine Corner</h1>
                         <div className="mt-1 flex justify-between text-sm">
                             <span className="font-semibold">Company-wise Medicine Stock Detail</span>
                             <span>

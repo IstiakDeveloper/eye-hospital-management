@@ -201,7 +201,7 @@ export default function NewPatientIncomeReport({ reportData = [], totals, filter
                     {/* Print Header */}
                     <div className="print-header mb-3">
                         <div className="mb-1 text-center">
-                            <h1 className="text-base font-bold">Naogaon Islamia Eye Hospital and Phaco Center</h1>
+                            <h1 className="text-base font-bold">Mousumi Eye Hospital</h1>
                         </div>
                         <div className="mt-2 flex items-center justify-between">
                             <h2 className="text-sm font-bold">New Patient Income Report</h2>
