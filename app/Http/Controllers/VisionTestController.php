@@ -662,7 +662,7 @@ class VisionTestController extends Controller
             ],
             'qrCodeBase64' => $qrCodeBase64,
             'hospitalInfo' => [
-                'name' => 'নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার',
+                'name' => config('hospital.name_bn'),
                 'address' => 'সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।',
                 'contact' => 'মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gmail.com',
             ],
@@ -771,7 +771,7 @@ class VisionTestController extends Controller
             'qrCodeBase64' => $qrCodeBase64,
             'isBlankReport' => true,
             'hospitalInfo' => [
-                'name' => 'নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার',
+                'name' => config('hospital.name_bn'),
                 'address' => 'সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।',
                 'contact' => 'মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gmail.com',
             ],

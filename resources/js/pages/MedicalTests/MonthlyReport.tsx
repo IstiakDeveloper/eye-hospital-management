@@ -217,7 +217,7 @@ export default function MonthlyReport({ testGroups, summary, year, month }: Prop
 
             <div className="report-container">
                 <div className="mb-6 border-b-4 border-blue-600 pb-4 text-center">
-                    <h1 className="mb-1 text-2xl font-bold text-gray-900">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+                    <h1 className="mb-1 text-2xl font-bold text-gray-900">মৌসুমী চক্ষু হাসপাতাল</h1>
                     <p className="text-sm text-gray-600">সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।</p>
                     <p className="text-sm text-gray-600">📞 ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০ • ✉️ niehpc@gmail.com</p>
                     <h2 className="mt-3 text-lg font-bold text-gray-800">Monthly Medical Test Report</h2>

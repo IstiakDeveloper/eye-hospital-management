@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\MedicineAccount;
 
 use App\Http\Controllers\Controller;
+use App\Models\MedicineAccount;
+use App\Models\MedicineExpenseCategory;
+use App\Models\MedicineFundTransaction;
+use App\Models\MedicineTransaction;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use App\Models\{MedicineAccount, MedicineFundTransaction, MedicineTransaction, MedicineExpenseCategory};
 use Inertia\Inertia;
 use Inertia\Response;
-use Carbon\Carbon;
 use NumberFormatter;
 
 class MedicineAccountController extends Controller
@@ -98,7 +101,7 @@ class MedicineAccountController extends Controller
             $categoryName = $category ? $category->name : $request->category;
         }
 
-        if (!$categoryId && $categoryName) {
+        if (! $categoryId && $categoryName) {
             $category = MedicineExpenseCategory::firstOrCreate(
                 ['name' => $categoryName],
                 ['is_active' => true]
@@ -131,27 +134,27 @@ class MedicineAccountController extends Controller
 
         $query = MedicineTransaction::with(['expenseCategory', 'createdBy']);
 
-        if (!empty($validated['type'])) {
+        if (! empty($validated['type'])) {
             $query->where('type', $validated['type']);
         }
 
-        if (!empty($validated['category'])) {
+        if (! empty($validated['category'])) {
             $query->where('category', $validated['category']);
         }
 
-        if (!empty($validated['expense_category_id'])) {
+        if (! empty($validated['expense_category_id'])) {
             $query->where('expense_category_id', $validated['expense_category_id']);
         }
 
-        if (!empty($validated['date_from'])) {
+        if (! empty($validated['date_from'])) {
             $query->whereDate('transaction_date', '>=', $validated['date_from']);
         }
 
-        if (!empty($validated['date_to'])) {
+        if (! empty($validated['date_to'])) {
             $query->whereDate('transaction_date', '<=', $validated['date_to']);
         }
 
-        if (!empty($validated['search'])) {
+        if (! empty($validated['search'])) {
             $search = $validated['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('transaction_no', 'like', "%{$search}%")
@@ -168,7 +171,7 @@ class MedicineAccountController extends Controller
         return Inertia::render('MedicineAccount/Transactions', [
             'transactions' => $transactions,
             'categories' => $categories,
-            'filters' => array_filter($request->only(['type', 'category', 'expense_category_id', 'date_from', 'date_to', 'search']))
+            'filters' => array_filter($request->only(['type', 'category', 'expense_category_id', 'date_from', 'date_to', 'search'])),
         ]);
     }
 
@@ -201,7 +204,7 @@ class MedicineAccountController extends Controller
     public function updateCategory(Request $request, MedicineExpenseCategory $category)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:medicine_expense_categories,name,' . $category->id,
+            'name' => 'required|string|max:255|unique:medicine_expense_categories,name,'.$category->id,
             'is_active' => 'boolean',
         ]);
 
@@ -223,7 +226,7 @@ class MedicineAccountController extends Controller
             ->with('expenseCategory')
             ->get()
             ->groupBy('expenseCategory.name')
-            ->map(fn($items) => $items->sum('amount'));
+            ->map(fn ($items) => $items->sum('amount'));
 
         $medicinePurchases = MedicineTransaction::where('type', 'expense')
             ->where('category', 'medicine_purchase')
@@ -318,10 +321,10 @@ class MedicineAccountController extends Controller
             ->with('expenseCategory')
             ->get()
             ->groupBy('expenseCategory.name')
-            ->map(fn($items) => [
+            ->map(fn ($items) => [
                 'category' => $items->first()->expenseCategory->name ?? 'Uncategorized',
                 'amount' => $items->sum('amount'),
-                'count' => $items->count()
+                'count' => $items->count(),
             ])
             ->sortByDesc('amount')
             ->values();
@@ -398,7 +401,7 @@ class MedicineAccountController extends Controller
             'transactions' => $transactions,
             'total_amount' => number_format($totalAmount, 2),
             'amount_in_words' => $amountInWords,
-            'hospital_name' => 'Mousumi Eye Hospital',
+            'hospital_name' => config('hospital.name_en'),
             'hospital_location' => 'Naogaon',
         ]);
     }
@@ -417,7 +420,7 @@ class MedicineAccountController extends Controller
             'success' => true,
             'message' => 'Export functionality to be implemented',
             'type' => $type,
-            'format' => $format
+            'format' => $format,
         ]);
     }
 
@@ -425,6 +428,7 @@ class MedicineAccountController extends Controller
     {
         $formatter = new NumberFormatter('en', NumberFormatter::SPELLOUT);
         $words = $formatter->format($amount);
-        return ucwords($words) . ' Taka Only';
+
+        return ucwords($words).' Taka Only';
     }
 }

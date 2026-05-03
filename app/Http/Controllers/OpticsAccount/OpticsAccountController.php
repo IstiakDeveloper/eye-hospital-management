@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\OpticsAccount;
 
 use App\Http\Controllers\Controller;
+use App\Models\OpticsAccount;
+use App\Models\OpticsExpenseCategory;
+use App\Models\OpticsFundTransaction;
+use App\Models\OpticsTransaction;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use App\Models\{OpticsAccount, OpticsFundTransaction, OpticsTransaction, OpticsExpenseCategory};
 use Inertia\Inertia;
 use Inertia\Response;
-use Carbon\Carbon;
 use NumberFormatter;
 
 class OpticsAccountController extends Controller
@@ -98,7 +101,7 @@ class OpticsAccountController extends Controller
             $categoryName = $category ? $category->name : $request->category;
         }
 
-        if (!$categoryId && $categoryName) {
+        if (! $categoryId && $categoryName) {
             $category = OpticsExpenseCategory::firstOrCreate(
                 ['name' => $categoryName],
                 ['is_active' => true]
@@ -131,27 +134,27 @@ class OpticsAccountController extends Controller
 
         $query = OpticsTransaction::with(['expenseCategory', 'createdBy']);
 
-        if (!empty($validated['type'])) {
+        if (! empty($validated['type'])) {
             $query->where('type', $validated['type']);
         }
 
-        if (!empty($validated['category'])) {
+        if (! empty($validated['category'])) {
             $query->where('category', $validated['category']);
         }
 
-        if (!empty($validated['expense_category_id'])) {
+        if (! empty($validated['expense_category_id'])) {
             $query->where('expense_category_id', $validated['expense_category_id']);
         }
 
-        if (!empty($validated['date_from'])) {
+        if (! empty($validated['date_from'])) {
             $query->whereDate('transaction_date', '>=', $validated['date_from']);
         }
 
-        if (!empty($validated['date_to'])) {
+        if (! empty($validated['date_to'])) {
             $query->whereDate('transaction_date', '<=', $validated['date_to']);
         }
 
-        if (!empty($validated['search'])) {
+        if (! empty($validated['search'])) {
             $search = $validated['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('transaction_no', 'like', "%{$search}%")
@@ -168,7 +171,7 @@ class OpticsAccountController extends Controller
         return Inertia::render('OpticsAccount/Transactions', [
             'transactions' => $transactions,
             'categories' => $categories,
-            'filters' => array_filter($request->only(['type', 'category', 'expense_category_id', 'date_from', 'date_to', 'search']))
+            'filters' => array_filter($request->only(['type', 'category', 'expense_category_id', 'date_from', 'date_to', 'search'])),
         ]);
     }
 
@@ -201,7 +204,7 @@ class OpticsAccountController extends Controller
     public function updateCategory(Request $request, OpticsExpenseCategory $category)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:optics_expense_categories,name,' . $category->id,
+            'name' => 'required|string|max:255|unique:optics_expense_categories,name,'.$category->id,
             'is_active' => 'boolean',
         ]);
 
@@ -223,7 +226,7 @@ class OpticsAccountController extends Controller
             ->with('expenseCategory')
             ->get()
             ->groupBy('expenseCategory.name')
-            ->map(fn($items) => $items->sum('amount'));
+            ->map(fn ($items) => $items->sum('amount'));
 
         $glassesPurchases = OpticsTransaction::where('type', 'expense')
             ->where('category', 'glasses_purchase')
@@ -353,10 +356,10 @@ class OpticsAccountController extends Controller
             ->with('expenseCategory')
             ->get()
             ->groupBy('expenseCategory.name')
-            ->map(fn($items) => [
+            ->map(fn ($items) => [
                 'category' => $items->first()->expenseCategory->name ?? 'Uncategorized',
                 'amount' => $items->sum('amount'),
-                'count' => $items->count()
+                'count' => $items->count(),
             ])
             ->sortByDesc('amount')
             ->values();
@@ -376,14 +379,14 @@ class OpticsAccountController extends Controller
             'sales' => $totalGlassesSales,
             'purchases' => $totalGlassesPurchases,
             'profit' => $totalGlassesSales - $totalGlassesPurchases,
-            'margin' => $totalGlassesSales > 0 ? (($totalGlassesSales - $totalGlassesPurchases) / $totalGlassesSales) * 100 : 0
+            'margin' => $totalGlassesSales > 0 ? (($totalGlassesSales - $totalGlassesPurchases) / $totalGlassesSales) * 100 : 0,
         ];
 
         $lensPerformance = [
             'sales' => $totalLensSales,
             'purchases' => $totalLensPurchases,
             'profit' => $totalLensSales - $totalLensPurchases,
-            'margin' => $totalLensSales > 0 ? (($totalLensSales - $totalLensPurchases) / $totalLensSales) * 100 : 0
+            'margin' => $totalLensSales > 0 ? (($totalLensSales - $totalLensPurchases) / $totalLensSales) * 100 : 0,
         ];
 
         return Inertia::render('OpticsAccount/Analytics', compact(
@@ -460,7 +463,7 @@ class OpticsAccountController extends Controller
             'transactions' => $transactions,
             'total_amount' => number_format($totalAmount, 2),
             'amount_in_words' => $amountInWords,
-            'hospital_name' => 'Mousumi Eye Hospital',
+            'hospital_name' => config('hospital.name_en'),
             'hospital_location' => 'Naogaon',
         ]);
     }
@@ -479,7 +482,7 @@ class OpticsAccountController extends Controller
             'success' => true,
             'message' => 'Export functionality to be implemented',
             'type' => $type,
-            'format' => $format
+            'format' => $format,
         ]);
     }
 
@@ -487,6 +490,7 @@ class OpticsAccountController extends Controller
     {
         $formatter = new NumberFormatter('en', NumberFormatter::SPELLOUT);
         $words = $formatter->format($amount);
-        return ucwords($words) . ' Taka Only';
+
+        return ucwords($words).' Taka Only';
     }
 }

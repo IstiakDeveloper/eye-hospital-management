@@ -107,11 +107,13 @@ export default function MedicalTestReceipt({ testGroup }: Props) {
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
-            height: 100% !important;
+            height: auto !important;
+            min-height: 100% !important;
             print-color-adjust: exact;
             -webkit-print-color-adjust: exact;
-            font-size: 10px;
-            overflow: hidden !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            overflow: visible !important;
           }
 
           .no-print {
@@ -120,34 +122,54 @@ export default function MedicalTestReceipt({ testGroup }: Props) {
 
           .receipt-box {
             width: 100% !important;
-            height: 30vh !important;
-            overflow: hidden !important;
-            page-break-inside: avoid !important;
-            page-break-after: avoid !important;
-            padding: 5px !important;
+            height: auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+            page-break-inside: auto !important;
+            padding: 8px !important;
             margin: 0 !important;
-            font-size: 9px !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
             border: 2px solid #1e40af !important;
           }
 
+          .receipt-box,
+          .receipt-box p,
+          .receipt-box span,
+          .receipt-box div,
+          .receipt-box h1 {
+            font-weight: 700 !important;
+          }
+
+          .hospital-header h1 {
+            font-size: 18px !important;
+            line-height: 1.2 !important;
+          }
+
           .header-text {
-            font-size: 12px !important;
+            font-size: 15px !important;
           }
 
           .subheader-text {
-            font-size: 8px !important;
+            font-size: 12px !important;
           }
 
           .info-text {
-            font-size: 8px !important;
+            font-size: 12px !important;
           }
 
           .test-item {
-            font-size: 8px !important;
+            font-size: 12px !important;
+          }
+
+          .tests-ordered-list {
+            max-height: none !important;
+            overflow: visible !important;
           }
 
           .total-text {
-            font-size: 9px !important;
+            font-size: 13px !important;
           }
         }
 
@@ -201,11 +223,11 @@ export default function MedicalTestReceipt({ testGroup }: Props) {
                             <Building className="h-7 w-7 text-white" />
                         </div>
                         <div className="flex-1 text-center">
-                            <h1 className="text-base leading-tight font-bold text-gray-900">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
-                            <p className="text-[10px] font-semibold text-blue-600 uppercase">Test Receipt</p>
+                            <h1 className="text-base leading-tight font-bold text-gray-900">মৌসুমী চক্ষু হাসপাতাল</h1>
+                            <p className="text-[10px] font-semibold text-blue-600 uppercase">মেডিকেল টেস্টের রসিদ</p>
                             <div className="text-[10px] text-gray-700">
                                 <span className="font-semibold">ঠিকানা:</span> সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ। |
-                                <span className="ml-1 font-semibold">যোগাযোগ:</span> ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০ | niehpc@gmail.com
+                                <span className="ml-1 font-semibold">যোগাযোগ:</span> ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০ | mousumieyehospital@gmail.com
                             </div>
                         </div>
                     </div>
@@ -279,8 +301,8 @@ export default function MedicalTestReceipt({ testGroup }: Props) {
                             <FileCheck className="h-3 w-3" />
                             TESTS ORDERED ({testGroup.tests.length})
                         </div>
-                        <div className="max-h-32 space-y-1 overflow-hidden">
-                            {testGroup.tests.slice(0, 6).map((test, idx) => (
+                        <div className="tests-ordered-list space-y-1">
+                            {testGroup.tests.map((test, idx) => (
                                 <div key={test.id} className="test-item border-b border-gray-200 pb-1">
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
@@ -300,9 +322,6 @@ export default function MedicalTestReceipt({ testGroup }: Props) {
                                     </div>
                                 </div>
                             ))}
-                            {testGroup.tests.length > 6 && (
-                                <div className="pt-1 text-center text-xs font-medium text-blue-600">+{testGroup.tests.length - 6} more tests</div>
-                            )}
                         </div>
                     </div>
                 </div>

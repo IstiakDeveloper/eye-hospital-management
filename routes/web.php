@@ -410,7 +410,7 @@ Route::prefix('medicine-corner')->middleware(['auth'])->name('medicine-corner.')
     Route::post('/add-stock', [MedicineCornerController::class, 'addStock'])->name('add-stock');
     Route::post('/adjust-stock', [MedicineCornerController::class, 'adjustStock'])->name('adjust-stock');
     Route::put('/medicines/{medicine}', [MedicineCornerController::class, 'updateMedicine'])->name('update-medicine')->middleware('super-admin-only');
-    Route::put('/medicines/{medicine}/sale-price', [MedicineCornerController::class, 'updateSalePrice'])->name('update-sale-price')->middleware('super-admin-only');
+    Route::put('/medicines/{medicine}/sale-price', [MedicineCornerController::class, 'updateSalePrice'])->name('update-sale-price');
     Route::put('/medicines/{medicine}/stock-alert', [MedicineCornerController::class, 'updateStockAlert'])->name('update-stock-alert')->middleware('super-admin-only');
     Route::post('/stock/sync-sale-prices', [MedicineCornerController::class, 'syncStockSalePrices'])->name('sync-sale-prices')->middleware('permission:medicine-corner.stock');
 

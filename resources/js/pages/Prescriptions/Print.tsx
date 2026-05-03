@@ -1736,9 +1736,7 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                                     </div>
                                     <div className="blank-hospital-title">
                                         <div className="p">মৌসুমি (এনজিও) ও অংশীজনের যৌথ উদ্যোগে পরিচালিত</div>
-                                        <div className="h1">
-                                            নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল <span className="sub">এন্ড ফ্যাকো সেন্টার</span>
-                                        </div>
+                                        <div className="h1">মৌসুমী চক্ষু হাসপাতাল</div>
                                         <div className="p">মেইন রোড, মৎস্য অফিসের পাশে, নওগাঁ সদর, নওগাঁ।</div>
                                         <div className="p">মোবাইলঃ ০১৩০৭-৮৮৫৫৬৬</div>
                                     </div>

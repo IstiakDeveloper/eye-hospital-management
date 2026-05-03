@@ -161,7 +161,7 @@ const Show: React.FC<Props> = ({ visionTest, patientVisits }) => {
                                     <Eye className="h-8 w-8 text-blue-600" />
                                 </div>
                                 <div>
-                                    <h1 className="text-2xl font-bold">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+                                    <h1 className="text-2xl font-bold">মৌসুমী চক্ষু হাসপাতাল</h1>
                                     <p className="text-blue-100">সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।</p>
                                     <p className="text-blue-100">মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gmail.com</p>
                                 </div>

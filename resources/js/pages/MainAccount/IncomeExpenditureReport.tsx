@@ -332,7 +332,7 @@ const IncomeExpenditureReport: React.FC<IncomeExpenditureReportProps> = ({
                 <div className="print-area">
                     {/* Report Header */}
                     <div className="print-header mb-6 text-center">
-                        <h1 className="text-2xl font-bold">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+                        <h1 className="text-2xl font-bold">মৌসুমী চক্ষু হাসপাতাল</h1>
                         <p className="text-base">সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।</p>
                         <p className="text-sm">📞 ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০ • ✉️ niehpc@gmail.com</p>
                         <h2 className="mt-2 text-xl font-bold">Income and Expenditure Report</h2>

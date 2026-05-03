@@ -177,7 +177,7 @@ const PrintableContent = ({
     <div className="printable-content mx-auto max-w-4xl border-2 border-black p-6 print:mx-0 print:max-w-none">
         {/* Header */}
         <div className="mb-6 text-center">
-            <h1 className="mb-2 text-xl font-bold text-black">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+            <h1 className="mb-2 text-xl font-bold text-black">মৌসুমী চক্ষু হাসপাতাল</h1>
             <p className="mb-1 text-base text-black">সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ।</p>
             <p className="mb-3 text-sm text-black">📞 ০১৩০৭-৮৮৫৫৬৬, ০১৩৩৪-৯২৫৯১০ • ✉️ niehpc@gmail.com</p>
             <p className="text-base font-semibold text-black">{voucher_type === 'Debit' ? 'Debit/Payment' : 'Credit/Receipt'} Voucher</p>

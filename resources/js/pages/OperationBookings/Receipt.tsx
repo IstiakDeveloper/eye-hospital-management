@@ -264,7 +264,7 @@ export default function OperationBookingReceipt({ booking }: Props) {
                             <Building className="h-7 w-7 text-white" />
                         </div>
                         <div className="flex-1 text-center">
-                            <h1 className="text-base leading-tight font-bold text-gray-900">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</h1>
+                            <h1 className="text-base leading-tight font-bold text-gray-900">মৌসুমী চক্ষু হাসপাতাল</h1>
                             <p className="text-[10px] font-semibold text-purple-600 uppercase">Operation Booking Receipt</p>
                             <div className="text-[10px] text-gray-700">
                                 <span className="font-semibold">ঠিকানা:</span> সার্কিট হাউজ সংলগ্ন, মেইন রোড, নওগাঁ। |

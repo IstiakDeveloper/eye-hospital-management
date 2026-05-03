@@ -603,7 +603,7 @@
                             @endif
                         </td>
                         <td class="info-cell">
-                            <div class="hospital-name">নওগাঁ ইসলামিয়া চক্ষু হাসপাতাল এন্ড ফ্যাকো সেন্টার</div>
+                            <div class="hospital-name">মৌসুমী চক্ষু হাসপাতাল</div>
                             <div class="hospital-address">প্রধান রাস্তা, নওগাঁ মৎস্য ভবনের পাশে, নওগাঁ সদর, নওগাঁ</div>
                             <div class="hospital-contact">মোবাইল: ০১৩০৭-৮৮৫৫৬৬; ইমেইল: niehpc@gamil.com</div>
                         </td>

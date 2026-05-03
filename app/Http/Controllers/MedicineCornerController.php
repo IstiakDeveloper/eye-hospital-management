@@ -2165,6 +2165,18 @@ class MedicineCornerController extends Controller
                 'updated_by' => auth()->id(),
             ]);
 
+            // Keep the original purchase row aligned with the batch + vendor ledger (Balance Sheet stock uses this sum).
+            DB::table('stock_transactions')
+                ->where('medicine_stock_id', $stock->id)
+                ->where('type', 'purchase')
+                ->update([
+                    'quantity' => $request->quantity,
+                    'unit_price' => $unitPrice,
+                    'total_amount' => $newTotalAmount,
+                    'vendor_transaction_id' => $vendorTransaction->id,
+                    'updated_at' => now(),
+                ]);
+
             // Create stock transaction for audit trail
             StockTransaction::create([
                 'medicine_stock_id' => $stock->id,

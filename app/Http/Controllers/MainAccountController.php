@@ -7,12 +7,11 @@ use App\Models\MainAccount;
 use App\Models\MainAccountVoucher;
 use App\Models\MedicineAccount;
 use App\Models\OpticsAccount;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Carbon\Carbon;
 use NumberFormatter;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MainAccountController extends Controller
 {
@@ -29,7 +28,7 @@ class MainAccountController extends Controller
         \Log::info('Debug MainAccount Data:', [
             'balance' => $balance,
             'summary' => $summary,
-            'sourceAccountSummary' => $sourceAccountSummary
+            'sourceAccountSummary' => $sourceAccountSummary,
         ]);
 
         // Debug: Manual calculation
@@ -40,7 +39,7 @@ class MainAccountController extends Controller
             'debit' => $manualDebit,
             'credit' => $manualCredit,
             'count_debit' => MainAccountVoucher::where('voucher_type', 'Debit')->count(),
-            'count_credit' => MainAccountVoucher::where('voucher_type', 'Credit')->count()
+            'count_credit' => MainAccountVoucher::where('voucher_type', 'Credit')->count(),
         ]);
 
         // Recent vouchers (last 10)
@@ -77,15 +76,15 @@ class MainAccountController extends Controller
         // Debug today's and monthly data
         \Log::info('Daily and Monthly Data:', [
             'todaySummary' => $todaySummary,
-            'monthlyReport' => $monthlyReport
+            'monthlyReport' => $monthlyReport,
         ]);
 
         // Fallback: If summary is null or empty, calculate manually
-        if (!$summary || ($summary['total_debit'] == 0 && $summary['total_credit'] == 0)) {
+        if (! $summary || ($summary['total_debit'] == 0 && $summary['total_credit'] == 0)) {
             $summary = [
                 'total_debit' => $manualDebit,
                 'total_credit' => $manualCredit,
-                'net_balance' => $manualCredit - $manualDebit
+                'net_balance' => $manualCredit - $manualDebit,
             ];
         }
 
@@ -117,27 +116,27 @@ class MainAccountController extends Controller
         $query = MainAccountVoucher::with('createdBy')->orderBy('id', 'desc');
 
         // Apply filters
-        if (!empty($validated['voucher_type'])) {
+        if (! empty($validated['voucher_type'])) {
             $query->where('voucher_type', $validated['voucher_type']);
         }
 
-        if (!empty($validated['source_account'])) {
+        if (! empty($validated['source_account'])) {
             $query->where('source_account', $validated['source_account']);
         }
 
-        if (!empty($validated['source_transaction_type'])) {
+        if (! empty($validated['source_transaction_type'])) {
             $query->where('source_transaction_type', $validated['source_transaction_type']);
         }
 
-        if (!empty($validated['date_from'])) {
+        if (! empty($validated['date_from'])) {
             $query->whereDate('date', '>=', $validated['date_from']);
         }
 
-        if (!empty($validated['date_to'])) {
+        if (! empty($validated['date_to'])) {
             $query->whereDate('date', '<=', $validated['date_to']);
         }
 
-        if (!empty($validated['search'])) {
+        if (! empty($validated['search'])) {
             $search = $validated['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('voucher_no', 'like', "%{$search}%")
@@ -267,7 +266,7 @@ class MainAccountController extends Controller
             'vouchers' => $vouchers,
             'total_amount' => number_format($totalAmount, 2),
             'amount_in_words' => $amountInWords,
-            'hospital_name' => 'Mousumi Eye Hospital',
+            'hospital_name' => config('hospital.name_en'),
             'hospital_location' => 'Naogaon',
         ]);
     }
@@ -311,7 +310,7 @@ class MainAccountController extends Controller
             'vouchers' => $vouchers,
             'total_amount' => number_format($totalAmount, 2),
             'amount_in_words' => $amountInWords,
-            'hospital_name' => 'Mousumi Eye Hospital',
+            'hospital_name' => config('hospital.name_en'),
             'hospital_location' => 'Naogaon',
         ]);
     }
@@ -352,7 +351,7 @@ class MainAccountController extends Controller
             'vouchers' => $vouchers,
             'total_amount' => number_format($totalAmount, 2),
             'amount_in_words' => $amountInWords,
-            'hospital_name' => 'Mousumi Eye Hospital',
+            'hospital_name' => config('hospital.name_en'),
             'hospital_location' => 'Naogaon',
         ]);
     }
@@ -366,7 +365,8 @@ class MainAccountController extends Controller
     {
         $formatter = new NumberFormatter('en', NumberFormatter::SPELLOUT);
         $words = $formatter->format($amount);
-        return ucwords($words) . ' Taka Only';
+
+        return ucwords($words).' Taka Only';
     }
 
     public function bankReport(Request $request): Response
@@ -440,7 +440,7 @@ class MainAccountController extends Controller
             $expense = $dayVouchers->where('voucher_type', 'Debit')
                 ->where('source_transaction_type', 'expense')
                 ->filter(function ($voucher) {
-                    return !str_contains($voucher->narration, '- Fixed Asset');
+                    return ! str_contains($voucher->narration, '- Fixed Asset');
                 })
                 ->sum('amount');
 
@@ -456,15 +456,15 @@ class MainAccountController extends Controller
                     'fund_in' => $fundIn,
                     'income' => $income,
                     'other_income' => $otherIncome,
-                    'total' => $totalCredit
+                    'total' => $totalCredit,
                 ],
                 'debit' => [
                     'fund_out' => $fundOut,
                     'fixed_asset' => $fixedAsset,
                     'expense' => $expense,
-                    'total' => $totalDebit
+                    'total' => $totalDebit,
                 ],
-                'running_balance' => $runningBalance
+                'running_balance' => $runningBalance,
             ];
         }
 
@@ -478,7 +478,6 @@ class MainAccountController extends Controller
         ]);
     }
 
-
     public function receiptAndPaymentReport(Request $request): Response
     {
         $validated = $request->validate([
@@ -486,7 +485,7 @@ class MainAccountController extends Controller
             'date_to' => 'nullable|date|after_or_equal:date_from',
         ]);
 
-        if (!empty($validated['date_from']) && !empty($validated['date_to'])) {
+        if (! empty($validated['date_from']) && ! empty($validated['date_to'])) {
             $startDate = Carbon::parse($validated['date_from'])->startOfDay();
             $endDate = Carbon::parse($validated['date_to'])->endOfDay();
         } else {
@@ -495,7 +494,7 @@ class MainAccountController extends Controller
             $endDate = now()->endOfMonth();
         }
 
-        $reportTitle = $startDate->format('d/m/Y') . ' to ' . $endDate->format('d/m/Y');
+        $reportTitle = $startDate->format('d/m/Y').' to '.$endDate->format('d/m/Y');
 
         // Get opening balance (balance before the start date)
         $openingBalance = MainAccountVoucher::where('date', '<', $startDate)
@@ -535,7 +534,7 @@ class MainAccountController extends Controller
                     },
                     'total_amount' => (float) $item->total_amount,
                     'transaction_count' => $item->transaction_count,
-                    'formatted_amount' => number_format($item->total_amount, 2)
+                    'formatted_amount' => number_format($item->total_amount, 2),
                 ];
             })
             ->groupBy('source_account');
@@ -568,7 +567,7 @@ class MainAccountController extends Controller
                     },
                     'total_amount' => (float) $item->total_amount,
                     'transaction_count' => $item->transaction_count,
-                    'formatted_amount' => number_format($item->total_amount, 2)
+                    'formatted_amount' => number_format($item->total_amount, 2),
                 ];
             })
             ->groupBy('source_account');
@@ -640,7 +639,7 @@ class MainAccountController extends Controller
             'formattedNetChange' => number_format($netChange, 2),
             'formattedTotalReceipts' => number_format($totalReceipts, 2),
             'formattedTotalPayments' => number_format($totalPayments, 2),
-            'hospital_name' => 'Mousumi Eye Hospital',
+            'hospital_name' => config('hospital.name_en'),
             'hospital_location' => 'Naogaon',
         ]);
     }
@@ -654,7 +653,7 @@ class MainAccountController extends Controller
 
         // Always use custom date range (monthly filter removed)
         // If no dates provided, default to current month
-        if (!empty($validated['date_from']) && !empty($validated['date_to'])) {
+        if (! empty($validated['date_from']) && ! empty($validated['date_to'])) {
             $startDate = Carbon::parse($validated['date_from'])->startOfDay();
             $endDate = Carbon::parse($validated['date_to'])->endOfDay();
         } else {
@@ -663,7 +662,7 @@ class MainAccountController extends Controller
             $endDate = now()->endOfMonth();
         }
 
-        $reportTitle = $startDate->format('d/m/Y') . ' to ' . $endDate->format('d/m/Y');
+        $reportTitle = $startDate->format('d/m/Y').' to '.$endDate->format('d/m/Y');
 
         // INCOME SECTION (Only Credit Vouchers with income and other_income, bank_interest)
         $incomes = MainAccountVoucher::whereBetween('date', [$startDate, $endDate])
@@ -695,7 +694,7 @@ class MainAccountController extends Controller
                     },
                     'total_amount' => (float) $item->total_amount,
                     'transaction_count' => $item->transaction_count,
-                    'formatted_amount' => number_format($item->total_amount, 2)
+                    'formatted_amount' => number_format($item->total_amount, 2),
                 ];
             })
             ->groupBy('source_account');
@@ -725,7 +724,7 @@ class MainAccountController extends Controller
                     'transaction_type_name' => 'Expense',
                     'total_amount' => (float) $item->total_amount,
                     'transaction_count' => $item->transaction_count,
-                    'formatted_amount' => number_format($item->total_amount, 2)
+                    'formatted_amount' => number_format($item->total_amount, 2),
                 ];
             })
             ->groupBy('source_account');
@@ -765,7 +764,7 @@ class MainAccountController extends Controller
                     },
                     'total_amount' => (float) $item->total_amount,
                     'transaction_count' => $item->transaction_count,
-                    'formatted_amount' => number_format($item->total_amount, 2)
+                    'formatted_amount' => number_format($item->total_amount, 2),
                 ];
             })
             ->groupBy('source_account');
@@ -794,7 +793,7 @@ class MainAccountController extends Controller
                     'transaction_type_name' => 'Expense',
                     'total_amount' => (float) $item->total_amount,
                     'transaction_count' => $item->transaction_count,
-                    'formatted_amount' => number_format($item->total_amount, 2)
+                    'formatted_amount' => number_format($item->total_amount, 2),
                 ];
             })
             ->groupBy('source_account');
@@ -883,7 +882,7 @@ class MainAccountController extends Controller
             'formattedCumulativeTotalIncome' => number_format($cumulativeTotalIncome, 2),
             'formattedCumulativeTotalExpenditure' => number_format($cumulativeTotalExpenditure, 2),
             'formattedCumulativeNetSurplusDeficit' => number_format($cumulativeNetSurplusDeficit, 2),
-            'hospital_name' => 'Mousumi Eye Hospital',
+            'hospital_name' => config('hospital.name_en'),
             'hospital_location' => 'Naogaon',
         ]);
     }
@@ -931,10 +930,10 @@ class MainAccountController extends Controller
                         'hospital' => 'Hospital Fixed Assets',
                         'medicine' => 'Medicine Fixed Assets',
                         'optics' => 'Optics Fixed Assets',
-                        default => ucfirst($item->source_account) . ' Fixed Assets'
+                        default => ucfirst($item->source_account).' Fixed Assets'
                     },
                     'amount' => (float) $item->total_amount,
-                    'formatted_amount' => number_format($item->total_amount, 2)
+                    'formatted_amount' => number_format($item->total_amount, 2),
                 ];
             });
 
@@ -945,8 +944,8 @@ class MainAccountController extends Controller
             [
                 'name' => 'Main Account (Cash & Bank)',
                 'amount' => $mainAccountBalance,
-                'formatted_amount' => number_format($mainAccountBalance, 2)
-            ]
+                'formatted_amount' => number_format($mainAccountBalance, 2),
+            ],
         ];
 
         $totalCurrentAssets = $mainAccountBalance;
@@ -994,7 +993,7 @@ class MainAccountController extends Controller
             $liabilities[] = [
                 'name' => 'Hospital Account Overdraft',
                 'amount' => abs($hospitalBalance),
-                'formatted_amount' => number_format(abs($hospitalBalance), 2)
+                'formatted_amount' => number_format(abs($hospitalBalance), 2),
             ];
             $totalLiabilities += abs($hospitalBalance);
         }
@@ -1003,7 +1002,7 @@ class MainAccountController extends Controller
             $liabilities[] = [
                 'name' => 'Medicine Account Overdraft',
                 'amount' => abs($medicineBalance),
-                'formatted_amount' => number_format(abs($medicineBalance), 2)
+                'formatted_amount' => number_format(abs($medicineBalance), 2),
             ];
             $totalLiabilities += abs($medicineBalance);
         }
@@ -1012,7 +1011,7 @@ class MainAccountController extends Controller
             $liabilities[] = [
                 'name' => 'Optics Account Overdraft',
                 'amount' => abs($opticsBalance),
-                'formatted_amount' => number_format(abs($opticsBalance), 2)
+                'formatted_amount' => number_format(abs($opticsBalance), 2),
             ];
             $totalLiabilities += abs($opticsBalance);
         }
@@ -1022,13 +1021,13 @@ class MainAccountController extends Controller
             [
                 'name' => 'Capital Account (Fund Contributions)',
                 'amount' => $initialCapital,
-                'formatted_amount' => number_format($initialCapital, 2)
+                'formatted_amount' => number_format($initialCapital, 2),
             ],
             [
                 'name' => 'Retained Earnings (Accumulated Surplus/Deficit)',
                 'amount' => $retainedEarnings,
-                'formatted_amount' => number_format($retainedEarnings, 2)
-            ]
+                'formatted_amount' => number_format($retainedEarnings, 2),
+            ],
         ];
 
         $totalLiabilitiesAndCapital = $totalLiabilities + $totalCapital;
@@ -1039,20 +1038,20 @@ class MainAccountController extends Controller
                 'name' => 'Hospital Account',
                 'balance' => $hospitalBalance,
                 'formatted_balance' => number_format($hospitalBalance, 2),
-                'status' => $hospitalBalance >= 0 ? 'asset' : 'liability'
+                'status' => $hospitalBalance >= 0 ? 'asset' : 'liability',
             ],
             [
                 'name' => 'Medicine Account',
                 'balance' => $medicineBalance,
                 'formatted_balance' => number_format($medicineBalance, 2),
-                'status' => $medicineBalance >= 0 ? 'asset' : 'liability'
+                'status' => $medicineBalance >= 0 ? 'asset' : 'liability',
             ],
             [
                 'name' => 'Optics Account',
                 'balance' => $opticsBalance,
                 'formatted_balance' => number_format($opticsBalance, 2),
-                'status' => $opticsBalance >= 0 ? 'asset' : 'liability'
-            ]
+                'status' => $opticsBalance >= 0 ? 'asset' : 'liability',
+            ],
         ];
 
         // Verification - Assets should equal Liabilities + Capital
@@ -1101,7 +1100,7 @@ class MainAccountController extends Controller
             'formattedInitialCapital' => number_format($initialCapital, 2),
             'formattedRetainedEarnings' => number_format($retainedEarnings, 2),
 
-            'hospital_name' => 'Mousumi Eye Hospital',
+            'hospital_name' => config('hospital.name_en'),
             'hospital_location' => 'Naogaon',
         ]);
     }
