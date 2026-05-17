@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Role;
 use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use App\Repositories\DoctorRepository;
 use App\Repositories\UserRepository;
@@ -14,6 +14,7 @@ use Inertia\Inertia;
 class UserController extends Controller
 {
     protected $userRepository;
+
     protected $doctorRepository;
 
     public function __construct(
@@ -35,10 +36,10 @@ class UserController extends Controller
         // Search functionality
         if ($request->has('search') && $request->search) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -67,7 +68,7 @@ class UserController extends Controller
                 'delete' => $authUser->hasPermission('users.delete'),
                 'view' => $authUser->hasPermission('users.view'),
                 'manage_permissions' => $authUser->hasPermission('users.manage-permissions'),
-            ]
+            ],
         ]);
     }
 
@@ -80,7 +81,7 @@ class UserController extends Controller
         $roles = Role::all();
 
         return Inertia::render('Users/Create', [
-            'roles' => $roles
+            'roles' => $roles,
         ]);
     }
 
@@ -153,7 +154,7 @@ class UserController extends Controller
                 'edit' => $authUser->hasPermission('users.edit'),
                 'delete' => $authUser->hasPermission('users.delete'),
                 'manage_permissions' => $authUser->hasPermission('users.manage-permissions'),
-            ]
+            ],
         ]);
     }
 
@@ -176,7 +177,7 @@ class UserController extends Controller
             'can' => [
                 'delete' => $authUser->hasPermission('users.delete'),
                 'manage_permissions' => $authUser->hasPermission('users.manage-permissions'),
-            ]
+            ],
         ]);
     }
 
@@ -188,13 +189,13 @@ class UserController extends Controller
     {
         $user = $this->userRepository->findById($id);
 
-        if (!$user) {
+        if (! $user) {
             abort(404, 'User not found');
         }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $id,
+            'email' => 'required|string|email|max:255|unique:users,email,'.$id,
             'password' => 'nullable|string|min:8|confirmed',
             'phone' => 'nullable|string|max:20',
             'role_id' => 'required|exists:roles,id',
@@ -209,7 +210,7 @@ class UserController extends Controller
 
         $success = $this->userRepository->update($id, $validated);
 
-        if (!$success) {
+        if (! $success) {
             return back()->with('error', 'Failed to update user.');
         }
 
@@ -219,7 +220,7 @@ class UserController extends Controller
         // Handle role change to/from doctor
         $role = Role::find($request->role_id);
         if ($role && $role->name === 'Doctor') {
-            if (!$user->doctor) {
+            if (! $user->doctor) {
                 return redirect()->route('doctors.create', ['user_id' => $id])
                     ->with('success', 'User updated successfully! Please complete the doctor profile.');
             } else {
@@ -247,7 +248,7 @@ class UserController extends Controller
 
         $user = $this->userRepository->findById($id);
 
-        if (!$user) {
+        if (! $user) {
             return back()->with('error', 'User not found.');
         }
 
@@ -258,7 +259,7 @@ class UserController extends Controller
 
         $success = $this->userRepository->delete($id);
 
-        if (!$success) {
+        if (! $success) {
             return back()->with('error', 'Failed to delete user.');
         }
 
@@ -310,7 +311,7 @@ class UserController extends Controller
     {
         $user = $this->userRepository->findById($id);
 
-        if (!$user) {
+        if (! $user) {
             return back()->with('error', 'User not found.');
         }
 
@@ -349,11 +350,11 @@ class UserController extends Controller
 
         $user = $this->userRepository->findById($id);
 
-        if (!$user) {
+        if (! $user) {
             return back()->with('error', 'User not found.');
         }
 
-        $user->is_active = !$user->is_active;
+        $user->is_active = ! $user->is_active;
         $user->save();
 
         $status = $user->is_active ? 'activated' : 'deactivated';

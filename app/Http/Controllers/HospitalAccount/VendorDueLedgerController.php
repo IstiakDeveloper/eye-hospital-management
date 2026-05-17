@@ -3,99 +3,68 @@
 namespace App\Http\Controllers\HospitalAccount;
 
 use App\Http\Controllers\Controller;
-use App\Models\FixedAsset;
 use App\Models\FixedAssetVendor;
-use App\Models\FixedAssetVendorPayment;
 use App\Models\GlassesPurchase;
+use App\Models\HospitalExpenseVendor;
 use App\Models\MedicineVendor;
 use App\Models\MedicineVendorPayment;
 use App\Models\MedicineVendorTransaction;
 use App\Models\OpticsVendor;
 use App\Models\OpticsVendorTransaction;
+use App\Services\HospitalAccount\FixedAssetVendorDueLedgerService;
+use App\Services\HospitalAccount\HospitalExpenseVendorDueLedgerService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class VendorDueLedgerController extends Controller
 {
-    public function fixedAssetVendorDue(Request $request)
+    public function expenseVendorDue(Request $request, HospitalExpenseVendorDueLedgerService $ledgerService)
     {
         $startDate = $request->start_date;
         $endDate = $request->end_date;
-        $vendorId = $request->vendor_id;
+        $vendorId = $request->vendor_id ? (int) $request->vendor_id : null;
 
-        // Get all vendors for the filter dropdown
-        $vendors = FixedAssetVendor::orderBy('name')
+        $vendors = HospitalExpenseVendor::orderBy('name')
             ->get(['id', 'name'])
             ->toArray();
 
-        // Build the query for vendor
-        $vendorQuery = FixedAssetVendor::query();
+        $result = $ledgerService->build($vendorId, $startDate, $endDate);
 
-        if ($vendorId) {
-            $vendorQuery->where('id', $vendorId);
-        }
-
-        $selectedVendors = $vendorQuery->get();
-        $ledgerData = [];
-
-        foreach ($selectedVendors as $vendor) {
-            // Get all fixed assets for this vendor (only those with due)
-            $assetsQuery = FixedAsset::where('vendor_id', $vendor->id)
-                ->where('due_amount', '>', 0);
-
-            if ($startDate && $endDate) {
-                $assetsQuery->whereBetween('purchase_date', [$startDate, $endDate]);
-            }
-
-            $totalPurchaseDue = $assetsQuery->sum('due_amount');
-
-            // Get all vendor payments for this vendor
-            $paymentsQuery = FixedAssetVendorPayment::where('vendor_id', $vendor->id);
-
-            if ($startDate && $endDate) {
-                $paymentsQuery->whereBetween('payment_date', [$startDate, $endDate]);
-            }
-
-            $totalPayment = $paymentsQuery->sum('amount');
-
-            $previousDue = 0;
-            $currentDue = $totalPurchaseDue - $totalPayment;
-
-            // Only add vendors with transactions
-            if ($totalPurchaseDue > 0 || $totalPayment > 0) {
-                $ledgerData[] = [
-                    'id' => 'vendor-'.$vendor->id,
-                    'date' => now()->toDateString(),
-                    'vendor_name' => $vendor->name,
-                    'description' => 'Vendor Due Summary',
-                    'previous_due' => $previousDue,
-                    'purchase_due' => $totalPurchaseDue,
-                    'payment' => $totalPayment,
-                    'current_due' => $currentDue,
-                ];
-            }
-        }
-
-        // Calculate totals
-        $totalPreviousDue = collect($ledgerData)->sum('previous_due');
-        $totalPurchaseDue = collect($ledgerData)->sum('purchase_due');
-        $totalPayment = collect($ledgerData)->sum('payment');
-        $totalCurrentDue = collect($ledgerData)->sum('current_due');
-
-        return Inertia::render('VendorDue/FixedAssetVendorDueLedger', [
-            'ledgerData' => $ledgerData,
+        return Inertia::render('VendorDue/ExpenseVendorDueLedger', [
+            'ledgerData' => $result['ledgerData'],
             'vendors' => $vendors,
+            'showVendorColumn' => $result['show_vendor_column'],
             'filters' => [
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'vendor_id' => $vendorId,
             ],
-            'totals' => [
-                'previous_due' => $totalPreviousDue,
-                'purchase_due' => $totalPurchaseDue,
-                'payment' => $totalPayment,
-                'current_due' => $totalCurrentDue,
+            'totals' => $result['totals'],
+        ]);
+    }
+
+    public function fixedAssetVendorDue(Request $request, FixedAssetVendorDueLedgerService $ledgerService)
+    {
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
+        $vendorId = $request->vendor_id ? (int) $request->vendor_id : null;
+
+        $vendors = FixedAssetVendor::orderBy('name')
+            ->get(['id', 'name'])
+            ->toArray();
+
+        $result = $ledgerService->build($vendorId, $startDate, $endDate);
+
+        return Inertia::render('VendorDue/FixedAssetVendorDueLedger', [
+            'ledgerData' => $result['ledgerData'],
+            'vendors' => $vendors,
+            'showVendorColumn' => $result['show_vendor_column'],
+            'filters' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'vendor_id' => $vendorId,
             ],
+            'totals' => $result['totals'],
         ]);
     }
 

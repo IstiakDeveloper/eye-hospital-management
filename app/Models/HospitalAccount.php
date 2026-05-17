@@ -442,7 +442,7 @@ class HospitalAccount extends Model
     }
 
     /**
-     * Create a fixed asset purchase record.
+     * Create a fixed asset master record with its first purchase line.
      * Deducts initial payment from hospital account if any.
      */
     public static function createFixedAsset(
@@ -451,51 +451,82 @@ class HospitalAccount extends Model
         float $totalAmount,
         float $paidAmount = 0,
         ?string $date = null,
-        ?int $vendorId = null
+        ?int $vendorId = null,
+        ?int $quantity = null
     ): FixedAsset {
-        $transactionDate = $date ?? now()->toDateString();
-
-        // Deduct initial payment from hospital account if any
-        if ($paidAmount > 0) {
-            $account = self::firstOrCreate([]);
-            $account->decrement('balance', $paidAmount);
-
-            // Create expense transaction for initial payment
-            $transaction = HospitalTransaction::create([
-                'transaction_no' => self::generateVoucherNo('HE'),
-                'type' => 'expense',
-                'amount' => $paidAmount,
-                'category' => 'Fixed Asset Purchase',
-                'description' => "{$name} - Initial Payment: {$description}",
-                'transaction_date' => $transactionDate,
-                'created_by' => auth()->id(),
-            ]);
-
-            // Create Main Account Debit Voucher
-            MainAccount::createDebitVoucher(
-                amount: $paidAmount,
-                narration: "Fixed Asset Purchase - {$name}: {$description}",
-                sourceAccount: 'hospital',
-                sourceTransactionType: 'fixed_asset_purchase',
-                sourceVoucherNo: $transaction->transaction_no,
-                sourceReferenceId: $transaction->id,
-                date: $transactionDate
-            );
-        }
-
-        // Create fixed asset record
         $asset = FixedAsset::create([
-            'vendor_id' => $vendorId,
             'name' => $name,
             'description' => $description,
+            'total_amount' => 0,
+            'paid_amount' => 0,
+            'due_amount' => 0,
+            'status' => 'active',
+            'created_by' => auth()->id(),
+        ]);
+
+        self::addFixedAssetPurchase(
+            asset: $asset,
+            vendorId: $vendorId,
+            description: $description,
+            totalAmount: $totalAmount,
+            paidAmount: $paidAmount,
+            date: $date,
+            quantity: $quantity
+        );
+
+        return $asset->fresh();
+    }
+
+    /**
+     * Add a purchase line to an existing fixed asset.
+     */
+    public static function addFixedAssetPurchase(
+        FixedAsset $asset,
+        ?int $vendorId,
+        string $description,
+        float $totalAmount,
+        float $paidAmount = 0,
+        ?string $date = null,
+        ?int $quantity = null
+    ): FixedAssetPurchase {
+        $transactionDate = $date ?? now()->toDateString();
+
+        if ($paidAmount > $totalAmount) {
+            throw new \InvalidArgumentException('Paid amount cannot exceed total amount.');
+        }
+
+        $purchase = FixedAssetPurchase::create([
+            'fixed_asset_id' => $asset->id,
+            'vendor_id' => $vendorId,
+            'description' => $description,
+            'quantity' => $quantity,
             'total_amount' => $totalAmount,
             'paid_amount' => $paidAmount,
-            'due_amount' => $totalAmount - $paidAmount,
             'purchase_date' => $transactionDate,
             'created_by' => auth()->id(),
         ]);
 
-        return $asset;
+        if ($paidAmount > 0) {
+            $expenseCategory = HospitalExpenseCategory::firstOrCreate(
+                ['name' => 'Fixed Asset Purchase'],
+                ['is_active' => true]
+            );
+
+            $transaction = self::addExpense(
+                amount: $paidAmount,
+                category: 'Fixed Asset Purchase',
+                description: "{$asset->name} - Initial Payment: {$description}",
+                categoryId: $expenseCategory->id,
+                date: $transactionDate
+            );
+
+            $transaction->update([
+                'reference_type' => 'fixed_asset_purchases',
+                'reference_id' => $purchase->id,
+            ]);
+        }
+
+        return $purchase;
     }
 
     /**

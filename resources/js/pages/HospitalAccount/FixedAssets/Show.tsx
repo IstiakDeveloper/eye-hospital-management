@@ -1,7 +1,42 @@
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
-import { Link, router } from '@inertiajs/react';
-import { ArrowLeft, Calendar, CheckCircle, Clock, DollarSign, Edit, FileText, Package, User, X } from 'lucide-react';
+import { Link, useForm } from '@inertiajs/react';
+import {
+    ArrowLeft,
+    Calendar,
+    CheckCircle,
+    Clock,
+    DollarSign,
+    Edit,
+    FileText,
+    Package,
+    PlusCircle,
+    User,
+    X,
+} from 'lucide-react';
 import React, { useState } from 'react';
+
+interface Vendor {
+    id: number;
+    name: string;
+    company_name: string | null;
+    phone: string;
+    current_balance: number;
+}
+
+interface Purchase {
+    id: number;
+    purchase_number: string;
+    description: string | null;
+    quantity: number | null;
+    total_amount: number;
+    paid_amount: number;
+    due_amount: number;
+    purchase_date: string;
+    vendor: Vendor | null;
+    created_by: {
+        name: string;
+    };
+}
 
 interface FixedAsset {
     id: number;
@@ -11,37 +46,34 @@ interface FixedAsset {
     total_amount: number;
     paid_amount: number;
     due_amount: number;
-    purchase_date: string;
     status: string;
     created_at: string;
     created_by: {
         name: string;
     };
-    payments: Array<{
-        id: number;
-        payment_no: string;
-        amount: number;
-        description: string;
-        payment_date: string;
-        created_at: string;
-        created_by: {
-            name: string;
-        };
-    }>;
+    purchases: Purchase[];
 }
 
 interface ShowProps {
     fixedAsset: FixedAsset;
+    vendors: Vendor[];
+    defaultVendorId: number | null;
 }
 
-const Show: React.FC<ShowProps> = ({ fixedAsset }) => {
-    const [paymentModal, setPaymentModal] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [paymentData, setPaymentData] = useState({
-        amount: fixedAsset.due_amount.toString(),
-        description: '',
-        payment_date: new Date().toISOString().split('T')[0],
+const Show: React.FC<ShowProps> = ({ fixedAsset, vendors, defaultVendorId }) => {
+    const [purchaseModal, setPurchaseModal] = useState(false);
+
+    const purchaseForm = useForm({
+        vendor_id: defaultVendorId ? String(defaultVendorId) : '',
+        quantity: '',
+        total_amount: '',
+        purchase_date: new Date().toISOString().split('T')[0],
     });
+
+    const resetPurchaseForm = () => {
+        purchaseForm.reset();
+        purchaseForm.clearErrors();
+    };
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-GB', {
@@ -78,24 +110,19 @@ const Show: React.FC<ShowProps> = ({ fixedAsset }) => {
         );
     };
 
-    const handlePaymentSubmit = (e: React.FormEvent) => {
+    const handlePurchaseSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
-        setLoading(true);
-        router.post(route('hospital-account.fixed-assets.payment', fixedAsset.id), paymentData, {
+        purchaseForm.post(route('hospital-account.fixed-assets.purchases.store', fixedAsset.id), {
+            preserveScroll: true,
             onSuccess: () => {
-                setPaymentModal(false);
-                setPaymentData({
-                    amount: '',
-                    description: '',
-                    payment_date: new Date().toISOString().split('T')[0],
-                });
+                setPurchaseModal(false);
+                resetPurchaseForm();
             },
-            onFinish: () => setLoading(false),
         });
     };
 
-    const paymentPercentage = (fixedAsset.paid_amount / fixedAsset.total_amount) * 100;
+    const paymentPercentage = fixedAsset.total_amount > 0 ? (fixedAsset.paid_amount / fixedAsset.total_amount) * 100 : 0;
+    const vendorsWithDue = vendors.filter((v) => v.current_balance > 0);
 
     return (
         <HospitalAccountLayout title="Fixed Asset Details">
@@ -111,7 +138,6 @@ const Show: React.FC<ShowProps> = ({ fixedAsset }) => {
                 </div>
 
                 <div className="space-y-6">
-                    {/* Header Card */}
                     <div className="rounded-lg bg-white p-6 shadow-md">
                         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
                             <div className="flex-1">
@@ -122,20 +148,34 @@ const Show: React.FC<ShowProps> = ({ fixedAsset }) => {
                                 <p className="text-sm text-gray-600">
                                     Asset Number: <span className="font-medium text-gray-900">{fixedAsset.asset_number}</span>
                                 </p>
+                                <p className="mt-1 text-sm text-gray-600">
+                                    Purchases: <span className="font-medium text-gray-900">{fixedAsset.purchases.length}</span>
+                                </p>
                             </div>
-                            <div className="flex gap-2">
-                                {fixedAsset.due_amount > 0 && fixedAsset.status === 'active' && (
-                                    <button
-                                        onClick={() => setPaymentModal(true)}
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        resetPurchaseForm();
+                                        setPurchaseModal(true);
+                                    }}
+                                    className="inline-flex items-center rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                                >
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Add Quantity
+                                </button>
+                                {fixedAsset.due_amount > 0 && vendorsWithDue.length > 0 && (
+                                    <Link
+                                        href={route('hospital-account.fixed-asset-vendors.show', vendorsWithDue[0].id)}
                                         className="inline-flex items-center rounded-lg border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
                                     >
                                         <DollarSign className="mr-2 h-4 w-4" />
-                                        Make Payment
-                                    </button>
+                                        Pay Vendor
+                                    </Link>
                                 )}
                                 <Link
                                     href={route('hospital-account.fixed-assets.edit', fixedAsset.id)}
-                                    className="inline-flex items-center rounded-lg border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                                    className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                                 >
                                     <Edit className="mr-2 h-4 w-4" />
                                     Edit
@@ -144,9 +184,8 @@ const Show: React.FC<ShowProps> = ({ fixedAsset }) => {
                         </div>
                     </div>
 
-                    {/* Payment Progress Card */}
                     <div className="rounded-lg bg-white p-6 shadow-md">
-                        <h2 className="mb-4 text-lg font-semibold text-gray-900">Payment Progress</h2>
+                        <h2 className="mb-4 text-lg font-semibold text-gray-900">Payment Progress (All Purchases)</h2>
 
                         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
                             <div className="rounded-lg bg-blue-50 p-4">
@@ -177,10 +216,8 @@ const Show: React.FC<ShowProps> = ({ fixedAsset }) => {
                         </div>
                     </div>
 
-                    {/* Asset Details Card */}
                     <div className="rounded-lg bg-white p-6 shadow-md">
                         <h2 className="mb-4 text-lg font-semibold text-gray-900">Asset Details</h2>
-
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <div className="space-y-4">
                                 <div className="flex items-start gap-3">
@@ -190,15 +227,6 @@ const Show: React.FC<ShowProps> = ({ fixedAsset }) => {
                                         <p className="font-medium text-gray-900">{fixedAsset.name}</p>
                                     </div>
                                 </div>
-
-                                <div className="flex items-start gap-3">
-                                    <Calendar className="mt-0.5 h-5 w-5 text-gray-400" />
-                                    <div>
-                                        <p className="text-sm text-gray-600">Purchase Date</p>
-                                        <p className="font-medium text-gray-900">{formatDate(fixedAsset.purchase_date)}</p>
-                                    </div>
-                                </div>
-
                                 <div className="flex items-start gap-3">
                                     <User className="mt-0.5 h-5 w-5 text-gray-400" />
                                     <div>
@@ -207,7 +235,6 @@ const Show: React.FC<ShowProps> = ({ fixedAsset }) => {
                                     </div>
                                 </div>
                             </div>
-
                             <div className="space-y-4">
                                 <div className="flex items-start gap-3">
                                     <FileText className="mt-0.5 h-5 w-5 text-gray-400" />
@@ -216,7 +243,6 @@ const Show: React.FC<ShowProps> = ({ fixedAsset }) => {
                                         <p className="font-medium text-gray-900">{fixedAsset.description || 'No description provided'}</p>
                                     </div>
                                 </div>
-
                                 <div className="flex items-start gap-3">
                                     <Calendar className="mt-0.5 h-5 w-5 text-gray-400" />
                                     <div>
@@ -228,42 +254,63 @@ const Show: React.FC<ShowProps> = ({ fixedAsset }) => {
                         </div>
                     </div>
 
-                    {/* Payment History Card */}
                     <div className="rounded-lg bg-white p-6 shadow-md">
-                        <h2 className="mb-4 text-lg font-semibold text-gray-900">Payment History ({fixedAsset.payments.length})</h2>
+                        <h2 className="mb-4 text-lg font-semibold text-gray-900">Purchase History ({fixedAsset.purchases.length})</h2>
 
-                        {fixedAsset.payments.length === 0 ? (
+                        {fixedAsset.purchases.length === 0 ? (
                             <div className="py-8 text-center">
-                                <DollarSign className="mx-auto h-12 w-12 text-gray-400" />
-                                <h3 className="mt-2 text-sm font-medium text-gray-900">No payments yet</h3>
-                                <p className="mt-1 text-sm text-gray-500">Payment history will appear here.</p>
+                                <Package className="mx-auto h-12 w-12 text-gray-400" />
+                                <h3 className="mt-2 text-sm font-medium text-gray-900">No purchases yet</h3>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-gray-50">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment No</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Purchase No</th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created By</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qty</th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Paid</th>
+                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Due</th>
+                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Note</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 bg-white">
-                                        {fixedAsset.payments.map((payment) => (
-                                            <tr key={payment.id} className="hover:bg-gray-50">
+                                        {fixedAsset.purchases.map((purchase) => (
+                                            <tr key={purchase.id} className="hover:bg-gray-50">
                                                 <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">
-                                                    {payment.payment_no}
+                                                    {purchase.purchase_number}
                                                 </td>
                                                 <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
-                                                    {formatDate(payment.payment_date)}
+                                                    {formatDate(purchase.purchase_date)}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
+                                                    {purchase.vendor ? (
+                                                        <Link
+                                                            href={route('hospital-account.fixed-asset-vendors.show', purchase.vendor.id)}
+                                                            className="text-blue-600 hover:text-blue-800"
+                                                        >
+                                                            {purchase.vendor.name}
+                                                        </Link>
+                                                    ) : (
+                                                        '-'
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-500">
+                                                    {purchase.quantity ?? '-'}
+                                                </td>
+                                                <td className="px-6 py-4 text-right text-sm whitespace-nowrap text-gray-900">
+                                                    ৳{purchase.total_amount.toLocaleString()}
                                                 </td>
                                                 <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap text-green-600">
-                                                    ৳{payment.amount.toLocaleString()}
+                                                    ৳{purchase.paid_amount.toLocaleString()}
                                                 </td>
-                                                <td className="px-6 py-4 text-sm text-gray-900">{payment.description || '-'}</td>
-                                                <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">{payment.created_by.name}</td>
+                                                <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap text-red-600">
+                                                    ৳{purchase.due_amount.toLocaleString()}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-900">{purchase.description || '-'}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -274,79 +321,110 @@ const Show: React.FC<ShowProps> = ({ fixedAsset }) => {
                 </div>
             </div>
 
-            {/* Payment Modal */}
-            {paymentModal && (
-                <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
-                    <div className="w-full max-w-md rounded-lg bg-white p-6">
+            {purchaseModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white p-6">
                         <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-lg font-semibold">Make Payment</h3>
-                            <button onClick={() => setPaymentModal(false)} className="text-gray-400 hover:text-gray-600">
+                            <h3 className="text-lg font-semibold">Add Quantity — {fixedAsset.name}</h3>
+                            <button onClick={() => setPurchaseModal(false)} className="text-gray-400 hover:text-gray-600">
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
 
-                        <div className="mb-4 rounded-lg bg-gray-50 p-4">
-                            <div className="text-sm text-gray-600">
-                                Asset: <span className="font-medium text-gray-900">{fixedAsset.name}</span>
-                            </div>
-                            <div className="mt-1 text-sm text-gray-600">
-                                Due Amount: <span className="font-medium text-red-600">৳{fixedAsset.due_amount.toLocaleString()}</span>
-                            </div>
-                        </div>
+                        <p className="mb-4 text-sm text-gray-500">
+                            Full amount will be deducted from hospital account on the purchase date you select.
+                        </p>
 
-                        <form onSubmit={handlePaymentSubmit} className="space-y-4">
+                        <form onSubmit={handlePurchaseSubmit} className="space-y-4">
+                            {!defaultVendorId && (
+                                <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                                        Vendor <span className="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        value={purchaseForm.data.vendor_id}
+                                        onChange={(e) => purchaseForm.setData('vendor_id', e.target.value)}
+                                        required
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="">Select vendor</option>
+                                        {vendors.map((vendor) => (
+                                            <option key={vendor.id} value={String(vendor.id)}>
+                                                {vendor.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {purchaseForm.errors.vendor_id && (
+                                        <p className="mt-1 text-sm text-red-600">{purchaseForm.errors.vendor_id}</p>
+                                    )}
+                                </div>
+                            )}
+
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">
-                                    Payment Amount <span className="text-red-500">*</span>
-                                </label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Quantity (optional)</label>
                                 <input
                                     type="number"
-                                    step="0.01"
-                                    value={paymentData.amount}
-                                    onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
-                                    max={fixedAsset.due_amount}
-                                    required
+                                    min="1"
+                                    value={purchaseForm.data.quantity}
+                                    onChange={(e) => purchaseForm.setData('quantity', e.target.value)}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                    placeholder="e.g. 10"
                                 />
+                                {purchaseForm.errors.quantity && (
+                                    <p className="mt-1 text-sm text-red-600">{purchaseForm.errors.quantity}</p>
+                                )}
                             </div>
 
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">
-                                    Payment Date <span className="text-red-500">*</span>
+                                    Amount <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute top-2 left-3 text-gray-500">৳</span>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="1"
+                                        value={purchaseForm.data.total_amount}
+                                        onChange={(e) => purchaseForm.setData('total_amount', e.target.value)}
+                                        required
+                                        className="w-full rounded-lg border border-gray-300 py-2 pr-3 pl-8 focus:ring-2 focus:ring-blue-500"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                {purchaseForm.errors.total_amount && (
+                                    <p className="mt-1 text-sm text-red-600">{purchaseForm.errors.total_amount}</p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Purchase Date <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="date"
-                                    value={paymentData.payment_date}
-                                    onChange={(e) => setPaymentData({ ...paymentData, payment_date: e.target.value })}
+                                    value={purchaseForm.data.purchase_date}
+                                    onChange={(e) => purchaseForm.setData('purchase_date', e.target.value)}
                                     required
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
                                 />
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
-                                <textarea
-                                    value={paymentData.description}
-                                    onChange={(e) => setPaymentData({ ...paymentData, description: e.target.value })}
-                                    rows={3}
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Payment note..."
-                                />
+                                {purchaseForm.errors.purchase_date && (
+                                    <p className="mt-1 text-sm text-red-600">{purchaseForm.errors.purchase_date}</p>
+                                )}
                             </div>
 
                             <div className="flex gap-2 pt-2">
                                 <button
                                     type="submit"
-                                    disabled={loading}
-                                    className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    disabled={purchaseForm.processing}
+                                    className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
                                 >
-                                    {loading ? 'Processing...' : 'Make Payment'}
+                                    {purchaseForm.processing ? 'Saving...' : 'Add'}
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setPaymentModal(false)}
-                                    disabled={loading}
-                                    className="flex-1 rounded-lg bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300 disabled:opacity-50"
+                                    onClick={() => setPurchaseModal(false)}
+                                    className="flex-1 rounded-lg bg-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-300"
                                 >
                                     Cancel
                                 </button>

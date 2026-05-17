@@ -71,12 +71,12 @@ interface UsersIndexProps {
         is_active?: string;
     };
     can: {
-        create: boolean;
-        edit: boolean;
-        delete: boolean;
-        view: boolean;
-        manage_permissions: boolean;
-    };
+                create: boolean;
+                edit: boolean;
+                delete: boolean;
+                view: boolean;
+                manage_permissions: boolean;
+            };
 }
 
 export default function UsersIndex({ users, roles, filters, can }: UsersIndexProps) {

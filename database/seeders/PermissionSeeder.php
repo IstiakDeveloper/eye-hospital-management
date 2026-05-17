@@ -199,6 +199,14 @@ class PermissionSeeder extends Seeder
             ['name' => 'profile.view', 'display_name' => 'View Profile', 'category' => 'profile', 'description' => 'Can view own profile'],
             ['name' => 'profile.edit', 'display_name' => 'Edit Profile', 'category' => 'profile', 'description' => 'Can edit own profile'],
 
+            ['name' => 'attendance.view', 'display_name' => 'View Attendance', 'category' => 'attendance', 'description' => 'Can view daily attendance sheet'],
+            ['name' => 'attendance.manage', 'display_name' => 'Manage Attendance', 'category' => 'attendance', 'description' => 'Can manage holidays, device sync targets, and per-user attendance settings'],
+
+            ['name' => 'employees.view', 'display_name' => 'View Employees', 'category' => 'employees', 'description' => 'Can view employee directory (separate from user accounts)'],
+            ['name' => 'employees.create', 'display_name' => 'Create Employee', 'category' => 'employees', 'description' => 'Can add employees'],
+            ['name' => 'employees.edit', 'display_name' => 'Edit Employee', 'category' => 'employees', 'description' => 'Can edit employees and attendance schedule'],
+            ['name' => 'employees.delete', 'display_name' => 'Delete Employee', 'category' => 'employees', 'description' => 'Can delete employees'],
+
             // Role & Permission Management
             ['name' => 'roles.view', 'display_name' => 'View Roles', 'category' => 'roles_permissions', 'description' => 'Can view roles and permissions'],
             ['name' => 'roles.create', 'display_name' => 'Create Role', 'category' => 'roles_permissions', 'description' => 'Can create new roles'],
@@ -241,13 +249,13 @@ class PermissionSeeder extends Seeder
                     [
                         'display_name' => 'All Permissions',
                         'category' => 'system',
-                        'description' => 'Wildcard permission - grants all access'
+                        'description' => 'Wildcard permission - grants all access',
                     ]
                 );
 
                 // Attach wildcard permission to Super Admin user
                 $superAdminUser->permissions()->syncWithoutDetaching([
-                    $wildcardPermission->id => ['granted' => true]
+                    $wildcardPermission->id => ['granted' => true],
                 ]);
 
                 $this->command->info('Super Admin: Wildcard permission assigned to user');

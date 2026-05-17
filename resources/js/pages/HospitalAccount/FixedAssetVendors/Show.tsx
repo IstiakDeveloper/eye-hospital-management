@@ -19,13 +19,26 @@ interface Vendor {
 
 interface Asset {
     id: number;
-    asset_number: string;
-    name: string;
+    purchase_number: string;
     total_amount: number;
     paid_amount: number;
     due_amount: number;
+    outstanding_due: number;
     purchase_date: string;
-    status: string;
+    fixed_asset: {
+        id: number;
+        asset_number: string;
+        name: string;
+        status: string;
+    };
+}
+
+interface FinancialSummary {
+    total_purchased: number;
+    total_paid_at_purchase: number;
+    total_purchase_due: number;
+    total_vendor_payments: number;
+    current_due: number;
 }
 
 interface Payment {
@@ -47,15 +60,17 @@ interface ShowProps {
         data: Asset[];
         current_page: number;
         last_page: number;
+        total: number;
     };
     payments: {
         data: Payment[];
         current_page: number;
         last_page: number;
     };
+    summary: FinancialSummary;
 }
 
-const Show: React.FC<ShowProps> = ({ vendor, assets, payments }) => {
+const Show: React.FC<ShowProps> = ({ vendor, assets, payments, summary }) => {
     const [paymentModal, setPaymentModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [paymentData, setPaymentData] = useState({
@@ -75,7 +90,14 @@ const Show: React.FC<ShowProps> = ({ vendor, assets, payments }) => {
     };
 
     const formatAmount = (amount: number) => {
-        return `৳${amount.toLocaleString()}`;
+        return new Intl.NumberFormat('en-BD', {
+            style: 'currency',
+            currency: 'BDT',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })
+            .format(amount)
+            .replace('BDT', '৳');
     };
 
     const handlePaymentSubmit = (e: React.FormEvent) => {
@@ -95,9 +117,6 @@ const Show: React.FC<ShowProps> = ({ vendor, assets, payments }) => {
             onFinish: () => setLoading(false),
         });
     };
-
-    const totalPurchased = assets.data.reduce((sum, asset) => sum + asset.total_amount, 0);
-    const totalPaid = payments.data.reduce((sum, payment) => sum + payment.amount, 0);
 
     return (
         <HospitalAccountLayout title={`Vendor: ${vendor.name}`}>
@@ -201,9 +220,9 @@ const Show: React.FC<ShowProps> = ({ vendor, assets, payments }) => {
                                 <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                                     <div className="mb-2 flex items-center gap-2">
                                         <Package className="h-5 w-5 text-blue-600" />
-                                        <p className="text-sm text-blue-700">Total Assets</p>
+                                        <p className="text-sm text-blue-700">Total Purchases</p>
                                     </div>
-                                    <p className="text-2xl font-bold text-blue-900">{assets.data.length}</p>
+                                    <p className="text-2xl font-bold text-blue-900">{assets.total}</p>
                                 </div>
 
                                 <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
@@ -211,29 +230,38 @@ const Show: React.FC<ShowProps> = ({ vendor, assets, payments }) => {
                                         <Building className="h-5 w-5 text-purple-600" />
                                         <p className="text-sm text-purple-700">Total Purchased</p>
                                     </div>
-                                    <p className="text-2xl font-bold text-purple-900">{formatAmount(totalPurchased)}</p>
+                                    <p className="text-2xl font-bold text-purple-900">{formatAmount(summary.total_purchased)}</p>
                                 </div>
 
                                 <div className="rounded-lg border border-green-200 bg-green-50 p-4">
                                     <div className="mb-2 flex items-center gap-2">
                                         <CreditCard className="h-5 w-5 text-green-600" />
-                                        <p className="text-sm text-green-700">Total Paid</p>
+                                        <p className="text-sm text-green-700">Vendor Payments</p>
                                     </div>
-                                    <p className="text-2xl font-bold text-green-900">{formatAmount(totalPaid)}</p>
+                                    <p className="text-2xl font-bold text-green-900">{formatAmount(summary.total_vendor_payments)}</p>
+                                    <p className="mt-1 text-xs text-green-700">
+                                        Paid at purchase: {formatAmount(summary.total_paid_at_purchase)}
+                                    </p>
                                 </div>
 
                                 <div
                                     className={`rounded-lg border p-4 ${
-                                        vendor.current_balance > 0 ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'
+                                        summary.current_due > 0 ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'
                                     }`}
                                 >
                                     <div className="mb-2 flex items-center gap-2">
-                                        <DollarSign className={`h-5 w-5 ${vendor.current_balance > 0 ? 'text-red-600' : 'text-gray-600'}`} />
-                                        <p className={`text-sm ${vendor.current_balance > 0 ? 'text-red-700' : 'text-gray-700'}`}>Current Due</p>
+                                        <DollarSign className={`h-5 w-5 ${summary.current_due > 0 ? 'text-red-600' : 'text-gray-600'}`} />
+                                        <p className={`text-sm ${summary.current_due > 0 ? 'text-red-700' : 'text-gray-700'}`}>Current Due</p>
                                     </div>
-                                    <p className={`text-2xl font-bold ${vendor.current_balance > 0 ? 'text-red-900' : 'text-gray-900'}`}>
-                                        {formatAmount(vendor.current_balance)}
+                                    <p className={`text-2xl font-bold ${summary.current_due > 0 ? 'text-red-900' : 'text-gray-900'}`}>
+                                        {formatAmount(summary.current_due)}
                                     </p>
+                                    {summary.total_purchase_due > 0 && summary.total_vendor_payments > 0 && (
+                                        <p className="mt-1 text-xs text-red-700">
+                                            Purchase due {formatAmount(summary.total_purchase_due)} − payments{' '}
+                                            {formatAmount(summary.total_vendor_payments)}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -264,7 +292,7 @@ const Show: React.FC<ShowProps> = ({ vendor, assets, payments }) => {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Asset</th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Amount</th>
                                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Paid</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Due</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Outstanding Due</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Purchase Date</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                                 </tr>
@@ -277,33 +305,49 @@ const Show: React.FC<ShowProps> = ({ vendor, assets, payments }) => {
                                         </td>
                                     </tr>
                                 ) : (
-                                    assets.data.map((asset) => (
-                                        <tr key={asset.id} className="hover:bg-gray-50">
+                                    assets.data.map((purchase) => (
+                                        <tr key={purchase.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4">
                                                 <div>
-                                                    <div className="text-sm font-medium text-gray-900">{asset.name}</div>
-                                                    <div className="text-sm text-gray-500">{asset.asset_number}</div>
+                                                    <Link
+                                                        href={route('hospital-account.fixed-assets.show', purchase.fixed_asset.id)}
+                                                        className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                                                    >
+                                                        {purchase.fixed_asset.name}
+                                                    </Link>
+                                                    <div className="text-sm text-gray-500">
+                                                        {purchase.fixed_asset.asset_number} · {purchase.purchase_number}
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-right text-sm text-gray-900">{formatAmount(asset.total_amount)}</td>
+                                            <td className="px-6 py-4 text-right text-sm text-gray-900">{formatAmount(purchase.total_amount)}</td>
                                             <td className="px-6 py-4 text-right text-sm font-medium text-green-600">
-                                                {formatAmount(asset.paid_amount)}
+                                                {formatAmount(purchase.paid_amount)}
                                             </td>
-                                            <td className="px-6 py-4 text-right text-sm font-medium text-red-600">
-                                                {formatAmount(asset.due_amount)}
+                                            <td className="px-6 py-4 text-right text-sm">
+                                                <span
+                                                    className={`font-medium ${purchase.outstanding_due > 0 ? 'text-red-600' : 'text-gray-500'}`}
+                                                >
+                                                    {formatAmount(purchase.outstanding_due)}
+                                                </span>
+                                                {purchase.due_amount > 0 && purchase.outstanding_due < purchase.due_amount && (
+                                                    <p className="mt-0.5 text-xs text-gray-400">
+                                                        of {formatAmount(purchase.due_amount)} purchase due
+                                                    </p>
+                                                )}
                                             </td>
-                                            <td className="px-6 py-4 text-sm text-gray-500">{formatDate(asset.purchase_date)}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-500">{formatDate(purchase.purchase_date)}</td>
                                             <td className="px-6 py-4">
                                                 <span
                                                     className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                                                        asset.status === 'fully_paid'
+                                                        purchase.fixed_asset.status === 'fully_paid'
                                                             ? 'bg-green-100 text-green-800'
-                                                            : asset.status === 'active'
+                                                            : purchase.fixed_asset.status === 'active'
                                                               ? 'bg-blue-100 text-blue-800'
                                                               : 'bg-gray-100 text-gray-800'
                                                     }`}
                                                 >
-                                                    {asset.status.replace('_', ' ').toUpperCase()}
+                                                    {purchase.fixed_asset.status.replace('_', ' ').toUpperCase()}
                                                 </span>
                                             </td>
                                         </tr>

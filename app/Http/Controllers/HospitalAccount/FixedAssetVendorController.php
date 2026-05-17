@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\HospitalAccount;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\{FixedAssetVendor, FixedAssetVendorPayment, HospitalAccount};
-use Inertia\Inertia;
+use App\Models\FixedAssetVendor;
+use App\Models\FixedAssetVendorPayment;
+use App\Models\HospitalAccount;
 use DB;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class FixedAssetVendorController extends Controller
 {
@@ -15,16 +17,16 @@ class FixedAssetVendorController extends Controller
      */
     public function index(Request $request)
     {
-        $query = FixedAssetVendor::withCount('assets')
-            ->withSum('assets', 'total_amount')
+        $query = FixedAssetVendor::withCount(['purchases as assets_count'])
+            ->withSum('purchases', 'total_amount')
             ->withSum('payments', 'amount');
 
         // Apply filters
         if ($request->search) {
             $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('company_name', 'like', '%' . $request->search . '%')
-                  ->orWhere('phone', 'like', '%' . $request->search . '%');
+                $q->where('name', 'like', '%'.$request->search.'%')
+                    ->orWhere('company_name', 'like', '%'.$request->search.'%')
+                    ->orWhere('phone', 'like', '%'.$request->search.'%');
             });
         }
 
@@ -43,7 +45,7 @@ class FixedAssetVendorController extends Controller
         $totals = [
             'total_vendors' => FixedAssetVendor::count(),
             'total_due' => FixedAssetVendor::sum('current_balance'),
-            'total_purchased' => FixedAssetVendor::withSum('assets', 'total_amount')->get()->sum('assets_sum_total_amount'),
+            'total_purchased' => FixedAssetVendor::withSum('purchases', 'total_amount')->get()->sum('purchases_sum_total_amount'),
             'total_paid' => FixedAssetVendorPayment::sum('amount'),
         ];
 
@@ -92,22 +94,39 @@ class FixedAssetVendorController extends Controller
      */
     public function show(FixedAssetVendor $fixedAssetVendor)
     {
-        $fixedAssetVendor->load(['assets', 'payments.createdBy']);
+        $fixedAssetVendor->load(['payments.createdBy']);
 
-        $assets = $fixedAssetVendor->assets()
-            ->with('createdBy')
+        $outstandingByPurchaseId = $fixedAssetVendor->outstandingDueByPurchaseId();
+
+        $assets = $fixedAssetVendor->purchases()
+            ->with(['fixedAsset', 'createdBy'])
             ->latest('purchase_date')
             ->paginate(10, ['*'], 'assets_page');
+
+        $assets->getCollection()->transform(function ($purchase) use ($outstandingByPurchaseId) {
+            $purchase->outstanding_due = $outstandingByPurchaseId[$purchase->id] ?? 0.0;
+
+            return $purchase;
+        });
 
         $payments = $fixedAssetVendor->payments()
             ->with('createdBy')
             ->latest('payment_date')
             ->paginate(10, ['*'], 'payments_page');
 
+        $summary = [
+            'total_purchased' => (float) $fixedAssetVendor->purchases()->sum('total_amount'),
+            'total_paid_at_purchase' => (float) $fixedAssetVendor->purchases()->sum('paid_amount'),
+            'total_purchase_due' => (float) $fixedAssetVendor->purchases()->sum('due_amount'),
+            'total_vendor_payments' => (float) $fixedAssetVendor->payments()->sum('amount'),
+            'current_due' => (float) $fixedAssetVendor->current_balance,
+        ];
+
         return Inertia::render('HospitalAccount/FixedAssetVendors/Show', [
             'vendor' => $fixedAssetVendor,
             'assets' => $assets,
             'payments' => $payments,
+            'summary' => $summary,
         ]);
     }
 
@@ -117,7 +136,7 @@ class FixedAssetVendorController extends Controller
     public function edit(FixedAssetVendor $fixedAssetVendor)
     {
         return Inertia::render('HospitalAccount/FixedAssetVendors/Edit', [
-            'vendor' => $fixedAssetVendor
+            'vendor' => $fixedAssetVendor,
         ]);
     }
 
@@ -151,7 +170,7 @@ class FixedAssetVendorController extends Controller
     public function destroy(FixedAssetVendor $fixedAssetVendor)
     {
         // Only allow deletion if no assets or payments
-        if ($fixedAssetVendor->assets()->count() > 0 || $fixedAssetVendor->payments()->count() > 0) {
+        if ($fixedAssetVendor->purchases()->count() > 0 || $fixedAssetVendor->payments()->count() > 0) {
             return back()->withErrors(['error' => 'Cannot delete vendor with assets or payments. Set status to inactive instead.']);
         }
 

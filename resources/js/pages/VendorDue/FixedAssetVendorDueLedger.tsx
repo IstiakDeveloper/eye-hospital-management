@@ -6,12 +6,14 @@ import React, { useState } from 'react';
 interface LedgerData {
     id: string;
     date: string;
+    vendor_id: number;
     vendor_name: string;
+    reference: string;
     description: string;
-    previous_due: number;
+    type: 'opening' | 'purchase' | 'payment';
     purchase_due: number;
     payment: number;
-    current_due: number;
+    balance: number;
 }
 
 interface Vendor {
@@ -26,20 +28,21 @@ interface Filters {
 }
 
 interface Totals {
-    previous_due: number;
-    purchase_due: number;
-    payment: number;
-    current_due: number;
+    opening_balance: number;
+    total_purchase_due: number;
+    total_payment: number;
+    closing_balance: number;
 }
 
 interface LedgerProps {
     ledgerData: LedgerData[];
     vendors: Vendor[];
+    showVendorColumn: boolean;
     filters: Filters;
     totals: Totals;
 }
 
-const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors, filters, totals }) => {
+const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors, showVendorColumn, filters, totals }) => {
     const [startDate, setStartDate] = useState(filters.start_date || '');
     const [endDate, setEndDate] = useState(filters.end_date || '');
     const [vendorId, setVendorId] = useState(filters.vendor_id?.toString() || '');
@@ -81,14 +84,14 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
     };
 
     const selectedVendorName = vendors.find((v) => v.id.toString() === vendorId)?.name || 'All Vendors';
+    const colSpan = showVendorColumn ? 7 : 6;
 
     return (
         <HospitalAccountLayout title="Fixed Asset Vendor Due Ledger">
-            {/* Filter Section */}
             <div className="no-print mb-6 rounded-lg border bg-white p-6 shadow-sm">
                 <div className="mb-4 flex items-center gap-2">
                     <Filter className="h-5 w-5 text-gray-600" />
-                    <h3 className="text-lg font-semibold">Filter Transactions</h3>
+                    <h3 className="text-lg font-semibold">Filter Ledger</h3>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                     <div>
@@ -132,7 +135,6 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
                 </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="mb-6 flex gap-4">
                 <button onClick={handlePrint} className="flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
                     <Printer className="mr-2 h-4 w-4" />
@@ -140,9 +142,7 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
                 </button>
             </div>
 
-            {/* Table */}
             <div className="report-section rounded-lg border bg-white shadow-sm">
-                {/* Print Header */}
                 <div className="print-header mb-3 p-4">
                     <div className="mb-1 text-center">
                         <h1 className="text-base font-bold">Mousumi Eye Hospital</h1>
@@ -151,48 +151,52 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
                         <h2 className="text-sm font-bold">Fixed Asset Vendor Due Ledger</h2>
                         <p className="text-xs">
                             {startDate && endDate ? `Period: ${formatDate(startDate)} to ${formatDate(endDate)}` : 'All Transactions'}
-                            {vendorId && ` - Vendor: ${selectedVendorName}`}
+                            {` — ${selectedVendorName}`}
                         </p>
                     </div>
                 </div>
+
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Vendor Name</th>
+                                {showVendorColumn && (
+                                    <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Vendor</th>
+                                )}
+                                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Reference</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Description</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Previous Due</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Purchase Due</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Payment</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Current Due</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">Balance</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 bg-white">
                             {ledgerData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                                    <td colSpan={colSpan} className="px-6 py-4 text-center text-gray-500">
                                         No transactions found
                                     </td>
                                 </tr>
                             ) : (
                                 ledgerData.map((item) => (
-                                    <tr key={item.id} className="hover:bg-gray-50">
+                                    <tr
+                                        key={item.id}
+                                        className={`hover:bg-gray-50 ${item.type === 'opening' ? 'bg-amber-50/60 font-medium' : ''}`}
+                                    >
                                         <td className="px-6 py-4 text-sm whitespace-nowrap">{formatDate(item.date)}</td>
-                                        <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">{item.vendor_name}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">{item.description}</td>
-                                        <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
-                                            {formatAmount(item.previous_due)}
-                                        </td>
+                                        {showVendorColumn && (
+                                            <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">{item.vendor_name}</td>
+                                        )}
+                                        <td className="px-6 py-4 text-sm font-mono whitespace-nowrap text-gray-700">{item.reference}</td>
+                                        <td className="max-w-xs px-6 py-4 text-sm text-gray-600">{item.description}</td>
                                         <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap text-red-600">
                                             {item.purchase_due > 0 ? formatAmount(item.purchase_due) : '-'}
                                         </td>
                                         <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap text-green-600">
                                             {item.payment > 0 ? formatAmount(item.payment) : '-'}
                                         </td>
-                                        <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
-                                            {formatAmount(item.current_due)}
-                                        </td>
+                                        <td className="px-6 py-4 text-right text-sm font-semibold whitespace-nowrap">{formatAmount(item.balance)}</td>
                                     </tr>
                                 ))
                             )}
@@ -200,13 +204,12 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
                         {ledgerData.length > 0 && (
                             <tfoot className="bg-gray-100">
                                 <tr className="font-bold">
-                                    <td colSpan={3} className="px-6 py-4 text-sm">
+                                    <td colSpan={showVendorColumn ? 4 : 3} className="px-6 py-4 text-sm">
                                         Total
                                     </td>
-                                    <td className="px-6 py-4 text-right text-sm">{formatAmount(totals.previous_due)}</td>
-                                    <td className="px-6 py-4 text-right text-sm text-red-600">{formatAmount(totals.purchase_due)}</td>
-                                    <td className="px-6 py-4 text-right text-sm text-green-600">{formatAmount(totals.payment)}</td>
-                                    <td className="px-6 py-4 text-right text-sm">{formatAmount(totals.current_due)}</td>
+                                    <td className="px-6 py-4 text-right text-sm text-red-600">{formatAmount(totals.total_purchase_due)}</td>
+                                    <td className="px-6 py-4 text-right text-sm text-green-600">{formatAmount(totals.total_payment)}</td>
+                                    <td className="px-6 py-4 text-right text-sm">{formatAmount(totals.closing_balance)}</td>
                                 </tr>
                             </tfoot>
                         )}
@@ -214,7 +217,6 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
                 </div>
             </div>
 
-            {/* Print-only styles */}
             <style>{`
                 .print-header {
                     display: none;
@@ -256,18 +258,6 @@ const FixedAssetVendorDueLedger: React.FC<LedgerProps> = ({ ledgerData, vendors,
                     p {
                         font-size: 10px !important;
                         margin: 0 !important;
-                    }
-                    .flex {
-                        display: flex !important;
-                    }
-                    .justify-between {
-                        justify-content: space-between !important;
-                    }
-                    .items-center {
-                        align-items: center !important;
-                    }
-                    .text-center {
-                        text-align: center !important;
                     }
                     button,
                     .mb-6,

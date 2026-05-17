@@ -2,9 +2,13 @@
 
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AppointmentDisplayController;
+use App\Http\Controllers\Attendance\AttendanceDayController;
+use App\Http\Controllers\Attendance\AttendanceDeviceController;
+use App\Http\Controllers\Attendance\HolidayController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\DoctorDashboardController;
+use App\Http\Controllers\Employees\EmployeeController;
 use App\Http\Controllers\HospitalAccount\AdvanceHouseRentController;
 use App\Http\Controllers\HospitalAccount\FixedAssetController;
 use App\Http\Controllers\HospitalAccount\FixedAssetVendorController;
@@ -111,6 +115,12 @@ Route::get('/migrate', function () {
 
     return response()->json(['message' => 'Migrations run successfully.']);
 })->name('migrate');
+
+Route::get('/seed-permissions', function () {
+    Artisan::call('db:seed', ['--class' => 'PermissionSeeder']);
+
+    return response()->json(['message' => 'Permission seeder run successfully.']);
+})->name('seed.permissions');
 
 Route::middleware(['auth'])->group(function () {
     // Admin Dashboard - Only for Super Admin (with wildcard permission or explicit admin.dashboard permission)
@@ -300,6 +310,36 @@ Route::middleware(['auth'])->group(function () {
     // Delete routes
     Route::middleware(['permission:users.delete', 'super-admin-only'])->group(function () {
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    });
+
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        Route::middleware(['permission:attendance.view'])->get('/day', [AttendanceDayController::class, 'index'])->name('day.index');
+        Route::middleware(['permission:attendance.manage'])->group(function () {
+            Route::get('/device', [AttendanceDeviceController::class, 'index'])->name('device.index');
+            Route::post('/device/sync', [AttendanceDeviceController::class, 'queueSync'])->name('device.sync');
+            Route::post('/device/push-all', [AttendanceDeviceController::class, 'queuePushAll'])->name('device.push-all');
+            Route::post('/device/push/{employee}', [AttendanceDeviceController::class, 'queuePushEmployee'])->name('device.push-employee');
+            Route::post('/device/remove/{employee}', [AttendanceDeviceController::class, 'queueRemoveEmployee'])->name('device.remove-employee');
+            Route::post('/device/remove-all', [AttendanceDeviceController::class, 'queueRemoveAll'])->name('device.remove-all');
+            Route::get('/holidays', [HolidayController::class, 'index'])->name('holidays.index');
+            Route::post('/holidays', [HolidayController::class, 'store'])->name('holidays.store');
+            Route::put('/holidays/{holiday}', [HolidayController::class, 'update'])->name('holidays.update');
+            Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->name('holidays.destroy');
+        });
+    });
+
+    Route::prefix('employees')->name('employees.')->group(function () {
+        Route::middleware(['permission:employees.view'])->get('/', [EmployeeController::class, 'index'])->name('index');
+        Route::middleware(['permission:employees.view'])->get('/attendance-calendar', [EmployeeController::class, 'attendanceCalendar'])->name('attendance-calendar');
+        Route::middleware(['permission:employees.view', 'super-admin-only'])->post('/manual-attendance', [EmployeeController::class, 'storeManualAttendance'])->name('manual-attendance.store');
+        Route::middleware(['permission:employees.create'])->get('/create', [EmployeeController::class, 'create'])->name('create');
+        Route::middleware(['permission:employees.create'])->get('/import/template', [EmployeeController::class, 'downloadImportTemplate'])->name('import.template');
+        Route::middleware(['permission:employees.create'])->post('/import', [EmployeeController::class, 'import'])->name('import');
+        Route::middleware(['permission:employees.create'])->post('/', [EmployeeController::class, 'store'])->name('store');
+        Route::middleware(['permission:employees.edit'])->get('/{employee}/edit', [EmployeeController::class, 'edit'])->name('edit');
+        Route::middleware(['permission:employees.view'])->get('/{employee}', [EmployeeController::class, 'show'])->name('show');
+        Route::middleware(['permission:employees.edit'])->put('/{employee}', [EmployeeController::class, 'update'])->name('update');
+        Route::middleware(['permission:employees.delete', 'super-admin-only'])->delete('/{employee}', [EmployeeController::class, 'destroy'])->name('destroy');
     });
 
     Route::middleware(['permission:doctors.view'])->group(function () {
@@ -732,11 +772,10 @@ Route::middleware(['permission:hospital-account.view'])->prefix('hospital-accoun
     Route::get('/fixed-assets/create', [FixedAssetController::class, 'create'])->name('fixed-assets.create');
     Route::post('/fixed-assets', [FixedAssetController::class, 'store'])->name('fixed-assets.store');
     Route::get('/fixed-assets/{fixedAsset}', [FixedAssetController::class, 'show'])->name('fixed-assets.show');
+    Route::post('/fixed-assets/{fixedAsset}/purchases', [FixedAssetController::class, 'storePurchase'])->name('fixed-assets.purchases.store');
     Route::get('/fixed-assets/{fixedAsset}/edit', [FixedAssetController::class, 'edit'])->name('fixed-assets.edit')->middleware('super-admin-only');
     Route::put('/fixed-assets/{fixedAsset}', [FixedAssetController::class, 'update'])->name('fixed-assets.update')->middleware('super-admin-only');
     Route::delete('/fixed-assets/{fixedAsset}', [FixedAssetController::class, 'destroy'])->name('fixed-assets.destroy')->middleware('super-admin-only');
-    Route::post('/fixed-assets/{fixedAsset}/payment', [FixedAssetController::class, 'makePayment'])->name('fixed-assets.payment');
-    Route::get('/fixed-assets/{fixedAsset}/payments', [FixedAssetController::class, 'payments'])->name('fixed-assets.payments');
 
     // Fixed Asset Vendor Routes
     Route::get('/fixed-asset-vendors', [FixedAssetVendorController::class, 'index'])->name('fixed-asset-vendors.index');
@@ -756,7 +795,14 @@ Route::middleware(['permission:hospital-account.view'])->prefix('hospital-accoun
     Route::get('/house-security-ledger', [\App\Http\Controllers\HospitalAccount\HouseSecurityLedgerController::class, 'index'])->name('house-security-ledger');
     Route::get('/house-security-ledger/print', [\App\Http\Controllers\HospitalAccount\HouseSecurityLedgerController::class, 'print'])->name('house-security-ledger.print');
 
+    // Due Expense Routes
+    Route::get('/due-expenses', [\App\Http\Controllers\HospitalAccount\DueExpenseController::class, 'index'])->name('due-expenses.index');
+    Route::post('/due-expenses/vendors', [\App\Http\Controllers\HospitalAccount\DueExpenseController::class, 'storeVendor'])->name('due-expenses.vendors.store');
+    Route::post('/due-expenses', [\App\Http\Controllers\HospitalAccount\DueExpenseController::class, 'storeDueExpense'])->name('due-expenses.store');
+    Route::post('/due-expenses/vendors/{hospitalExpenseVendor}/payment', [\App\Http\Controllers\HospitalAccount\DueExpenseController::class, 'makePayment'])->name('due-expenses.payment');
+
     // Vendor Due Ledger Routes
+    Route::get('/vendor-due-ledger/due-expense', [\App\Http\Controllers\HospitalAccount\VendorDueLedgerController::class, 'expenseVendorDue'])->name('vendor-due-ledger.due-expense');
     Route::get('/vendor-due-ledger/fixed-asset', [\App\Http\Controllers\HospitalAccount\VendorDueLedgerController::class, 'fixedAssetVendorDue'])->name('vendor-due-ledger.fixed-asset');
     Route::get('/vendor-due-ledger/medicine', [\App\Http\Controllers\HospitalAccount\VendorDueLedgerController::class, 'medicineVendorDue'])->name('vendor-due-ledger.medicine');
     Route::get('/vendor-due-ledger/optics', [\App\Http\Controllers\HospitalAccount\VendorDueLedgerController::class, 'opticsVendorDue'])->name('vendor-due-ledger.optics');

@@ -1,7 +1,7 @@
 // resources/js/Components/ui/select.tsx
 import React, { SelectHTMLAttributes, forwardRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { ChevronDown, AlertCircle, CheckCircle, Search, X } from 'lucide-react';
+import { ChevronDown, AlertCircle, CheckCircle, X } from 'lucide-react';
 
 export interface SelectOption {
   value: string | number;
@@ -15,14 +15,13 @@ export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement
   helperText?: string;
   label?: string;
   placeholder?: string;
-  options: SelectOption[];
+  options?: SelectOption[];
   success?: boolean;
   loading?: boolean;
   variant?: 'default' | 'filled' | 'underlined';
   selectSize?: 'sm' | 'default' | 'lg';
   leftIcon?: React.ReactNode;
   clearable?: boolean;
-  searchable?: boolean;
   emptyMessage?: string;
   onClear?: () => void;
 }
@@ -34,14 +33,13 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
     helperText,
     label,
     placeholder = "Select an option...",
-    options,
+    options = [],
     success,
     loading,
     variant = 'default',
     selectSize = 'default',
     leftIcon,
     clearable = false,
-    searchable = false,
     emptyMessage = "No options found",
     disabled,
     value,
@@ -50,7 +48,6 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
     ...props
   }, ref) => {
     const [isFocused, setIsFocused] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
     const [isOpen, setIsOpen] = useState(false);
 
     // Size variants
@@ -96,15 +93,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
       return cn(base, left, right);
     };
 
-    // Filter options based on search
-    const filteredOptions = searchable
-      ? options.filter(option =>
-          option.label.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      : options;
-
-    // Group options if they have groups
-    const groupedOptions = filteredOptions.reduce((groups, option) => {
+    const groupedOptions = options.reduce((groups, option) => {
       const group = option.group || '';
       if (!groups[group]) {
         groups[group] = [];
@@ -237,7 +226,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             })}
 
             {/* Empty Message */}
-            {filteredOptions.length === 0 && (
+            {options.length === 0 && (
               <option value="" disabled>
                 {emptyMessage}
               </option>

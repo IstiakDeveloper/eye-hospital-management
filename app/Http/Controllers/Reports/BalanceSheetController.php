@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Reports;
 use App\Http\Controllers\Controller;
 use App\Models\AdvanceHouseRent;
 use App\Models\CompleteGlasses;
-use App\Models\FixedAsset;
 use App\Models\Glasses;
 use App\Models\LensType;
 use App\Models\Medicine;
@@ -144,9 +143,12 @@ class BalanceSheetController extends Controller
         $advanceHouseRent = $advanceHouseRent2And3 + $advanceHouseRent4;
 
         // 5. Fixed Assets - DATE-WISE
-        $fixedAssets = FixedAsset::where('status', '!=', 'inactive')
-            ->where('purchase_date', '<=', $asOnDate)
-            ->sum('total_amount');
+        $fixedAssets = DB::table('fixed_asset_purchases')
+            ->join('fixed_assets', 'fixed_asset_purchases.fixed_asset_id', '=', 'fixed_assets.id')
+            ->where('fixed_assets.status', '!=', 'inactive')
+            ->where('fixed_asset_purchases.purchase_date', '<=', $asOnDate)
+            ->whereNull('fixed_assets.deleted_at')
+            ->sum('fixed_asset_purchases.total_amount');
 
         // 5a. House Security (Prepaid Expense) - DATE-WISE
         // Get the cumulative amount spent on House Security category up to the date
@@ -248,42 +250,41 @@ class BalanceSheetController extends Controller
         // Calculate due amount per vendor as of the specified date
         // For each asset purchased on or before the date, calculate: total_amount - (paid_amount at purchase + vendor payments up to date)
 
-        $vendors = DB::table('fixed_assets')
-            ->select('vendor_id')
-            ->where('purchase_date', '<=', $asOnDate)
-            ->whereNotNull('vendor_id')
-            ->whereNull('deleted_at')
+        $vendors = DB::table('fixed_asset_purchases')
+            ->join('fixed_assets', 'fixed_asset_purchases.fixed_asset_id', '=', 'fixed_assets.id')
+            ->select('fixed_asset_purchases.vendor_id')
+            ->where('fixed_asset_purchases.purchase_date', '<=', $asOnDate)
+            ->whereNotNull('fixed_asset_purchases.vendor_id')
+            ->whereNull('fixed_assets.deleted_at')
             ->distinct()
             ->pluck('vendor_id');
 
         $assetPurchaseDue = 0;
 
         foreach ($vendors as $vendorId) {
-            // Get total amount and paid amount at time of purchase for this vendor's assets
-            $assetTotals = DB::table('fixed_assets')
-                ->where('vendor_id', $vendorId)
-                ->where('purchase_date', '<=', $asOnDate)
-                ->whereNull('deleted_at')
-                ->selectRaw('SUM(total_amount) as total, SUM(paid_amount) as paid')
+            $assetTotals = DB::table('fixed_asset_purchases')
+                ->join('fixed_assets', 'fixed_asset_purchases.fixed_asset_id', '=', 'fixed_assets.id')
+                ->where('fixed_asset_purchases.vendor_id', $vendorId)
+                ->where('fixed_asset_purchases.purchase_date', '<=', $asOnDate)
+                ->whereNull('fixed_assets.deleted_at')
+                ->selectRaw('SUM(fixed_asset_purchases.total_amount) as total, SUM(fixed_asset_purchases.paid_amount) as paid')
                 ->first();
 
-            // Get vendor payments made up to the date for this vendor
             $vendorPayments = DB::table('fixed_asset_vendor_payments')
                 ->where('vendor_id', $vendorId)
                 ->where('payment_date', '<=', $asOnDate)
                 ->sum('amount');
 
-            // Due = Total - Paid at purchase - Vendor payments up to date
             $vendorDue = ($assetTotals->total ?? 0) - ($assetTotals->paid ?? 0) - $vendorPayments;
-            $assetPurchaseDue += max(0, $vendorDue); // Ensure non-negative
+            $assetPurchaseDue += max(0, $vendorDue);
         }
 
-        // Also handle assets without vendors (if any)
-        $noVendorAssets = DB::table('fixed_assets')
-            ->whereNull('vendor_id')
-            ->where('purchase_date', '<=', $asOnDate)
-            ->whereNull('deleted_at')
-            ->selectRaw('SUM(total_amount) - SUM(paid_amount) as due')
+        $noVendorAssets = DB::table('fixed_asset_purchases')
+            ->join('fixed_assets', 'fixed_asset_purchases.fixed_asset_id', '=', 'fixed_assets.id')
+            ->whereNull('fixed_asset_purchases.vendor_id')
+            ->where('fixed_asset_purchases.purchase_date', '<=', $asOnDate)
+            ->whereNull('fixed_assets.deleted_at')
+            ->selectRaw('SUM(fixed_asset_purchases.total_amount) - SUM(fixed_asset_purchases.paid_amount) as due')
             ->value('due');
 
         $assetPurchaseDue += $noVendorAssets ?? 0;

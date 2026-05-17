@@ -33,4 +33,19 @@ class FixedAssetVendorPayment extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public static function generatePaymentNo(): string
+    {
+        $date = now()->format('Ymd');
+        $sequence = self::query()
+            ->whereDate('created_at', today())
+            ->count() + 1;
+
+        do {
+            $paymentNo = 'FAVP-'.$date.'-'.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+            $sequence++;
+        } while (self::query()->where('payment_no', $paymentNo)->exists());
+
+        return $paymentNo;
+    }
 }

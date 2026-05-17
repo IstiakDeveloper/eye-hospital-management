@@ -47,7 +47,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => function () {
                 $user = Auth::user();
 
-                if (!$user) {
+                if (! $user) {
                     return ['user' => null];
                 }
 
@@ -65,11 +65,11 @@ class HandleInertiaRequests extends Middleware
                     ],
                 ];
             },
-            'ziggy' => fn(): array => [
+            'ziggy' => fn (): array => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
             ],
-            'sidebarOpen' => !$request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
 
             // Flash messages
             'flash' => [
@@ -77,6 +77,7 @@ class HandleInertiaRequests extends Middleware
                 'error' => $request->session()->get('error'),
                 'warning' => $request->session()->get('warning'),
                 'info' => $request->session()->get('info'),
+                'import_errors' => $request->session()->get('import_errors'),
             ],
         ];
     }
@@ -84,7 +85,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * Get all permissions for the user
      *
-     * @param \App\Models\User $user
+     * @param  \App\Models\User  $user
      * @return array<string>
      */
     private function getUserPermissions($user): array
@@ -94,7 +95,7 @@ class HandleInertiaRequests extends Middleware
             return ['*']; // Frontend will check for this wildcard
         }
 
-        if (!$user->role) {
+        if (! $user->role) {
             return [];
         }
 

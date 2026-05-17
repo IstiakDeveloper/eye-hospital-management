@@ -24,10 +24,9 @@ class FixedAssetVendor extends Model
         'is_active' => 'boolean',
     ];
 
-    // Relationships
-    public function assets(): HasMany
+    public function purchases(): HasMany
     {
-        return $this->hasMany(FixedAsset::class, 'vendor_id');
+        return $this->hasMany(FixedAssetPurchase::class, 'vendor_id');
     }
 
     public function payments(): HasMany
@@ -35,16 +34,14 @@ class FixedAssetVendor extends Model
         return $this->hasMany(FixedAssetVendorPayment::class, 'vendor_id');
     }
 
-    // Helper Methods
     public function makePayment(float $amount, string $description, string $paymentMethod = 'cash', ?string $referenceNo = null, ?string $date = null): FixedAssetVendorPayment
     {
         if ($amount > $this->current_balance) {
             throw new \Exception('Payment amount cannot exceed current balance');
         }
 
-        // Create payment record
         $payment = $this->payments()->create([
-            'payment_no' => $this->generatePaymentNo(),
+            'payment_no' => FixedAssetVendorPayment::generatePaymentNo(),
             'amount' => $amount,
             'payment_method' => $paymentMethod,
             'reference_no' => $referenceNo,
@@ -53,16 +50,13 @@ class FixedAssetVendor extends Model
             'created_by' => auth()->id(),
         ]);
 
-        // Update vendor balance
         $this->decrement('current_balance', $amount);
 
-        // Find or create expense category for Fixed Asset Vendor Payment
         $expenseCategory = HospitalExpenseCategory::firstOrCreate(
             ['name' => 'Fixed Asset Vendor Payment'],
             ['is_active' => true]
         );
 
-        // Deduct from hospital account with proper category link
         HospitalAccount::addExpense(
             amount: $amount,
             category: 'Fixed Asset Vendor Payment',
@@ -74,20 +68,12 @@ class FixedAssetVendor extends Model
         return $payment;
     }
 
-    private function generatePaymentNo(): string
-    {
-        $date = now()->format('Ymd');
-        $count = self::whereDate('created_at', now())->count();
-        return 'FAVP-' . $date . '-' . str_pad(($count + 1), 4, '0', STR_PAD_LEFT);
-    }
-
     public function addAssetPurchase(float $totalAmount, float $paidAmount): void
     {
         $dueAmount = $totalAmount - $paidAmount;
         $this->increment('current_balance', $dueAmount);
     }
 
-    // Scopes
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -98,19 +84,50 @@ class FixedAssetVendor extends Model
         return $query->where('current_balance', '>', 0);
     }
 
-    // Accessors
-    public function getTotalAssetsAttribute()
+    public function getTotalAssetsAttribute(): int
     {
-        return $this->assets()->count();
+        return $this->purchases()->distinct('fixed_asset_id')->count('fixed_asset_id');
     }
 
-    public function getTotalPurchasedAttribute()
+    public function getTotalPurchasedAttribute(): float
     {
-        return $this->assets()->sum('total_amount');
+        return (float) $this->purchases()->sum('total_amount');
     }
 
-    public function getTotalPaidAttribute()
+    public function getTotalPaidAttribute(): float
     {
-        return $this->payments()->sum('amount');
+        return (float) $this->payments()->sum('amount');
+    }
+
+    /**
+     * Outstanding due per purchase after applying vendor payments (FIFO by purchase date).
+     *
+     * @return array<int, float>
+     */
+    public function outstandingDueByPurchaseId(): array
+    {
+        $paymentPool = (float) $this->payments()->sum('amount');
+        $outstanding = [];
+
+        $purchases = $this->purchases()
+            ->orderBy('purchase_date')
+            ->orderBy('id')
+            ->get(['id', 'due_amount']);
+
+        foreach ($purchases as $purchase) {
+            $due = (float) $purchase->due_amount;
+
+            if ($due <= 0) {
+                $outstanding[$purchase->id] = 0.0;
+
+                continue;
+            }
+
+            $allocated = min($due, max(0, $paymentPool));
+            $outstanding[$purchase->id] = round($due - $allocated, 2);
+            $paymentPool = max(0, $paymentPool - $allocated);
+        }
+
+        return $outstanding;
     }
 }

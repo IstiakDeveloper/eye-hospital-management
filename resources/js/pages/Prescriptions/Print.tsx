@@ -333,6 +333,11 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                     margin: 5mm;
                 }
 
+                @page blank-form {
+                    size: A4 portrait;
+                    margin: 5mm;
+                }
+
                 body {
                     font-family: 'Noto Sans Bengali', Arial, sans-serif;
                     font-size: 10px;
@@ -1025,6 +1030,28 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                     @page {
                         margin: 0;
                     }
+
+                    @page blank-form {
+                        size: A4 portrait;
+                        margin: 5mm;
+                    }
+
+                    .blank-prescription-container {
+                        width: 100% !important;
+                        max-width: 200mm !important;
+                        margin: 0 auto !important;
+                        padding: 0 !important;
+                    }
+
+                    .tpl-blank-page {
+                        page: blank-form;
+                        width: 100% !important;
+                        max-width: 200mm !important;
+                        min-height: 287mm !important;
+                        max-height: 287mm !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
                 }
 
                 @media screen {
@@ -1042,6 +1069,7 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
 
                 /* Blank prescription (compact colored header + left panel + blank writing area) */
                 .blank-prescription-container {
+                    width: 210mm;
                     max-width: 210mm;
                     margin: 0 auto;
                     padding: 0;
@@ -1229,18 +1257,27 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                     --tpl-pad-x: 4mm;
                     --tpl-pad-y: 3mm;
                     --tpl-inner-pad: 2.5mm;
+                    --tpl-logo-size: 20mm;
+                    --tpl-fs-base: 10px;
+                    --tpl-fs-sm: 10.5px;
+                    --tpl-fs-md: 11px;
+                    --tpl-fs-patient-label: 10.5px;
+                    --tpl-fs-patient-value: 11.5px;
+                    --tpl-fs-subtitle: 12px;
+                    --tpl-fs-heading: 15px;
+                    --tpl-fs-rx: 42px;
                     position: relative;
                     display: flex;
                     flex-direction: column;
+                    width: 210mm;
                     min-height: 287mm;
-                    width: 100%;
-                    max-width: 210mm;
+                    max-height: 287mm;
                     margin: 0 auto;
                     padding: var(--tpl-pad-y) var(--tpl-pad-x);
                     background: #fff;
                     color: #000;
-                    font-size: 8.5px;
-                    line-height: 1.25;
+                    font-size: var(--tpl-fs-base);
+                    line-height: 1.28;
                     box-sizing: border-box;
                     border: 1px solid #000;
                 }
@@ -1281,9 +1318,9 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                     display: flex;
                     justify-content: center;
                     align-items: center;
-                    padding: 1mm 0 3mm 0;
+                    padding: 1.5mm 0 2.5mm 0;
                     margin: 0;
-                    border-bottom: 2px solid #000;
+                    border-bottom: 1.5px solid #000;
                     flex-shrink: 0;
                     background: #fff;
                 }
@@ -1296,11 +1333,12 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                 }
 
                 .tpl-logo {
-                    width: 20mm;
-                    height: 20mm;
+                    width: var(--tpl-logo-size);
+                    height: var(--tpl-logo-size);
                     display: flex;
                     align-items: center;
                     justify-content: center;
+                    flex-shrink: 0;
                 }
 
                 .tpl-logo img {
@@ -1314,29 +1352,46 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                 }
 
                 .tpl-hospital-name {
-                    font-size: 15px;
+                    font-size: var(--tpl-fs-heading);
                     font-weight: 700;
-                    margin-bottom: 1mm;
+                    margin-bottom: 0.6mm;
+                    line-height: 1.2;
                 }
 
                 .tpl-header-line {
-                    font-size: 9.5px;
-                    margin-bottom: 0.5mm;
+                    font-size: var(--tpl-fs-sm);
+                    font-weight: 500;
+                    margin-bottom: 0.4mm;
+                    line-height: 1.3;
                 }
 
                 .tpl-doc-title {
-                    font-size: 13px;
+                    font-size: var(--tpl-fs-subtitle);
                     font-weight: 700;
-                    margin-top: 2mm;
-                    letter-spacing: 0.5px;
+                    margin-top: 1.5mm;
+                    letter-spacing: 0.3px;
+                    line-height: 1.2;
                 }
 
                 .tpl-patient-wrap {
-                    padding: var(--tpl-inner-pad) 0;
+                    padding: 2mm 0 2.2mm 0;
                     margin: 0;
                     border-bottom: 1px solid #000;
                     flex-shrink: 0;
                     background: #fff;
+                    font-size: var(--tpl-fs-sm);
+                    line-height: 1.32;
+                }
+
+                .tpl-patient-wrap .tpl-label {
+                    font-weight: 700;
+                    font-size: var(--tpl-fs-patient-label);
+                }
+
+                .tpl-patient-wrap .tpl-line {
+                    font-weight: 800;
+                    font-size: var(--tpl-fs-patient-value);
+                    color: #000;
                 }
 
                 .tpl-p-row {
@@ -1344,7 +1399,7 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                     flex-wrap: wrap;
                     align-items: baseline;
                     gap: 1mm 3mm;
-                    margin-bottom: 1.5mm;
+                    margin-bottom: 1.2mm;
                 }
 
                 .tpl-p-row:last-child {
@@ -1471,7 +1526,7 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                 .tpl-clinical-table.tpl-clinical-table--compact {
                     flex: 0 0 auto;
                     height: auto;
-                    font-size: 10px;
+                    font-size: var(--tpl-fs-md);
                 }
 
                 .tpl-clinical-table.tpl-clinical-table--compact th,
@@ -1486,7 +1541,7 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                 }
 
                 .tpl-vitals.tpl-vitals--compact {
-                    font-size: 10px;
+                    font-size: var(--tpl-fs-md);
                 }
 
                 .tpl-vitals.tpl-vitals--compact td {
@@ -1550,7 +1605,7 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                     position: relative;
                     z-index: 1;
                     font-family: 'Times New Roman', Times, serif;
-                    font-size: 38px;
+                    font-size: var(--tpl-fs-rx);
                     font-weight: 700;
                     line-height: 1;
                     margin-bottom: 2mm;
@@ -1560,7 +1615,7 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                 .tpl-clinical-table {
                     width: 100%;
                     border-collapse: collapse;
-                    font-size: 8px;
+                    font-size: var(--tpl-fs-base);
                 }
 
                 .tpl-clinical-table th,
@@ -1583,7 +1638,7 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                 .tpl-vitals {
                     width: 100%;
                     border-collapse: collapse;
-                    font-size: 8px;
+                    font-size: var(--tpl-fs-base);
                 }
 
                 .tpl-vitals td {
@@ -1613,7 +1668,9 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                 }
 
                 .tpl-fundus-label,
-                .tpl-diagnosis-label {
+                .tpl-diagnosis-label,
+                .tpl-cc-box .tpl-label {
+                    font-size: var(--tpl-fs-sm);
                     font-weight: 700;
                     margin-bottom: 1mm;
                 }
@@ -1624,7 +1681,7 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                 }
 
                 .tpl-footer-gold {
-                    height: 3.5mm;
+                    height: 3mm;
                     background: #e8b923;
                     -webkit-print-color-adjust: exact;
                     print-color-adjust: exact;
@@ -1634,22 +1691,15 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                     background: #000;
                     color: #fff;
                     text-align: center;
-                    padding: 2mm 3mm;
-                    font-size: 9.5px;
-                    font-weight: 600;
-                    line-height: 1.35;
+                    padding: 1.8mm 3mm;
+                    font-size: var(--tpl-fs-sm);
+                    font-weight: 700;
+                    line-height: 1.32;
                     -webkit-print-color-adjust: exact;
                     print-color-adjust: exact;
                 }
 
                 @media print {
-                    .tpl-blank-page {
-                        font-size: 8px;
-                        min-height: 287mm;
-                        max-width: none;
-                        width: 100%;
-                    }
-
                     .tpl-page-watermark img {
                         width: 100mm;
                         max-width: 55%;
@@ -1660,12 +1710,6 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                         border: none !important;
                         outline: none !important;
                         box-shadow: none !important;
-                    }
-
-                    .blank-prescription-container {
-                        max-width: none;
-                        width: 100%;
-                        margin: 0;
                     }
                 }
 

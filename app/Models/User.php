@@ -54,7 +54,6 @@ class User extends Authenticatable
         ];
     }
 
-
     /**
      * Get the role that the user belongs to.
      */
@@ -105,8 +104,6 @@ class User extends Authenticatable
 
     /**
      * Check if the user is a doctor.
-     *
-     * @return bool
      */
     public function isDoctor(): bool
     {
@@ -115,8 +112,6 @@ class User extends Authenticatable
 
     /**
      * Check if the user is a receptionist.
-     *
-     * @return bool
      */
     public function isReceptionist(): bool
     {
@@ -125,8 +120,6 @@ class User extends Authenticatable
 
     /**
      * Check if the user is a super admin.
-     *
-     * @return bool
      */
     public function isSuperAdmin(): bool
     {
@@ -161,6 +154,11 @@ class User extends Authenticatable
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);
+    }
+
+    public function employee(): HasOne
+    {
+        return $this->hasOne(Employee::class);
     }
 
     /**
@@ -210,6 +208,7 @@ class User extends Authenticatable
                 return true;
             }
         }
+
         return false;
     }
 
@@ -219,10 +218,11 @@ class User extends Authenticatable
     public function hasAllPermissions(array $permissions): bool
     {
         foreach ($permissions as $permission) {
-            if (!$this->hasPermission($permission)) {
+            if (! $this->hasPermission($permission)) {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -236,7 +236,7 @@ class User extends Authenticatable
         }
 
         $this->permissions()->syncWithoutDetaching([
-            $permission->id => ['granted' => true]
+            $permission->id => ['granted' => true],
         ]);
     }
 
@@ -250,7 +250,7 @@ class User extends Authenticatable
         }
 
         $this->permissions()->syncWithoutDetaching([
-            $permission->id => ['granted' => false]
+            $permission->id => ['granted' => false],
         ]);
     }
 

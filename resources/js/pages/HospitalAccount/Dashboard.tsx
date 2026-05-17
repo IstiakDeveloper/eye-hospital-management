@@ -1,6 +1,6 @@
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
 import { router } from '@inertiajs/react';
-import { BarChart3, CreditCard, MinusCircle, PlusCircle, TrendingDown, TrendingUp } from 'lucide-react';
+import { BarChart3, CreditCard, MinusCircle, PlusCircle, Receipt, TrendingDown, TrendingUp } from 'lucide-react';
 import React, { useState } from 'react';
 
 interface DashboardProps {
@@ -275,6 +275,13 @@ const Dashboard: React.FC<DashboardProps> = ({
                 >
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Other Income
+                </button>
+                <button
+                    onClick={() => router.visit(route('hospital-account.due-expenses.index'))}
+                    className="flex items-center rounded-lg bg-amber-600 px-4 py-2 text-white hover:bg-amber-700"
+                >
+                    <Receipt className="mr-2 h-4 w-4" />
+                    Due Expense
                 </button>
             </div>
 

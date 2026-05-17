@@ -1,6 +1,6 @@
 import AdminLayout from '@/layouts/admin-layout';
 import { Link, usePage } from '@inertiajs/react';
-import { BarChart3, BookOpen, FileText, History, Package, Tags, Users } from 'lucide-react';
+import { BarChart3, BookOpen, FileText, History, Package, Receipt, Tags, Users } from 'lucide-react';
 import React from 'react';
 
 interface PageProps {
@@ -75,6 +75,20 @@ const HospitalAccountLayout: React.FC<HospitalAccountLayoutProps> = ({ children,
             icon: Tags,
             current: route().current('hospital-account.categories'),
             permission: 'hospital-account.categories',
+        },
+        {
+            name: 'Due Expense',
+            href: '/hospital-account/due-expenses',
+            icon: Receipt,
+            current: route().current('hospital-account.due-expenses.*'),
+            permission: 'hospital-account.view',
+        },
+        {
+            name: 'Due Expense Ledger',
+            href: '/hospital-account/vendor-due-ledger/due-expense',
+            icon: FileText,
+            current: route().current('hospital-account.vendor-due-ledger.due-expense'),
+            permission: 'hospital-account.view',
         },
         {
             name: 'Fixed Assets',
