@@ -202,6 +202,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'attendance.view', 'display_name' => 'View Attendance', 'category' => 'attendance', 'description' => 'Can view daily attendance sheet'],
             ['name' => 'attendance.manage', 'display_name' => 'Manage Attendance', 'category' => 'attendance', 'description' => 'Can manage holidays, device sync targets, and per-user attendance settings'],
 
+            ['name' => 'employee-management.view', 'display_name' => 'Employee Management (Show & Create)', 'category' => 'employees', 'description' => 'Grants view & create access for all Employee Management modules (Edit/Delete restricted to Super Admin)'],
             ['name' => 'employees.view', 'display_name' => 'View Employees', 'category' => 'employees', 'description' => 'Can view employee directory (separate from user accounts)'],
             ['name' => 'employees.create', 'display_name' => 'Create Employee', 'category' => 'employees', 'description' => 'Can add employees'],
             ['name' => 'employees.edit', 'display_name' => 'Edit Employee', 'category' => 'employees', 'description' => 'Can edit employees and attendance schedule'],

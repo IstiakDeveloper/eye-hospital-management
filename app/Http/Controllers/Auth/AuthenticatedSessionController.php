@@ -47,6 +47,11 @@ class AuthenticatedSessionController extends Controller
             return route('dashboard');
         }
 
+        if ($user->role->name === 'Employee') {
+            Log::info('User is Employee, redirecting to employee dashboard');
+            return route('employee.dashboard');
+        }
+
         // Load user permissions
         $permissions = $user->role->permissions->pluck('name')->toArray();
 

@@ -51,6 +51,13 @@ class HandleInertiaRequests extends Middleware
                     return ['user' => null];
                 }
 
+                $activeMovement = null;
+                if ($user->employee) {
+                    $activeMovement = \App\Models\EmployeeMovement::where('employee_id', $user->employee->id)
+                        ->whereNull('end_time')
+                        ->first();
+                }
+
                 return [
                     'user' => [
                         'id' => $user->id,
@@ -62,6 +69,7 @@ class HandleInertiaRequests extends Middleware
                         ] : null,
                         // Share user permissions with frontend
                         'permissions' => $this->getUserPermissions($user),
+                        'activeMovement' => $activeMovement,
                     ],
                 ];
             },

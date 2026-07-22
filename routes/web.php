@@ -240,6 +240,7 @@ Route::middleware(['auth'])->group(function () {
     // Role & Permission Management Routes
     Route::middleware(['permission:roles.view'])->group(function () {
         Route::get('/roles-permissions', [RolePermissionController::class, 'index'])->name('roles.index');
+        Route::post('/permissions/sync', [RolePermissionController::class, 'syncPermissions'])->name('permissions.sync');
     });
 
     Route::middleware(['permission:roles.create'])->group(function () {
@@ -339,6 +340,7 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware(['permission:employees.edit'])->get('/{employee}/edit', [EmployeeController::class, 'edit'])->name('edit');
         Route::middleware(['permission:employees.view'])->get('/{employee}', [EmployeeController::class, 'show'])->name('show');
         Route::middleware(['permission:employees.edit'])->put('/{employee}', [EmployeeController::class, 'update'])->name('update');
+        Route::middleware(['permission:employees.edit', 'super-admin-only'])->post('/{employee}/create-user', [EmployeeController::class, 'createUserAccount'])->name('create-user');
         Route::middleware(['permission:employees.delete', 'super-admin-only'])->delete('/{employee}', [EmployeeController::class, 'destroy'])->name('destroy');
     });
 
@@ -489,6 +491,24 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/medicine/reports/buy-sale-stock', [\App\Http\Controllers\MedicineReportController::class, 'buySaleStockReport'])->name('medicine.reports.buy-sale-stock')->middleware('permission:medicine.reports.buy-sale-stock');
     Route::get('/medicine/reports/company-stock', [\App\Http\Controllers\MedicineReportController::class, 'companyStockReport'])->name('medicine.reports.company-stock')->middleware('permission:medicine.reports.buy-sale-stock');
     Route::get('/medicine/reports/company-medicine-stock', [\App\Http\Controllers\MedicineReportController::class, 'companyMedicineStockReport'])->name('medicine.reports.company-medicine-stock')->middleware('permission:medicine.reports.buy-sale-stock');
+});
+
+// Employee Portal Routes
+Route::middleware(['auth'])->prefix('employee')->name('employee.')->group(function () {
+    Route::get('/dashboard', [\App\Http\Controllers\EmployeeDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/attendance', [\App\Http\Controllers\Employee\AttendanceController::class, 'index'])->name('attendance.index');
+    Route::resource('leaves', \App\Http\Controllers\Employee\LeaveController::class);
+    Route::patch('/movements/{movement}/close', [\App\Http\Controllers\Employee\MovementController::class, 'close'])->name('movements.close');
+    Route::resource('movements', \App\Http\Controllers\Employee\MovementController::class);
+});
+
+// Admin Management Routes for Leave and Movement
+Route::middleware(['auth', 'super-admin-only'])->prefix('admin/attendance')->name('admin.')->group(function () {
+    Route::resource('leave-types', \App\Http\Controllers\Admin\LeaveTypeController::class);
+    Route::patch('/leaves/{leave}/status', [\App\Http\Controllers\Admin\LeaveManagementController::class, 'updateStatus'])->name('leaves.status');
+    Route::resource('leaves', \App\Http\Controllers\Admin\LeaveManagementController::class);
+    Route::patch('/movements/{movement}/status', [\App\Http\Controllers\Admin\MovementManagementController::class, 'updateStatus'])->name('movements.status');
+    Route::resource('movements', \App\Http\Controllers\Admin\MovementManagementController::class);
 });
 
 // Medicine Vendor Management Routes - Permission-based

@@ -27,6 +27,30 @@ class AttendanceDayRecordService
     }
 
     /**
+     * Ensure every active employee has an AttendanceDayRecord for a given date.
+     * If no punch or movement exists, automatically calculate & persist Absent (or Holiday/Weekend).
+     */
+    public function ensureRecordsForDate(Carbon $date): void
+    {
+        $ymd = $date->toDateString();
+
+        $activeEmployees = Employee::query()
+            ->where('is_active', true)
+            ->get();
+
+        $existingRecordEmployeeIds = AttendanceDayRecord::query()
+            ->whereDate('work_date', $ymd)
+            ->pluck('employee_id')
+            ->toArray();
+
+        foreach ($activeEmployees as $employee) {
+            if (!in_array($employee->id, $existingRecordEmployeeIds, true)) {
+                $this->calculateOneDay($employee, $date);
+            }
+        }
+    }
+
+    /**
      * @param  Collection<int, Employee>  $employees
      */
     public function recalculateForDateRange(Collection $employees, Carbon $from, Carbon $to): int
@@ -69,15 +93,6 @@ class AttendanceDayRecordService
         $tz = config('app.timezone');
         $day = $workDate->copy()->timezone($tz)->startOfDay();
 
-        if (Holiday::query()->whereDate('observed_on', $day->toDateString())->exists()) {
-            return $this->persist($employee, $day, AttendanceDayStatus::Holiday, null, null, null, null, null);
-        }
-
-        $weekendDays = $settings->weekend_days ?? [];
-        if (in_array((int) $day->format('w'), array_map('intval', $weekendDays), true)) {
-            return $this->persist($employee, $day, AttendanceDayStatus::Weekend, null, null, null, null, null);
-        }
-
         $start = $day->copy()->startOfDay();
         $end = $day->copy()->endOfDay();
 
@@ -98,19 +113,71 @@ class AttendanceDayRecordService
             ->orderBy('punched_at')
             ->get();
 
-        if ($punches->isEmpty()) {
+        $movements = \App\Models\EmployeeMovement::query()
+            ->where('employee_id', $employee->id)
+            ->whereDate('date', $day->toDateString())
+            ->get();
+
+        $earliestMovementStart = null;
+        $latestMovementEnd = null;
+
+        foreach ($movements as $m) {
+            if ($m->start_time) {
+                $mStart = $day->copy()->setTimeFromTimeString(substr((string) $m->start_time, 0, 5));
+                if (!$earliestMovementStart || $mStart->lt($earliestMovementStart)) {
+                    $earliestMovementStart = $mStart;
+                }
+            }
+            if ($m->end_time) {
+                $mEnd = $day->copy()->setTimeFromTimeString(substr((string) $m->end_time, 0, 5));
+                if (!$latestMovementEnd || $mEnd->gt($latestMovementEnd)) {
+                    $latestMovementEnd = $mEnd;
+                }
+            }
+        }
+
+        // If NO punches and NO movements exist for this employee on this date
+        if ($punches->isEmpty() && !$earliestMovementStart) {
+            // Check for Holiday
+            if (Holiday::query()->whereDate('observed_on', $day->toDateString())->exists()) {
+                return $this->persist($employee, $day, AttendanceDayStatus::Holiday, null, null, null, null, null);
+            }
+
+            // Check for Weekend
+            $weekendDays = $settings->weekend_days ?? [];
+            if (in_array((int) $day->format('w'), array_map('intval', $weekendDays), true)) {
+                return $this->persist($employee, $day, AttendanceDayStatus::Weekend, null, null, null, null, null);
+            }
+
+            // Default to Absent
             return $this->persist($employee, $day, AttendanceDayStatus::Absent, null, null, null, null, null);
         }
 
-        $firstIn = $punches->first()->punched_at;
-        $lastOut = $punches->last()->punched_at;
+        $punchFirstIn = $punches->first()?->punched_at;
+        $punchLastOut = $punches->last()?->punched_at;
+
+        // Determine absolute earliest Check-In time (between ZKTeco punch and Movement start)
+        $firstIn = $punchFirstIn;
+        if ($earliestMovementStart && (!$firstIn || $earliestMovementStart->lt($firstIn))) {
+            $firstIn = $earliestMovementStart;
+        }
+
+        // Determine absolute latest Check-Out time (between ZKTeco punch and Movement end)
+        $lastOut = $punchLastOut;
+        if ($latestMovementEnd && (!$lastOut || $latestMovementEnd->gt($lastOut))) {
+            $lastOut = $latestMovementEnd;
+        }
+
+        if (!$lastOut) {
+            $lastOut = $firstIn;
+        }
 
         $expectedIn = $day->copy()->setTimeFromTimeString((string) $settings->expected_check_in);
         $expectedOut = $day->copy()->setTimeFromTimeString((string) $settings->expected_check_out);
         $graceEnd = $expectedIn->copy()->addMinutes((int) $settings->grace_minutes);
 
-        $singlePunch = $punches->count() === 1
-            || ($firstIn && $lastOut && $firstIn->equalTo($lastOut));
+        $singlePunch = ($punches->count() <= 1 && !$latestMovementEnd)
+            && ($firstIn && $lastOut && $firstIn->equalTo($lastOut));
 
         if ($singlePunch) {
             return $this->persist($employee, $day, AttendanceDayStatus::Incomplete, $firstIn, $lastOut, null, null, null);

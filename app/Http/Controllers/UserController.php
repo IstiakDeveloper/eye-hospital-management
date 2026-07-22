@@ -57,17 +57,19 @@ class UserController extends Controller
 
         $roles = Role::all();
         $authUser = auth()->user();
+        $isSuperAdmin = $authUser->isSuperAdmin();
+        $hasEmpMgmt = $authUser->hasPermission('employee-management.view');
 
         return Inertia::render('Users/Index', [
             'users' => $users,
             'roles' => $roles,
             'filters' => $request->only(['search', 'role_id', 'is_active']),
             'can' => [
-                'create' => $authUser->hasPermission('users.create'),
-                'edit' => $authUser->hasPermission('users.edit'),
-                'delete' => $authUser->hasPermission('users.delete'),
-                'view' => $authUser->hasPermission('users.view'),
-                'manage_permissions' => $authUser->hasPermission('users.manage-permissions'),
+                'create' => $isSuperAdmin || $hasEmpMgmt || $authUser->hasPermission('users.create'),
+                'edit' => $isSuperAdmin || ($authUser->hasPermission('users.edit') && !$hasEmpMgmt),
+                'delete' => $isSuperAdmin || ($authUser->hasPermission('users.delete') && !$hasEmpMgmt),
+                'view' => $isSuperAdmin || $hasEmpMgmt || $authUser->hasPermission('users.view'),
+                'manage_permissions' => $isSuperAdmin,
             ],
         ]);
     }

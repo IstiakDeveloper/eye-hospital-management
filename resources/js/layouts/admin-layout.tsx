@@ -1,4 +1,7 @@
+import { ActiveMovementBanner } from '@/components/ActiveMovementBanner';
+import { EmployeeBottomNav } from '@/components/EmployeeBottomNav';
 import FlashMessages from '@/components/FlashMessage';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     Activity,
@@ -17,6 +20,7 @@ import {
     DollarSign,
     Eye,
     FileBarChart,
+    FileText,
     Glasses,
     History,
     Home,
@@ -267,7 +271,9 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     const currentRouteName = route().current();
 
     // Active route detection helper
-    const isRouteActive = (currentPattern: string) => {
+    const isRouteActive = (currentPattern?: string) => {
+        if (!currentPattern) return false;
+
         // For dashboard routes, check if current route ends with 'dashboard'
         if (currentPattern === 'dashboard') {
             return (
@@ -576,13 +582,50 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
 
     // Navigation items with permission-based access - NO ROLE FILTERING
     const navigationItems: NavItem[] = [
-        {
-            name: 'Dashboard',
-            href: route(getDashboardRoute()),
-            icon: Home,
-            current: 'dashboard',
-            roles: [], // Empty - show to everyone with dashboard permission
-        },
+        // Employee Portal (For Employees)
+        ...(hasRole(['Employee'])
+            ? [
+                  {
+                      name: 'My Dashboard',
+                      href: route('employee.dashboard'),
+                      icon: Home,
+                      current: 'employee.dashboard',
+                      roles: [],
+                  },
+                  {
+                      name: 'My Attendance',
+                      href: route('employee.attendance.index'),
+                      icon: Clock,
+                      current: 'employee.attendance.*',
+                      roles: [],
+                  },
+                  {
+                      name: 'My Leaves',
+                      href: route('employee.leaves.index'),
+                      icon: Calendar,
+                      current: 'employee.leaves.*',
+                      roles: [],
+                  },
+                  {
+                      name: 'My Movements',
+                      href: route('employee.movements.index'),
+                      icon: LucideWaypoints,
+                      current: 'employee.movements.*',
+                      roles: [],
+                  },
+              ]
+            : []),
+        ...(!hasRole(['Employee'])
+            ? [
+                  {
+                      name: 'Dashboard',
+                      href: route(getDashboardRoute()),
+                      icon: Home,
+                      current: 'dashboard',
+                      roles: [], // Empty - show to everyone with dashboard permission
+                  },
+              ]
+            : []),
         // Patients - Check permission ONLY
         ...(hasPermission('patients.view')
             ? [
@@ -1212,6 +1255,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
               ]
             : []),
         ...(hasAnyPermission([
+            'employee-management.view',
             'users.view',
             'doctors.view',
             'attendance.view',
@@ -1222,8 +1266,10 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             'employees.delete',
         ])
             ? (() => {
+                  const hasEmpMgmt = hasPermission('employee-management.view');
                   const employeeChildren = [
-                      ...(hasPermission('employees.view')
+                      // 1. Staff & User Accounts
+                      ...(hasEmpMgmt || hasPermission('employees.view')
                           ? [
                                 {
                                     name: 'Employees',
@@ -1234,7 +1280,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 },
                             ]
                           : []),
-                      ...(hasPermission('users.view')
+                      ...(hasEmpMgmt || hasPermission('users.view')
                           ? [
                                 {
                                     name: 'Users',
@@ -1245,7 +1291,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 },
                             ]
                           : []),
-                      ...(hasPermission('doctors.view')
+                      ...(hasEmpMgmt || hasPermission('doctors.view')
                           ? [
                                 {
                                     name: 'Doctors',
@@ -1256,10 +1302,12 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 },
                             ]
                           : []),
-                      ...(hasPermission('attendance.view')
+
+                      // 2. Attendance, Leaves & Movements
+                      ...(hasEmpMgmt || hasPermission('attendance.view')
                           ? [
                                 {
-                                    name: 'Daily attendance',
+                                    name: 'Daily Attendance',
                                     href: route('attendance.day.index'),
                                     icon: Calendar,
                                     current: 'attendance.day.*',
@@ -1267,20 +1315,47 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 },
                             ]
                           : []),
-                      ...(hasPermission('attendance.manage')
+                      ...(hasEmpMgmt || hasPermission('attendance.manage')
                           ? [
                                 {
-                                    name: 'ZKTeco device',
-                                    href: route('attendance.device.index'),
-                                    icon: Upload,
-                                    current: 'attendance.device.*',
+                                    name: 'Leave Applications',
+                                    href: route('admin.leaves.index'),
+                                    icon: CalendarDays,
+                                    current: 'admin.leaves.*',
                                     roles: [],
                                 },
+                                {
+                                    name: 'Leave Types',
+                                    href: route('admin.leave-types.index'),
+                                    icon: FileText,
+                                    current: 'admin.leave-types.*',
+                                    roles: [],
+                                },
+                                {
+                                    name: 'Movements',
+                                    href: route('admin.movements.index'),
+                                    icon: Clock,
+                                    current: 'admin.movements.*',
+                                    roles: [],
+                                },
+                            ]
+                          : []),
+
+                      // 3. Holidays & Device Settings
+                      ...(hasEmpMgmt || hasPermission('attendance.manage')
+                          ? [
                                 {
                                     name: 'Holidays',
                                     href: route('attendance.holidays.index'),
                                     icon: CalendarDays,
                                     current: 'attendance.holidays.*',
+                                    roles: [],
+                                },
+                                {
+                                    name: 'ZKTeco Device',
+                                    href: route('attendance.device.index'),
+                                    icon: Upload,
+                                    current: 'attendance.device.*',
                                     roles: [],
                                 },
                             ]
@@ -1390,21 +1465,19 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
 
             {/* Sidebar */}
             <aside
-                className={`admin-sidebar fixed inset-y-0 left-0 z-50 flex h-dvh max-h-dvh min-h-0 w-[min(100vw-3rem,18rem)] transform flex-col border-r border-gray-200/80 bg-white shadow-xl transition-transform duration-300 ease-out sm:w-72 ${
+                className={`admin-sidebar fixed inset-y-0 left-0 z-50 flex h-dvh max-h-dvh min-h-0 w-[min(100vw-3rem,18rem)] transform flex-col border-r border-slate-200/70 bg-white shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-out sm:w-72 ${
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 } md:static md:z-auto md:flex-shrink-0 md:translate-x-0`}
             >
                 {/* Logo */}
-                <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 bg-gradient-to-r from-blue-600 to-indigo-600 px-4 sm:px-6">
-                    <Link href={route(getDashboardRoute())} className="flex items-center">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white">
-                            <Eye className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <span className="ml-3 text-xl font-bold text-white">Eye Hospital</span>
+                <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 bg-white px-4 sm:px-6">
+                    <Link href={route(getDashboardRoute())} className="flex items-center gap-3">
+                        <img src="/logo.png" alt="Eye Hospital Logo" className="h-9 w-9 object-contain shrink-0" />
+                        <span className="text-xl font-extrabold tracking-tight text-slate-800">Eye Hospital</span>
                     </Link>
                     <button
                         type="button"
-                        className="rounded-lg p-2 text-white transition-colors hover:bg-white/15 md:hidden"
+                        className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 md:hidden"
                         onClick={toggleSidebar}
                     >
                         <X className="h-5 w-5" />
@@ -1412,7 +1485,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 </div>
 
                 {/* User Info Card */}
-                <div className="shrink-0 border-b border-gray-200 bg-gray-50/90 p-4">
+                <div className="shrink-0 border-b border-gray-200 bg-white p-4">
                     <div className="flex items-center space-x-3">
                         <div className="flex-shrink-0">
                             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-lg font-bold text-white shadow-lg">
@@ -1420,7 +1493,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                             </div>
                         </div>
                         <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-gray-900">{auth.user.name}</p>
+                            <p className="truncate text-sm font-semibold text-slate-900">{auth.user.name}</p>
                             <div
                                 className={`mt-1 inline-flex items-center space-x-1 rounded-full px-2 py-1 text-xs font-medium ${getRoleColor(userRole)}`}
                             >
@@ -1435,8 +1508,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 <div className="admin-sidebar-scroll flex min-h-0 flex-1 flex-col overflow-hidden">
                     <div className="flex-1 overflow-y-auto overscroll-y-contain py-4">
                     {/* Main Navigation */}
-                    <div className="px-3 sm:px-4">
-                        <p className="mb-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">Main Menu</p>
+                    <div className="px-4 sm:px-5">
+                        <p className="mb-3 text-[11px] font-bold tracking-widest text-slate-400 uppercase">Main Menu</p>
                         <nav className="space-y-1">
                             {navigationItems
                                 // 🎯 Filter for Super Admin hidden navigations
@@ -1465,15 +1538,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                             <div key={item.name}>
                                                 <button
                                                     onClick={() => setMedicineCornerOpen(!medicineCornerOpen)}
-                                                    className={`group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                                                    className={`group flex w-full items-center rounded-md mx-2 px-3 py-2 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                         shouldShowAsActive
-                                                            ? 'border-r-2 border-blue-700 bg-blue-50 text-blue-700'
-                                                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                            ? 'bg-blue-50 text-blue-700 font-semibold shadow-sm ring-1 ring-inset ring-blue-600/20 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-blue-600'
+                                                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                     }`}
                                                 >
                                                     <Icon
-                                                        className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                                                            shouldShowAsActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                        className={`mr-3 h-[18px] w-[18px] flex-shrink-0 ${
+                                                            shouldShowAsActive ? 'text-blue-700' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                         }`}
                                                     />
                                                     <span className="flex-1 text-left">{item.name}</span>
@@ -1498,15 +1571,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                             <Link
                                                                 key={childItem.name}
                                                                 href={childItem.href}
-                                                                className={`group flex items-center rounded-lg py-2 pr-3 pl-11 text-sm font-medium transition-all duration-200 ${
+                                                                className={`group flex items-center rounded-md mx-2 py-1.5 pr-3 pl-10 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                                     isChildActive
-                                                                        ? 'border-r-2 border-blue-600 bg-blue-100 text-blue-800'
-                                                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                        ? 'bg-blue-50 text-blue-700 font-semibold relative before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:rounded-r-full before:bg-blue-500'
+                                                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                                 }`}
                                                             >
                                                                 <ChildIcon
-                                                                    className={`mr-2 h-4 w-4 flex-shrink-0 ${
-                                                                        isChildActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'
+                                                                    className={`mr-2 h-[16px] w-[16px] flex-shrink-0 ${
+                                                                        isChildActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                                     }`}
                                                                 />
                                                                 <span>{childItem.name}</span>
@@ -1528,15 +1601,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                             <div key={item.name}>
                                                 <button
                                                     onClick={() => setOpticsCornerOpen(!opticsCornerOpen)}
-                                                    className={`group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                                                    className={`group flex w-full items-center rounded-md mx-2 px-3 py-2 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                         shouldShowAsActive
-                                                            ? 'border-r-2 border-indigo-700 bg-indigo-50 text-indigo-700'
-                                                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                            ? 'bg-indigo-50 text-indigo-700 font-semibold shadow-sm ring-1 ring-inset ring-indigo-600/20 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-indigo-600'
+                                                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                     }`}
                                                 >
                                                     <Icon
-                                                        className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                                                            shouldShowAsActive ? 'text-indigo-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                        className={`mr-3 h-[18px] w-[18px] flex-shrink-0 ${
+                                                            shouldShowAsActive ? 'text-indigo-700' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                         }`}
                                                     />
                                                     <span className="flex-1 text-left">{item.name}</span>
@@ -1600,15 +1673,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                             <Link
                                                                 key={childItem.name}
                                                                 href={childItem.href}
-                                                                className={`group flex items-center rounded-lg py-2 pr-3 pl-11 text-sm font-medium transition-all duration-200 ${
+                                                                className={`group flex items-center rounded-md mx-2 py-1.5 pr-3 pl-10 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                                     isChildActive
-                                                                        ? 'border-r-2 border-indigo-600 bg-indigo-100 text-indigo-800'
-                                                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                        ? 'bg-indigo-50 text-indigo-700 font-semibold relative before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:rounded-r-full before:bg-indigo-500'
+                                                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                                 }`}
                                                             >
                                                                 <ChildIcon
-                                                                    className={`mr-2 h-4 w-4 flex-shrink-0 ${
-                                                                        isChildActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-500'
+                                                                    className={`mr-2 h-[16px] w-[16px] flex-shrink-0 ${
+                                                                        isChildActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                                     }`}
                                                                 />
                                                                 <span>{childItem.name}</span>
@@ -1629,15 +1702,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                             <div key={item.name}>
                                                 <button
                                                     onClick={() => setMedicalTestsOpen(!medicalTestsOpen)}
-                                                    className={`group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                                                    className={`group flex w-full items-center rounded-md mx-2 px-3 py-2 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                         shouldShowAsActive
-                                                            ? 'border-r-2 border-teal-700 bg-teal-50 text-teal-700'
-                                                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                            ? 'bg-teal-50 text-teal-700 font-semibold shadow-sm ring-1 ring-inset ring-teal-600/20 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-teal-600'
+                                                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                     }`}
                                                 >
                                                     <Icon
-                                                        className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                                                            shouldShowAsActive ? 'text-teal-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                        className={`mr-3 h-[18px] w-[18px] flex-shrink-0 ${
+                                                            shouldShowAsActive ? 'text-teal-700' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                         }`}
                                                     />
                                                     <span className="flex-1 text-left">{item.name}</span>
@@ -1668,15 +1741,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                             <Link
                                                                 key={childItem.name}
                                                                 href={childItem.href}
-                                                                className={`group flex items-center rounded-lg py-2 pr-3 pl-11 text-sm font-medium transition-all duration-200 ${
+                                                                className={`group flex items-center rounded-md mx-2 py-1.5 pr-3 pl-10 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                                     isChildActive
-                                                                        ? 'border-r-2 border-teal-600 bg-teal-100 text-teal-800'
-                                                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                        ? 'bg-teal-50 text-teal-700 font-semibold relative before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:rounded-r-full before:bg-teal-500'
+                                                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                                 }`}
                                                             >
                                                                 <ChildIcon
-                                                                    className={`mr-2 h-4 w-4 flex-shrink-0 ${
-                                                                        isChildActive ? 'text-teal-600' : 'text-gray-400 group-hover:text-gray-500'
+                                                                    className={`mr-2 h-[16px] w-[16px] flex-shrink-0 ${
+                                                                        isChildActive ? 'text-teal-600' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                                     }`}
                                                                 />
                                                                 <span>{childItem.name}</span>
@@ -1698,15 +1771,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                             <div key={item.name}>
                                                 <button
                                                     onClick={() => setOperationsOpen(!operationsOpen)}
-                                                    className={`group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                                                    className={`group flex w-full items-center rounded-md mx-2 px-3 py-2 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                         shouldShowAsActive
-                                                            ? 'border-r-2 border-purple-700 bg-purple-50 text-purple-700'
-                                                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                            ? 'bg-purple-50 text-purple-700 font-semibold shadow-sm ring-1 ring-inset ring-purple-600/20 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-purple-600'
+                                                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                     }`}
                                                 >
                                                     <Icon
-                                                        className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                                                            shouldShowAsActive ? 'text-purple-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                        className={`mr-3 h-[18px] w-[18px] flex-shrink-0 ${
+                                                            shouldShowAsActive ? 'text-purple-700' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                         }`}
                                                     />
                                                     <span className="flex-1 text-left">{item.name}</span>
@@ -1754,15 +1827,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                             <Link
                                                                 key={childItem.name}
                                                                 href={childItem.href}
-                                                                className={`group flex items-center rounded-lg py-2 pr-3 pl-11 text-sm font-medium transition-all duration-200 ${
+                                                                className={`group flex items-center rounded-md mx-2 py-1.5 pr-3 pl-10 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                                     isChildActive
-                                                                        ? 'border-r-2 border-purple-600 bg-purple-100 text-purple-800'
-                                                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                        ? 'bg-purple-50 text-purple-700 font-semibold relative before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:rounded-r-full before:bg-purple-500'
+                                                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                                 }`}
                                                             >
                                                                 <ChildIcon
-                                                                    className={`mr-2 h-4 w-4 flex-shrink-0 ${
-                                                                        isChildActive ? 'text-purple-600' : 'text-gray-400 group-hover:text-gray-500'
+                                                                    className={`mr-2 h-[16px] w-[16px] flex-shrink-0 ${
+                                                                        isChildActive ? 'text-purple-600' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                                     }`}
                                                                 />
                                                                 <span>{childItem.name}</span>
@@ -1788,15 +1861,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                             <div key={item.name}>
                                                 <button
                                                     onClick={() => setReportsOpen(!reportsOpen)}
-                                                    className={`group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                                                    className={`group flex w-full items-center rounded-md mx-2 px-3 py-2 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                         shouldShowAsActive
-                                                            ? 'border-r-2 border-orange-700 bg-orange-50 text-orange-700'
-                                                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                            ? 'bg-orange-50 text-orange-700 font-semibold shadow-sm ring-1 ring-inset ring-orange-600/20 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-orange-600'
+                                                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                     }`}
                                                 >
                                                     <Icon
-                                                        className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                                                            shouldShowAsActive ? 'text-orange-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                        className={`mr-3 h-[18px] w-[18px] flex-shrink-0 ${
+                                                            shouldShowAsActive ? 'text-orange-700' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                         }`}
                                                     />
                                                     <span className="flex-1 text-left">{item.name}</span>
@@ -1821,14 +1894,14 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                             <Link
                                                                 key={childItem.name}
                                                                 href={childItem.href}
-                                                                className={`group flex items-center rounded-lg py-2 pr-3 pl-11 text-sm font-medium transition-all duration-200 ${
+                                                                className={`group flex items-center rounded-md mx-2 py-1.5 pr-3 pl-10 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                                     isChildActive
-                                                                        ? 'border-r-2 border-orange-600 bg-orange-100 text-orange-800'
-                                                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                        ? 'bg-orange-50 text-orange-700 font-semibold relative before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:rounded-r-full before:bg-orange-500'
+                                                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                                 }`}
                                                             >
                                                                 <ChildIcon
-                                                                    className={`mr-2 h-4 w-4 flex-shrink-0 ${isChildActive ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-500'}`}
+                                                                    className={`mr-2 h-[16px] w-[16px] flex-shrink-0 ${isChildActive ? 'text-orange-600' : 'text-slate-400 group-hover:text-slate-500 transition-colors'}`}
                                                                 />
                                                                 <span>{childItem.name}</span>
                                                             </Link>
@@ -1849,15 +1922,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                             <div key={item.name}>
                                                 <button
                                                     onClick={() => setAccountSectionOpen(!accountSectionOpen)}
-                                                    className={`group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                                                    className={`group flex w-full items-center rounded-md mx-2 px-3 py-2 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                         shouldShowAsActive
-                                                            ? 'border-r-2 border-emerald-700 bg-emerald-50 text-emerald-700'
-                                                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                            ? 'bg-emerald-50 text-emerald-700 font-semibold shadow-sm ring-1 ring-inset ring-emerald-600/20 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-emerald-600'
+                                                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                     }`}
                                                 >
                                                     <Icon
-                                                        className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                                                            shouldShowAsActive ? 'text-emerald-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                        className={`mr-3 h-[18px] w-[18px] flex-shrink-0 ${
+                                                            shouldShowAsActive ? 'text-emerald-700' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                         }`}
                                                     />
                                                     <span className="flex-1 text-left">{item.name}</span>
@@ -1893,14 +1966,14 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                             <Link
                                                                 key={childItem.name}
                                                                 href={childItem.href}
-                                                                className={`group flex items-center rounded-lg py-2 pr-3 pl-11 text-sm font-medium transition-all duration-200 ${
+                                                                className={`group flex items-center rounded-md mx-2 py-1.5 pr-3 pl-10 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                                     isChildActive
-                                                                        ? 'border-r-2 border-emerald-600 bg-emerald-100 text-emerald-800'
-                                                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                        ? 'bg-emerald-50 text-emerald-700 font-semibold relative before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:rounded-r-full before:bg-emerald-500'
+                                                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                                 }`}
                                                             >
                                                                 <ChildIcon
-                                                                    className={`mr-2 h-4 w-4 flex-shrink-0 ${isChildActive ? 'text-emerald-600' : 'text-gray-400 group-hover:text-gray-500'}`}
+                                                                    className={`mr-2 h-[16px] w-[16px] flex-shrink-0 ${isChildActive ? 'text-emerald-600' : 'text-slate-400 group-hover:text-slate-500 transition-colors'}`}
                                                                 />
                                                                 <span>{childItem.name}</span>
                                                             </Link>
@@ -1916,15 +1989,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                         <Link
                                             key={item.name}
                                             href={item.href}
-                                            className={`group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                                            className={`group flex items-center rounded-md mx-2 px-3 py-2 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                 isActive
-                                                    ? 'border-r-2 border-blue-700 bg-blue-50 text-blue-700'
-                                                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                    ? 'bg-blue-50 text-blue-700 font-semibold shadow-sm ring-1 ring-inset ring-blue-600/20 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-blue-600'
+                                                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                             }`}
                                         >
                                             <Icon
-                                                className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                                                    isActive ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                className={`mr-3 h-[18px] w-[18px] flex-shrink-0 ${
+                                                    isActive ? 'text-blue-700' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                 }`}
                                             />
                                             <span className="flex-1">{item.name}</span>
@@ -1941,8 +2014,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
 
                     {/* Admin Section - Permission-based, NOT role-based */}
                     {adminNavigation.length > 0 && (
-                        <div className="mt-8 px-3 sm:px-4">
-                            <p className="mb-3 text-xs font-semibold tracking-wider text-gray-400 uppercase">Administration</p>
+                        <div className="mt-8 px-4 sm:px-5">
+                            <p className="mb-3 text-[11px] font-bold tracking-widest text-slate-400 uppercase">Administration</p>
                             <nav className="space-y-1">
                                 {adminNavigation
                                     // 🎯 Filter for Super Admin hidden navigations
@@ -1959,15 +2032,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                     <button
                                                         type="button"
                                                         onClick={() => setEmployeeManagementOpen(!employeeManagementOpen)}
-                                                        className={`group flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                                                        className={`group flex w-full items-center rounded-md mx-2 px-3 py-2 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                             shouldShowAsActive
-                                                                ? 'border-r-2 border-purple-700 bg-purple-50 text-purple-700'
-                                                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                                ? 'bg-purple-50 text-purple-700 font-semibold shadow-sm ring-1 ring-inset ring-purple-600/20 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-purple-600'
+                                                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                         }`}
                                                     >
                                                         <Icon
-                                                            className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                                                                shouldShowAsActive ? 'text-purple-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                            className={`mr-3 h-[18px] w-[18px] flex-shrink-0 ${
+                                                                shouldShowAsActive ? 'text-purple-700' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                             }`}
                                                         />
                                                         <span className="flex-1 text-left">{item.name}</span>
@@ -1991,15 +2064,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                                                 <Link
                                                                     key={childItem.name}
                                                                     href={childItem.href}
-                                                                    className={`group flex items-center rounded-lg py-2 pr-3 pl-11 text-sm font-medium transition-all duration-200 ${
+                                                                    className={`group flex items-center rounded-md mx-2 py-1.5 pr-3 pl-10 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                                         isChildActive
-                                                                            ? 'border-r-2 border-purple-600 bg-purple-100 text-purple-800'
-                                                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                            ? 'bg-purple-50 text-purple-700 font-semibold relative before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:rounded-r-full before:bg-purple-500'
+                                                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                                     }`}
                                                                 >
                                                                     <ChildIcon
-                                                                        className={`mr-2 h-4 w-4 flex-shrink-0 ${
-                                                                            isChildActive ? 'text-purple-600' : 'text-gray-400 group-hover:text-gray-500'
+                                                                        className={`mr-2 h-[16px] w-[16px] flex-shrink-0 ${
+                                                                            isChildActive ? 'text-purple-600' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                                         }`}
                                                                     />
                                                                     <span>{childItem.name}</span>
@@ -2018,15 +2091,15 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                             <Link
                                                 key={item.name}
                                                 href={item.href}
-                                                className={`group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                                                className={`group flex items-center rounded-md mx-2 px-3 py-2 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
                                                     isActive
-                                                        ? 'border-r-2 border-purple-700 bg-purple-50 text-purple-700'
-                                                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                                        ? 'bg-purple-50 text-purple-700 font-semibold shadow-sm ring-1 ring-inset ring-purple-600/20 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-purple-600'
+                                                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors'
                                                 }`}
                                             >
                                                 <Icon
-                                                    className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                                                        isActive ? 'text-purple-700' : 'text-gray-400 group-hover:text-gray-500'
+                                                    className={`mr-3 h-[18px] w-[18px] flex-shrink-0 ${
+                                                        isActive ? 'text-purple-700' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
                                                     }`}
                                                 />
                                                 <span>{item.name}</span>
@@ -2057,7 +2130,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                             </button>
 
                             <div className="min-w-0">
-                                <h1 className="truncate text-lg font-semibold text-gray-900 sm:text-xl">{title}</h1>
+                                <h1 className="truncate text-lg font-semibold text-slate-900 sm:text-xl">{title}</h1>
                                 <p className="truncate text-xs text-gray-500 sm:text-sm">
                                     Welcome back, {auth.user.name.split(' ')[0]}
                                 </p>
@@ -2084,7 +2157,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                 {notificationsOpen && (
                                     <div className="ring-opacity-5 absolute right-0 z-50 mt-2 w-[min(100vw-2rem,20rem)] max-w-[calc(100vw-2rem)] rounded-lg bg-white shadow-lg ring-1 ring-black sm:w-80">
                                         <div className="border-b border-gray-200 p-4">
-                                            <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+                                            <h3 className="text-lg font-semibold text-slate-900">Notifications</h3>
                                         </div>
                                         <div className="p-4">
                                             <p className="py-4 text-center text-sm text-gray-500">No new notifications</p>
@@ -2101,7 +2174,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                                 >
                                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600">
-                                        <span className="text-sm font-medium text-white">{auth.user.name.charAt(0).toUpperCase()}</span>
+                                        <span className="text-[13px] font-medium text-white">{auth.user.name.charAt(0).toUpperCase()}</span>
                                     </div>
                                     <ChevronDown className="h-4 w-4" />
                                 </button>
@@ -2140,10 +2213,18 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 </header>
 
                 {/* Page content */}
-                <main className="admin-main-scroll flex-1 overflow-y-auto overflow-x-hidden bg-slate-50">
-                    <div className="mx-auto w-full max-w-[1600px] p-4 sm:p-6">{children}</div>
+                <main className="admin-main-scroll flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 pb-16 sm:pb-6">
+                    <div className="mx-auto w-full max-w-[1600px] p-4 sm:p-6">
+                        {auth.user?.activeMovement && (
+                            <ActiveMovementBanner movement={auth.user.activeMovement} />
+                        )}
+                        {children}
+                    </div>
                 </main>
             </div>
+
+            {hasRole(['Employee']) && <EmployeeBottomNav />}
+            <PWAInstallPrompt />
 
             {/* Print Styles */}
             <style>{`

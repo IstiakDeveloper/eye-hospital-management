@@ -10,7 +10,7 @@ import Pagination from '@/components/ui/pagination';
 import AdminLayout from '@/layouts/admin-layout';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CalendarDays, ClipboardPen, Download, Eye, FileUp, Pencil, Plus, Search, Trash2, UserCircle } from 'lucide-react';
+import { CalendarDays, ClipboardPen, Download, Eye, FileUp, Pencil, Plus, Search, Trash2, UserCircle, UserPlus } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 
 interface ImportRowError {
@@ -563,6 +563,11 @@ export default function EmployeesIndex({
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-1">
+                                                        {!e.user && can.edit ? (
+                                                            <Button variant="ghost" size="sm" type="button" onClick={() => router.post(route('employees.create-user', e.id), {}, { preserveScroll: true })} title="Create User Account">
+                                                                <UserPlus className="h-4 w-4 text-emerald-600" />
+                                                            </Button>
+                                                        ) : null}
                                                         <Button variant="ghost" size="sm" asChild>
                                                             <Link href={route('employees.show', e.id)} title="View & print attendance">
                                                                 <Eye className="h-4 w-4 text-sky-600" />

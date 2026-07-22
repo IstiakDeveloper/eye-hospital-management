@@ -43,6 +43,7 @@ interface User {
     id: number;
     name: string;
     email: string;
+    username: string | null;
     phone: string | null;
     role: Role;
     is_active: boolean;
@@ -201,55 +202,59 @@ export default function UsersIndex({ users, roles, filters, can }: UsersIndexPro
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                    <Card>
-                        <CardContent className="p-4">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-4">
+                    <Card className="border-0 shadow-sm ring-1 ring-slate-200 overflow-hidden relative group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <CardContent className="p-5 relative z-10">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Total Users</p>
-                                    <p className="text-2xl font-bold text-gray-900">{users?.total || 0}</p>
+                                    <p className="text-sm font-semibold text-slate-500 tracking-wide uppercase">Total Users</p>
+                                    <p className="text-3xl font-extrabold text-slate-900 mt-1">{users?.total || 0}</p>
                                 </div>
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
-                                    <Users className="h-4 w-4 text-blue-600" />
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600 shadow-sm">
+                                    <Users className="h-6 w-6" />
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardContent className="p-4">
+                    <Card className="border-0 shadow-sm ring-1 ring-slate-200 overflow-hidden relative group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-teal-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <CardContent className="p-5 relative z-10">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Active Users</p>
-                                    <p className="text-2xl font-bold text-green-600">{users?.data?.filter((user) => user.is_active).length || 0}</p>
+                                    <p className="text-sm font-semibold text-slate-500 tracking-wide uppercase">Active Users</p>
+                                    <p className="text-3xl font-extrabold text-emerald-600 mt-1">{users?.data?.filter((user) => user.is_active).length || 0}</p>
                                 </div>
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
-                                    <Check className="h-4 w-4 text-green-600" />
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 shadow-sm">
+                                    <Check className="h-6 w-6" />
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardContent className="p-4">
+                    <Card className="border-0 shadow-sm ring-1 ring-slate-200 overflow-hidden relative group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-rose-50 to-red-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <CardContent className="p-5 relative z-10">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Inactive Users</p>
-                                    <p className="text-2xl font-bold text-red-600">{users?.data?.filter((user) => !user.is_active).length || 0}</p>
+                                    <p className="text-sm font-semibold text-slate-500 tracking-wide uppercase">Inactive</p>
+                                    <p className="text-3xl font-extrabold text-rose-600 mt-1">{users?.data?.filter((user) => !user.is_active).length || 0}</p>
                                 </div>
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
-                                    <XIcon className="h-4 w-4 text-red-600" />
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-rose-100 text-rose-600 shadow-sm">
+                                    <XIcon className="h-6 w-6" />
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardContent className="p-4">
+                    <Card className="border-0 shadow-sm ring-1 ring-slate-200 overflow-hidden relative group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-fuchsia-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <CardContent className="p-5 relative z-10">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">Total Roles</p>
-                                    <p className="text-2xl font-bold text-purple-600">{roles?.length || 0}</p>
+                                    <p className="text-sm font-semibold text-slate-500 tracking-wide uppercase">Total Roles</p>
+                                    <p className="text-3xl font-extrabold text-purple-600 mt-1">{roles?.length || 0}</p>
                                 </div>
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100">
-                                    <Shield className="h-4 w-4 text-purple-600" />
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-600 shadow-sm">
+                                    <Shield className="h-6 w-6" />
                                 </div>
                             </div>
                         </CardContent>
@@ -344,28 +349,41 @@ export default function UsersIndex({ users, roles, filters, can }: UsersIndexPro
                                         {users.data?.map((user) => (
                                             <TableRow key={user.id} className="hover:bg-gray-50">
                                                 <TableCell className="font-medium">
-                                                    <div className="flex items-center space-x-3">
+                                                    <div className="flex items-center space-x-4">
                                                         <div
-                                                            className={`h-10 w-10 rounded-full ${getAvatarColor(user.name)} flex items-center justify-center text-sm font-semibold text-white`}
+                                                            className={`h-12 w-12 rounded-xl ${getAvatarColor(user.name)} flex items-center justify-center text-sm font-bold text-white shadow-sm ring-2 ring-white`}
                                                         >
                                                             {getInitials(user.name)}
                                                         </div>
                                                         <div>
-                                                            <p className="font-medium text-gray-900">{user.name}</p>
-                                                            <p className="text-sm text-gray-500">ID: #{user.id}</p>
+                                                            <p className="font-bold text-slate-900 text-base">{user.name}</p>
+                                                            <div className="flex items-center mt-0.5 space-x-2">
+                                                                <Badge variant="outline" className="text-xs bg-slate-50 text-slate-600 font-mono">
+                                                                    ID: #{user.id}
+                                                                </Badge>
+                                                                {user.username && (
+                                                                    <Badge variant="outline" className="text-xs bg-blue-50/50 text-blue-700 font-medium border-blue-200">
+                                                                        @{user.username}
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="space-y-1">
+                                                    <div className="space-y-1.5">
                                                         <div className="flex items-center space-x-2">
-                                                            <Mail className="h-4 w-4 text-gray-400" />
-                                                            <span className="text-sm text-gray-900">{user.email}</span>
+                                                            <div className="bg-slate-100 p-1.5 rounded-md">
+                                                                <Mail className="h-3.5 w-3.5 text-slate-500" />
+                                                            </div>
+                                                            <span className="text-sm font-medium text-slate-700">{user.email}</span>
                                                         </div>
                                                         {user.phone && (
                                                             <div className="flex items-center space-x-2">
-                                                                <Phone className="h-4 w-4 text-gray-400" />
-                                                                <span className="text-sm text-gray-600">{user.phone}</span>
+                                                                <div className="bg-slate-100 p-1.5 rounded-md">
+                                                                    <Phone className="h-3.5 w-3.5 text-slate-500" />
+                                                                </div>
+                                                                <span className="text-sm font-medium text-slate-600">{user.phone}</span>
                                                             </div>
                                                         )}
                                                     </div>

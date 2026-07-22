@@ -58,13 +58,15 @@ class EmployeeController extends Controller
         $authUser = $request->user();
         $isSuperAdmin = $authUser->isSuperAdmin();
 
+        $hasEmpMgmt = $authUser->hasPermission('employee-management.view');
+
         return Inertia::render('Employees/Index', [
             'employees' => $employees,
             'filters' => $request->only(['search', 'is_active']),
             'can' => [
-                'create' => $authUser->hasPermission('employees.create'),
-                'edit' => $authUser->hasPermission('employees.edit'),
-                'delete' => $authUser->hasPermission('employees.delete'),
+                'create' => $isSuperAdmin || $hasEmpMgmt || $authUser->hasPermission('employees.create'),
+                'edit' => $isSuperAdmin || ($authUser->hasPermission('employees.edit') && !$hasEmpMgmt),
+                'delete' => $isSuperAdmin || ($authUser->hasPermission('employees.delete') && !$hasEmpMgmt),
             ],
             'canSetManualAttendance' => $isSuperAdmin,
             'employeeOptions' => $isSuperAdmin ? $this->manualAttendanceEmployeeOptions() : [],
@@ -124,6 +126,22 @@ class EmployeeController extends Controller
     {
         $data = $request->validated();
 
+        $userId = $data['user_id'] ?? null;
+        
+        if (!$userId) {
+            // Create user for employee
+            $role = \App\Models\Role::firstOrCreate(['name' => 'Employee']);
+            $user = \App\Models\User::create([
+                'name' => $data['name'],
+                'email' => $data['email'] ?? ($data['employee_code'] . '@example.com'),
+                'username' => $data['employee_code'],
+                'password' => \Illuminate\Support\Facades\Hash::make('1234'), // Default 4-digit password
+                'phone' => $data['phone'] ?? null,
+                'role_id' => $role->id,
+            ]);
+            $userId = $user->id;
+        }
+
         $employee = Employee::query()->create([
             'employee_code' => $data['employee_code'],
             'name' => $data['name'],
@@ -134,14 +152,14 @@ class EmployeeController extends Controller
             'date_of_join' => $data['date_of_join'] ?? null,
             'is_active' => $request->boolean('is_active', true),
             'zkteco_user_id' => $data['zkteco_user_id'] ?? null,
-            'user_id' => $data['user_id'] ?? null,
+            'user_id' => $userId,
         ]);
 
         $this->syncAttendanceSettings($employee, $data);
         $this->recalculateRecent($employee);
 
         return redirect()->route('employees.index')
-            ->with('success', 'Employee created.');
+            ->with('success', 'Employee created. Default password is 1234.');
     }
 
     public function show(Request $request, Employee $employee): Response
@@ -298,6 +316,10 @@ class EmployeeController extends Controller
 
     public function edit(Employee $employee): Response
     {
+        if (!request()->user()?->isSuperAdmin()) {
+            abort(403, 'Only Super Admin can edit employee records.');
+        }
+
         $setting = $this->attendanceDayRecordService->ensureSettings($employee);
 
         return Inertia::render('Employees/Edit', [
@@ -326,7 +348,26 @@ class EmployeeController extends Controller
 
     public function update(UpdateEmployeeRequest $request, Employee $employee): RedirectResponse
     {
+        if (!$request->user()?->isSuperAdmin()) {
+            abort(403, 'Only Super Admin can edit employee records.');
+        }
+
         $data = $request->validated();
+
+        $userId = $data['user_id'] ?? $employee->user_id;
+
+        if (!$userId) {
+            $role = \App\Models\Role::firstOrCreate(['name' => 'Employee']);
+            $user = \App\Models\User::create([
+                'name' => $data['name'],
+                'email' => $data['email'] ?? ($data['employee_code'] . '@example.com'),
+                'username' => $data['employee_code'],
+                'password' => \Illuminate\Support\Facades\Hash::make('1234'), // Default 4-digit password
+                'phone' => $data['phone'] ?? null,
+                'role_id' => $role->id,
+            ]);
+            $userId = $user->id;
+        }
 
         $employee->update([
             'employee_code' => $data['employee_code'],
@@ -338,7 +379,7 @@ class EmployeeController extends Controller
             'date_of_join' => $data['date_of_join'] ?? null,
             'is_active' => $request->boolean('is_active', true),
             'zkteco_user_id' => $data['zkteco_user_id'] ?? null,
-            'user_id' => $data['user_id'] ?? null,
+            'user_id' => $userId,
         ]);
 
         $this->syncAttendanceSettings($employee, $data);
@@ -351,6 +392,10 @@ class EmployeeController extends Controller
 
     public function destroy(Employee $employee): RedirectResponse
     {
+        if (!request()->user()?->isSuperAdmin()) {
+            abort(403, 'Only Super Admin can delete employee records.');
+        }
+
         $employee->attendancePunches()->delete();
         $employee->attendanceDayRecords()->delete();
         EmployeeAttendanceSetting::query()->where('employee_id', $employee->id)->delete();
@@ -358,6 +403,41 @@ class EmployeeController extends Controller
 
         return redirect()->route('employees.index')
             ->with('success', 'Employee removed.');
+    }
+
+    public function createUserAccount(Employee $employee): RedirectResponse
+    {
+        if ($employee->user_id) {
+            return back()->with('error', 'Employee already has a linked user.');
+        }
+
+        // Extract digits from employee code
+        $digits = preg_replace('/[^0-9]/', '', $employee->employee_code);
+        
+        // Pad to at least 4 digits if it's less (e.g. 001 -> 0001)
+        $username = str_pad($digits ?: '1', 4, '0', STR_PAD_LEFT);
+        
+        // Ensure username is unique
+        $originalUsername = $username;
+        $counter = 1;
+        while (\App\Models\User::where('username', $username)->exists()) {
+            $username = $originalUsername . $counter;
+            $counter++;
+        }
+
+        $role = \App\Models\Role::firstOrCreate(['name' => 'Employee']);
+        $user = \App\Models\User::create([
+            'name' => $employee->name,
+            'email' => $employee->email ?? ($employee->employee_code . '@example.com'),
+            'username' => $username,
+            'password' => \Illuminate\Support\Facades\Hash::make($username), // Password is the same digit string
+            'phone' => $employee->phone ?? null,
+            'role_id' => $role->id,
+        ]);
+
+        $employee->update(['user_id' => $user->id]);
+
+        return back()->with('success', 'User created successfully! Username: ' . $username . ' | Password: ' . $username);
     }
 
     /**

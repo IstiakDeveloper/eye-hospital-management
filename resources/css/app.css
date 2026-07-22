@@ -159,7 +159,8 @@
     }
 
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground text-[14px] leading-relaxed;
+        font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     }
 }
 

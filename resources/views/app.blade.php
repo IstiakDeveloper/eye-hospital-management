@@ -3,7 +3,16 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+    {{-- PWA Meta Tags & Manifest --}}
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Eye Hospital">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 
     {{-- Favicon --}}
     <link rel="icon" type="image/png" href="{{ asset('eye.png') }}">
@@ -47,6 +56,21 @@
 
 <body class="font-sans antialiased">
     @inertia
+
+    {{-- Register PWA Service Worker --}}
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('PWA ServiceWorker registered with scope: ', registration.scope);
+                    })
+                    .catch(function(err) {
+                        console.log('PWA ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
 </body>
 
 </html>

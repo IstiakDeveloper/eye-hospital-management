@@ -22,6 +22,9 @@ class AttendanceDayController extends Controller
             $day = now()->startOfDay();
         }
 
+        // Auto-ensure attendance records for all active employees for this date
+        app(\App\Services\Attendance\AttendanceDayRecordService::class)->ensureRecordsForDate($day);
+
         $employees = Employee::query()
             ->with('employeeAttendanceSetting')
             ->where('is_active', true)
@@ -45,11 +48,25 @@ class AttendanceDayController extends Controller
             'weekend' => 0,
         ];
 
-        $rows = $employees->map(function (Employee $employee) use ($records, $day, &$summary) {
+        $isHoliday = Holiday::query()->whereDate('observed_on', $day->toDateString())->exists();
+
+        $rows = $employees->map(function (Employee $employee) use ($records, $day, $isHoliday, &$summary) {
             $rec = $records->get($employee->id);
             $status = $rec?->status;
 
-            if ($status && isset($summary[$status])) {
+            // Default status if no record exists
+            if (!$status) {
+                $weekendDays = $employee->employeeAttendanceSetting?->weekend_days ?? [5, 6];
+                if ($isHoliday) {
+                    $status = 'holiday';
+                } elseif (in_array((int) $day->format('w'), array_map('intval', (array) $weekendDays), true)) {
+                    $status = 'weekend';
+                } else {
+                    $status = 'absent';
+                }
+            }
+
+            if (isset($summary[$status])) {
                 $summary[$status]++;
             }
 
