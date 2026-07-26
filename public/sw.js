@@ -1,6 +1,5 @@
-const CACHE_NAME = 'eye-hospital-pwa-v1';
+const CACHE_NAME = 'eye-hospital-pwa-v2';
 const STATIC_ASSETS = [
-    '/',
     '/manifest.json',
     '/logo.png',
     '/icons/icon-192x192.png',
@@ -42,16 +41,13 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                // Return original response
+                // Return original response directly (including 302 redirects)
                 return response;
             })
             .catch(() => {
                 return caches.match(event.request).then((cachedResponse) => {
                     if (cachedResponse) {
                         return cachedResponse;
-                    }
-                    if (event.request.headers.get('accept').includes('text/html')) {
-                        return caches.match('/');
                     }
                 });
             })

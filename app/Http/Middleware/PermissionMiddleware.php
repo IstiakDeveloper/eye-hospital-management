@@ -46,41 +46,10 @@ class PermissionMiddleware
      */
     private function getAlternativeDashboard($user): string
     {
-        if (!$user || !$user->role) {
+        if (! $user) {
             return route('login');
         }
 
-        // Load user permissions
-        $permissions = $user->role->permissions->pluck('name')->toArray();
-
-        // Priority order: Doctor > Receptionist > Refractionist > Medicine Seller > Optics Seller
-
-        // Check for Doctor permissions
-        if (in_array('dashboard.doctor', $permissions) && Route::has('doctor.dashboard')) {
-            return route('doctor.dashboard');
-        }
-
-        // Check for Receptionist permissions
-        if (in_array('dashboard.receptionist', $permissions) && Route::has('receptionist.dashboard')) {
-            return route('receptionist.dashboard');
-        }
-
-        // Check for Refractionist permissions
-        if (in_array('dashboard.refractionist', $permissions) && Route::has('refractionist.dashboard')) {
-            return route('refractionist.dashboard');
-        }
-
-        // Check for Medicine Seller permissions
-        if (in_array('dashboard.medicine-seller', $permissions) && Route::has('medicine-seller.dashboard')) {
-            return route('medicine-seller.dashboard');
-        }
-
-        // Check for Optics Seller permissions
-        if (in_array('dashboard.optics-seller', $permissions) && Route::has('optics-seller.dashboard')) {
-            return route('optics-seller.dashboard');
-        }
-
-        // Fallback to login if no dashboard found
-        return route('login');
+        return $user->getDashboardRoute();
     }
 }

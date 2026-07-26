@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Route;
 
 class User extends Authenticatable
 {
@@ -286,5 +287,48 @@ class User extends Authenticatable
 
         // Merge and deduplicate
         return array_values(array_unique(array_merge($rolePermissions, $userPermissions)));
+    }
+
+    /**
+     * Get default dashboard route for this user based on role and permissions.
+     */
+    public function getDashboardRoute(): string
+    {
+        if (! $this->role) {
+            return route('dashboard');
+        }
+
+        if ($this->role->name === 'Employee') {
+            return route('employee.dashboard');
+        }
+
+        $permissions = $this->getAllPermissions();
+        $hasSuperAdminPermission = in_array('*', $permissions);
+
+        if ($hasSuperAdminPermission || in_array('admin.dashboard', $permissions)) {
+            return route('dashboard');
+        }
+
+        if (in_array('dashboard.doctor', $permissions) && Route::has('doctor.dashboard')) {
+            return route('doctor.dashboard');
+        }
+
+        if (in_array('dashboard.receptionist', $permissions) && Route::has('receptionist.dashboard')) {
+            return route('receptionist.dashboard');
+        }
+
+        if (in_array('dashboard.refractionist', $permissions) && Route::has('refractionist.dashboard')) {
+            return route('refractionist.dashboard');
+        }
+
+        if (in_array('dashboard.medicine-seller', $permissions) && Route::has('medicine-seller.dashboard')) {
+            return route('medicine-seller.dashboard');
+        }
+
+        if (in_array('dashboard.optics-seller', $permissions) && Route::has('optics-seller.dashboard')) {
+            return route('optics-seller.dashboard');
+        }
+
+        return route('dashboard');
     }
 }

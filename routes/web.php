@@ -49,59 +49,11 @@ use Illuminate\Support\Facades\Storage;
 */
 
 Route::get('/', function () {
-    // Check if user is authenticated
     if (! auth()->check()) {
         return redirect()->route('login');
     }
 
-    $user = auth()->user();
-
-    if (! $user || ! $user->role) {
-        return redirect()->route('dashboard');
-    }
-
-    // Load user permissions
-    $permissions = $user->role->permissions->pluck('name')->toArray();
-
-    // Check for wildcard permission (Super Admin)
-    $hasSuperAdminPermission = in_array('*', $permissions);
-
-    // Permission-based dashboard routing
-    // Priority order: Check Admin FIRST, then specific roles
-
-    // 1. Check for Super Admin permission FIRST (wildcard or explicit admin dashboard permission)
-    // Super Admin should ALWAYS go to Admin Dashboard
-    if ($hasSuperAdminPermission || in_array('admin.dashboard', $permissions)) {
-        return redirect()->route('dashboard');
-    }
-
-    // 2. Check for Doctor permissions
-    if (in_array('dashboard.doctor', $permissions) && Route::has('doctor.dashboard')) {
-        return redirect()->route('doctor.dashboard');
-    }
-
-    // 3. Check for Receptionist permissions
-    if (in_array('dashboard.receptionist', $permissions) && Route::has('receptionist.dashboard')) {
-        return redirect()->route('receptionist.dashboard');
-    }
-
-    // 4. Check for Refractionist permissions
-    if (in_array('dashboard.refractionist', $permissions) && Route::has('refractionist.dashboard')) {
-        return redirect()->route('refractionist.dashboard');
-    }
-
-    // 5. Check for Medicine Seller permissions
-    if (in_array('dashboard.medicine-seller', $permissions) && Route::has('medicine-seller.dashboard')) {
-        return redirect()->route('medicine-seller.dashboard');
-    }
-
-    // 6. Check for Optics Seller permissions
-    if (in_array('dashboard.optics-seller', $permissions) && Route::has('optics-seller.dashboard')) {
-        return redirect()->route('optics-seller.dashboard');
-    }
-
-    // 7. Fallback to default dashboard if user has any permissions
-    return redirect()->route('dashboard');
+    return redirect()->to(auth()->user()->getDashboardRoute());
 });
 
 Route::get('/storage-link', function () {
