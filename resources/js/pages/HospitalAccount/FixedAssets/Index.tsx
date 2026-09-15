@@ -1,6 +1,6 @@
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
 import { Link, router } from '@inertiajs/react';
-import { CheckCircle, Clock, DollarSign, Edit, Eye, Filter, Package, PlusCircle, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle, Clock, DollarSign, Edit, Eye, Filter, Package, PlusCircle, Printer, Trash2, XCircle } from 'lucide-react';
 import React, { useState } from 'react';
 
 interface Vendor {
@@ -192,7 +192,20 @@ const Index: React.FC<IndexProps> = ({ assets, vendors, totals, filters }) => {
                         <h1 className="text-2xl font-bold text-gray-900">Fixed Assets</h1>
                         <p className="mt-1 text-sm text-gray-600">Manage hospital fixed assets and payments</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                        <Link
+                            href={route('hospital-account.fixed-assets.ledger', {
+                                start_date: filterData.date_from || undefined,
+                                end_date: filterData.date_to || undefined,
+                                vendor_id: filterData.vendor_id || undefined,
+                                search: filterData.search || undefined,
+                                status: filterData.status || undefined,
+                            })}
+                            className="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                        >
+                            <Printer className="mr-2 h-4 w-4" />
+                            Print Ledger
+                        </Link>
                         <button
                             onClick={() => setShowFilters(!showFilters)}
                             className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"

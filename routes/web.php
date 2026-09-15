@@ -741,6 +741,7 @@ Route::middleware(['permission:hospital-account.view'])->prefix('hospital-accoun
 
     // Fixed Asset Routes
     Route::get('/fixed-assets', [FixedAssetController::class, 'index'])->name('fixed-assets.index');
+    Route::get('/fixed-assets/ledger', [FixedAssetController::class, 'ledger'])->name('fixed-assets.ledger');
     Route::get('/fixed-assets/create', [FixedAssetController::class, 'create'])->name('fixed-assets.create');
     Route::post('/fixed-assets', [FixedAssetController::class, 'store'])->name('fixed-assets.store');
     Route::get('/fixed-assets/{fixedAsset}', [FixedAssetController::class, 'show'])->name('fixed-assets.show');

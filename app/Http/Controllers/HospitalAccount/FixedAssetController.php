@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\HospitalAccount\StoreFixedAssetPurchaseRequest;
 use App\Http\Requests\HospitalAccount\StoreFixedAssetRequest;
 use App\Models\FixedAsset;
+use App\Models\FixedAssetPurchase;
 use App\Models\FixedAssetVendor;
 use App\Models\HospitalAccount;
 use Illuminate\Http\RedirectResponse;
@@ -65,6 +66,92 @@ class FixedAssetController extends Controller
         ];
 
         return Inertia::render('HospitalAccount/FixedAssets/Index', compact('assets', 'vendors', 'totals', 'filters'));
+    }
+
+    public function ledger(Request $request): Response
+    {
+        $startDate = $request->start_date;
+        $endDate = $request->end_date;
+        $vendorId = $request->vendor_id;
+        $search = $request->search;
+        $status = $request->status;
+
+        $query = FixedAssetPurchase::query()
+            ->with(['fixedAsset', 'vendor'])
+            ->whereHas('fixedAsset')
+            ->orderBy('purchase_date')
+            ->orderBy('id');
+
+        if ($startDate && $endDate) {
+            $query->whereBetween('purchase_date', [$startDate, $endDate]);
+        }
+
+        if ($vendorId) {
+            $query->where('vendor_id', $vendorId);
+        }
+
+        if ($status) {
+            $query->whereHas('fixedAsset', fn ($q) => $q->where('status', $status));
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('purchase_number', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%')
+                    ->orWhereHas('fixedAsset', function ($assetQuery) use ($search) {
+                        $assetQuery->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('asset_number', 'like', '%'.$search.'%');
+                    });
+            });
+        }
+
+        $purchases = $query->get();
+
+        $runningBalance = 0;
+        $ledgerData = [];
+
+        foreach ($purchases as $purchase) {
+            $previousBalance = $runningBalance;
+            $runningBalance += (float) $purchase->total_amount;
+
+            $ledgerData[] = [
+                'id' => $purchase->id,
+                'date' => $purchase->purchase_date,
+                'purchase_number' => $purchase->purchase_number,
+                'asset_name' => $purchase->fixedAsset?->name,
+                'asset_number' => $purchase->fixedAsset?->asset_number,
+                'vendor_name' => $purchase->vendor?->name,
+                'description' => $purchase->description,
+                'quantity' => $purchase->quantity,
+                'previous_balance' => $previousBalance,
+                'purchase_amount' => (float) $purchase->total_amount,
+                'paid_amount' => (float) $purchase->paid_amount,
+                'due_amount' => (float) $purchase->due_amount,
+                'balance' => $runningBalance,
+            ];
+        }
+
+        $vendors = FixedAssetVendor::query()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return Inertia::render('HospitalAccount/FixedAssets/Ledger', [
+            'ledgerData' => $ledgerData,
+            'vendors' => $vendors,
+            'filters' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'vendor_id' => $vendorId ? (int) $vendorId : null,
+                'search' => $search,
+                'status' => $status,
+            ],
+            'totals' => [
+                'purchase_amount' => (float) $purchases->sum('total_amount'),
+                'paid_amount' => (float) $purchases->sum('paid_amount'),
+                'due_amount' => (float) $purchases->sum('due_amount'),
+                'balance' => $runningBalance,
+            ],
+        ]);
     }
 
     public function create(): Response
