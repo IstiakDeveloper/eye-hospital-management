@@ -3,10 +3,17 @@
 namespace App\Http\Controllers\HospitalAccount;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\{HospitalAccount, HospitalFundTransaction, HospitalTransaction, HospitalExpenseCategory, HospitalIncomeCategory, MainAccount, MainAccountVoucher, AdvanceHouseRent};
-use Inertia\Inertia;
+use App\Models\AdvanceHouseRent;
+use App\Models\HospitalAccount;
+use App\Models\HospitalExpenseCategory;
+use App\Models\HospitalFundTransaction;
+use App\Models\HospitalIncomeCategory;
+use App\Models\HospitalTransaction;
+use App\Models\MainAccount;
+use App\Models\MainAccountVoucher;
 use DB;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class HospitalAccountController extends Controller
 {
@@ -115,7 +122,7 @@ class HospitalAccountController extends Controller
         }
 
         // If category name is provided but no ID, try to find or create the category
-        if (!$categoryId && $categoryName) {
+        if (! $categoryId && $categoryName) {
             $category = HospitalExpenseCategory::firstOrCreate(
                 ['name' => $categoryName],
                 ['is_active' => true]
@@ -200,35 +207,41 @@ class HospitalAccountController extends Controller
                     'date' => $request->date,
                     'narration' => $transaction->type === 'expense'
                         ? "Hospital Expense - {$request->category}: {$request->description}"
-                        : "Hospital Income - {$request->category}: {$request->description}"
+                        : "Hospital Income - {$request->category}: {$request->description}",
                 ]);
             }
 
-            // Handle category update
             $categoryName = $request->category;
-            $categoryId = $request->expense_category_id;
-
-            if ($categoryId && empty($categoryName)) {
-                $category = HospitalExpenseCategory::find($categoryId);
-                $categoryName = $category ? $category->name : $request->category;
-            }
-
-            if (!$categoryId && $categoryName) {
-                $category = HospitalExpenseCategory::firstOrCreate(
-                    ['name' => $categoryName],
-                    ['is_active' => true]
-                );
-                $categoryId = $category->id;
-            }
-
-            // Update transaction
-            $transaction->update([
+            $updates = [
                 'amount' => $newAmount,
                 'category' => $categoryName,
-                'expense_category_id' => $categoryId,
                 'description' => $request->description,
                 'transaction_date' => $request->date,
-            ]);
+            ];
+
+            if ($transaction->type === 'expense') {
+                $categoryId = $request->expense_category_id;
+
+                if ($categoryId && empty($categoryName)) {
+                    $category = HospitalExpenseCategory::find($categoryId);
+                    $categoryName = $category ? $category->name : $request->category;
+                    $updates['category'] = $categoryName;
+                }
+
+                if (! $categoryId && $categoryName) {
+                    $category = HospitalExpenseCategory::firstOrCreate(
+                        ['name' => $categoryName],
+                        ['is_active' => true]
+                    );
+                    $categoryId = $category->id;
+                }
+
+                $updates['expense_category_id'] = $categoryId;
+            } else {
+                $updates['expense_category_id'] = null;
+            }
+
+            $transaction->update($updates);
         });
 
         return back()->with('success', 'Transaction updated successfully!');
@@ -338,7 +351,7 @@ class HospitalAccountController extends Controller
                     'date' => $request->date,
                     'narration' => $fundTransaction->type === 'fund_out'
                         ? "Hospital Fund Out - {$request->purpose}: {$request->description}"
-                        : "Hospital Fund In - {$request->purpose}: {$request->description}"
+                        : "Hospital Fund In - {$request->purpose}: {$request->description}",
                 ]);
             }
 
@@ -380,20 +393,20 @@ class HospitalAccountController extends Controller
         if ($request->category_filter) {
             if ($request->category_filter === 'fixed_asset') {
                 $query->where('category', 'LIKE', '%Fixed Asset%')
-                      ->orWhere('category', 'LIKE', '%Asset%');
+                    ->orWhere('category', 'LIKE', '%Asset%');
             } elseif ($request->category_filter === 'advance_house_rent') {
                 $query->where('category', 'LIKE', '%Advance House Rent%');
             } elseif ($request->category_filter === 'fund_transaction') {
                 $query->where('category', 'LIKE', '%Fund%');
             } elseif ($request->category_filter === 'other_expense') {
                 $query->where('type', 'expense')
-                      ->where('category', 'NOT LIKE', '%Fixed Asset%')
-                      ->where('category', 'NOT LIKE', '%Asset%')
-                      ->where('category', 'NOT LIKE', '%Advance House Rent%')
-                      ->where('category', 'NOT LIKE', '%Fund%');
+                    ->where('category', 'NOT LIKE', '%Fixed Asset%')
+                    ->where('category', 'NOT LIKE', '%Asset%')
+                    ->where('category', 'NOT LIKE', '%Advance House Rent%')
+                    ->where('category', 'NOT LIKE', '%Fund%');
             } elseif ($request->category_filter === 'other_income') {
                 $query->where('type', 'income')
-                      ->where('category', 'NOT LIKE', '%Fund%');
+                    ->where('category', 'NOT LIKE', '%Fund%');
             }
         }
 
@@ -416,16 +429,16 @@ class HospitalAccountController extends Controller
         // Get category-wise breakdown
         $categoryStats = [
             'fixed_asset_expense' => HospitalTransaction::where('type', 'expense')
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('category', 'LIKE', '%Fixed Asset%')
-                      ->orWhere('category', 'LIKE', '%Asset%');
+                        ->orWhere('category', 'LIKE', '%Asset%');
                 })
                 ->sum('amount'),
             'advance_rent_balance' => AdvanceHouseRent::active()->sum('remaining_amount'),
             'advance_rent_deductions' => HospitalTransaction::where('type', 'expense')
-                ->where(function($q) {
+                ->where(function ($q) {
                     $q->where('category', 'LIKE', '%Rent Deduction%')
-                      ->orWhere('category', 'LIKE', '%House Rent - Monthly%');
+                        ->orWhere('category', 'LIKE', '%House Rent - Monthly%');
                 })
                 ->sum('amount'),
             'other_expense' => HospitalTransaction::where('type', 'expense')
@@ -480,7 +493,7 @@ class HospitalAccountController extends Controller
         }
 
         if ($request->purpose) {
-            $query->where('purpose', 'like', '%' . $request->purpose . '%');
+            $query->where('purpose', 'like', '%'.$request->purpose.'%');
         }
 
         $fundTransactions = $query->latest('date')->paginate(20);
@@ -516,8 +529,8 @@ class HospitalAccountController extends Controller
         }
 
         if ($request->purpose) {
-            $fundInQuery->where('purpose', 'like', '%' . $request->purpose . '%');
-            $fundOutQuery->where('purpose', 'like', '%' . $request->purpose . '%');
+            $fundInQuery->where('purpose', 'like', '%'.$request->purpose.'%');
+            $fundOutQuery->where('purpose', 'like', '%'.$request->purpose.'%');
         }
 
         // Calculate totals
@@ -540,7 +553,7 @@ class HospitalAccountController extends Controller
         $totals = [
             'total_fund_in' => $totalFundIn,
             'total_fund_out' => $totalFundOut,
-            'net_fund' => $totalFundIn - $totalFundOut
+            'net_fund' => $totalFundIn - $totalFundOut,
         ];
 
         return Inertia::render('HospitalAccount/FundHistory', compact('fundTransactions', 'purposes', 'filters', 'totals'));
@@ -583,7 +596,7 @@ class HospitalAccountController extends Controller
     public function updateCategory(Request $request, HospitalExpenseCategory $category)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:hospital_expense_categories,name,' . $category->id,
+            'name' => 'required|string|max:255|unique:hospital_expense_categories,name,'.$category->id,
             'is_active' => 'boolean',
         ]);
 
@@ -596,7 +609,7 @@ class HospitalAccountController extends Controller
     public function updateIncomeCategory(Request $request, HospitalIncomeCategory $category)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:hospital_income_categories,name,' . $category->id,
+            'name' => 'required|string|max:255|unique:hospital_income_categories,name,'.$category->id,
             'is_active' => 'boolean',
         ]);
 
@@ -619,7 +632,7 @@ class HospitalAccountController extends Controller
             ->with('expenseCategory')
             ->get()
             ->groupBy('expenseCategory.name')
-            ->map(fn($items) => $items->sum('amount'));
+            ->map(fn ($items) => $items->sum('amount'));
 
         return Inertia::render('HospitalAccount/MonthlyReport', compact('report', 'categoryExpenses', 'year', 'month'));
     }
@@ -663,7 +676,7 @@ class HospitalAccountController extends Controller
         }
 
         // If category name is provided but no ID, try to find or create the category
-        if (!$categoryId && $categoryName) {
+        if (! $categoryId && $categoryName) {
             $category = HospitalIncomeCategory::firstOrCreate(
                 ['name' => $categoryName],
                 ['is_active' => true]

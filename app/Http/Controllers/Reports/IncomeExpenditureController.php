@@ -294,23 +294,32 @@ class IncomeExpenditureController extends Controller
         }
 
         // Add regular expense categories
+        $incomeCategoryNames = HospitalIncomeCategory::query()->pluck('name');
+
         foreach ($categories as $category) {
-            // Current month amount
             $currentMonth = HospitalTransaction::where('expense_category_id', $category->id)
+                ->where('type', 'expense')
                 ->whereBetween('transaction_date', [$fromDate, $toDate])
                 ->sum('amount');
 
-            // Cumulative amount (from beginning to toDate)
             $cumulative = HospitalTransaction::where('expense_category_id', $category->id)
+                ->where('type', 'expense')
                 ->where('transaction_date', '<=', $toDate)
                 ->sum('amount');
+
+            $currentMonthAmount = (float) abs($currentMonth);
+            $cumulativeAmount = (float) abs($cumulative);
+
+            if ($currentMonthAmount == 0.0 && $cumulativeAmount == 0.0 && $incomeCategoryNames->contains($category->name)) {
+                continue;
+            }
 
             $expenses[] = [
                 'serial' => $serial++,
                 'category' => $category->name,
                 'category_id' => $category->id,
-                'current_month' => (float) abs($currentMonth),
-                'cumulative' => (float) abs($cumulative),
+                'current_month' => $currentMonthAmount,
+                'cumulative' => $cumulativeAmount,
                 'is_active' => $category->is_active,
             ];
         }
@@ -409,7 +418,8 @@ class IncomeExpenditureController extends Controller
                 ->whereNull('income_category_id')
                 ->where('amount', '<', 0);
         } else {
-            $query->where('expense_category_id', $categoryId);
+            $query->where('type', 'expense')
+                ->where('expense_category_id', $categoryId);
         }
 
         $transactions = $query->get()->map(function ($txn) {

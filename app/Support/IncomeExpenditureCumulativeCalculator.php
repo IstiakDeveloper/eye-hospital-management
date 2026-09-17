@@ -99,6 +99,7 @@ class IncomeExpenditureCumulativeCalculator
 
         foreach ($expenseCategories as $category) {
             $cumulative = HospitalTransaction::where('expense_category_id', $category->id)
+                ->where('type', 'expense')
                 ->where('transaction_date', '<=', $toDate)
                 ->sum('amount');
 
