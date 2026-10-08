@@ -4,6 +4,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AppointmentDisplayController;
 use App\Http\Controllers\Attendance\AttendanceDayController;
 use App\Http\Controllers\Attendance\AttendanceDeviceController;
+use App\Http\Controllers\Attendance\AttendanceReportController;
 use App\Http\Controllers\Attendance\HolidayController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DoctorController;
@@ -267,6 +268,8 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('attendance')->name('attendance.')->group(function () {
         Route::middleware(['permission:attendance.view'])->get('/day', [AttendanceDayController::class, 'index'])->name('day.index');
+        Route::middleware(['permission:attendance.view'])->get('/report', [AttendanceReportController::class, 'index'])->name('report');
+        Route::middleware(['permission:attendance.view'])->get('/monthly', [EmployeeController::class, 'attendanceCalendar'])->name('monthly');
         Route::middleware(['permission:attendance.manage'])->group(function () {
             Route::get('/device', [AttendanceDeviceController::class, 'index'])->name('device.index');
             Route::post('/device/sync', [AttendanceDeviceController::class, 'queueSync'])->name('device.sync');
@@ -283,6 +286,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('employees')->name('employees.')->group(function () {
         Route::middleware(['permission:employees.view'])->get('/', [EmployeeController::class, 'index'])->name('index');
+        Route::middleware(['permission:employees.view'])->get('/dashboard', [AttendanceReportController::class, 'employeeDashboard'])->name('dashboard');
         Route::middleware(['permission:employees.view'])->get('/attendance-calendar', [EmployeeController::class, 'attendanceCalendar'])->name('attendance-calendar');
         Route::middleware(['permission:employees.view', 'super-admin-only'])->post('/manual-attendance', [EmployeeController::class, 'storeManualAttendance'])->name('manual-attendance.store');
         Route::middleware(['permission:employees.create'])->get('/create', [EmployeeController::class, 'create'])->name('create');

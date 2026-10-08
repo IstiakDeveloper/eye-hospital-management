@@ -8,7 +8,6 @@ import {
     AlertTriangle,
     BarChart3,
     Bell,
-    Briefcase,
     Building2,
     Calculator,
     Calendar,
@@ -87,7 +86,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
     const [medicalTestsOpen, setMedicalTestsOpen] = useState(false);
     const [operationsOpen, setOperationsOpen] = useState(false);
     const [reportsOpen, setReportsOpen] = useState(false);
-    const [employeeManagementOpen, setEmployeeManagementOpen] = useState(false);
+    const [employeeManagementGroupsOpen, setEmployeeManagementGroupsOpen] = useState<Record<string, boolean>>({});
 
     const userRole = auth.user.role.name;
     const userPermissions = auth.user.permissions || [];
@@ -457,29 +456,30 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
         }
     };
 
-    const isEmployeeManagementSectionActive = () => {
-        return (
-            currentRouteName?.startsWith('users.') ||
-            currentRouteName?.startsWith('doctors.') ||
-            currentRouteName?.startsWith('attendance.') ||
-            currentRouteName?.startsWith('employees.') ||
-            window.location.pathname.startsWith('/users') ||
-            window.location.pathname.startsWith('/doctors') ||
-            window.location.pathname.startsWith('/attendance') ||
-            window.location.pathname.startsWith('/employees')
-        );
-    };
-
     const isEmployeeManagementChildRouteActive = (childItem: NavItem) => {
+        if (childItem.children?.length) {
+            return childItem.children.some((child) => isEmployeeManagementChildRouteActive(child));
+        }
+
         switch (childItem.current) {
             case 'employees.*':
-                return !!currentRouteName?.startsWith('employees.');
+                return (
+                    !!currentRouteName?.startsWith('employees.') &&
+                    currentRouteName !== 'employees.dashboard' &&
+                    currentRouteName !== 'employees.attendance-calendar'
+                );
             case 'users.*':
                 return !!currentRouteName?.startsWith('users.');
             case 'doctors.*':
                 return !!currentRouteName?.startsWith('doctors.');
             case 'attendance.day.*':
                 return currentRouteName === 'attendance.day.index';
+            case 'attendance.report':
+                return currentRouteName === 'attendance.report';
+            case 'attendance.monthly':
+                return currentRouteName === 'attendance.monthly' || currentRouteName === 'employees.attendance-calendar';
+            case 'employees.dashboard':
+                return currentRouteName === 'employees.dashboard';
             case 'attendance.device.*':
                 return currentRouteName?.startsWith('attendance.device') ?? false;
             case 'attendance.holidays.*':
@@ -1241,20 +1241,8 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             : []),
     ].filter((item) => item);
 
-    // Admin navigation with permission check - NO ROLE FILTERING
-    const adminNavigation: NavItem[] = [
-        ...(hasPermission('roles.view')
-            ? [
-                  {
-                      name: 'Roles & Permissions',
-                      href: route('roles.index'),
-                      icon: Shield,
-                      current: 'roles.*',
-                      roles: [], // Empty - show to anyone with roles.view permission
-                  },
-              ]
-            : []),
-        ...(hasAnyPermission([
+    // Employee Management is kept separate from Administration and grouped by workflow.
+    const hasEmployeeManagementAccess = hasAnyPermission([
             'employee-management.view',
             'users.view',
             'doctors.view',
@@ -1264,119 +1252,181 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
             'employees.create',
             'employees.edit',
             'employees.delete',
-        ])
-            ? (() => {
-                  const hasEmpMgmt = hasPermission('employee-management.view');
-                  const employeeChildren = [
-                      // 1. Staff & User Accounts
-                      ...(hasEmpMgmt || hasPermission('employees.view')
-                          ? [
-                                {
-                                    name: 'Employees',
-                                    href: route('employees.index'),
-                                    icon: Users,
-                                    current: 'employees.*',
-                                    roles: [],
-                                },
-                            ]
-                          : []),
-                      ...(hasEmpMgmt || hasPermission('users.view')
-                          ? [
-                                {
-                                    name: 'Users',
-                                    href: route('users.index'),
-                                    icon: UserPlus,
-                                    current: 'users.*',
-                                    roles: [],
-                                },
-                            ]
-                          : []),
-                      ...(hasEmpMgmt || hasPermission('doctors.view')
-                          ? [
-                                {
-                                    name: 'Doctors',
-                                    href: route('doctors.index'),
-                                    icon: Stethoscope,
-                                    current: 'doctors.*',
-                                    roles: [],
-                                },
-                            ]
-                          : []),
+        ]);
+    const hasEmpMgmt = hasPermission('employee-management.view');
+    const employeeManagementNavigation: NavItem[] = [
+        {
+            name: 'Employee Records',
+            href: '#',
+            icon: Users,
+            current: 'employee-records.group',
+            roles: [],
+            children: [
+                ...(hasEmpMgmt || hasPermission('employees.view')
+                    ? [
+                          {
+                              name: 'Employees',
+                              href: route('employees.index'),
+                              icon: Users,
+                              current: 'employees.*',
+                              roles: [],
+                          },
+                      ]
+                    : []),
+                ...(hasEmpMgmt || hasPermission('users.view')
+                    ? [
+                          {
+                              name: 'Users',
+                              href: route('users.index'),
+                              icon: UserPlus,
+                              current: 'users.*',
+                              roles: [],
+                          },
+                      ]
+                    : []),
+                ...(hasEmpMgmt || hasPermission('doctors.view')
+                    ? [
+                          {
+                              name: 'Doctors',
+                              href: route('doctors.index'),
+                              icon: Stethoscope,
+                              current: 'doctors.*',
+                              roles: [],
+                          },
+                      ]
+                    : []),
+            ],
+        },
+        {
+            name: 'Attendance',
+            href: '#',
+            icon: Calendar,
+            current: 'attendance.group',
+            roles: [],
+            children:
+                hasEmpMgmt || hasPermission('attendance.view')
+                    ? [
+                          {
+                              name: 'Daily Attendance',
+                              href: route('attendance.day.index'),
+                              icon: Calendar,
+                              current: 'attendance.day.*',
+                              roles: [],
+                          },
+                      ]
+                    : [],
+        },
+        {
+            name: 'Leave & Movements',
+            href: '#',
+            icon: Clock,
+            current: 'employee-leave-movements.group',
+            roles: [],
+            children:
+                hasEmpMgmt || hasPermission('attendance.manage')
+                    ? [
+                          {
+                              name: 'Leave Applications',
+                              href: route('admin.leaves.index'),
+                              icon: CalendarDays,
+                              current: 'admin.leaves.*',
+                              roles: [],
+                          },
+                          {
+                              name: 'Leave Types',
+                              href: route('admin.leave-types.index'),
+                              icon: FileText,
+                              current: 'admin.leave-types.*',
+                              roles: [],
+                          },
+                          {
+                              name: 'Movements',
+                              href: route('admin.movements.index'),
+                              icon: Clock,
+                              current: 'admin.movements.*',
+                              roles: [],
+                          },
+                      ]
+                    : [],
+        },
+        {
+            name: 'Attendance Setup',
+            href: '#',
+            icon: Settings,
+            current: 'attendance-setup.group',
+            roles: [],
+            children:
+                hasEmpMgmt || hasPermission('attendance.manage')
+                    ? [
+                          {
+                              name: 'Holidays',
+                              href: route('attendance.holidays.index'),
+                              icon: CalendarDays,
+                              current: 'attendance.holidays.*',
+                              roles: [],
+                          },
+                          {
+                              name: 'ZKTeco Device',
+                              href: route('attendance.device.index'),
+                              icon: Upload,
+                              current: 'attendance.device.*',
+                              roles: [],
+                          },
+                      ]
+                    : [],
+        },
+        {
+            name: 'Report',
+            href: '#',
+            icon: FileBarChart,
+            current: 'employee-reports.group',
+            roles: [],
+            children: [
+                ...(hasEmpMgmt || hasPermission('employees.view')
+                    ? [
+                          {
+                              name: 'Employee Dashboard',
+                              href: route('employees.dashboard'),
+                              icon: BarChart3,
+                              current: 'employees.dashboard',
+                              roles: [],
+                          },
+                      ]
+                    : []),
+                ...(hasEmpMgmt || hasPermission('attendance.view')
+                    ? [
+                          {
+                              name: 'Monthly View',
+                              href: route('attendance.monthly'),
+                              icon: CalendarDays,
+                              current: 'attendance.monthly',
+                              roles: [],
+                          },
+                          {
+                              name: 'Attendance Report',
+                              href: route('attendance.report'),
+                              icon: FileText,
+                              current: 'attendance.report',
+                              roles: [],
+                          },
+                      ]
+                    : []),
+            ],
+        },
+    ].filter((group) => group.children?.length);
 
-                      // 2. Attendance, Leaves & Movements
-                      ...(hasEmpMgmt || hasPermission('attendance.view')
-                          ? [
-                                {
-                                    name: 'Daily Attendance',
-                                    href: route('attendance.day.index'),
-                                    icon: Calendar,
-                                    current: 'attendance.day.*',
-                                    roles: [],
-                                },
-                            ]
-                          : []),
-                      ...(hasEmpMgmt || hasPermission('attendance.manage')
-                          ? [
-                                {
-                                    name: 'Leave Applications',
-                                    href: route('admin.leaves.index'),
-                                    icon: CalendarDays,
-                                    current: 'admin.leaves.*',
-                                    roles: [],
-                                },
-                                {
-                                    name: 'Leave Types',
-                                    href: route('admin.leave-types.index'),
-                                    icon: FileText,
-                                    current: 'admin.leave-types.*',
-                                    roles: [],
-                                },
-                                {
-                                    name: 'Movements',
-                                    href: route('admin.movements.index'),
-                                    icon: Clock,
-                                    current: 'admin.movements.*',
-                                    roles: [],
-                                },
-                            ]
-                          : []),
-
-                      // 3. Holidays & Device Settings
-                      ...(hasEmpMgmt || hasPermission('attendance.manage')
-                          ? [
-                                {
-                                    name: 'Holidays',
-                                    href: route('attendance.holidays.index'),
-                                    icon: CalendarDays,
-                                    current: 'attendance.holidays.*',
-                                    roles: [],
-                                },
-                                {
-                                    name: 'ZKTeco Device',
-                                    href: route('attendance.device.index'),
-                                    icon: Upload,
-                                    current: 'attendance.device.*',
-                                    roles: [],
-                                },
-                            ]
-                          : []),
-                  ].filter(Boolean);
-
-                  if (employeeChildren.length === 0) {
-                      return [];
-                  }
-
-                  return [
-                      {
-                          name: 'Employee Management',
-                          href: '#',
-                          icon: Briefcase,
-                          current: 'employee-management.*',
-                          roles: [],
-                          children: employeeChildren,
-                      },
-                  ];
-              })()
+    // Admin navigation with permission check - NO ROLE FILTERING
+    const adminNavigation: NavItem[] = [
+        ...(hasPermission('roles.view')
+            ? [
+                  {
+                      name: 'Roles & Permissions',
+                      href: route('roles.index'),
+                      icon: Shield,
+                      current: 'roles.*',
+                      roles: [],
+                  },
+              ]
             : []),
         ...(hasPermission('medicines.view')
             ? [
@@ -2012,6 +2062,79 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                         </nav>
                     </div>
 
+                    {hasEmployeeManagementAccess &&
+                        employeeManagementNavigation.length > 0 &&
+                        shouldShowAdminNavigationForSuperAdmin('Employee Management') && (
+                            <div className="mt-8 px-4 sm:px-5">
+                                <p className="mb-3 text-[11px] font-bold tracking-widest text-slate-400 uppercase">Employee Management</p>
+                                <nav className="space-y-1">
+                                    {employeeManagementNavigation.map((group) => {
+                                        const GroupIcon = group.icon;
+                                        const groupIsActive = isEmployeeManagementChildRouteActive(group);
+                                        const groupIsOpen = employeeManagementGroupsOpen[group.name] ?? groupIsActive;
+
+                                        return (
+                                            <div key={group.name}>
+                                                <button
+                                                    type="button"
+                                                    aria-expanded={groupIsOpen}
+                                                    onClick={() =>
+                                                        setEmployeeManagementGroupsOpen((openGroups) => ({
+                                                            ...openGroups,
+                                                            [group.name]: !groupIsOpen,
+                                                        }))
+                                                    }
+                                                    className={`group flex w-full items-center rounded-md mx-2 px-3 py-2 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
+                                                        groupIsActive
+                                                            ? 'bg-purple-50 text-purple-700 font-semibold'
+                                                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                                    }`}
+                                                >
+                                                    <GroupIcon
+                                                        className={`mr-3 h-[18px] w-[18px] flex-shrink-0 ${
+                                                            groupIsActive ? 'text-purple-700' : 'text-slate-400 group-hover:text-slate-500'
+                                                        }`}
+                                                    />
+                                                    <span className="flex-1 text-left">{group.name}</span>
+                                                    <ChevronRight
+                                                        className={`h-4 w-4 transition-transform duration-200 ${
+                                                            groupIsOpen ? 'rotate-90' : ''
+                                                        } ${groupIsActive ? 'text-purple-700' : 'text-gray-400'}`}
+                                                    />
+                                                </button>
+
+                                                <div className={`mt-1 space-y-1 overflow-hidden transition-all duration-200 ${groupIsOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                    {group.children?.map((childItem) => {
+                                                        const ChildIcon = childItem.icon;
+                                                        const isChildActive = isEmployeeManagementChildRouteActive(childItem);
+
+                                                        return (
+                                                            <Link
+                                                                key={childItem.name}
+                                                                href={childItem.href}
+                                                                className={`group flex items-center rounded-md mx-2 py-1.5 pr-3 pl-10 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
+                                                                    isChildActive
+                                                                        ? 'bg-purple-50 text-purple-700 font-semibold relative before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:rounded-r-full before:bg-purple-500'
+                                                                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                                                                }`}
+                                                            >
+                                                                <ChildIcon
+                                                                    className={`mr-2 h-[16px] w-[16px] flex-shrink-0 ${
+                                                                        isChildActive ? 'text-purple-600' : 'text-slate-400 group-hover:text-slate-500'
+                                                                    }`}
+                                                                />
+                                                                <span>{childItem.name}</span>
+                                                            </Link>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </nav>
+                            </div>
+                        )}
+
                     {/* Admin Section - Permission-based, NOT role-based */}
                     {adminNavigation.length > 0 && (
                         <div className="mt-8 px-4 sm:px-5">
@@ -2021,69 +2144,6 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                                     // 🎯 Filter for Super Admin hidden navigations
                                     .filter((item) => shouldShowAdminNavigationForSuperAdmin(item.name))
                                     .map((item) => {
-                                        if (item.name === 'Employee Management' && item.children?.length) {
-                                            const Icon = item.icon;
-                                            const anyChildActive = item.children.some((c) => isEmployeeManagementChildRouteActive(c));
-                                            const sectionActive = isEmployeeManagementSectionActive();
-                                            const shouldShowAsActive = sectionActive || anyChildActive;
-
-                                            return (
-                                                <div key={item.name}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setEmployeeManagementOpen(!employeeManagementOpen)}
-                                                        className={`group flex w-full items-center rounded-md mx-2 px-3 py-2 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
-                                                            shouldShowAsActive
-                                                                ? 'bg-purple-50 text-purple-700 font-semibold shadow-sm ring-1 ring-inset ring-purple-600/20 relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-r-full before:bg-purple-600'
-                                                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors'
-                                                        }`}
-                                                    >
-                                                        <Icon
-                                                            className={`mr-3 h-[18px] w-[18px] flex-shrink-0 ${
-                                                                shouldShowAsActive ? 'text-purple-700' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
-                                                            }`}
-                                                        />
-                                                        <span className="flex-1 text-left">{item.name}</span>
-                                                        <ChevronRight
-                                                            className={`h-4 w-4 transition-transform duration-200 ${
-                                                                employeeManagementOpen || anyChildActive ? 'rotate-90' : ''
-                                                            } ${shouldShowAsActive ? 'text-purple-700' : 'text-gray-400'}`}
-                                                        />
-                                                    </button>
-
-                                                    <div
-                                                        className={`mt-1 space-y-1 overflow-hidden transition-all duration-200 ${
-                                                            employeeManagementOpen || anyChildActive ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                                        }`}
-                                                    >
-                                                        {item.children.map((childItem) => {
-                                                            const ChildIcon = childItem.icon;
-                                                            const isChildActive = isEmployeeManagementChildRouteActive(childItem);
-
-                                                            return (
-                                                                <Link
-                                                                    key={childItem.name}
-                                                                    href={childItem.href}
-                                                                    className={`group flex items-center rounded-md mx-2 py-1.5 pr-3 pl-10 mb-[2px] text-[13px] font-medium transition-all duration-200 ${
-                                                                        isChildActive
-                                                                            ? 'bg-purple-50 text-purple-700 font-semibold relative before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[2px] before:rounded-r-full before:bg-purple-500'
-                                                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors'
-                                                                    }`}
-                                                                >
-                                                                    <ChildIcon
-                                                                        className={`mr-2 h-[16px] w-[16px] flex-shrink-0 ${
-                                                                            isChildActive ? 'text-purple-600' : 'text-slate-400 group-hover:text-slate-500 transition-colors'
-                                                                        }`}
-                                                                    />
-                                                                    <span>{childItem.name}</span>
-                                                                </Link>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            );
-                                        }
-
                                         const Icon = item.icon;
                                         const isActive = isRouteActive(item.current);
 
