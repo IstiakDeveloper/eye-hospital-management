@@ -393,6 +393,7 @@ Route::prefix('medicine-corner')->middleware(['auth'])->name('medicine-corner.')
     // Main Medicine Corner Pages - Individual permissions
     Route::get('/stock', [MedicineCornerController::class, 'stock'])->name('stock')->middleware('permission:medicine-corner.stock');
     Route::get('/medicines', [MedicineCornerController::class, 'medicines'])->name('medicines')->middleware('permission:medicine-corner.view');
+    Route::get('/medicines/{medicine}/history', [MedicineCornerController::class, 'purchaseHistory'])->name('medicine-history')->middleware('permission:medicine-corner.view');
     Route::get('/purchase', [MedicineCornerController::class, 'purchase'])->name('purchase')->middleware('permission:medicine-corner.purchase');
     Route::get('/reports', [MedicineCornerController::class, 'reports'])->name('reports')->middleware('permission:medicine-corner.reports');
     Route::get('/alerts', [MedicineCornerController::class, 'alerts'])->name('alerts')->middleware('permission:medicine-corner.stock');
@@ -426,7 +427,7 @@ Route::prefix('medicine-corner')->middleware(['auth'])->name('medicine-corner.')
     Route::get('/sales-analytics', [MedicineCornerController::class, 'salesAnalytics'])->name('sales-analytics');
 
     // Vendor Due Management
-    Route::get('/vendor-dues', [MedicineCornerController::class, 'vendorDues'])->name('vendor-dues');
+    Route::redirect('/vendor-dues', '/medicine-vendors/reports/due-report')->name('vendor-dues');
     Route::post('/vendor-payment', [MedicineCornerController::class, 'makeVendorPayment'])->name('vendor-payment');
     Route::get('/vendor-purchase-history', [MedicineCornerController::class, 'getVendorPurchaseHistory'])->name('vendor-purchase-history');
     Route::put('/update-stock-payment-status', [MedicineCornerController::class, 'updateStockPaymentStatus'])->name('update-stock-payment-status');

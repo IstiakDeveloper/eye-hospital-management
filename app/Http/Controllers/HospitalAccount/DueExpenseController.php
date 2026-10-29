@@ -66,7 +66,9 @@ class DueExpenseController extends Controller
                 'payment_date' => $payment->payment_date->format('Y-m-d'),
             ]);
 
-        $expenseCategories = HospitalExpenseCategory::where('is_active', true)
+        $expenseCategories = HospitalExpenseCategory::query()
+            ->where('is_active', true)
+            ->forManualEntry()
             ->orderBy('name')
             ->get(['id', 'name']);
 

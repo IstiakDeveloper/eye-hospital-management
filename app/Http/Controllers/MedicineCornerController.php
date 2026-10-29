@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\MedicineCorner\MedicinePurchaseHistoryRequest;
 use App\Models\HospitalAccount;
 use App\Models\HospitalExpenseCategory;
 use App\Models\Medicine;
@@ -21,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class MedicineCornerController extends Controller
 {
@@ -105,25 +107,20 @@ class MedicineCornerController extends Controller
     public function stock(Request $request)
     {
         $search = $request->get('search');
-        $dateType = $request->get('date_type', 'expiry'); // expiry | purchase
-        $fromDate = $request->get('from_date');
-        $toDate = $request->get('to_date');
-        $companyName = $request->get('company_name'); // vendor.company_name
-
-        $dateColumn = $dateType === 'purchase' ? 'purchase_date' : 'expiry_date';
+        $fromDate = $request->filled('from_date') ? $request->date('from_date')->toDateString() : null;
+        $toDate = $request->filled('to_date') ? $request->date('to_date')->toDateString() : null;
+        $vendorId = $request->integer('vendor_id') ?: null;
 
         $filteredStocksQuery = MedicineStock::query()
             ->where('available_quantity', '>', 0)
-            ->when($fromDate, function ($q) use ($dateColumn, $fromDate) {
-                $q->whereDate($dateColumn, '>=', $fromDate);
+            ->when($fromDate, function ($q) use ($fromDate) {
+                $q->whereDate('purchase_date', '>=', $fromDate);
             })
-            ->when($toDate, function ($q) use ($dateColumn, $toDate) {
-                $q->whereDate($dateColumn, '<=', $toDate);
+            ->when($toDate, function ($q) use ($toDate) {
+                $q->whereDate('purchase_date', '<=', $toDate);
             })
-            ->when($companyName, function ($q) use ($companyName) {
-                $q->whereHas('vendor', function ($vq) use ($companyName) {
-                    $vq->where('company_name', $companyName);
-                });
+            ->when($vendorId, function ($q) use ($vendorId) {
+                $q->where('vendor_id', $vendorId);
             })
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($sq) use ($search) {
@@ -137,74 +134,33 @@ class MedicineCornerController extends Controller
                                 ->orWhere('company_name', 'like', "%{$search}%");
                         });
                 });
-            })
-            ->orderBy($dateColumn, 'asc')
-            ->orderBy('expiry_date', 'asc');
-
-        $stocks = $filteredStocksQuery
-            ->with(['medicine', 'vendor', 'addedBy'])
-            ->paginate(20)
-            ->withQueryString();
-
-        $lowStockMedicines = Medicine::with('stockAlert')
-            ->whereHas('stockAlert', function ($query) {
-                $query->whereRaw('medicines.total_stock <= stock_alerts.minimum_stock');
-            })
-            ->limit(5)
-            ->get();
-
-        $expiringStock = MedicineStock::with(['medicine', 'vendor'])
-            ->where('expiry_date', '>', now())
-            ->where('expiry_date', '<=', now()->addDays(30))
-            ->where('available_quantity', '>', 0)
-            ->orderBy('expiry_date', 'asc')
-            ->limit(10)
-            ->get();
+            });
 
         $totalStockValue = (clone $filteredStocksQuery)
-            ->reorder()
             ->selectRaw('SUM(available_quantity * buy_price) as total')
             ->value('total') ?? 0;
 
-        // Pending payments to vendors
-        $pendingVendorPaymentsQuery = MedicineStock::with(['vendor', 'medicine'])
-            ->where('payment_status', '!=', 'paid')
-            ->where('due_amount', '>', 0)
-            ->orderBy('purchase_date', 'asc')
-            ->limit(10);
+        $stocks = $filteredStocksQuery
+            ->with(['medicine', 'vendor', 'addedBy'])
+            ->orderByDesc('purchase_date')
+            ->orderByDesc('id')
+            ->paginate(20)
+            ->withQueryString();
 
-        if ($companyName) {
-            $pendingVendorPaymentsQuery->whereHas('vendor', function ($vq) use ($companyName) {
-                $vq->where('company_name', $companyName);
-            });
-        }
-
-        // If the user is filtering by purchase date, keep pending payments aligned to the same range.
-        if ($dateType === 'purchase' && ($fromDate || $toDate)) {
-            $pendingVendorPaymentsQuery->when($fromDate, function ($q) use ($fromDate) {
-                $q->whereDate('purchase_date', '>=', $fromDate);
-            })->when($toDate, function ($q) use ($toDate) {
-                $q->whereDate('purchase_date', '<=', $toDate);
-            });
-        }
-
-        $pendingVendorPayments = $pendingVendorPaymentsQuery->get();
-
-        // Company filter values (vendor.company_name)
-        $companyNames = MedicineVendor::active()
-            ->whereNotNull('company_name')
-            ->orderBy('company_name')
-            ->distinct()
-            ->pluck('company_name')
-            ->values();
+        $vendors = MedicineVendor::query()
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
         return Inertia::render('MedicineCorner/Stock', [
             'stocks' => $stocks,
-            'lowStockMedicines' => $lowStockMedicines,
-            'expiringStock' => $expiringStock,
-            'totalStockValue' => $totalStockValue,
-            'pendingVendorPayments' => $pendingVendorPayments,
-            'companyNames' => $companyNames,
+            'totalStockValue' => round((float) $totalStockValue, 2),
+            'vendors' => $vendors,
+            'filters' => [
+                'search' => $search,
+                'from_date' => $fromDate,
+                'to_date' => $toDate,
+                'vendor_id' => $vendorId,
+            ],
         ]);
     }
 
@@ -329,6 +285,76 @@ class MedicineCornerController extends Controller
             'filterOptions' => $filterOptions,
             'stats' => $stats,
             'filters' => $request->only(['search', 'type', 'manufacturer', 'stock_status', 'active', 'sort_by', 'sort_order']),
+        ]);
+    }
+
+    /**
+     * Read-only purchase history for one medicine.
+     * Reads medicine_stocks.quantity for the selected purchase dates and writes nothing.
+     */
+    public function purchaseHistory(MedicinePurchaseHistoryRequest $request, Medicine $medicine): Response
+    {
+        $from = $request->date('from_date')?->toDateString() ?? now()->startOfMonth()->toDateString();
+        $to = $request->date('to_date')?->toDateString() ?? now()->toDateString();
+
+        $stocks = MedicineStock::query()
+            ->where('medicine_id', $medicine->id)
+            ->whereDate('purchase_date', '>=', $from)
+            ->whereDate('purchase_date', '<=', $to)
+            ->with([
+                'vendor:id,name',
+                'addedBy:id,name',
+                'vendorTransaction:id,reference_id,reference_type,transaction_no,payment_status,paid_amount,due_amount',
+            ])
+            ->withExists([
+                'transactions as was_updated' => function ($query): void {
+                    $query->where('type', 'adjustment')
+                        ->where('reason', 'like', 'Stock purchase updated%');
+                },
+            ])
+            ->orderByDesc('purchase_date')
+            ->orderByDesc('id')
+            ->get();
+
+        $purchases = $stocks->map(function (MedicineStock $stock): array {
+            $quantity = (int) $stock->quantity;
+            $buyPrice = round((float) $stock->buy_price, 2);
+
+            return [
+                'id' => $stock->id,
+                'purchase_date' => $stock->purchase_date?->toDateString(),
+                'batch_number' => $stock->batch_number,
+                'vendor_name' => $stock->vendor?->name,
+                'quantity' => $quantity,
+                'buy_price' => $buyPrice,
+                'total_amount' => round($quantity * $buyPrice, 2),
+                'entered_by' => $stock->addedBy?->name,
+                'was_updated' => (bool) $stock->was_updated,
+                'bill_no' => $stock->vendorTransaction?->transaction_no,
+                'payment_status' => $stock->vendorTransaction?->payment_status,
+                'paid_amount' => $stock->vendorTransaction ? round((float) $stock->vendorTransaction->paid_amount, 2) : null,
+                'due_amount' => $stock->vendorTransaction ? round((float) $stock->vendorTransaction->due_amount, 2) : null,
+            ];
+        })->values();
+
+        return Inertia::render('MedicineCorner/MedicineHistory', [
+            'medicine' => [
+                'id' => $medicine->id,
+                'name' => $medicine->name,
+                'generic_name' => $medicine->generic_name,
+                'manufacturer' => $medicine->manufacturer,
+                'unit' => $medicine->unit ?: 'pcs',
+            ],
+            'filters' => [
+                'from_date' => $from,
+                'to_date' => $to,
+            ],
+            'summary' => [
+                'purchase_count' => $purchases->count(),
+                'total_quantity' => (int) $purchases->sum('quantity'),
+                'total_amount' => round((float) $purchases->sum('total_amount'), 2),
+            ],
+            'purchases' => $purchases,
         ]);
     }
 

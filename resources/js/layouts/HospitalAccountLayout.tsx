@@ -160,34 +160,29 @@ const HospitalAccountLayout: React.FC<HospitalAccountLayoutProps> = ({ children,
 
     return (
         <AdminLayout title={title}>
-            <div className="min-h-screen bg-gray-50">
-                {/* Horizontal Tab Navigation */}
-                <div className="border-b border-gray-200 bg-white shadow-sm">
-                    <div className="px-6">
-                        <div className="flex flex-wrap items-center gap-x-1 gap-y-0">
-                            {navigation.map((item) => {
-                                const Icon = item.icon;
-                                return (
-                                    <Link
-                                        key={item.name}
-                                        href={item.href}
-                                        className={`flex items-center border-b-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
-                                            item.current
-                                                ? 'border-blue-600 text-blue-600'
-                                                : 'border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900'
-                                        }`}
-                                    >
-                                        <Icon className="mr-2 h-4 w-4" />
-                                        {item.name}
-                                    </Link>
-                                );
-                            })}
-                        </div>
+            <div>
+                <div className="overflow-x-auto border-b border-slate-200 bg-white">
+                    <div className="flex min-w-max items-center px-2">
+                        {navigation.map((item) => {
+                            const Icon = item.icon;
+
+                            return (
+                                <Link
+                                    key={item.name}
+                                    href={item.href}
+                                    className={`flex items-center gap-1.5 border-b-2 px-2.5 py-2 text-[12px] font-medium whitespace-nowrap ${
+                                        item.current ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-800'
+                                    }`}
+                                >
+                                    <Icon className="h-3.5 w-3.5" />
+                                    {item.name}
+                                </Link>
+                            );
+                        })}
                     </div>
                 </div>
 
-                {/* Main Content Area */}
-                <main className="p-6">{children}</main>
+                <div className="p-4">{children}</div>
             </div>
         </AdminLayout>
     );

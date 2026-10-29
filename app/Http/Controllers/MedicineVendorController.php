@@ -1,13 +1,21 @@
 <?php
+
 // app/Http/Controllers/MedicineVendorController.php
+
 namespace App\Http\Controllers;
 
-use App\Models\{MedicineVendor, MedicineVendorTransaction, MedicineVendorPayment, MedicineStock, Medicine, HospitalAccount, HospitalExpenseCategory};
+use App\Models\HospitalAccount;
+use App\Models\HospitalExpenseCategory;
+use App\Models\Medicine;
+use App\Models\MedicineStock;
+use App\Models\MedicineVendor;
+use App\Models\MedicineVendorPayment;
+use App\Models\MedicineVendorTransaction;
 use App\Models\StockTransaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\{DB, Validator};
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
-use Carbon\Carbon;
 
 class MedicineVendorController extends Controller
 {
@@ -16,15 +24,15 @@ class MedicineVendorController extends Controller
      */
     public function index(Request $request)
     {
-        $vendors = MedicineVendor::with(['transactions' => function($query) {
-                $query->where('type', 'purchase')->where('payment_status', '!=', 'paid');
-            }])
-            ->when($request->search, function($query, $search) {
+        $vendors = MedicineVendor::with(['transactions' => function ($query) {
+            $query->where('type', 'purchase')->where('payment_status', '!=', 'paid');
+        }])
+            ->when($request->search, function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('company_name', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%");
+                    ->orWhere('company_name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             })
-            ->when($request->status, function($query, $status) {
+            ->when($request->status, function ($query, $status) {
                 if ($status === 'active') {
                     $query->where('is_active', true);
                 } elseif ($status === 'inactive') {
@@ -49,10 +57,10 @@ class MedicineVendorController extends Controller
             'vendors' => $vendors,
             'filters' => $request->only(['search', 'status']),
             'statistics' => [
-                'total_vendors' => $totalVendors,
-                'total_dues' => $totalDues,
-                'overdue_amount' => $overdueAmount,
-                'vendors_with_dues' => $vendorsWithDues,
+                'total_vendors' => (int) $totalVendors,
+                'total_dues' => round((float) ($totalDues ?? 0), 2),
+                'overdue_amount' => round((float) ($overdueAmount ?? 0), 2),
+                'vendors_with_dues' => (int) $vendorsWithDues,
             ],
         ]);
     }
@@ -98,7 +106,7 @@ class MedicineVendorController extends Controller
 
             return redirect()->back()->with('success', 'Vendor added successfully');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to add vendor: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to add vendor: '.$e->getMessage());
         }
     }
 
@@ -111,7 +119,7 @@ class MedicineVendorController extends Controller
             'name' => 'required|string|max:255',
             'company_name' => 'nullable|string|max:255',
             'contact_person' => 'nullable|string|max:255',
-            'phone' => 'required|string|max:20|unique:medicine_vendors,phone,' . $vendor->id,
+            'phone' => 'required|string|max:20|unique:medicine_vendors,phone,'.$vendor->id,
             'email' => 'nullable|email|max:255',
             'address' => 'nullable|string',
             'trade_license' => 'nullable|string|max:255',
@@ -127,6 +135,7 @@ class MedicineVendorController extends Controller
 
         try {
             $vendor->update($request->validated());
+
             return response()->json(['success' => true, 'message' => 'Vendor updated successfully']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Failed to update vendor'], 500);
@@ -139,14 +148,25 @@ class MedicineVendorController extends Controller
     public function show(MedicineVendor $vendor)
     {
         $vendor->load([
-            'transactions' => function($query) {
+            'transactions' => function ($query) {
+                $query->with(['createdBy:id,name', 'purchaseStock:id,purchase_date'])
+                    ->orderByDesc('transaction_date')
+                    ->orderByDesc('id');
+            },
+            'payments' => function ($query) {
                 $query->with('createdBy')->orderBy('created_at', 'desc');
             },
-            'payments' => function($query) {
-                $query->with('createdBy')->orderBy('created_at', 'desc');
-            },
-            'stocks.medicine'
+            'stocks.medicine',
         ]);
+
+        $vendor->transactions->each(function (MedicineVendorTransaction $transaction): void {
+            $purchaseDate = $transaction->reference_type === 'medicine_purchase'
+                ? $transaction->purchaseStock?->purchase_date?->toDateString()
+                : null;
+
+            $transaction->setAttribute('purchase_date', $purchaseDate ?? $transaction->transaction_date?->toDateString());
+            $transaction->unsetRelation('purchaseStock');
+        });
 
         // Get overdue transactions
         $overdueTransactions = $vendor->transactions()
@@ -259,7 +279,7 @@ class MedicineVendorController extends Controller
                 'unit_price' => $request->buy_price,
                 'total_amount' => $totalPurchaseAmount,
                 'vendor_transaction_id' => $vendorTransaction->id,
-                'reason' => 'Stock purchase - Batch: ' . $request->batch_number,
+                'reason' => 'Stock purchase - Batch: '.$request->batch_number,
                 'created_by' => auth()->id(),
             ]);
 
@@ -316,7 +336,8 @@ class MedicineVendorController extends Controller
             return redirect()->back()->with('success', $message);
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Failed to add stock: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to add stock: '.$e->getMessage());
         }
     }
 
@@ -369,11 +390,13 @@ class MedicineVendorController extends Controller
             ]);
 
             // Update allocated transactions
-            if (!empty($request->allocated_transactions)) {
+            if (! empty($request->allocated_transactions)) {
                 $remainingAmount = $request->amount;
 
                 foreach ($request->allocated_transactions as $transactionId) {
-                    if ($remainingAmount <= 0) break;
+                    if ($remainingAmount <= 0) {
+                        break;
+                    }
 
                     $transaction = MedicineVendorTransaction::findOrFail($transactionId);
                     $paymentForTransaction = min($remainingAmount, $transaction->due_amount);
@@ -424,7 +447,8 @@ class MedicineVendorController extends Controller
             return redirect()->back()->with('success', "Payment of ৳{$request->amount} made successfully to {$vendor->name}");
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Failed to make payment: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to make payment: '.$e->getMessage());
         }
     }
 
@@ -433,30 +457,50 @@ class MedicineVendorController extends Controller
      */
     public function dueReport(Request $request)
     {
-        $dateFrom = $request->get('date_from', now()->startOfMonth()->toDateString());
-        $dateTo = $request->get('date_to', now()->toDateString());
+        $dateFrom = $request->filled('date_from') ? $request->date('date_from')->toDateString() : null;
+        $dateTo = $request->filled('date_to') ? $request->date('date_to')->toDateString() : null;
 
         $vendorsWithDues = MedicineVendor::with([
-                'transactions' => function($query) use ($dateFrom, $dateTo) {
-                    $query->where('type', 'purchase')
-                          ->where('payment_status', '!=', 'paid')
-                          ->whereBetween('transaction_date', [$dateFrom, $dateTo]);
-                }
-            ])
+            'transactions' => function ($query) use ($dateFrom, $dateTo) {
+                $query->where('type', 'purchase')
+                    ->where('payment_status', '!=', 'paid')
+                    ->when($dateFrom, function ($inner) use ($dateFrom) {
+                        $inner->whereDate('transaction_date', '>=', $dateFrom);
+                    })
+                    ->when($dateTo, function ($inner) use ($dateTo) {
+                        $inner->whereDate('transaction_date', '<=', $dateTo);
+                    })
+                    ->with('purchaseStock:id,purchase_date')
+                    ->orderByDesc('transaction_date')
+                    ->orderByDesc('id');
+            },
+        ])
             ->withDues()
             ->get()
-            ->map(function($vendor) {
-                $overdueAmount = $vendor->transactions
-                    ->where('due_date', '<', now())
-                    ->sum('due_amount');
+            ->map(function (MedicineVendor $vendor) {
+                $vendor->transactions->each(function (MedicineVendorTransaction $transaction): void {
+                    $purchaseDate = $transaction->reference_type === 'medicine_purchase'
+                        ? $transaction->purchaseStock?->purchase_date?->toDateString()
+                        : null;
 
-                $vendor->overdue_amount = $overdueAmount;
+                    $transaction->setAttribute('purchase_date', $purchaseDate ?? $transaction->transaction_date?->toDateString());
+                    $transaction->unsetRelation('purchaseStock');
+                });
+
+                $openBills = $vendor->transactions;
+                $vendor->period_due = round((float) $openBills->sum('due_amount'), 2);
+                $vendor->overdue_amount = round((float) $openBills
+                    ->filter(fn ($transaction) => $transaction->due_date !== null && $transaction->due_date->lt(now()->startOfDay()))
+                    ->sum('due_amount'), 2);
+
                 return $vendor;
             })
-            ->sortByDesc('current_balance');
+            ->filter(fn (MedicineVendor $vendor) => $vendor->transactions->isNotEmpty())
+            ->sortByDesc('period_due')
+            ->values();
 
-        // Summary statistics
-        $totalDues = $vendorsWithDues->sum('current_balance');
+        // Summary statistics for the selected dates only. Balances are not saved.
+        $totalDues = $vendorsWithDues->sum('period_due');
         $totalOverdue = $vendorsWithDues->sum('overdue_amount');
         $vendorCount = $vendorsWithDues->count();
 
@@ -489,11 +533,11 @@ class MedicineVendorController extends Controller
 
         return Inertia::render('MedicineVendor/DueReport', [
             'vendorsWithDues' => $vendorsWithDues,
-            'filters' => ['date_from' => $dateFrom, 'date_to' => $dateTo],
+            'filters' => ['date_from' => $dateFrom ?? '', 'date_to' => $dateTo ?? ''],
             'summary' => [
-                'total_dues' => $totalDues,
-                'total_overdue' => $totalOverdue,
-                'vendor_count' => $vendorCount,
+                'total_dues' => round((float) ($totalDues ?? 0), 2),
+                'total_overdue' => round((float) ($totalOverdue ?? 0), 2),
+                'vendor_count' => (int) $vendorCount,
             ],
             'agingAnalysis' => $agingAnalysis,
         ]);
@@ -509,10 +553,10 @@ class MedicineVendorController extends Controller
 
         $payments = MedicineVendorPayment::with(['vendor', 'createdBy'])
             ->whereBetween('payment_date', [$dateFrom, $dateTo])
-            ->when($request->vendor_id, function($query, $vendorId) {
+            ->when($request->vendor_id, function ($query, $vendorId) {
                 $query->where('vendor_id', $vendorId);
             })
-            ->when($request->payment_method, function($query, $method) {
+            ->when($request->payment_method, function ($query, $method) {
                 $query->where('payment_method', $method);
             })
             ->orderBy('payment_date', 'desc')
@@ -525,8 +569,13 @@ class MedicineVendorController extends Controller
         return Inertia::render('MedicineVendor/PaymentHistory', [
             'payments' => $payments,
             'vendors' => $vendors,
-            'filters' => $request->only(['date_from', 'date_to', 'vendor_id', 'payment_method']),
-            'totalPayments' => $totalPayments,
+            'filters' => [
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
+                'vendor_id' => $request->get('vendor_id'),
+                'payment_method' => $request->get('payment_method'),
+            ],
+            'totalPayments' => round((float) ($totalPayments ?? 0), 2),
         ]);
     }
 
@@ -539,14 +588,15 @@ class MedicineVendorController extends Controller
         $month = $request->get('month', now()->month);
 
         // Top vendors by purchase volume
-        $topVendors = MedicineVendor::with(['transactions' => function($query) use ($year, $month) {
-                $query->where('type', 'purchase')
-                      ->whereYear('transaction_date', $year)
-                      ->whereMonth('transaction_date', $month);
-            }])
+        $topVendors = MedicineVendor::with(['transactions' => function ($query) use ($year, $month) {
+            $query->where('type', 'purchase')
+                ->whereYear('transaction_date', $year)
+                ->whereMonth('transaction_date', $month);
+        }])
             ->get()
-            ->map(function($vendor) {
+            ->map(function ($vendor) {
                 $totalPurchases = $vendor->transactions->sum('amount');
+
                 return [
                     'name' => $vendor->name,
                     'company_name' => $vendor->company_name,
@@ -647,7 +697,8 @@ class MedicineVendorController extends Controller
             return redirect()->back()->with('success', 'Vendor balance adjusted successfully');
         } catch (\Exception $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Failed to adjust balance: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Failed to adjust balance: '.$e->getMessage());
         }
     }
 
@@ -694,7 +745,7 @@ class MedicineVendorController extends Controller
             'success' => true,
             'message' => 'Export functionality to be implemented',
             'type' => $type,
-            'format' => $format
+            'format' => $format,
         ]);
     }
 }

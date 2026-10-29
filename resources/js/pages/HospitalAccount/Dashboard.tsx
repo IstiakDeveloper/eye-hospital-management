@@ -1,6 +1,7 @@
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
+import { formatTaka, moneyAmount } from '@/lib/money';
 import { router } from '@inertiajs/react';
-import { BarChart3, CreditCard, MinusCircle, PlusCircle, Receipt, TrendingDown, TrendingUp } from 'lucide-react';
+import { MinusCircle, PlusCircle, Receipt, TrendingDown } from 'lucide-react';
 import React, { useState } from 'react';
 
 interface DashboardProps {
@@ -60,22 +61,23 @@ const Dashboard: React.FC<DashboardProps> = ({
     });
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-GB', {
+        if (!dateString) {
+            return '—';
+        }
+
+        const calendarDate = /^\d{4}-\d{2}-\d{2}$/.test(dateString);
+        const parsed = new Date(calendarDate ? `${dateString}T00:00:00` : dateString);
+
+        if (Number.isNaN(parsed.getTime())) {
+            return '—';
+        }
+
+        return parsed.toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short',
             year: 'numeric',
+            ...(calendarDate ? {} : { timeZone: 'Asia/Dhaka' }),
         });
-    };
-
-    const formatAmount = (amount: number) => {
-        return new Intl.NumberFormat('en-BD', {
-            style: 'currency',
-            currency: 'BDT',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        })
-            .format(amount)
-            .replace('BDT', '৳');
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -199,167 +201,185 @@ const Dashboard: React.FC<DashboardProps> = ({
         });
     };
 
+    const profit = moneyAmount(monthlyReport.profit);
+    const fieldClass = 'h-8 w-full rounded border border-slate-300 px-2 text-[12px] focus:border-slate-500 focus:outline-none';
+    const noteClass = 'w-full rounded border border-slate-300 px-2 py-1.5 text-[12px] focus:border-slate-500 focus:outline-none';
+
     return (
         <HospitalAccountLayout title="Dashboard">
-            {/* Quick Stats */}
-            <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-4">
-                <div className="rounded-lg border bg-white p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-600">Current Balance</p>
-                            <p className="text-2xl font-bold text-gray-900">{formatAmount(balance)}</p>
+            <div className="space-y-3 text-[13px] text-slate-800">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h1 className="text-[15px] font-semibold text-slate-900">Hospital account</h1>
+                        <p className="text-[12px] text-slate-500">This month</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setFundInModal(true)}
+                            className="inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2.5 text-[12px] hover:bg-slate-50"
+                        >
+                            <PlusCircle className="h-3.5 w-3.5" />
+                            Fund in
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFundOutModal(true)}
+                            className="inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2.5 text-[12px] hover:bg-slate-50"
+                        >
+                            <MinusCircle className="h-3.5 w-3.5" />
+                            Fund out
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setOtherIncomeModal(true)}
+                            className="inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2.5 text-[12px] hover:bg-slate-50"
+                        >
+                            <PlusCircle className="h-3.5 w-3.5" />
+                            Other income
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => router.visit(route('hospital-account.due-expenses.index'))}
+                            className="inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2.5 text-[12px] hover:bg-slate-50"
+                        >
+                            <Receipt className="h-3.5 w-3.5" />
+                            Due expense
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setExpenseModal(true)}
+                            className="inline-flex h-7 items-center gap-1 rounded bg-slate-800 px-2.5 text-[12px] text-white hover:bg-slate-700"
+                        >
+                            <TrendingDown className="h-3.5 w-3.5" />
+                            Add expense
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 divide-x divide-slate-200 overflow-hidden rounded border border-slate-200 bg-white sm:grid-cols-4">
+                    {[
+                        ['Balance', formatTaka(balance), 'text-slate-900'],
+                        ['Income', formatTaka(monthlyReport.income), 'text-emerald-700'],
+                        ['Expense', formatTaka(monthlyReport.expense), 'text-red-700'],
+                        ['Profit', formatTaka(monthlyReport.profit), profit >= 0 ? 'text-emerald-700' : 'text-red-700'],
+                    ].map(([label, value, tone]) => (
+                        <div key={label} className="px-3 py-2">
+                            <p className="text-[11px] text-slate-500">{label}</p>
+                            <p className={`text-[13px] font-semibold tabular-nums ${tone}`}>{value}</p>
                         </div>
-                        <CreditCard className="h-8 w-8 text-blue-600" />
-                    </div>
+                    ))}
                 </div>
 
-                <div className="rounded-lg border bg-white p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-600">Monthly Income</p>
-                            <p className="text-2xl font-bold text-green-600">{formatAmount(monthlyReport.income)}</p>
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                    <section className="overflow-hidden rounded border border-slate-200 bg-white">
+                        <div className="border-b border-slate-200 px-3 py-2">
+                            <h2 className="text-[13px] font-semibold">Recent transactions</h2>
                         </div>
-                        <TrendingUp className="h-8 w-8 text-green-600" />
-                    </div>
-                </div>
-
-                <div className="rounded-lg border bg-white p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-600">Monthly Expense</p>
-                            <p className="text-2xl font-bold text-red-600">{formatAmount(monthlyReport.expense)}</p>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full text-left text-[12px]">
+                                <thead className="bg-slate-50 text-[11px] text-slate-500">
+                                    <tr>
+                                        <th className="px-3 py-1.5 font-medium">Category</th>
+                                        <th className="px-3 py-1.5 font-medium">Date</th>
+                                        <th className="px-3 py-1.5 text-right font-medium">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {recentTransactions.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={3} className="px-3 py-6 text-center text-slate-500">
+                                                No transactions yet.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        recentTransactions.map((transaction) => (
+                                            <tr key={transaction.id} className="border-t border-slate-100">
+                                                <td className="px-3 py-1.5">
+                                                    <p className="text-slate-900">{transaction.category}</p>
+                                                    <p className="max-w-xs truncate text-[11px] text-slate-500">{transaction.description}</p>
+                                                </td>
+                                                <td className="px-3 py-1.5 whitespace-nowrap text-slate-600">
+                                                    {formatDate(transaction.transaction_date)}
+                                                </td>
+                                                <td
+                                                    className={`px-3 py-1.5 text-right font-medium tabular-nums ${transaction.type === 'income' ? 'text-emerald-700' : 'text-red-700'}`}
+                                                >
+                                                    {transaction.type === 'income' ? '+' : '−'}
+                                                    {formatTaka(transaction.amount)}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
-                        <TrendingDown className="h-8 w-8 text-red-600" />
-                    </div>
-                </div>
+                    </section>
 
-                <div className="rounded-lg border bg-white p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-600">Monthly Profit</p>
-                            <p className={`text-2xl font-bold ${monthlyReport.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {formatAmount(monthlyReport.profit)}
-                            </p>
+                    <section className="overflow-hidden rounded border border-slate-200 bg-white">
+                        <div className="border-b border-slate-200 px-3 py-2">
+                            <h2 className="text-[13px] font-semibold">Recent funds</h2>
                         </div>
-                        <BarChart3 className="h-8 w-8 text-blue-600" />
-                    </div>
-                </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="mb-8 flex gap-4">
-                <button
-                    onClick={() => setFundInModal(true)}
-                    className="flex items-center rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-                >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Fund In
-                </button>
-                <button
-                    onClick={() => setFundOutModal(true)}
-                    className="flex items-center rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-                >
-                    <MinusCircle className="mr-2 h-4 w-4" />
-                    Fund Out
-                </button>
-                <button
-                    onClick={() => setExpenseModal(true)}
-                    className="flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-                >
-                    <TrendingDown className="mr-2 h-4 w-4" />
-                    Add Expense
-                </button>
-                <button
-                    onClick={() => setOtherIncomeModal(true)}
-                    className="flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
-                >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Other Income
-                </button>
-                <button
-                    onClick={() => router.visit(route('hospital-account.due-expenses.index'))}
-                    className="flex items-center rounded-lg bg-amber-600 px-4 py-2 text-white hover:bg-amber-700"
-                >
-                    <Receipt className="mr-2 h-4 w-4" />
-                    Due Expense
-                </button>
-            </div>
-
-            {/* Recent Transactions */}
-            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-                <div className="rounded-lg border bg-white shadow-sm">
-                    <div className="border-b p-6">
-                        <h3 className="text-lg font-semibold">Recent Transactions</h3>
-                    </div>
-                    <div className="p-6">
-                        {recentTransactions.map((transaction) => (
-                            <div key={transaction.id} className="flex items-center justify-between border-b py-2 last:border-b-0">
-                                <div>
-                                    <p className="font-medium">{transaction.category}</p>
-                                    <p className="max-w-xs truncate text-sm text-gray-600">{transaction.description}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className={`font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                                        {transaction.type === 'income' ? '+' : '-'}
-                                        {formatAmount(transaction.amount)}
-                                    </p>
-                                    <p className="text-sm text-gray-600">{formatDate(transaction.transaction_date)}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="rounded-lg border bg-white shadow-sm">
-                    <div className="border-b p-6">
-                        <h3 className="text-lg font-semibold">Recent Fund Transactions</h3>
-                    </div>
-                    <div className="p-6">
-                        {recentFundTransactions.map((fund) => (
-                            <div key={fund.id} className="flex items-center justify-between border-b py-2 last:border-b-0">
-                                <div>
-                                    <p className="font-medium">{fund.purpose}</p>
-                                    <p className="max-w-xs truncate text-sm text-gray-600">{fund.description}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className={`font-medium ${fund.type === 'fund_in' ? 'text-green-600' : 'text-red-600'}`}>
-                                        {fund.type === 'fund_in' ? '+' : '-'}
-                                        {formatAmount(fund.amount)}
-                                    </p>
-                                    <p className="text-sm text-gray-600">{formatDate(fund.date)}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full text-left text-[12px]">
+                                <thead className="bg-slate-50 text-[11px] text-slate-500">
+                                    <tr>
+                                        <th className="px-3 py-1.5 font-medium">Investor</th>
+                                        <th className="px-3 py-1.5 font-medium">Date</th>
+                                        <th className="px-3 py-1.5 text-right font-medium">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {recentFundTransactions.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={3} className="px-3 py-6 text-center text-slate-500">
+                                                No fund entries yet.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        recentFundTransactions.map((fund) => (
+                                            <tr key={fund.id} className="border-t border-slate-100">
+                                                <td className="px-3 py-1.5">
+                                                    <p className="text-slate-900">{fund.purpose}</p>
+                                                    <p className="max-w-xs truncate text-[11px] text-slate-500">{fund.description}</p>
+                                                </td>
+                                                <td className="px-3 py-1.5 whitespace-nowrap text-slate-600">{formatDate(fund.date)}</td>
+                                                <td
+                                                    className={`px-3 py-1.5 text-right font-medium tabular-nums ${fund.type === 'fund_in' ? 'text-emerald-700' : 'text-red-700'}`}
+                                                >
+                                                    {fund.type === 'fund_in' ? '+' : '−'}
+                                                    {formatTaka(fund.amount)}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
                 </div>
             </div>
 
             {/* Fund In Modal */}
             {fundInModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
-                    <div className="mx-4 w-96 max-w-lg rounded-lg bg-white p-6">
-                        <h3 className="mb-4 text-lg font-semibold">Add Fund</h3>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Amount *</label>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+                    <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded border border-slate-200 bg-white p-4">
+                        <h2 className="mb-3 text-[14px] font-semibold text-slate-900">Add Fund</h2>
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Amount *</label>
                             <input
                                 type="number"
                                 name="amount"
                                 value={formData.amount}
                                 onChange={handleInputChange}
                                 placeholder="Enter amount"
-                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                                className={fieldClass}
                                 required
                             />
                         </div>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Investor Name *</label>
-                            <select
-                                name="investor_name"
-                                value={formData.investor_name}
-                                onChange={handleInputChange}
-                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                                required
-                            >
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Investor Name *</label>
+                            <select name="investor_name" value={formData.investor_name} onChange={handleInputChange} className={fieldClass} required>
                                 <option value="">Select Investor</option>
                                 {investorNames.map((name, index) => (
                                     <option key={index} value={name}>
@@ -375,31 +395,24 @@ const Dashboard: React.FC<DashboardProps> = ({
                                         value={formData.purpose}
                                         onChange={handleInputChange}
                                         placeholder="Or type new investor name"
-                                        className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                                        className={fieldClass}
                                     />
                                 </div>
                             )}
                         </div>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Date *</label>
-                            <input
-                                type="date"
-                                name="date"
-                                value={formData.date}
-                                onChange={handleInputChange}
-                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                                required
-                            />
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Date *</label>
+                            <input type="date" name="date" value={formData.date} onChange={handleInputChange} className={fieldClass} required />
                         </div>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Description *</label>
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Description *</label>
                             <textarea
                                 name="description"
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 placeholder="Enter description"
-                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                                rows={3}
+                                className={noteClass}
+                                rows={2}
                                 required
                             />
                         </div>
@@ -407,14 +420,14 @@ const Dashboard: React.FC<DashboardProps> = ({
                             <button
                                 onClick={handleFundIn}
                                 disabled={!formData.amount || (!formData.investor_name && !formData.purpose) || !formData.description || loading}
-                                className="flex-1 rounded-lg bg-green-600 py-2 text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                                className="h-7 flex-1 rounded bg-slate-800 text-[12px] text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                             >
                                 {loading ? 'Adding...' : 'Add Fund'}
                             </button>
                             <button
                                 onClick={() => setFundInModal(false)}
                                 disabled={loading}
-                                className="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600 disabled:opacity-50"
+                                className="h-7 flex-1 rounded border border-slate-300 text-[12px] text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                             >
                                 Cancel
                             </button>
@@ -425,11 +438,11 @@ const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Fund Out Modal */}
             {fundOutModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
-                    <div className="mx-4 w-96 max-w-lg rounded-lg bg-white p-6">
-                        <h3 className="mb-4 text-lg font-semibold">Withdraw Fund</h3>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Amount *</label>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+                    <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded border border-slate-200 bg-white p-4">
+                        <h2 className="mb-3 text-[14px] font-semibold text-slate-900">Withdraw Fund</h2>
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Amount *</label>
                             <input
                                 type="number"
                                 name="amount"
@@ -437,20 +450,14 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 onChange={handleInputChange}
                                 max={balance}
                                 placeholder="Enter amount"
-                                className="w-full rounded-lg border px-3 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-500"
+                                className={fieldClass}
                                 required
                             />
-                            <p className="mt-1 text-xs text-gray-500">Available balance: {formatAmount(balance)}</p>
+                            <p className="mt-1 text-xs text-gray-500">Available balance: {formatTaka(balance)}</p>
                         </div>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Investor Name *</label>
-                            <select
-                                name="investor_name"
-                                value={formData.investor_name}
-                                onChange={handleInputChange}
-                                className="w-full rounded-lg border px-3 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-500"
-                                required
-                            >
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Investor Name *</label>
+                            <select name="investor_name" value={formData.investor_name} onChange={handleInputChange} className={fieldClass} required>
                                 <option value="">Select Investor</option>
                                 {investorNames.map((name, index) => (
                                     <option key={index} value={name}>
@@ -466,31 +473,24 @@ const Dashboard: React.FC<DashboardProps> = ({
                                         value={formData.purpose}
                                         onChange={handleInputChange}
                                         placeholder="Or type new investor name"
-                                        className="w-full rounded-lg border px-3 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-500"
+                                        className={fieldClass}
                                     />
                                 </div>
                             )}
                         </div>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Date *</label>
-                            <input
-                                type="date"
-                                name="date"
-                                value={formData.date}
-                                onChange={handleInputChange}
-                                className="w-full rounded-lg border px-3 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-500"
-                                required
-                            />
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Date *</label>
+                            <input type="date" name="date" value={formData.date} onChange={handleInputChange} className={fieldClass} required />
                         </div>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Description *</label>
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Description *</label>
                             <textarea
                                 name="description"
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 placeholder="Enter description"
-                                className="w-full rounded-lg border px-3 py-2 focus:border-red-500 focus:ring-2 focus:ring-red-500"
-                                rows={3}
+                                className={noteClass}
+                                rows={2}
                                 required
                             />
                         </div>
@@ -504,14 +504,14 @@ const Dashboard: React.FC<DashboardProps> = ({
                                     parseFloat(formData.amount) > balance ||
                                     loading
                                 }
-                                className="flex-1 rounded-lg bg-red-600 py-2 text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                                className="h-7 flex-1 rounded bg-slate-800 text-[12px] text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                             >
                                 {loading ? 'Processing...' : 'Withdraw'}
                             </button>
                             <button
                                 onClick={() => setFundOutModal(false)}
                                 disabled={loading}
-                                className="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600 disabled:opacity-50"
+                                className="h-7 flex-1 rounded border border-slate-300 text-[12px] text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                             >
                                 Cancel
                             </button>
@@ -522,11 +522,11 @@ const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Expense Modal */}
             {expenseModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
-                    <div className="mx-4 w-96 max-w-lg rounded-lg bg-white p-6">
-                        <h3 className="mb-4 text-lg font-semibold">Add Expense</h3>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Amount *</label>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+                    <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded border border-slate-200 bg-white p-4">
+                        <h2 className="mb-3 text-[14px] font-semibold text-slate-900">Add Expense</h2>
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Amount *</label>
                             <input
                                 type="number"
                                 name="amount"
@@ -534,18 +534,18 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 onChange={handleInputChange}
                                 max={balance}
                                 placeholder="Enter amount"
-                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                                className={fieldClass}
                                 required
                             />
-                            <p className="mt-1 text-xs text-gray-500">Available balance: {formatAmount(balance)}</p>
+                            <p className="mt-1 text-xs text-gray-500">Available balance: {formatTaka(balance)}</p>
                         </div>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Category *</label>
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Category *</label>
                             <select
                                 name="expense_category_id"
                                 value={formData.expense_category_id}
                                 onChange={handleInputChange}
-                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                                className={fieldClass}
                                 required
                             >
                                 <option value="">Select Category</option>
@@ -556,26 +556,19 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 ))}
                             </select>
                         </div>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Date *</label>
-                            <input
-                                type="date"
-                                name="date"
-                                value={formData.date}
-                                onChange={handleInputChange}
-                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                                required
-                            />
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Date *</label>
+                            <input type="date" name="date" value={formData.date} onChange={handleInputChange} className={fieldClass} required />
                         </div>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Description *</label>
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Description *</label>
                             <textarea
                                 name="description"
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 placeholder="Enter description"
-                                className="w-full rounded-lg border px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                                rows={3}
+                                className={noteClass}
+                                rows={2}
                                 required
                             />
                         </div>
@@ -589,14 +582,14 @@ const Dashboard: React.FC<DashboardProps> = ({
                                     parseFloat(formData.amount) > balance ||
                                     loading
                                 }
-                                className="flex-1 rounded-lg bg-blue-600 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                                className="h-7 flex-1 rounded bg-slate-800 text-[12px] text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                             >
                                 {loading ? 'Adding...' : 'Add Expense'}
                             </button>
                             <button
                                 onClick={() => setExpenseModal(false)}
                                 disabled={loading}
-                                className="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600 disabled:opacity-50"
+                                className="h-7 flex-1 rounded border border-slate-300 text-[12px] text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                             >
                                 Cancel
                             </button>
@@ -606,28 +599,28 @@ const Dashboard: React.FC<DashboardProps> = ({
             )}
 
             {otherIncomeModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(17, 24, 39, 0.75)' }}>
-                    <div className="mx-4 w-96 max-w-lg rounded-lg bg-white p-6">
-                        <h3 className="mb-4 text-lg font-semibold">Add Other Income</h3>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Amount *</label>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+                    <div className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded border border-slate-200 bg-white p-4">
+                        <h2 className="mb-3 text-[14px] font-semibold text-slate-900">Add Other Income</h2>
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Amount *</label>
                             <input
                                 type="number"
                                 name="amount"
                                 value={formData.amount}
                                 onChange={handleInputChange}
                                 placeholder="Enter amount"
-                                className="w-full rounded-lg border px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                                className={fieldClass}
                                 required
                             />
                         </div>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Income Category *</label>
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Income Category *</label>
                             <select
                                 name="income_category_id"
                                 value={formData.income_category_id}
                                 onChange={handleInputChange}
-                                className="w-full rounded-lg border px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
+                                className={fieldClass}
                                 required
                             >
                                 <option value="">Select Income Category</option>
@@ -638,26 +631,19 @@ const Dashboard: React.FC<DashboardProps> = ({
                                 ))}
                             </select>
                         </div>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Date *</label>
-                            <input
-                                type="date"
-                                name="date"
-                                value={formData.date}
-                                onChange={handleInputChange}
-                                className="w-full rounded-lg border px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                                required
-                            />
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Date *</label>
+                            <input type="date" name="date" value={formData.date} onChange={handleInputChange} className={fieldClass} required />
                         </div>
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium">Description *</label>
+                        <div className="mb-2.5">
+                            <label className="mb-1 block text-[11px] font-medium text-slate-600">Description *</label>
                             <textarea
                                 name="description"
                                 value={formData.description}
                                 onChange={handleInputChange}
                                 placeholder="Enter description"
-                                className="w-full rounded-lg border px-3 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-                                rows={3}
+                                className={noteClass}
+                                rows={2}
                                 required
                             />
                         </div>
@@ -666,14 +652,14 @@ const Dashboard: React.FC<DashboardProps> = ({
                             <button
                                 onClick={handleOtherIncome}
                                 disabled={!formData.amount || !formData.income_category_id || !formData.description || loading}
-                                className="flex-1 rounded-lg bg-indigo-600 py-2 text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                                className="h-7 flex-1 rounded bg-slate-800 text-[12px] text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                             >
                                 {loading ? 'Adding...' : 'Add Income'}
                             </button>
                             <button
                                 onClick={() => setOtherIncomeModal(false)}
                                 disabled={loading}
-                                className="flex-1 rounded-lg bg-gray-500 py-2 text-white hover:bg-gray-600 disabled:opacity-50"
+                                className="h-7 flex-1 rounded border border-slate-300 text-[12px] text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                             >
                                 Cancel
                             </button>

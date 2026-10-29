@@ -1,844 +1,461 @@
 import AdminLayout from '@/layouts/admin-layout';
-import { Head, router, useForm } from '@inertiajs/react';
-import {
-    AlertTriangle,
-    ArrowLeft,
-    Building2,
-    CheckCircle,
-    CreditCard,
-    DollarSign,
-    Edit3,
-    FileText,
-    Mail,
-    MapPin,
-    Package,
-    Phone,
-    TrendingUp,
-    User,
-    XCircle,
-} from 'lucide-react';
-import React, { useState } from 'react';
+import { formatTaka, moneyAmount } from '@/lib/money';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
+import VendorTabs from './VendorTabs';
 
 interface VendorTransaction {
     id: number;
     transaction_no: string;
     type: 'purchase' | 'payment' | 'adjustment';
-    amount: number;
-    due_amount: number;
-    paid_amount: number;
+    amount: number | string;
+    due_amount: number | string;
+    paid_amount: number | string;
     payment_status: 'pending' | 'partial' | 'paid';
-    payment_method?: string;
     description: string;
     transaction_date: string;
-    due_date?: string;
-    is_overdue: boolean;
-    created_by: {
-        name: string;
-    };
+    purchase_date?: string | null;
+    due_date?: string | null;
 }
 
 interface VendorPayment {
     id: number;
     payment_no: string;
-    amount: number;
+    amount: number | string;
     payment_method: string;
-    reference_no?: string;
+    reference_no?: string | null;
     payment_date: string;
     description: string;
-    created_by: {
-        name: string;
-    };
-}
-
-interface RecentPurchase {
-    id: number;
-    batch_number: string;
-    quantity: number;
-    buy_price: number;
-    total_cost: number;
-    purchase_date: string;
-    medicine: {
-        name: string;
-        generic_name?: string;
-    };
-    added_by: {
-        name: string;
-    };
 }
 
 interface Vendor {
     id: number;
     name: string;
-    company_name?: string;
-    contact_person?: string;
-    phone: string;
-    email?: string;
-    address?: string;
-    trade_license?: string;
-    current_balance: number;
+    company_name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    address?: string | null;
+    current_balance: number | string;
     balance_type: 'due' | 'advance';
-    credit_limit: number;
+    credit_limit: number | string;
     payment_terms_days: number;
     is_active: boolean;
-    notes?: string;
-    created_at: string;
     transactions: VendorTransaction[];
     payments: VendorPayment[];
 }
 
-interface VendorShowProps {
+interface Props {
     vendor: Vendor;
     overdueTransactions: VendorTransaction[];
-    recentPurchases: RecentPurchase[];
 }
 
-export default function VendorShow({ vendor, overdueTransactions, recentPurchases }: VendorShowProps) {
-    const [activeTab, setActiveTab] = useState('overview');
-    const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [showAdjustModal, setShowAdjustModal] = useState(false);
+const fieldClass = 'h-7 w-full rounded border border-slate-300 px-2 text-[12px]';
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+function formatDate(value?: string | null): string {
+    if (!value) {
+        return '—';
+    }
+
+    const calendarDate = /^\d{4}-\d{2}-\d{2}$/.test(value);
+    const parsed = new Date(calendarDate ? `${value}T00:00:00` : value);
+
+    if (Number.isNaN(parsed.getTime())) {
+        return '—';
+    }
+
+    return parsed.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        ...(calendarDate ? {} : { timeZone: 'Asia/Dhaka' }),
+    });
+}
+
+function statusLabel(status: VendorTransaction['payment_status']): string {
+    if (status === 'paid') {
+        return 'Paid';
+    }
+
+    if (status === 'partial') {
+        return 'Partial';
+    }
+
+    return 'Due';
+}
+
+export default function VendorShow({ vendor, overdueTransactions }: Props) {
+    const [showPayment, setShowPayment] = useState(false);
+    const [showAdjust, setShowAdjust] = useState(false);
+
+    const payment = useForm({
+        vendor_id: vendor.id,
         amount: '',
         payment_method: 'cash',
         reference_no: '',
+        payment_date: new Date().toISOString().slice(0, 10),
         description: '',
+        allocated_transactions: [] as number[],
+    });
+
+    const adjust = useForm({
+        vendor_id: vendor.id,
         adjustment_type: 'increase',
+        amount: '',
         reason: '',
     });
 
-    const formatCurrency = (amount: number) => {
-        const formatted = new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 0,
-        }).format(amount);
-        return `৳${formatted}`;
-    };
+    const openBills = vendor.transactions.filter((transaction) => transaction.type === 'purchase' && transaction.payment_status !== 'paid');
+    const overdue = overdueTransactions.reduce((sum, transaction) => sum + moneyAmount(transaction.due_amount), 0);
+    const purchases = vendor.transactions
+        .filter((transaction) => transaction.type === 'purchase')
+        .reduce((sum, transaction) => sum + moneyAmount(transaction.amount), 0);
+    const payments = vendor.payments.reduce((sum, item) => sum + moneyAmount(item.amount), 0);
 
-    const formatDate = (date: string) => {
-        return new Date(date).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-        });
-    };
-
-    const getCreditUtilization = () => {
-        if (vendor.credit_limit === 0) return 0;
-        return (vendor.current_balance / vendor.credit_limit) * 100;
-    };
-
-    const getDaysOverdue = (dueDate: string) => {
-        const today = new Date();
-        const due = new Date(dueDate);
-        const diffTime = today.getTime() - due.getTime();
-        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    };
-
-    const handlePayment = (e: React.FormEvent) => {
-        e.preventDefault();
-        post(route('medicine-vendors.make-payment'), {
-            ...data,
+    const openBillPayment = (bill?: VendorTransaction) => {
+        payment.setData({
             vendor_id: vendor.id,
-            onSuccess: () => {
-                setShowPaymentModal(false);
-                reset();
-            },
+            amount: moneyAmount(bill?.due_amount ?? vendor.current_balance).toString(),
+            payment_method: 'cash',
+            reference_no: '',
+            payment_date: new Date().toISOString().slice(0, 10),
+            description: bill ? `Payment for bill ${bill.transaction_no}` : `Payment to ${vendor.name}`,
+            allocated_transactions: bill ? [bill.id] : [],
         });
+        setShowPayment(true);
     };
 
-    const handleAdjustment = (e: React.FormEvent) => {
-        e.preventDefault();
-        post(route('medicine-vendors.adjust-balance'), {
-            ...data,
-            vendor_id: vendor.id,
-            onSuccess: () => {
-                setShowAdjustModal(false);
-                reset();
-            },
-        });
-    };
-
-    const totalPurchases = vendor.transactions.filter((t) => t.type === 'purchase').reduce((sum, t) => sum + t.amount, 0);
-    const totalPayments = vendor.payments.reduce((sum, p) => sum + p.amount, 0);
-    const overdueAmount = overdueTransactions.reduce((sum, t) => sum + t.due_amount, 0);
+    const selectedBill = openBills.find((bill) => bill.id === payment.data.allocated_transactions[0]);
+    const payable = moneyAmount(selectedBill?.due_amount ?? vendor.current_balance);
 
     return (
         <AdminLayout>
-            <Head title={`${vendor.name} - Vendor Details`} />
+            <Head title={vendor.name} />
 
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => router.visit(route('medicine-vendors.index'))}
-                            className="inline-flex items-center gap-2 text-gray-600 transition-colors hover:text-gray-900"
+            <div className="space-y-3 text-[13px] text-slate-800">
+                <VendorTabs />
+
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <Link
+                            href={route('medicine-vendors.index')}
+                            className="mb-1 inline-flex items-center gap-1 text-[12px] text-slate-500 hover:text-slate-800"
                         >
-                            <ArrowLeft className="h-4 w-4" />
-                            Back to Vendors
-                        </button>
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900">{vendor.name}</h1>
-                            <p className="mt-1 text-gray-600">
-                                {vendor.company_name && `${vendor.company_name} • `}
-                                Vendor since {formatDate(vendor.created_at)}
-                            </p>
-                        </div>
+                            <ArrowLeft className="h-3.5 w-3.5" />
+                            Vendors
+                        </Link>
+                        <h1 className="text-[15px] font-semibold text-slate-900">{vendor.name}</h1>
+                        <p className="text-[12px] text-slate-500">
+                            {[vendor.company_name, vendor.phone, vendor.email].filter(Boolean).join(' · ') || 'No contact details'}
+                            {vendor.address ? ` · ${vendor.address}` : ''}
+                        </p>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex gap-1.5">
                         <button
-                            onClick={() => setShowAdjustModal(true)}
-                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 transition-colors hover:bg-gray-50"
+                            type="button"
+                            onClick={() => setShowAdjust(true)}
+                            className="h-7 rounded border border-slate-300 px-2.5 text-[12px] hover:bg-slate-50"
                         >
-                            <Edit3 className="h-4 w-4" />
-                            Adjust Balance
+                            Adjust
                         </button>
-                        {vendor.current_balance > 0 && (
-                            <button
-                                onClick={() => setShowPaymentModal(true)}
-                                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition-colors hover:bg-green-700"
-                            >
-                                <CreditCard className="h-4 w-4" />
-                                Make Payment
-                            </button>
-                        )}
                         <button
-                            onClick={() => router.visit(route('medicine-vendors.update', vendor.id))}
-                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700"
+                            type="button"
+                            onClick={() => openBillPayment()}
+                            className="h-7 rounded bg-slate-800 px-2.5 text-[12px] text-white hover:bg-slate-700"
                         >
-                            <Edit3 className="h-4 w-4" />
-                            Edit Vendor
+                            Pay
                         </button>
                     </div>
                 </div>
 
-                {/* Vendor Info Cards */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Current Balance</p>
-                                <p className={`mt-1 text-2xl font-bold ${vendor.current_balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                    {formatCurrency(vendor.current_balance)}
-                                </p>
-                                <p className="mt-1 text-sm text-gray-500">{vendor.balance_type === 'due' ? 'Amount due' : 'Advance paid'}</p>
-                            </div>
-                            <div className={`rounded-lg p-3 ${vendor.current_balance > 0 ? 'bg-red-100' : 'bg-green-100'}`}>
-                                <DollarSign className={`h-6 w-6 ${vendor.current_balance > 0 ? 'text-red-600' : 'text-green-600'}`} />
-                            </div>
+                <div className="grid grid-cols-2 divide-x divide-slate-200 overflow-hidden rounded border border-slate-200 bg-white sm:grid-cols-4">
+                    {[
+                        ['Balance', formatTaka(vendor.current_balance), vendor.balance_type === 'due' ? 'text-red-700' : 'text-emerald-700'],
+                        ['Overdue', formatTaka(overdue), 'text-red-700'],
+                        ['Purchases', formatTaka(purchases), 'text-slate-900'],
+                        ['Payments', formatTaka(payments), 'text-slate-900'],
+                    ].map(([label, value, tone]) => (
+                        <div key={label} className="px-3 py-2">
+                            <p className="text-[11px] text-slate-500">{label}</p>
+                            <p className={`text-[13px] font-semibold tabular-nums ${tone}`}>{value}</p>
                         </div>
-                    </div>
-
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Credit Utilization</p>
-                                <p className="mt-1 text-2xl font-bold text-gray-900">{getCreditUtilization().toFixed(1)}%</p>
-                                <p className="mt-1 text-sm text-gray-500">of {formatCurrency(vendor.credit_limit)}</p>
-                            </div>
-                            <div className="rounded-lg bg-purple-100 p-3">
-                                <CreditCard className="h-6 w-6 text-purple-600" />
-                            </div>
-                        </div>
-                        <div className="mt-4">
-                            <div className="h-2 w-full rounded-full bg-gray-200">
-                                <div
-                                    className={`h-2 rounded-full transition-all duration-300 ${
-                                        getCreditUtilization() > 80 ? 'bg-red-500' : getCreditUtilization() > 60 ? 'bg-yellow-500' : 'bg-green-500'
-                                    }`}
-                                    style={{ width: `${Math.min(getCreditUtilization(), 100)}%` }}
-                                ></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Total Purchases</p>
-                                <p className="mt-1 text-2xl font-bold text-blue-600">{formatCurrency(totalPurchases)}</p>
-                                <p className="mt-1 text-sm text-gray-500">{vendor.transactions.filter((t) => t.type === 'purchase').length} orders</p>
-                            </div>
-                            <div className="rounded-lg bg-blue-100 p-3">
-                                <Package className="h-6 w-6 text-blue-600" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Overdue Amount</p>
-                                <p className="mt-1 text-2xl font-bold text-orange-600">{formatCurrency(overdueAmount)}</p>
-                                <p className="mt-1 text-sm text-gray-500">{overdueTransactions.length} transactions</p>
-                            </div>
-                            <div className="rounded-lg bg-orange-100 p-3">
-                                <AlertTriangle className="h-6 w-6 text-orange-600" />
-                            </div>
-                        </div>
-                    </div>
+                    ))}
                 </div>
 
-                {/* Alert for Overdue */}
-                {overdueTransactions.length > 0 && (
-                    <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-                        <div className="flex items-center gap-3">
-                            <AlertTriangle className="h-5 w-5 flex-shrink-0 text-red-600" />
-                            <div>
-                                <h3 className="text-sm font-medium text-red-800">Overdue Payments</h3>
-                                <p className="mt-1 text-sm text-red-700">
-                                    This vendor has {overdueTransactions.length} overdue transactions totaling {formatCurrency(overdueAmount)}.
-                                    Consider making payments or adjusting terms.
-                                </p>
-                            </div>
+                <section className="overflow-hidden rounded border border-slate-200 bg-white">
+                    <div className="border-b border-slate-200 px-3 py-2">
+                        <h2 className="text-[13px] font-semibold">Open bills</h2>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full text-left text-[12px]">
+                            <thead className="bg-slate-50 text-[11px] text-slate-500">
+                                <tr>
+                                    <th className="px-3 py-1.5 font-medium">Bill</th>
+                                    <th className="px-3 py-1.5 font-medium">Purchase date</th>
+                                    <th className="px-3 py-1.5 font-medium">Due date</th>
+                                    <th className="px-3 py-1.5 text-right font-medium">Amount</th>
+                                    <th className="px-3 py-1.5 text-right font-medium">Due</th>
+                                    <th className="px-3 py-1.5 font-medium">Status</th>
+                                    <th className="px-3 py-1.5 text-right font-medium">Pay</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {openBills.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
+                                            No open bills.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    openBills.map((bill) => (
+                                        <tr key={bill.id} className="border-t border-slate-100">
+                                            <td className="px-3 py-1.5 text-slate-900">{bill.transaction_no}</td>
+                                            <td className="px-3 py-1.5 whitespace-nowrap">
+                                                {formatDate(bill.purchase_date || bill.transaction_date)}
+                                            </td>
+                                            <td className="px-3 py-1.5 whitespace-nowrap">{formatDate(bill.due_date)}</td>
+                                            <td className="px-3 py-1.5 text-right tabular-nums">{formatTaka(bill.amount)}</td>
+                                            <td className="px-3 py-1.5 text-right font-medium text-red-700 tabular-nums">
+                                                {formatTaka(bill.due_amount)}
+                                            </td>
+                                            <td className="px-3 py-1.5">{statusLabel(bill.payment_status)}</td>
+                                            <td className="px-3 py-1.5 text-right">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openBillPayment(bill)}
+                                                    className="h-6 rounded bg-slate-800 px-1.5 text-[11px] text-white hover:bg-slate-700"
+                                                >
+                                                    Pay bill
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section className="overflow-hidden rounded border border-slate-200 bg-white">
+                    <div className="border-b border-slate-200 px-3 py-2">
+                        <h2 className="text-[13px] font-semibold">Payments</h2>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full text-left text-[12px]">
+                            <thead className="bg-slate-50 text-[11px] text-slate-500">
+                                <tr>
+                                    <th className="px-3 py-1.5 font-medium">Payment</th>
+                                    <th className="px-3 py-1.5 font-medium">Date</th>
+                                    <th className="px-3 py-1.5 font-medium">Method</th>
+                                    <th className="px-3 py-1.5 font-medium">Reference</th>
+                                    <th className="px-3 py-1.5 text-right font-medium">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {vendor.payments.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-3 py-6 text-center text-slate-500">
+                                            No payments yet.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    vendor.payments.map((item) => (
+                                        <tr key={item.id} className="border-t border-slate-100">
+                                            <td className="px-3 py-1.5">{item.payment_no}</td>
+                                            <td className="px-3 py-1.5 whitespace-nowrap">{formatDate(item.payment_date)}</td>
+                                            <td className="px-3 py-1.5 capitalize">{item.payment_method.replace('_', ' ')}</td>
+                                            <td className="px-3 py-1.5">{item.reference_no || '—'}</td>
+                                            <td className="px-3 py-1.5 text-right tabular-nums">{formatTaka(item.amount)}</td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            {showPayment && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            payment.post(route('medicine-vendors.make-payment'), {
+                                onSuccess: () => {
+                                    setShowPayment(false);
+                                    payment.reset('amount', 'reference_no', 'description', 'allocated_transactions');
+                                },
+                            });
+                        }}
+                        className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded border border-slate-200 bg-white"
+                    >
+                        <div className="border-b border-slate-200 px-4 py-2.5">
+                            <h2 className="text-[14px] font-semibold">Pay {vendor.name}</h2>
+                            <p className="text-[11px] text-slate-500">Payable {formatTaka(payable)}</p>
                         </div>
-                    </div>
-                )}
-
-                {/* Vendor Information */}
-                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <div className="mb-6 flex items-center justify-between">
-                        <h2 className="text-xl font-semibold text-gray-900">Vendor Information</h2>
-                        <span
-                            className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${
-                                vendor.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}
-                        >
-                            {vendor.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-                        <div className="space-y-6">
-                            <div>
-                                <h3 className="mb-3 text-sm font-medium text-gray-900">Contact Information</h3>
-                                <div className="space-y-3">
-                                    <div className="flex items-center gap-3">
-                                        <Building2 className="h-4 w-4 text-gray-400" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900">{vendor.name}</p>
-                                            {vendor.company_name && <p className="text-sm text-gray-600">{vendor.company_name}</p>}
-                                        </div>
-                                    </div>
-
-                                    {vendor.contact_person && (
-                                        <div className="flex items-center gap-3">
-                                            <User className="h-4 w-4 text-gray-400" />
-                                            <p className="text-sm text-gray-900">{vendor.contact_person}</p>
-                                        </div>
-                                    )}
-
-                                    <div className="flex items-center gap-3">
-                                        <Phone className="h-4 w-4 text-gray-400" />
-                                        <p className="text-sm text-gray-900">{vendor.phone}</p>
-                                    </div>
-
-                                    {vendor.email && (
-                                        <div className="flex items-center gap-3">
-                                            <Mail className="h-4 w-4 text-gray-400" />
-                                            <p className="text-sm text-gray-900">{vendor.email}</p>
-                                        </div>
-                                    )}
-
-                                    {vendor.address && (
-                                        <div className="flex items-start gap-3">
-                                            <MapPin className="mt-0.5 h-4 w-4 text-gray-400" />
-                                            <p className="text-sm text-gray-900">{vendor.address}</p>
-                                        </div>
-                                    )}
-
-                                    {vendor.trade_license && (
-                                        <div className="flex items-center gap-3">
-                                            <FileText className="h-4 w-4 text-gray-400" />
-                                            <div>
-                                                <p className="text-xs text-gray-500">Trade License</p>
-                                                <p className="text-sm text-gray-900">{vendor.trade_license}</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-6">
-                            <div>
-                                <h3 className="mb-3 text-sm font-medium text-gray-900">Financial Terms</h3>
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-                                        <span className="text-sm text-gray-600">Credit Limit</span>
-                                        <span className="text-sm font-medium text-gray-900">{formatCurrency(vendor.credit_limit)}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-                                        <span className="text-sm text-gray-600">Payment Terms</span>
-                                        <span className="text-sm font-medium text-gray-900">{vendor.payment_terms_days} days</span>
-                                    </div>
-                                    <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-                                        <span className="text-sm text-gray-600">Available Credit</span>
-                                        <span className="text-sm font-medium text-green-600">
-                                            {formatCurrency(Math.max(0, vendor.credit_limit - vendor.current_balance))}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {vendor.notes && (
-                                <div>
-                                    <h3 className="mb-3 text-sm font-medium text-gray-900">Notes</h3>
-                                    <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">{vendor.notes}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Tabs */}
-                <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-                    <div className="flex border-b border-gray-200">
-                        {[
-                            { key: 'overview', label: 'Overview', icon: TrendingUp },
-                            { key: 'transactions', label: 'Transactions', icon: FileText },
-                            { key: 'payments', label: 'Payments', icon: CreditCard },
-                            { key: 'purchases', label: 'Recent Purchases', icon: Package },
-                        ].map((tab) => (
-                            <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key)}
-                                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium transition-colors ${
-                                    activeTab === tab.key ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-500 hover:text-gray-700'
-                                }`}
-                            >
-                                <tab.icon className="h-4 w-4" />
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="p-6">
-                        {/* Overview Tab */}
-                        {activeTab === 'overview' && (
-                            <div className="space-y-6">
-                                {/* Financial Summary */}
-                                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                                    <div className="rounded-lg bg-blue-50 p-6 text-center">
-                                        <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalPurchases)}</div>
-                                        <div className="mt-1 text-sm text-blue-700">Total Purchases</div>
-                                    </div>
-                                    <div className="rounded-lg bg-green-50 p-6 text-center">
-                                        <div className="text-2xl font-bold text-green-600">{formatCurrency(totalPayments)}</div>
-                                        <div className="mt-1 text-sm text-green-700">Total Payments</div>
-                                    </div>
-                                    <div className="rounded-lg bg-purple-50 p-6 text-center">
-                                        <div className="text-2xl font-bold text-purple-600">
-                                            {totalPurchases > 0 ? ((totalPayments / totalPurchases) * 100).toFixed(1) : '0'}%
-                                        </div>
-                                        <div className="mt-1 text-sm text-purple-700">Payment Rate</div>
-                                    </div>
-                                </div>
-
-                                {/* Recent Activity Summary */}
-                                <div>
-                                    <h3 className="mb-4 text-lg font-medium text-gray-900">Recent Activity</h3>
-                                    <div className="space-y-3">
-                                        {[...vendor.transactions, ...vendor.payments]
-                                            .sort(
-                                                (a, b) =>
-                                                    new Date(b.created_at || b.payment_date || b.transaction_date).getTime() -
-                                                    new Date(a.created_at || a.payment_date || a.transaction_date).getTime(),
-                                            )
-                                            .slice(0, 5)
-                                            .map((item, index) => (
-                                                <div key={index} className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-                                                    <div className="flex items-center gap-3">
-                                                        {'type' in item ? (
-                                                            item.type === 'purchase' ? (
-                                                                <Package className="h-4 w-4 text-blue-600" />
-                                                            ) : (
-                                                                <CreditCard className="h-4 w-4 text-green-600" />
-                                                            )
-                                                        ) : (
-                                                            <CreditCard className="h-4 w-4 text-green-600" />
-                                                        )}
-                                                        <div>
-                                                            <p className="text-sm font-medium text-gray-900">
-                                                                {'payment_no' in item
-                                                                    ? `Payment ${item.payment_no}`
-                                                                    : 'type' in item
-                                                                      ? `${item.type} ${item.transaction_no}`
-                                                                      : 'Transaction'}
-                                                            </p>
-                                                            <p className="text-xs text-gray-500">
-                                                                {formatDate('payment_date' in item ? item.payment_date : item.transaction_date)}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p
-                                                            className={`text-sm font-medium ${
-                                                                'payment_no' in item || ('type' in item && item.type === 'payment')
-                                                                    ? 'text-green-600'
-                                                                    : 'text-red-600'
-                                                            }`}
-                                                        >
-                                                            {formatCurrency(item.amount)}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Transactions Tab */}
-                        {activeTab === 'transactions' && (
-                            <div>
-                                <div className="mb-6 flex items-center justify-between">
-                                    <h3 className="text-lg font-medium text-gray-900">All Transactions</h3>
-                                    <div className="flex items-center gap-2">
-                                        <select className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                                            <option value="">All Types</option>
-                                            <option value="purchase">Purchase</option>
-                                            <option value="payment">Payment</option>
-                                            <option value="adjustment">Adjustment</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className="bg-gray-50">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transaction</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Amount</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                            {vendor.transactions.map((transaction) => (
-                                                <tr key={transaction.id} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-3">
-                                                        <div>
-                                                            <p className="text-sm font-medium text-gray-900">{transaction.transaction_no}</p>
-                                                            <p className="max-w-[200px] truncate text-xs text-gray-500">{transaction.description}</p>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        <span
-                                                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                                                transaction.type === 'purchase'
-                                                                    ? 'bg-blue-100 text-blue-800'
-                                                                    : transaction.type === 'payment'
-                                                                      ? 'bg-green-100 text-green-800'
-                                                                      : 'bg-gray-100 text-gray-800'
-                                                            }`}
-                                                        >
-                                                            {transaction.type}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                        {formatCurrency(transaction.amount)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm font-medium text-red-600">
-                                                        {formatCurrency(transaction.due_amount)}
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        <span
-                                                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                                                                transaction.payment_status === 'paid'
-                                                                    ? 'bg-green-100 text-green-800'
-                                                                    : transaction.payment_status === 'partial'
-                                                                      ? 'bg-yellow-100 text-yellow-800'
-                                                                      : 'bg-red-100 text-red-800'
-                                                            }`}
-                                                        >
-                                                            {transaction.payment_status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm text-gray-900">{formatDate(transaction.transaction_date)}</td>
-                                                    <td className="px-4 py-3">
-                                                        {transaction.due_date && (
-                                                            <div className="text-sm">
-                                                                <p
-                                                                    className={`${transaction.is_overdue ? 'font-medium text-red-600' : 'text-gray-900'}`}
-                                                                >
-                                                                    {formatDate(transaction.due_date)}
-                                                                </p>
-                                                                {transaction.is_overdue && (
-                                                                    <p className="text-xs text-red-500">
-                                                                        {getDaysOverdue(transaction.due_date)} days overdue
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Payments Tab */}
-                        {activeTab === 'payments' && (
-                            <div>
-                                <div className="mb-6 flex items-center justify-between">
-                                    <h3 className="text-lg font-medium text-gray-900">Payment History</h3>
-                                </div>
-
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className="bg-gray-50">
-                                            <tr>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment No</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Method</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reference</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Added By</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                            {vendor.payments.map((payment) => (
-                                                <tr key={payment.id} className="hover:bg-gray-50">
-                                                    <td className="px-4 py-3">
-                                                        <div>
-                                                            <p className="text-sm font-medium text-gray-900">{payment.payment_no}</p>
-                                                            <p className="max-w-[200px] truncate text-xs text-gray-500">{payment.description}</p>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm font-medium text-green-600">{formatCurrency(payment.amount)}</td>
-                                                    <td className="px-4 py-3">
-                                                        <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-                                                            {payment.payment_method.replace('_', ' ')}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm text-gray-900">{payment.reference_no || '-'}</td>
-                                                    <td className="px-4 py-3 text-sm text-gray-900">{formatDate(payment.payment_date)}</td>
-                                                    <td className="px-4 py-3 text-sm text-gray-900">{payment.created_by.name}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Recent Purchases Tab */}
-                        {activeTab === 'purchases' && (
-                            <div>
-                                <div className="mb-6 flex items-center justify-between">
-                                    <h3 className="text-lg font-medium text-gray-900">Recent Purchases</h3>
-                                </div>
-
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                    {recentPurchases.map((purchase) => (
-                                        <div key={purchase.id} className="rounded-lg bg-gray-50 p-4">
-                                            <div className="mb-2 flex items-start justify-between">
-                                                <div>
-                                                    <h4 className="font-medium text-gray-900">{purchase.medicine.name}</h4>
-                                                    {purchase.medicine.generic_name && (
-                                                        <p className="text-sm text-gray-600">{purchase.medicine.generic_name}</p>
-                                                    )}
-                                                </div>
-                                                <span className="text-sm font-bold text-green-600">{formatCurrency(purchase.total_cost)}</span>
-                                            </div>
-                                            <div className="space-y-1 text-sm text-gray-600">
-                                                <p>Batch: {purchase.batch_number}</p>
-                                                <p>Quantity: {purchase.quantity}</p>
-                                                <p>Unit Price: {formatCurrency(purchase.buy_price)}</p>
-                                                <p>Date: {formatDate(purchase.purchase_date)}</p>
-                                                <p>Added by: {purchase.added_by.name}</p>
-                                            </div>
-                                        </div>
+                        <div className="space-y-2.5 px-4 py-3">
+                            <label className="block text-[11px] font-medium text-slate-600">
+                                Bill
+                                <select
+                                    value={payment.data.allocated_transactions[0] ?? ''}
+                                    onChange={(event) => {
+                                        const bill = openBills.find((item) => item.id === Number(event.target.value));
+                                        payment.setData({
+                                            ...payment.data,
+                                            amount: moneyAmount(bill?.due_amount ?? vendor.current_balance).toString(),
+                                            description: bill ? `Payment for bill ${bill.transaction_no}` : `Payment to ${vendor.name}`,
+                                            allocated_transactions: bill ? [bill.id] : [],
+                                        });
+                                    }}
+                                    className={`${fieldClass} mt-1`}
+                                >
+                                    <option value="">Vendor balance</option>
+                                    {openBills.map((bill) => (
+                                        <option key={bill.id} value={bill.id}>
+                                            {bill.transaction_no} · {formatTaka(bill.due_amount)}
+                                        </option>
                                     ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Payment Modal */}
-                {showPaymentModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                        <div className="w-full max-w-lg rounded-xl bg-white">
-                            <div className="border-b border-gray-200 p-6">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-xl font-semibold text-gray-900">Make Payment</h2>
-                                    <button onClick={() => setShowPaymentModal(false)} className="text-gray-400 hover:text-gray-600">
-                                        <XCircle className="h-6 w-6" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            <form onSubmit={handlePayment} className="space-y-4 p-6">
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">Amount *</label>
+                                </select>
+                            </label>
+                            <label className="block text-[11px] font-medium text-slate-600">
+                                Amount
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={payable}
+                                    step="0.01"
+                                    value={payment.data.amount}
+                                    onChange={(event) => payment.setData('amount', event.target.value)}
+                                    className={`${fieldClass} mt-1`}
+                                    required
+                                />
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="block text-[11px] font-medium text-slate-600">
+                                    Date
                                     <input
-                                        type="number"
-                                        step="0.01"
-                                        value={data.amount}
-                                        onChange={(e) => setData('amount', e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Enter amount"
-                                        max={vendor.current_balance}
+                                        type="date"
+                                        value={payment.data.payment_date}
+                                        onChange={(event) => payment.setData('payment_date', event.target.value)}
+                                        className={`${fieldClass} mt-1`}
+                                        required
                                     />
-                                    {errors.amount && <p className="mt-1 text-sm text-red-600">{errors.amount}</p>}
-                                </div>
-
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">Payment Method *</label>
+                                </label>
+                                <label className="block text-[11px] font-medium text-slate-600">
+                                    Method
                                     <select
-                                        value={data.payment_method}
-                                        onChange={(e) => setData('payment_method', e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                        value={payment.data.payment_method}
+                                        onChange={(event) => payment.setData('payment_method', event.target.value)}
+                                        className={`${fieldClass} mt-1`}
                                     >
                                         <option value="cash">Cash</option>
-                                        <option value="bank_transfer">Bank Transfer</option>
+                                        <option value="bank_transfer">Bank transfer</option>
                                         <option value="cheque">Cheque</option>
-                                        <option value="mobile_banking">Mobile Banking</option>
+                                        <option value="mobile_banking">Mobile banking</option>
                                     </select>
-                                </div>
-
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">Reference Number</label>
-                                    <input
-                                        type="text"
-                                        value={data.reference_no}
-                                        onChange={(e) => setData('reference_no', e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Transaction reference"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">Description *</label>
-                                    <input
-                                        type="text"
-                                        value={data.description}
-                                        onChange={(e) => setData('description', e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Payment description"
-                                    />
-                                    {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
-                                </div>
-
-                                <div className="flex items-center justify-end gap-4 border-t border-gray-200 pt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPaymentModal(false)}
-                                        className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={processing}
-                                        className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:bg-gray-400"
-                                    >
-                                        {processing ? (
-                                            <>
-                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                                                Processing...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CheckCircle className="h-4 w-4" />
-                                                Make Payment
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
-
-                {/* Balance Adjustment Modal */}
-                {showAdjustModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-                        <div className="w-full max-w-lg rounded-xl bg-white">
-                            <div className="border-b border-gray-200 p-6">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-xl font-semibold text-gray-900">Adjust Balance</h2>
-                                    <button onClick={() => setShowAdjustModal(false)} className="text-gray-400 hover:text-gray-600">
-                                        <XCircle className="h-6 w-6" />
-                                    </button>
-                                </div>
+                                </label>
                             </div>
-
-                            <form onSubmit={handleAdjustment} className="space-y-4 p-6">
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">Adjustment Type *</label>
-                                    <select
-                                        value={data.adjustment_type}
-                                        onChange={(e) => setData('adjustment_type', e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value="increase">Increase Due</option>
-                                        <option value="decrease">Decrease Due</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">Amount *</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        value={data.amount}
-                                        onChange={(e) => setData('amount', e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Enter adjustment amount"
-                                    />
-                                    {errors.amount && <p className="mt-1 text-sm text-red-600">{errors.amount}</p>}
-                                </div>
-
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">Reason *</label>
-                                    <textarea
-                                        value={data.reason}
-                                        onChange={(e) => setData('reason', e.target.value)}
-                                        rows={3}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
-                                        placeholder="Reason for adjustment"
-                                    />
-                                    {errors.reason && <p className="mt-1 text-sm text-red-600">{errors.reason}</p>}
-                                </div>
-
-                                <div className="flex items-center justify-end gap-4 border-t border-gray-200 pt-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowAdjustModal(false)}
-                                        className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={processing}
-                                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400"
-                                    >
-                                        {processing ? (
-                                            <>
-                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                                                Processing...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <CheckCircle className="h-4 w-4" />
-                                                Adjust Balance
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
+                            <label className="block text-[11px] font-medium text-slate-600">
+                                Reference
+                                <input
+                                    value={payment.data.reference_no}
+                                    onChange={(event) => payment.setData('reference_no', event.target.value)}
+                                    className={`${fieldClass} mt-1`}
+                                />
+                            </label>
+                            <label className="block text-[11px] font-medium text-slate-600">
+                                Description
+                                <input
+                                    value={payment.data.description}
+                                    onChange={(event) => payment.setData('description', event.target.value)}
+                                    className={`${fieldClass} mt-1`}
+                                    required
+                                />
+                            </label>
+                            {payment.errors.amount && <p className="text-[11px] text-red-600">{payment.errors.amount}</p>}
                         </div>
-                    </div>
-                )}
-            </div>
+                        <div className="flex justify-end gap-1.5 border-t border-slate-200 px-4 py-2.5">
+                            <button
+                                type="button"
+                                onClick={() => setShowPayment(false)}
+                                className="h-7 rounded border border-slate-300 px-2.5 text-[12px]"
+                            >
+                                Cancel
+                            </button>
+                            <button type="submit" disabled={payment.processing} className="h-7 rounded bg-slate-800 px-2.5 text-[12px] text-white">
+                                Save payment
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {showAdjust && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            adjust.post(route('medicine-vendors.adjust-balance'), {
+                                onSuccess: () => {
+                                    setShowAdjust(false);
+                                    adjust.reset('amount', 'reason');
+                                },
+                            });
+                        }}
+                        className="max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded border border-slate-200 bg-white"
+                    >
+                        <div className="border-b border-slate-200 px-4 py-2.5">
+                            <h2 className="text-[14px] font-semibold">Adjust balance</h2>
+                        </div>
+                        <div className="space-y-2.5 px-4 py-3">
+                            <label className="block text-[11px] font-medium text-slate-600">
+                                Type
+                                <select
+                                    value={adjust.data.adjustment_type}
+                                    onChange={(event) => adjust.setData('adjustment_type', event.target.value)}
+                                    className={`${fieldClass} mt-1`}
+                                >
+                                    <option value="increase">Increase due</option>
+                                    <option value="decrease">Decrease due</option>
+                                </select>
+                            </label>
+                            <label className="block text-[11px] font-medium text-slate-600">
+                                Amount
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="0.01"
+                                    value={adjust.data.amount}
+                                    onChange={(event) => adjust.setData('amount', event.target.value)}
+                                    className={`${fieldClass} mt-1`}
+                                    required
+                                />
+                            </label>
+                            <label className="block text-[11px] font-medium text-slate-600">
+                                Reason
+                                <input
+                                    value={adjust.data.reason}
+                                    onChange={(event) => adjust.setData('reason', event.target.value)}
+                                    className={`${fieldClass} mt-1`}
+                                    required
+                                />
+                            </label>
+                        </div>
+                        <div className="flex justify-end gap-1.5 border-t border-slate-200 px-4 py-2.5">
+                            <button
+                                type="button"
+                                onClick={() => setShowAdjust(false)}
+                                className="h-7 rounded border border-slate-300 px-2.5 text-[12px]"
+                            >
+                                Cancel
+                            </button>
+                            <button type="submit" disabled={adjust.processing} className="h-7 rounded bg-slate-800 px-2.5 text-[12px] text-white">
+                                Save
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
         </AdminLayout>
     );
 }

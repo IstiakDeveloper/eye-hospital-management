@@ -24,7 +24,7 @@ class MedicineVendorTransaction extends Model
         'description',
         'transaction_date',
         'due_date',
-        'created_by'
+        'created_by',
     ];
 
     protected $casts = [
@@ -46,6 +46,11 @@ class MedicineVendorTransaction extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function purchaseStock(): BelongsTo
+    {
+        return $this->belongsTo(MedicineStock::class, 'reference_id');
+    }
+
     public function stockTransactions(): HasMany
     {
         return $this->hasMany(StockTransaction::class, 'vendor_transaction_id');
@@ -57,7 +62,8 @@ class MedicineVendorTransaction extends Model
         $prefix = 'VT-';
         $date = now()->format('ymd');
         $count = self::whereDate('created_at', today())->count() + 1;
-        return $prefix . $date . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+
+        return $prefix.$date.'-'.str_pad($count, 4, '0', STR_PAD_LEFT);
     }
 
     // Check if overdue

@@ -1,4 +1,5 @@
 import AdminLayout from '@/layouts/admin-layout';
+import { moneyAmount } from '@/lib/money';
 import { Head, useForm } from '@inertiajs/react';
 import {
     AlertCircle,
@@ -15,7 +16,7 @@ import {
     ShoppingCart,
     X,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface Medicine {
     id: number;
@@ -71,11 +72,17 @@ interface PurchasePageProps {
     vendorsWithDues: VendorWithDue[];
 }
 
+const fieldClass = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-[12px] focus:ring-2 focus:ring-blue-500';
+
 export default function Purchase({ medicines, vendors, recentPurchases, todayPurchases, vendorsWithDues }: PurchasePageProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [showMedicineDropdown, setShowMedicineDropdown] = useState(false);
     const [selectedMedicine, setSelectedMedicine] = useState<Medicine | null>(null);
     const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+    const [vendorOpen, setVendorOpen] = useState(false);
+    const [vendorQuery, setVendorQuery] = useState('');
+    const vendorRef = useRef<HTMLDivElement>(null);
+    const vendorSearchRef = useRef<HTMLInputElement>(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         vendor_id: '',
@@ -83,7 +90,7 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
         batch_number: '',
         expiry_date: '',
         quantity: '',
-        total_price: '', // ✅ Total price instead of unit price
+        total_price: '',
         sale_price: '',
         paid_amount: '',
         payment_method: 'credit',
@@ -92,10 +99,31 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
         notes: '',
     });
 
-    const formatCurrency = (amount: number) => {
+    useEffect(() => {
+        const closeOnOutsideClick = (event: MouseEvent) => {
+            if (vendorRef.current && !vendorRef.current.contains(event.target as Node)) {
+                setVendorOpen(false);
+                setVendorQuery('');
+            }
+        };
+
+        document.addEventListener('mousedown', closeOnOutsideClick);
+
+        return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+    }, []);
+
+    useEffect(() => {
+        if (vendorOpen) {
+            vendorSearchRef.current?.focus();
+        }
+    }, [vendorOpen]);
+
+    const formatCurrency = (amount: number | string | null | undefined) => {
         const formatted = new Intl.NumberFormat('en-US', {
             minimumFractionDigits: 0,
-        }).format(amount);
+            maximumFractionDigits: 2,
+        }).format(moneyAmount(amount));
+
         return `৳${formatted}`;
     };
 
@@ -113,6 +141,9 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
             medicine.name.toLowerCase().includes(searchTerm.toLowerCase()) || medicine.generic_name?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
 
+    const vendorSearch = vendorQuery.trim().toLowerCase();
+    const filteredVendors = vendors.filter((vendor) => `${vendor.name} ${vendor.company_name ?? ''}`.toLowerCase().includes(vendorSearch));
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         post(route('medicine-corner.add-stock'), {
@@ -129,7 +160,6 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
         setData({
             ...data,
             medicine_id: medicine.id.toString(),
-            // Default new batch sale from latest stock when available, else list standard.
             sale_price: (medicine.latest_sale_price ?? medicine.standard_sale_price).toString(),
         });
         setSearchTerm('');
@@ -142,9 +172,10 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
             ...data,
             vendor_id: vendor.id.toString(),
         });
+        setVendorOpen(false);
+        setVendorQuery('');
     };
 
-    // ✅ Calculate unit price from total price
     const getUnitPrice = () => {
         if (data.quantity && data.total_price) {
             const qty = parseFloat(data.quantity);
@@ -154,19 +185,17 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
         return 0;
     };
 
-    // ✅ Calculate new average price
     const getNewAveragePrice = () => {
         if (!selectedMedicine || !data.quantity || !data.total_price) return null;
 
         const oldStock = selectedMedicine.total_stock;
-        const oldPrice = selectedMedicine.average_buy_price || 0;
+        const oldPrice = moneyAmount(selectedMedicine.average_buy_price);
         const newQty = parseFloat(data.quantity);
         const newPrice = getUnitPrice();
 
         if (oldStock === 0) return newPrice;
 
-        const newAvg = (oldStock * oldPrice + newQty * newPrice) / (oldStock + newQty);
-        return newAvg;
+        return (oldStock * oldPrice + newQty * newPrice) / (oldStock + newQty);
     };
 
     const getDueAmount = () => {
@@ -176,43 +205,45 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
     };
 
     const getCreditUtilization = () => {
-        if (!selectedVendor || selectedVendor.credit_limit === 0) return 0;
-        const newDue = selectedVendor.current_balance + getDueAmount();
-        return (newDue / selectedVendor.credit_limit) * 100;
+        if (!selectedVendor) return 0;
+        const limit = moneyAmount(selectedVendor.credit_limit);
+        if (limit === 0) return 0;
+        const newDue = moneyAmount(selectedVendor.current_balance) + getDueAmount();
+        return (newDue / limit) * 100;
     };
 
     const unitPrice = getUnitPrice();
     const newAveragePrice = getNewAveragePrice();
+    const vendorLabel = selectedVendor
+        ? `${selectedVendor.name}${selectedVendor.company_name ? ` (${selectedVendor.company_name})` : ''}`
+        : 'Choose a vendor...';
 
     return (
         <AdminLayout>
             <Head title="Purchase Entry" />
 
             <div className="space-y-6">
-                {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Medicine Purchase</h1>
-                        <p className="mt-1 text-gray-600">Add new stock - Simple & Fast (Like Optics)</p>
+                        <h1 className="text-[15px] font-semibold text-gray-900">Medicine Purchase</h1>
+                        <p className="mt-1 text-[12px] text-gray-600">Add new stock - Simple & Fast (Like Optics)</p>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="text-right">
-                            <p className="text-sm text-gray-600">Today's Purchases</p>
-                            <p className="text-xl font-bold text-green-600">{formatCurrency(todayPurchases)}</p>
-                        </div>
+                    <div className="text-right">
+                        <p className="text-[12px] text-gray-600">Today's Purchases</p>
+                        <p className="text-[13px] font-semibold text-green-600">{formatCurrency(todayPurchases)}</p>
                     </div>
                 </div>
 
-                {/* Vendor Due Alert */}
                 {vendorsWithDues.length > 0 && (
                     <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
                         <div className="flex items-center gap-3">
-                            <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-600" />
+                            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
                             <div className="flex-1">
-                                <h3 className="text-sm font-medium text-amber-800">Vendor Due Alert</h3>
-                                <p className="mt-1 text-sm text-amber-700">
+                                <h3 className="text-[12px] font-medium text-amber-800">Vendor Due Alert</h3>
+                                <p className="mt-1 text-[12px] text-amber-700">
                                     {vendorsWithDues.length} vendors have pending dues.
                                     <button
+                                        type="button"
                                         onClick={() => window.open(route('medicine-corner.vendor-dues'), '_blank')}
                                         className="ml-2 text-amber-800 underline hover:no-underline"
                                     >
@@ -225,49 +256,82 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
                 )}
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                    {/* Purchase Form */}
                     <div className="lg:col-span-2">
                         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                             <div className="mb-6 flex items-center gap-3">
                                 <div className="rounded-lg bg-blue-100 p-2">
-                                    <Plus className="h-5 w-5 text-blue-600" />
+                                    <Plus className="h-4 w-4 text-blue-600" />
                                 </div>
-                                <h2 className="text-xl font-semibold text-gray-900">Add New Stock</h2>
+                                <h2 className="text-[13px] font-semibold text-gray-900">Add New Stock</h2>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-6">
-                                {/* Vendor Selection */}
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">Select Vendor *</label>
-                                    <select
-                                        value={data.vendor_id}
-                                        onChange={(e) => {
-                                            const vendor = vendors.find((v) => v.id === parseInt(e.target.value));
-                                            if (vendor) handleVendorSelect(vendor);
-                                        }}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                                <div className="relative" ref={vendorRef}>
+                                    <label className="mb-2 block text-[12px] font-medium text-gray-700">Select Vendor *</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setVendorOpen((open) => !open)}
+                                        className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-left text-[12px] ${
+                                            errors.vendor_id ? 'border-red-400' : 'border-gray-300'
+                                        }`}
                                     >
-                                        <option value="">Choose a vendor...</option>
-                                        {vendors.map((vendor) => (
-                                            <option key={vendor.id} value={vendor.id}>
-                                                {vendor.name} {vendor.company_name && `(${vendor.company_name})`}
-                                                {vendor.current_balance > 0 && ` - Due: ${formatCurrency(vendor.current_balance)}`}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {errors.vendor_id && <p className="mt-1 text-sm text-red-600">{errors.vendor_id}</p>}
+                                        <span className={`truncate ${selectedVendor ? 'text-gray-800' : 'text-gray-400'}`}>{vendorLabel}</span>
+                                        <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 ${vendorOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {vendorOpen && (
+                                        <div className="absolute z-50 mt-2 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+                                            <div className="flex items-center gap-2 border-b border-gray-100 px-3">
+                                                <Search className="h-4 w-4 text-gray-400" />
+                                                <input
+                                                    ref={vendorSearchRef}
+                                                    type="text"
+                                                    value={vendorQuery}
+                                                    onChange={(event) => setVendorQuery(event.target.value)}
+                                                    placeholder="Search vendor"
+                                                    className="w-full py-2 text-[12px] outline-none"
+                                                />
+                                            </div>
+                                            <div className="max-h-60 overflow-auto">
+                                                {filteredVendors.length > 0 ? (
+                                                    filteredVendors.map((vendor) => (
+                                                        <button
+                                                            key={vendor.id}
+                                                            type="button"
+                                                            onClick={() => handleVendorSelect(vendor)}
+                                                            className={`flex w-full items-center justify-between gap-2 border-b border-gray-50 px-3 py-2 text-left text-[12px] last:border-0 hover:bg-blue-50 ${
+                                                                selectedVendor?.id === vendor.id ? 'bg-blue-50' : ''
+                                                            }`}
+                                                        >
+                                                            <span className="truncate">
+                                                                {vendor.name}
+                                                                {vendor.company_name ? ` (${vendor.company_name})` : ''}
+                                                            </span>
+                                                            {moneyAmount(vendor.current_balance) > 0 && (
+                                                                <span className="shrink-0 text-[11px] text-red-600">
+                                                                    Due: {formatCurrency(vendor.current_balance)}
+                                                                </span>
+                                                            )}
+                                                        </button>
+                                                    ))
+                                                ) : (
+                                                    <div className="px-3 py-3 text-center text-[12px] text-gray-500">No vendor found</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {errors.vendor_id && <p className="mt-1 text-[12px] text-red-600">{errors.vendor_id}</p>}
 
                                     {selectedVendor && (
                                         <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                            <div className="flex items-center justify-between text-sm">
+                                            <div className="flex items-center justify-between text-[12px]">
                                                 <span className="text-gray-700">Current Due:</span>
                                                 <span className="font-semibold text-red-600">{formatCurrency(selectedVendor.current_balance)}</span>
                                             </div>
-                                            <div className="mt-1 flex items-center justify-between text-sm">
+                                            <div className="mt-1 flex items-center justify-between text-[12px]">
                                                 <span className="text-gray-700">Credit Limit:</span>
                                                 <span className="font-semibold text-gray-800">{formatCurrency(selectedVendor.credit_limit)}</span>
                                             </div>
-                                            <div className="mt-1 flex items-center justify-between text-sm">
+                                            <div className="mt-1 flex items-center justify-between text-[12px]">
                                                 <span className="text-gray-700">Payment Terms:</span>
                                                 <span className="font-semibold text-gray-800">{selectedVendor.payment_terms_days} days</span>
                                             </div>
@@ -275,16 +339,15 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
                                     )}
                                 </div>
 
-                                {/* Medicine Search with Dropdown */}
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">Select Medicine *</label>
+                                    <label className="mb-2 block text-[12px] font-medium text-gray-700">Select Medicine *</label>
                                     <div className="relative">
                                         <div className="flex items-center gap-2 rounded-lg border-2 border-gray-300 px-3 py-2 focus-within:border-blue-500">
-                                            <Search className="text-gray-400" size={18} />
+                                            <Search className="text-gray-400" size={16} />
                                             <input
                                                 type="text"
                                                 placeholder="Search medicines by name or generic name..."
-                                                className="flex-1 outline-none"
+                                                className="flex-1 text-[12px] outline-none"
                                                 value={searchTerm}
                                                 onChange={(e) => {
                                                     setSearchTerm(e.target.value);
@@ -301,13 +364,12 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
                                                     }}
                                                     className="text-gray-400 hover:text-gray-600"
                                                 >
-                                                    <X size={16} />
+                                                    <X size={14} />
                                                 </button>
                                             )}
                                             <ChevronDown className="text-gray-400" size={16} />
                                         </div>
 
-                                        {/* Dropdown */}
                                         {showMedicineDropdown && (
                                             <div className="absolute z-50 mt-2 max-h-96 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
                                                 {filteredMedicines.length > 0 ? (
@@ -316,34 +378,34 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
                                                             key={medicine.id}
                                                             type="button"
                                                             onClick={() => handleMedicineSelect(medicine)}
-                                                            className="w-full border-b border-gray-100 px-4 py-3 text-left transition-colors last:border-0 hover:bg-blue-50"
+                                                            className="w-full border-b border-gray-100 px-4 py-2 text-left transition-colors last:border-0 hover:bg-blue-50"
                                                         >
                                                             <div className="flex items-start justify-between">
                                                                 <div className="flex-1">
-                                                                    <p className="font-semibold text-gray-800">{medicine.name}</p>
+                                                                    <p className="text-[12px] font-semibold text-gray-800">{medicine.name}</p>
                                                                     {medicine.generic_name && (
-                                                                        <p className="mt-1 text-xs text-gray-500">{medicine.generic_name}</p>
+                                                                        <p className="mt-1 text-[11px] text-gray-500">{medicine.generic_name}</p>
                                                                     )}
-                                                                    <div className="mt-2 flex items-center gap-3 text-xs">
+                                                                    <div className="mt-1 flex items-center gap-3 text-[11px]">
                                                                         <span className="text-gray-600">Stock: {medicine.total_stock}</span>
-                                                                        {medicine.average_buy_price > 0 && (
-                                                                            <span className="rounded bg-amber-100 px-2 py-1 text-amber-700">
+                                                                        {moneyAmount(medicine.average_buy_price) > 0 && (
+                                                                            <span className="rounded bg-amber-100 px-2 py-0.5 text-amber-700">
                                                                                 Avg: {formatCurrency(medicine.average_buy_price)}
                                                                             </span>
                                                                         )}
                                                                     </div>
                                                                 </div>
                                                                 <div className="ml-4 text-right">
-                                                                    <p className="text-sm font-semibold text-blue-600">
+                                                                    <p className="text-[12px] font-semibold text-blue-600">
                                                                         {formatCurrency(medicine.standard_sale_price)}
                                                                     </p>
-                                                                    <p className="text-xs text-gray-500">Sale Price</p>
+                                                                    <p className="text-[11px] text-gray-500">Sale Price</p>
                                                                 </div>
                                                             </div>
                                                         </button>
                                                     ))
                                                 ) : (
-                                                    <div className="px-4 py-3 text-center text-gray-500">No medicines found</div>
+                                                    <div className="px-4 py-3 text-center text-[12px] text-gray-500">No medicines found</div>
                                                 )}
                                             </div>
                                         )}
@@ -354,18 +416,18 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1">
                                                     <div className="mb-2 flex items-center gap-2">
-                                                        <CheckCircle className="h-5 w-5 text-green-600" />
-                                                        <span className="font-semibold text-green-900">{selectedMedicine.name}</span>
+                                                        <CheckCircle className="h-4 w-4 text-green-600" />
+                                                        <span className="text-[12px] font-semibold text-green-900">{selectedMedicine.name}</span>
                                                     </div>
                                                     {selectedMedicine.generic_name && (
-                                                        <p className="mb-2 text-sm text-green-700">{selectedMedicine.generic_name}</p>
+                                                        <p className="mb-2 text-[12px] text-green-700">{selectedMedicine.generic_name}</p>
                                                     )}
-                                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                                    <div className="grid grid-cols-2 gap-2 text-[12px]">
                                                         <div>
                                                             <span className="text-gray-600">Current Stock:</span>
                                                             <span className="ml-2 font-semibold text-gray-800">{selectedMedicine.total_stock}</span>
                                                         </div>
-                                                        {selectedMedicine.average_buy_price > 0 && (
+                                                        {moneyAmount(selectedMedicine.average_buy_price) > 0 && (
                                                             <div>
                                                                 <span className="text-gray-600">Avg Price:</span>
                                                                 <span className="ml-2 font-semibold text-amber-600">
@@ -383,117 +445,113 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
                                                     }}
                                                     className="text-red-500 hover:text-red-700"
                                                 >
-                                                    <X size={18} />
+                                                    <X size={16} />
                                                 </button>
                                             </div>
                                         </div>
                                     )}
 
-                                    {errors.medicine_id && <p className="mt-1 text-sm text-red-600">{errors.medicine_id}</p>}
+                                    {errors.medicine_id && <p className="mt-1 text-[12px] text-red-600">{errors.medicine_id}</p>}
                                 </div>
 
-                                {/* Batch and Expiry (Optional) */}
                                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                                     <div className="mb-3 flex items-center gap-2">
                                         <AlertCircle className="h-4 w-4 text-gray-500" />
-                                        <span className="text-sm font-medium text-gray-700">Optional Details</span>
+                                        <span className="text-[12px] font-medium text-gray-700">Optional Details</span>
                                     </div>
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <div>
-                                            <label className="mb-2 block text-sm font-medium text-gray-600">Batch Number (Optional)</label>
+                                            <label className="mb-2 block text-[12px] font-medium text-gray-600">Batch Number (Optional)</label>
                                             <input
                                                 type="text"
                                                 value={data.batch_number}
                                                 onChange={(e) => setData('batch_number', e.target.value)}
-                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                                className={fieldClass}
                                                 placeholder="Auto-generated if empty"
                                             />
                                         </div>
-
                                         <div>
-                                            <label className="mb-2 block text-sm font-medium text-gray-600">Expiry Date (Optional)</label>
+                                            <label className="mb-2 block text-[12px] font-medium text-gray-600">Expiry Date (Optional)</label>
                                             <div className="relative">
-                                                <Calendar className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
+                                                <Calendar className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
                                                 <input
                                                     type="date"
                                                     value={data.expiry_date}
                                                     onChange={(e) => setData('expiry_date', e.target.value)}
                                                     min={new Date().toISOString().split('T')[0]}
-                                                    className="w-full rounded-lg border border-gray-300 py-2 pr-3 pl-10 focus:ring-2 focus:ring-blue-500"
+                                                    className={`${fieldClass} pl-10`}
                                                 />
                                             </div>
-                                            <p className="mt-1 text-xs text-gray-500">Default: 2 years from now</p>
+                                            <p className="mt-1 text-[11px] text-gray-500">Default: 2 years from now</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Quantity and Total Price */}
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-gray-700">Quantity *</label>
+                                        <label className="mb-2 block text-[12px] font-medium text-gray-700">Quantity *</label>
                                         <div className="relative">
-                                            <Package className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
+                                            <Package className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
                                             <input
                                                 type="number"
                                                 value={data.quantity}
                                                 onChange={(e) => setData('quantity', e.target.value)}
-                                                className="w-full rounded-lg border border-gray-300 py-2 pr-3 pl-10 focus:ring-2 focus:ring-blue-500"
+                                                className={`${fieldClass} pl-10`}
                                                 placeholder="0"
                                                 min="1"
                                             />
                                         </div>
-                                        {errors.quantity && <p className="mt-1 text-sm text-red-600">{errors.quantity}</p>}
+                                        {errors.quantity && <p className="mt-1 text-[12px] text-red-600">{errors.quantity}</p>}
                                     </div>
-
                                     <div>
-                                        <label className="mb-2 block text-sm font-medium text-gray-700">
-                                            Total Price * <span className="text-xs text-gray-500">(Not per unit)</span>
+                                        <label className="mb-2 block text-[12px] font-medium text-gray-700">
+                                            Total Price * <span className="text-[11px] text-gray-500">(Not per unit)</span>
                                         </label>
                                         <div className="relative">
-                                            <DollarSign className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
+                                            <DollarSign className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
                                             <input
                                                 type="number"
                                                 value={data.total_price}
                                                 onChange={(e) => setData('total_price', e.target.value)}
-                                                className="w-full rounded-lg border border-gray-300 py-2 pr-3 pl-10 focus:ring-2 focus:ring-blue-500"
+                                                className={`${fieldClass} pl-10`}
                                                 placeholder="0.00"
                                                 step="0.01"
                                                 min="0"
                                             />
                                         </div>
-                                        {errors.total_price && <p className="mt-1 text-sm text-red-600">{errors.total_price}</p>}
+                                        {errors.total_price && <p className="mt-1 text-[12px] text-red-600">{errors.total_price}</p>}
                                     </div>
                                 </div>
 
-                                {/* Calculated Unit Price Display */}
                                 {unitPrice > 0 && (
                                     <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-sm text-gray-600">Calculated Unit Price:</p>
-                                                <p className="mt-1 text-2xl font-bold text-blue-600">{formatCurrency(unitPrice)}</p>
-                                                <p className="mt-1 text-xs text-gray-500">
+                                                <p className="text-[12px] text-gray-600">Calculated Unit Price:</p>
+                                                <p className="mt-1 text-[13px] font-semibold text-blue-600">{formatCurrency(unitPrice)}</p>
+                                                <p className="mt-1 text-[11px] text-gray-500">
                                                     {data.total_price} ÷ {data.quantity} = {unitPrice.toFixed(2)}
                                                 </p>
                                             </div>
-                                            {selectedMedicine && selectedMedicine.average_buy_price > 0 && (
+                                            {selectedMedicine && moneyAmount(selectedMedicine.average_buy_price) > 0 && (
                                                 <div className="text-right">
-                                                    <p className="text-sm text-gray-600">Previous Avg:</p>
-                                                    <p className="text-lg font-semibold text-amber-600">
+                                                    <p className="text-[12px] text-gray-600">Previous Avg:</p>
+                                                    <p className="text-[13px] font-semibold text-amber-600">
                                                         {formatCurrency(selectedMedicine.average_buy_price)}
                                                     </p>
                                                 </div>
                                             )}
                                         </div>
-
                                         {newAveragePrice !== null && selectedMedicine && (
                                             <div className="mt-3 border-t border-blue-200 pt-3">
-                                                <div className="flex items-center justify-between text-sm">
+                                                <div className="flex items-center justify-between text-[12px]">
                                                     <span className="text-gray-700">New Average Price:</span>
-                                                    <span className="text-lg font-bold text-green-600">{formatCurrency(newAveragePrice)}</span>
+                                                    <span className="text-[13px] font-semibold text-green-600">
+                                                        {formatCurrency(newAveragePrice)}
+                                                    </span>
                                                 </div>
-                                                <p className="mt-1 text-xs text-gray-500">
-                                                    ({selectedMedicine.total_stock} × {Number(selectedMedicine.average_buy_price || 0).toFixed(2)}) +
+                                                <p className="mt-1 text-[11px] text-gray-500">
+                                                    ({selectedMedicine.total_stock} × {moneyAmount(selectedMedicine.average_buy_price).toFixed(2)}) +
                                                     ({data.quantity} × {unitPrice.toFixed(2)}) ÷ ({selectedMedicine.total_stock} +{' '}
                                                     {parseFloat(data.quantity)})
                                                 </p>
@@ -502,16 +560,15 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
                                     </div>
                                 )}
 
-                                {/* Payment Details */}
                                 <div className="rounded-lg border border-green-200 bg-green-50 p-4">
-                                    <h3 className="mb-3 text-sm font-semibold text-green-900">Payment Details</h3>
+                                    <h3 className="mb-3 text-[12px] font-semibold text-green-900">Payment Details</h3>
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <div>
-                                            <label className="mb-2 block text-sm font-medium text-gray-700">Payment Method</label>
+                                            <label className="mb-2 block text-[12px] font-medium text-gray-700">Payment Method</label>
                                             <select
                                                 value={data.payment_method}
                                                 onChange={(e) => setData('payment_method', e.target.value)}
-                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-green-500"
+                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[12px] focus:ring-2 focus:ring-green-500"
                                             >
                                                 <option value="credit">Credit (Pay Later)</option>
                                                 <option value="cash">Cash</option>
@@ -519,42 +576,39 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
                                                 <option value="cheque">Cheque</option>
                                             </select>
                                         </div>
-
                                         <div>
-                                            <label className="mb-2 block text-sm font-medium text-gray-700">Paid Amount</label>
+                                            <label className="mb-2 block text-[12px] font-medium text-gray-700">Paid Amount</label>
                                             <div className="relative">
-                                                <CreditCard className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
+                                                <CreditCard className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
                                                 <input
                                                     type="number"
                                                     value={data.paid_amount}
                                                     onChange={(e) => setData('paid_amount', e.target.value)}
-                                                    className="w-full rounded-lg border border-gray-300 py-2 pr-3 pl-10 focus:ring-2 focus:ring-green-500"
+                                                    className="w-full rounded-lg border border-gray-300 py-2 pr-3 pl-10 text-[12px] focus:ring-2 focus:ring-green-500"
                                                     placeholder="0.00"
                                                     step="0.01"
                                                     min="0"
                                                 />
                                             </div>
                                         </div>
-
                                         {data.payment_method === 'cheque' && (
                                             <>
                                                 <div>
-                                                    <label className="mb-2 block text-sm font-medium text-gray-700">Cheque No</label>
+                                                    <label className="mb-2 block text-[12px] font-medium text-gray-700">Cheque No</label>
                                                     <input
                                                         type="text"
                                                         value={data.cheque_no}
                                                         onChange={(e) => setData('cheque_no', e.target.value)}
-                                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-green-500"
+                                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[12px] focus:ring-2 focus:ring-green-500"
                                                     />
                                                 </div>
-
                                                 <div>
-                                                    <label className="mb-2 block text-sm font-medium text-gray-700">Cheque Date</label>
+                                                    <label className="mb-2 block text-[12px] font-medium text-gray-700">Cheque Date</label>
                                                     <input
                                                         type="date"
                                                         value={data.cheque_date}
                                                         onChange={(e) => setData('cheque_date', e.target.value)}
-                                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-green-500"
+                                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[12px] focus:ring-2 focus:ring-green-500"
                                                     />
                                                 </div>
                                             </>
@@ -562,10 +616,10 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
                                     </div>
 
                                     {data.total_price && (
-                                        <div className="mt-4 space-y-2 text-sm">
+                                        <div className="mt-4 space-y-2 text-[12px]">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-gray-700">Total Amount:</span>
-                                                <span className="font-bold text-gray-900">{formatCurrency(parseFloat(data.total_price))}</span>
+                                                <span className="font-semibold text-gray-900">{formatCurrency(parseFloat(data.total_price))}</span>
                                             </div>
                                             {data.paid_amount && parseFloat(data.paid_amount) > 0 && (
                                                 <>
@@ -577,7 +631,7 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
                                                     </div>
                                                     <div className="flex items-center justify-between border-t border-green-300 pt-2">
                                                         <span className="font-medium text-gray-700">Due Amount:</span>
-                                                        <span className="font-bold text-red-600">{formatCurrency(getDueAmount())}</span>
+                                                        <span className="font-semibold text-red-600">{formatCurrency(getDueAmount())}</span>
                                                     </div>
                                                 </>
                                             )}
@@ -586,23 +640,21 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
 
                                     {selectedVendor && data.total_price && parseFloat(data.total_price) > 0 && (
                                         <div className="mt-3 rounded border border-red-200 bg-red-50 p-2">
-                                            <div className="flex justify-between text-xs">
+                                            <div className="flex justify-between text-[11px]">
                                                 <span className="text-red-700">Vendor Total Due (After This Purchase):</span>
                                                 <span className="font-semibold text-red-800">
-                                                    {formatCurrency(selectedVendor.current_balance + getDueAmount())}
+                                                    {formatCurrency(moneyAmount(selectedVendor.current_balance) + getDueAmount())}
                                                 </span>
                                             </div>
-                                            {selectedVendor.credit_limit > 0 && (
+                                            {moneyAmount(selectedVendor.credit_limit) > 0 && (
                                                 <div className="mt-1">
-                                                    <div className="mb-1 flex justify-between text-xs text-red-600">
+                                                    <div className="mb-1 flex justify-between text-[11px] text-red-600">
                                                         <span>Credit Utilization:</span>
                                                         <span className="font-semibold">{getCreditUtilization().toFixed(1)}%</span>
                                                     </div>
                                                     <div className="h-1.5 w-full rounded-full bg-red-200">
                                                         <div
-                                                            className={`h-1.5 rounded-full ${
-                                                                getCreditUtilization() > 90 ? 'bg-red-600' : 'bg-red-400'
-                                                            }`}
+                                                            className={`h-1.5 rounded-full ${getCreditUtilization() > 90 ? 'bg-red-600' : 'bg-red-400'}`}
                                                             style={{ width: `${Math.min(100, getCreditUtilization())}%` }}
                                                         ></div>
                                                     </div>
@@ -612,56 +664,51 @@ export default function Purchase({ medicines, vendors, recentPurchases, todayPur
                                     )}
                                 </div>
 
-                                {/* Notes */}
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">Notes (Optional)</label>
+                                    <label className="mb-2 block text-[12px] font-medium text-gray-700">Notes (Optional)</label>
                                     <textarea
                                         value={data.notes}
                                         onChange={(e) => setData('notes', e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[12px] focus:ring-2 focus:ring-blue-500"
                                         rows={3}
                                         placeholder="Any additional notes..."
                                     />
                                 </div>
 
-                                {/* Submit Button */}
                                 <button
                                     type="submit"
                                     disabled={processing}
-                                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 py-3 font-semibold text-white transition-all hover:from-blue-700 hover:to-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 py-2 text-[12px] font-semibold text-white transition-all hover:from-blue-700 hover:to-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    <ShoppingCart className="h-5 w-5" />
+                                    <ShoppingCart className="h-4 w-4" />
                                     {processing ? 'Adding Stock...' : 'Add Stock to Inventory'}
                                 </button>
                             </form>
                         </div>
                     </div>
 
-                    {/* Right Sidebar - Recent Purchases */}
-                    <div className="space-y-6 lg:col-span-1">
-                        {/* Recent Purchases */}
+                    <div className="lg:col-span-1">
                         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                             <div className="mb-4 flex items-center gap-2">
-                                <Clock className="h-5 w-5 text-gray-600" />
-                                <h3 className="font-semibold text-gray-900">Recent Purchases</h3>
+                                <Clock className="h-4 w-4 text-gray-600" />
+                                <h3 className="text-[13px] font-semibold text-gray-900">Recent Purchases</h3>
                             </div>
-
                             <div className="space-y-3">
                                 {recentPurchases.slice(0, 5).map((purchase) => (
                                     <div key={purchase.id} className="border-b border-gray-100 pb-3 last:border-0">
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-900">{purchase.medicine_stock.medicine.name}</p>
+                                                <p className="text-[12px] font-medium text-gray-900">{purchase.medicine_stock.medicine.name}</p>
                                                 {purchase.medicine_stock.vendor && (
-                                                    <p className="mt-1 text-xs text-gray-500">{purchase.medicine_stock.vendor.name}</p>
+                                                    <p className="mt-1 text-[11px] text-gray-500">{purchase.medicine_stock.vendor.name}</p>
                                                 )}
-                                                <p className="mt-1 text-xs text-gray-400">
+                                                <p className="mt-1 text-[11px] text-gray-400">
                                                     {purchase.quantity} units × {formatCurrency(purchase.unit_price)}
                                                 </p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-sm font-bold text-green-600">{formatCurrency(purchase.total_amount)}</p>
-                                                <p className="text-xs text-gray-400">{formatDate(purchase.created_at)}</p>
+                                                <p className="text-[12px] font-semibold text-green-600">{formatCurrency(purchase.total_amount)}</p>
+                                                <p className="text-[11px] text-gray-400">{formatDate(purchase.created_at)}</p>
                                             </div>
                                         </div>
                                     </div>

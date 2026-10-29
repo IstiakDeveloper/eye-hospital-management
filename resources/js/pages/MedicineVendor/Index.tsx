@@ -1,24 +1,9 @@
 import AdminLayout from '@/layouts/admin-layout';
+import { formatTaka, moneyAmount } from '@/lib/money';
 import { Head, router, useForm } from '@inertiajs/react';
-import {
-    AlertTriangle,
-    Building2,
-    Calendar,
-    CheckCircle,
-    CreditCard,
-    DollarSign,
-    Edit3,
-    Eye,
-    Filter,
-    Mail,
-    MoreVertical,
-    Phone,
-    Plus,
-    Search,
-    Users,
-    XCircle,
-} from 'lucide-react';
+import { CheckCircle, Edit3, Eye, Filter, Plus, Search, XCircle } from 'lucide-react';
 import React, { useState } from 'react';
+import VendorTabs from './VendorTabs';
 
 interface VendorTransaction {
     id: number;
@@ -37,9 +22,9 @@ interface Vendor {
     email?: string;
     address?: string;
     trade_license?: string;
-    current_balance: number;
+    current_balance: number | string;
     balance_type: 'due' | 'advance';
-    credit_limit: number;
+    credit_limit: number | string;
     payment_terms_days: number;
     is_active: boolean;
     notes?: string;
@@ -59,8 +44,8 @@ interface VendorIndexProps {
     };
     statistics: {
         total_vendors: number;
-        total_dues: number;
-        overdue_amount: number;
+        total_dues: number | string;
+        overdue_amount: number | string;
         vendors_with_dues: number;
     };
 }
@@ -87,47 +72,27 @@ export default function VendorIndex({ vendors, filters, statistics }: VendorInde
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || 'all');
 
-    const formatCurrency = (amount: number) => {
-        const formatted = new Intl.NumberFormat('en-US', {
-            minimumFractionDigits: 0,
-        }).format(amount);
-        return `৳${formatted}`;
-    };
-
-    const formatDate = (date: string) => {
-        return new Date(date).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-        });
-    };
+    const formatCurrency = (amount: number | string | null | undefined) => formatTaka(amount);
 
     const getCreditUtilization = (vendor: Vendor) => {
-        if (vendor.credit_limit === 0) return 0;
-        return (vendor.current_balance / vendor.credit_limit) * 100;
+        const limit = moneyAmount(vendor.credit_limit);
+        if (limit <= 0) {
+            return 0;
+        }
+
+        return (moneyAmount(vendor.current_balance) / limit) * 100;
     };
 
     const getStatusBadge = (vendor: Vendor) => {
         if (!vendor.is_active) {
-            return (
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">Inactive</span>
-            );
+            return <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">Inactive</span>;
         }
 
-        if (vendor.current_balance === 0) {
-            return <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Clear</span>;
+        if (moneyAmount(vendor.current_balance) <= 0) {
+            return <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700">Clear</span>;
         }
 
-        const utilization = getCreditUtilization(vendor);
-        if (utilization > 90) {
-            return <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Critical</span>;
-        }
-        if (utilization > 70) {
-            return (
-                <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">High</span>
-            );
-        }
-        return <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Active</span>;
+        return <span className="rounded bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-700">Due</span>;
     };
 
     const handleSearch = () => {
@@ -171,7 +136,7 @@ export default function VendorIndex({ vendors, filters, statistics }: VendorInde
             address: vendor.address || '',
             trade_license: vendor.trade_license || '',
             opening_balance: '',
-            credit_limit: vendor.credit_limit.toString(),
+            credit_limit: moneyAmount(vendor.credit_limit).toString(),
             payment_terms_days: vendor.payment_terms_days.toString(),
             notes: vendor.notes || '',
         });
@@ -182,294 +147,136 @@ export default function VendorIndex({ vendors, filters, statistics }: VendorInde
         <AdminLayout>
             <Head title="Vendor Management" />
 
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
+            <div className="mx-auto max-w-6xl space-y-3">
+                <div className="flex items-center justify-between gap-3">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Vendor Management</h1>
-                        <p className="mt-1 text-gray-600">Manage your medicine suppliers and track their payments</p>
+                        <h1 className="text-[15px] font-semibold tracking-tight text-slate-900">Vendors</h1>
+                        <p className="text-[12px] text-slate-500">Suppliers, dues, and payments in one place</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => router.visit(route('medicine-vendors.due-report'))}
-                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 transition-colors hover:bg-gray-50"
-                        >
-                            <DollarSign className="h-4 w-4" />
-                            Due Report
-                        </button>
-                        <button
-                            onClick={() => setShowAddModal(true)}
-                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700"
-                        >
-                            <Plus className="h-4 w-4" />
-                            Add Vendor
-                        </button>
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="inline-flex h-7 items-center gap-1.5 rounded bg-slate-800 px-2.5 text-[12px] font-medium text-white hover:bg-slate-700"
+                    >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Vendor
+                    </button>
+                </div>
+
+                <VendorTabs current="vendors" />
+
+                <div className="grid grid-cols-2 overflow-hidden rounded border border-slate-200 bg-white md:grid-cols-4">
+                    <div className="px-3 py-2">
+                        <p className="text-[10px] font-medium tracking-wide text-slate-500 uppercase">Vendors</p>
+                        <p className="text-[13px] font-semibold text-slate-900 tabular-nums">{statistics.total_vendors}</p>
+                    </div>
+                    <div className="border-l border-slate-200 px-3 py-2">
+                        <p className="text-[10px] font-medium tracking-wide text-slate-500 uppercase">Outstanding</p>
+                        <p className="text-[13px] font-semibold text-red-700 tabular-nums">{formatCurrency(statistics.total_dues)}</p>
+                    </div>
+                    <div className="border-l border-slate-200 px-3 py-2">
+                        <p className="text-[10px] font-medium tracking-wide text-slate-500 uppercase">Overdue</p>
+                        <p className="text-[13px] font-semibold text-orange-700 tabular-nums">{formatCurrency(statistics.overdue_amount)}</p>
+                    </div>
+                    <div className="border-l border-slate-200 px-3 py-2">
+                        <p className="text-[10px] font-medium tracking-wide text-slate-500 uppercase">With dues</p>
+                        <p className="text-[13px] font-semibold text-slate-900 tabular-nums">{statistics.vendors_with_dues}</p>
                     </div>
                 </div>
 
-                {/* Statistics Cards */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Total Vendors</p>
-                                <p className="mt-1 text-2xl font-bold text-gray-900">{statistics.total_vendors}</p>
-                            </div>
-                            <div className="rounded-lg bg-blue-100 p-3">
-                                <Users className="h-6 w-6 text-blue-600" />
-                            </div>
-                        </div>
+                <form
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        handleSearch();
+                    }}
+                    className="flex flex-wrap items-center gap-2"
+                >
+                    <div className="relative min-w-[220px] flex-1">
+                        <Search className="absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search name or phone"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="h-7 w-full rounded border border-slate-300 pr-2 pl-7 text-[12px]"
+                        />
                     </div>
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="h-7 rounded border border-slate-300 px-2 text-[12px]"
+                    >
+                        <option value="all">All</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="with_dues">With dues</option>
+                    </select>
+                    <button type="submit" className="inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2.5 text-[12px] text-slate-700 hover:bg-slate-50">
+                        <Filter className="h-3.5 w-3.5" />
+                        Show
+                    </button>
+                </form>
 
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Total Outstanding</p>
-                                <p className="mt-1 text-2xl font-bold text-red-600">{formatCurrency(statistics.total_dues)}</p>
-                            </div>
-                            <div className="rounded-lg bg-red-100 p-3">
-                                <DollarSign className="h-6 w-6 text-red-600" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Overdue Amount</p>
-                                <p className="mt-1 text-2xl font-bold text-orange-600">{formatCurrency(statistics.overdue_amount)}</p>
-                            </div>
-                            <div className="rounded-lg bg-orange-100 p-3">
-                                <AlertTriangle className="h-6 w-6 text-orange-600" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Vendors with Dues</p>
-                                <p className="mt-1 text-2xl font-bold text-amber-600">{statistics.vendors_with_dues}</p>
-                            </div>
-                            <div className="rounded-lg bg-amber-100 p-3">
-                                <Building2 className="h-6 w-6 text-amber-600" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Search & Filters */}
-                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <div className="flex flex-col gap-4 sm:flex-row">
-                        <div className="relative flex-1">
-                            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search vendors by name, phone, email..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 py-2 pr-4 pl-10 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="all">All Status</option>
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                            <option value="with_dues">With Dues</option>
-                        </select>
-                        <button
-                            onClick={handleSearch}
-                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
-                        >
-                            <Filter className="h-4 w-4" />
-                            Apply
-                        </button>
-                    </div>
-                </div>
-
-                {/* Vendors Grid */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {vendors.data.map((vendor) => (
-                        <div
-                            key={vendor.id}
-                            className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
-                        >
-                            {/* Header */}
-                            <div className="border-b border-gray-100 p-6">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-3">
-                                            <div className="rounded-lg bg-blue-100 p-2">
-                                                <Building2 className="h-5 w-5 text-blue-600" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-lg font-semibold text-gray-900">{vendor.name}</h3>
-                                                {vendor.company_name && <p className="text-sm text-gray-600">{vendor.company_name}</p>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {getStatusBadge(vendor)}
-                                        <div className="relative">
-                                            <button className="rounded p-1 text-gray-400 hover:text-gray-600">
-                                                <MoreVertical className="h-4 w-4" />
+                <div className="overflow-hidden rounded border border-slate-200 bg-white">
+                    <table className="w-full border-collapse text-left text-[12px]">
+                        <thead className="bg-slate-50 text-[11px] tracking-wide text-slate-500 uppercase">
+                            <tr>
+                                <th className="px-3 py-1.5 font-medium">Vendor</th>
+                                <th className="px-3 py-1.5 font-medium">Phone</th>
+                                <th className="px-3 py-1.5 text-right font-medium">Due</th>
+                                <th className="px-3 py-1.5 font-medium">Status</th>
+                                <th className="px-3 py-1.5 text-right font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {vendors.data.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="px-3 py-8 text-center text-[12px] text-slate-500">
+                                        No vendors found.
+                                    </td>
+                                </tr>
+                            )}
+                            {vendors.data.map((vendor) => (
+                                <tr key={vendor.id} className="border-t border-slate-100 text-slate-800">
+                                    <td className="px-3 py-1.5">
+                                        <p className="font-medium text-slate-900">{vendor.name}</p>
+                                        {vendor.company_name && <p className="text-[11px] text-slate-500">{vendor.company_name}</p>}
+                                    </td>
+                                    <td className="px-3 py-1.5 whitespace-nowrap">{vendor.phone}</td>
+                                    <td className={`px-3 py-1.5 text-right font-medium tabular-nums ${moneyAmount(vendor.current_balance) > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                                        {formatCurrency(vendor.current_balance)}
+                                    </td>
+                                    <td className="px-3 py-1.5">{getStatusBadge(vendor)}</td>
+                                    <td className="px-3 py-1.5">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button
+                                                onClick={() => router.visit(route('medicine-vendors.show', vendor.id))}
+                                                className="inline-flex h-6 items-center gap-1 rounded px-1.5 text-[11px] text-slate-700 hover:bg-slate-100"
+                                            >
+                                                <Eye className="h-3.5 w-3.5" />
+                                                View
                                             </button>
+                                            <button
+                                                onClick={() => openEditModal(vendor)}
+                                                className="inline-flex h-6 items-center gap-1 rounded px-1.5 text-[11px] text-slate-700 hover:bg-slate-100"
+                                            >
+                                                <Edit3 className="h-3.5 w-3.5" />
+                                                Edit
+                                            </button>
+                                            {moneyAmount(vendor.current_balance) > 0 && (
+                                                <button
+                                                    onClick={() => router.visit(route('medicine-vendors.due-report'))}
+                                                    className="inline-flex h-6 items-center rounded bg-slate-800 px-1.5 text-[11px] text-white hover:bg-slate-700"
+                                                >
+                                                    Pay
+                                                </button>
+                                            )}
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Content */}
-                            <div className="p-6">
-                                <div className="space-y-4">
-                                    {/* Contact Info */}
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2 text-sm">
-                                            <Phone className="h-4 w-4 text-gray-400" />
-                                            <span className="text-gray-900">{vendor.phone}</span>
-                                        </div>
-                                        {vendor.email && (
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <Mail className="h-4 w-4 text-gray-400" />
-                                                <span className="text-gray-900">{vendor.email}</span>
-                                            </div>
-                                        )}
-                                        {vendor.contact_person && (
-                                            <div className="flex items-center gap-2 text-sm">
-                                                <Users className="h-4 w-4 text-gray-400" />
-                                                <span className="text-gray-900">{vendor.contact_person}</span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Financial Info */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <p className="text-xs text-gray-500">Current Balance</p>
-                                            <p className={`font-semibold ${vendor.current_balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                {formatCurrency(vendor.current_balance)}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-gray-500">Credit Limit</p>
-                                            <p className="font-semibold text-gray-900">{formatCurrency(vendor.credit_limit)}</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Credit Utilization */}
-                                    {vendor.credit_limit > 0 && (
-                                        <div>
-                                            <div className="mb-1 flex items-center justify-between">
-                                                <span className="text-xs text-gray-500">Credit Utilization</span>
-                                                <span className="text-xs font-medium text-gray-900">{getCreditUtilization(vendor).toFixed(1)}%</span>
-                                            </div>
-                                            <div className="h-2 w-full rounded-full bg-gray-200">
-                                                <div
-                                                    className={`h-2 rounded-full transition-all duration-300 ${
-                                                        getCreditUtilization(vendor) > 80
-                                                            ? 'bg-red-500'
-                                                            : getCreditUtilization(vendor) > 60
-                                                              ? 'bg-yellow-500'
-                                                              : 'bg-green-500'
-                                                    }`}
-                                                    style={{ width: `${Math.min(getCreditUtilization(vendor), 100)}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Payment Terms */}
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <Calendar className="h-4 w-4 text-gray-400" />
-                                        <span className="text-gray-600">Payment Terms:</span>
-                                        <span className="font-medium text-gray-900">{vendor.payment_terms_days} days</span>
-                                    </div>
-
-                                    {/* Recent Transactions */}
-                                    {vendor.transactions.length > 0 && (
-                                        <div>
-                                            <h4 className="mb-2 text-sm font-medium text-gray-900">Recent Transactions</h4>
-                                            <div className="space-y-2">
-                                                {vendor.transactions.slice(0, 2).map((transaction) => (
-                                                    <div key={transaction.id} className="flex items-center justify-between text-sm">
-                                                        <span className="text-gray-600">{formatDate(transaction.transaction_date)}</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium text-red-600">{formatCurrency(transaction.due_amount)}</span>
-                                                            <span
-                                                                className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ${
-                                                                    transaction.payment_status === 'paid'
-                                                                        ? 'bg-green-100 text-green-800'
-                                                                        : transaction.payment_status === 'partial'
-                                                                          ? 'bg-yellow-100 text-yellow-800'
-                                                                          : 'bg-red-100 text-red-800'
-                                                                }`}
-                                                            >
-                                                                {transaction.payment_status}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="border-t border-gray-100 bg-gray-50 p-6">
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={() => router.visit(route('medicine-vendors.show', vendor.id))}
-                                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm transition-colors hover:bg-gray-50"
-                                    >
-                                        <Eye className="h-4 w-4" />
-                                        View Details
-                                    </button>
-                                    <button
-                                        onClick={() => openEditModal(vendor)}
-                                        className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-blue-600 transition-colors hover:bg-blue-50"
-                                    >
-                                        <Edit3 className="h-4 w-4" />
-                                        Edit
-                                    </button>
-                                    {vendor.current_balance > 0 && (
-                                        <button
-                                            onClick={() => router.visit(route('medicine-corner.vendor-dues'))}
-                                            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-2 text-sm text-white transition-colors hover:bg-green-700"
-                                        >
-                                            <CreditCard className="h-4 w-4" />
-                                            Pay
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
-
-                {/* Empty State */}
-                {vendors.data.length === 0 && (
-                    <div className="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm">
-                        <Building2 className="mx-auto mb-4 h-16 w-16 text-gray-300" />
-                        <h3 className="mb-2 text-lg font-medium text-gray-900">No vendors found</h3>
-                        <p className="mb-6 text-gray-500">
-                            {searchTerm || statusFilter !== 'all' ? 'Try adjusting your search filters.' : 'Get started by adding your first vendor.'}
-                        </p>
-                        {!searchTerm && statusFilter === 'all' && (
-                            <button
-                                onClick={() => setShowAddModal(true)}
-                                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700"
-                            >
-                                <Plus className="h-4 w-4" />
-                                Add First Vendor
-                            </button>
-                        )}
-                    </div>
-                )}
 
                 {/* Add Vendor Modal */}
                 {showAddModal && (
@@ -812,12 +619,14 @@ export default function VendorIndex({ vendors, filters, statistics }: VendorInde
                                                     {formatCurrency(selectedVendor.current_balance)}
                                                 </span>
                                             </div>
-                                            <div>
-                                                <span className="text-gray-600">Credit Utilization: </span>
-                                                <span className="font-semibold text-gray-900">
-                                                    {getCreditUtilization(selectedVendor).toFixed(1)}%
-                                                </span>
-                                            </div>
+                                            {moneyAmount(selectedVendor.credit_limit) > 0 && (
+                                                <div>
+                                                    <span className="text-gray-600">Credit used: </span>
+                                                    <span className="font-semibold text-gray-900">
+                                                        {getCreditUtilization(selectedVendor).toFixed(1)}%
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

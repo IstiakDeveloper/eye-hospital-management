@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\HospitalAccount;
 
+use App\Models\HospitalExpenseCategory;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreHospitalDueExpenseRequest extends FormRequest
@@ -35,6 +36,15 @@ class StoreHospitalDueExpenseRequest extends FormRequest
             if ($paid > $total) {
                 $validator->errors()->add('paid_amount', 'Paid amount cannot exceed total amount.');
             }
+
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            HospitalExpenseCategory::ensureManualEntry(
+                $this->filled('expense_category_id') ? $this->integer('expense_category_id') : null,
+                null,
+            );
         });
     }
 }

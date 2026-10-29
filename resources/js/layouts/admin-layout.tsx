@@ -432,23 +432,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
 
         switch (current) {
             case 'medicine-vendors.index':
-                return (
-                    currentRouteName === 'medicine-vendors.index' ||
-                    currentRouteName === 'medicine-vendors.show' ||
-                    window.location.pathname === '/medicine-vendors'
-                );
-
-            case 'medicine-vendors.due-report':
-                return currentRouteName === 'medicine-vendors.due-report' || window.location.pathname === '/medicine-vendors/reports/due-report';
-
-            case 'medicine-vendors.payment-history':
-                return (
-                    currentRouteName === 'medicine-vendors.payment-history' ||
-                    window.location.pathname === '/medicine-vendors/reports/payment-history'
-                );
-
-            case 'medicine-vendors.analytics':
-                return currentRouteName === 'medicine-vendors.analytics' || window.location.pathname === '/medicine-vendors/reports/analytics';
+                return !!currentRouteName?.startsWith('medicine-vendors.') || window.location.pathname.startsWith('/medicine-vendors');
 
             default:
                 // For medicine-corner routes
@@ -831,32 +815,11 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                           ...(hasPermission('medicine-corner.vendors')
                               ? [
                                     {
-                                        name: 'Vendor Management',
+                                        name: 'Vendors',
                                         href: route('medicine-vendors.index'),
                                         icon: Building2,
                                         current: 'medicine-vendors.index',
-                                        roles: [], // Empty
-                                    },
-                                    {
-                                        name: 'Vendor Dues',
-                                        href: route('medicine-vendors.due-report'),
-                                        icon: AlertTriangle,
-                                        current: 'medicine-vendors.due-report',
-                                        roles: [], // Empty
-                                    },
-                                    {
-                                        name: 'Payment History',
-                                        href: route('medicine-vendors.payment-history'),
-                                        icon: History,
-                                        current: 'medicine-vendors.payment-history',
-                                        roles: [], // Empty
-                                    },
-                                    {
-                                        name: 'Vendor Analytics',
-                                        href: route('medicine-vendors.analytics'),
-                                        icon: BarChart3,
-                                        current: 'medicine-vendors.analytics',
-                                        roles: [], // Empty
+                                        roles: [],
                                     },
                                 ]
                               : []),

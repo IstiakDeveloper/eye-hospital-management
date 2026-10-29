@@ -1,8 +1,9 @@
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
+import { formatTaka } from '@/lib/money';
 import { formatDate } from '@/lib/utils';
 import { router } from '@inertiajs/react';
-import { Building2, DollarSign, Edit, Filter, Home, Receipt, RefreshCw, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
-import React, { useState } from 'react';
+import { Building2, ChevronDown, Edit, Filter, Home, Receipt, RefreshCw, Trash2, TrendingDown, TrendingUp } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface Transaction {
     id: number;
@@ -72,6 +73,33 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
 
     const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
+    const [categoryOpen, setCategoryOpen] = useState(false);
+    const [categoryQuery, setCategoryQuery] = useState('');
+    const categoryRef = useRef<HTMLDivElement>(null);
+    const categorySearchRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const closeOnOutsideClick = (event: MouseEvent) => {
+            if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+                setCategoryOpen(false);
+                setCategoryQuery('');
+            }
+        };
+
+        document.addEventListener('mousedown', closeOnOutsideClick);
+
+        return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+    }, []);
+
+    useEffect(() => {
+        if (categoryOpen) {
+            categorySearchRef.current?.focus();
+        }
+    }, [categoryOpen]);
+
+    const categorySearch = categoryQuery.trim().toLowerCase();
+    const filteredExpenseCategories = (expenseCategories ?? []).filter((category) => category.name.toLowerCase().includes(categorySearch));
+    const filteredIncomeCategories = (incomeCategories ?? []).filter((category) => category.name.toLowerCase().includes(categorySearch));
 
     // Auto filter function with debouncing
     const applyFilters = (newFilters: any) => {
@@ -98,9 +126,19 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
         }, 300);
     };
 
+    const selectCategory = (name: string) => {
+        const newFilters = { ...filter, category: name };
+        setFilter(newFilters);
+        setCategoryOpen(false);
+        setCategoryQuery('');
+        applyFilters(newFilters);
+    };
+
     const clearFilters = () => {
         const emptyFilters = { type: '', date_from: '', date_to: '', category: '', category_filter: '' };
         setFilter(emptyFilters);
+        setCategoryOpen(false);
+        setCategoryQuery('');
         router.get('/hospital-account/transactions');
     };
 
@@ -165,8 +203,8 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                                 <TrendingUp className="h-4 w-4 text-green-600" />
                             </div>
                             <div>
-                                <div className="text-xs text-gray-500">INCOME</div>
-                                <div className="text-xl font-bold text-gray-800">৳{totals.total_income.toLocaleString()}</div>
+                                <div className="text-[10px] tracking-wide text-gray-500">INCOME</div>
+                                <div className="text-[13px] font-semibold text-gray-800 tabular-nums">{formatTaka(totals.total_income)}</div>
                             </div>
                         </div>
                     </div>
@@ -180,8 +218,8 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                                 <TrendingDown className="h-4 w-4 text-red-600" />
                             </div>
                             <div>
-                                <div className="text-xs text-gray-500">EXPENSE</div>
-                                <div className="text-xl font-bold text-gray-800">৳{totals.total_expense.toLocaleString()}</div>
+                                <div className="text-[10px] tracking-wide text-gray-500">EXPENSE</div>
+                                <div className="text-[13px] font-semibold text-gray-800 tabular-nums">{formatTaka(totals.total_expense)}</div>
                             </div>
                         </div>
                     </div>
@@ -195,8 +233,10 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                                 <Building2 className="h-4 w-4 text-purple-600" />
                             </div>
                             <div>
-                                <div className="text-xs text-gray-500">ASSETS</div>
-                                <div className="text-xl font-bold text-gray-800">৳{categoryStats.fixed_asset_expense.toLocaleString()}</div>
+                                <div className="text-[10px] tracking-wide text-gray-500">ASSETS</div>
+                                <div className="text-[13px] font-semibold text-gray-800 tabular-nums">
+                                    {formatTaka(categoryStats.fixed_asset_expense)}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -210,8 +250,10 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                                 <Home className="h-4 w-4 text-indigo-600" />
                             </div>
                             <div>
-                                <div className="text-xs text-gray-500">ADVANCE RENT</div>
-                                <div className="text-xl font-bold text-gray-800">৳{categoryStats.advance_rent_balance.toLocaleString()}</div>
+                                <div className="text-[10px] tracking-wide text-gray-500">ADVANCE RENT</div>
+                                <div className="text-[13px] font-semibold text-gray-800 tabular-nums">
+                                    {formatTaka(categoryStats.advance_rent_balance)}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -219,11 +261,11 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
             </div>
 
             {/* Quick Filter Buttons */}
-            <div className="mb-6 flex flex-wrap gap-3">
+            <div className="mb-3 flex flex-wrap gap-1.5">
                 <button
                     onClick={() => applyQuickFilter('')}
-                    className={`rounded-lg px-4 py-2 font-medium transition-all ${
-                        !filter.category_filter ? 'bg-gray-800 text-white shadow-lg' : 'border bg-white text-gray-700 hover:bg-gray-50'
+                    className={`inline-flex h-7 items-center rounded px-2 text-[12px] font-medium ${
+                        !filter.category_filter ? 'bg-gray-800 text-white' : 'border bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                 >
                     <Receipt className="mr-2 inline h-4 w-4" />
@@ -231,10 +273,8 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                 </button>
                 <button
                     onClick={() => applyQuickFilter('other_income')}
-                    className={`rounded-lg px-4 py-2 font-medium transition-all ${
-                        filter.category_filter === 'other_income'
-                            ? 'bg-green-600 text-white shadow-lg'
-                            : 'border bg-white text-gray-700 hover:bg-gray-50'
+                    className={`inline-flex h-7 items-center rounded px-2 text-[12px] font-medium ${
+                        filter.category_filter === 'other_income' ? 'bg-green-600 text-white' : 'border bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                 >
                     <TrendingUp className="mr-2 inline h-4 w-4" />
@@ -242,10 +282,8 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                 </button>
                 <button
                     onClick={() => applyQuickFilter('other_expense')}
-                    className={`rounded-lg px-4 py-2 font-medium transition-all ${
-                        filter.category_filter === 'other_expense'
-                            ? 'bg-red-600 text-white shadow-lg'
-                            : 'border bg-white text-gray-700 hover:bg-gray-50'
+                    className={`inline-flex h-7 items-center rounded px-2 text-[12px] font-medium ${
+                        filter.category_filter === 'other_expense' ? 'bg-red-600 text-white' : 'border bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                 >
                     <TrendingDown className="mr-2 inline h-4 w-4" />
@@ -253,10 +291,8 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                 </button>
                 <button
                     onClick={() => applyQuickFilter('fixed_asset')}
-                    className={`rounded-lg px-4 py-2 font-medium transition-all ${
-                        filter.category_filter === 'fixed_asset'
-                            ? 'bg-purple-600 text-white shadow-lg'
-                            : 'border bg-white text-gray-700 hover:bg-gray-50'
+                    className={`inline-flex h-7 items-center rounded px-2 text-[12px] font-medium ${
+                        filter.category_filter === 'fixed_asset' ? 'bg-purple-600 text-white' : 'border bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                 >
                     <Building2 className="mr-2 inline h-4 w-4" />
@@ -264,9 +300,9 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                 </button>
                 <button
                     onClick={() => applyQuickFilter('advance_house_rent')}
-                    className={`rounded-lg px-4 py-2 font-medium transition-all ${
+                    className={`inline-flex h-7 items-center rounded px-2 text-[12px] font-medium ${
                         filter.category_filter === 'advance_house_rent'
-                            ? 'bg-indigo-600 text-white shadow-lg'
+                            ? 'bg-indigo-600 text-white'
                             : 'border bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                 >
@@ -276,20 +312,20 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
             </div>
 
             {/* Advanced Filter Section */}
-            <div className="mb-4 rounded-lg border bg-white p-4 shadow-sm">
-                <div className="mb-3 flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm font-semibold text-gray-700">Advanced Filters</span>
+            <div className="mb-3 rounded border bg-white p-3">
+                <div className="mb-2 flex items-center gap-1.5">
+                    <Filter className="h-3.5 w-3.5 text-gray-500" />
+                    <span className="text-[12px] font-semibold text-gray-700">Filters</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-700">Type</label>
+                        <label className="mb-1 block text-[11px] font-medium text-gray-600">Type</label>
                         <select
                             name="type"
                             value={filter.type}
                             onChange={handleFilterChange}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            className="h-7 w-full rounded border border-gray-300 px-2 text-[12px] focus:outline-none"
                         >
                             <option value="">All Types</option>
                             <option value="income">Income</option>
@@ -298,58 +334,102 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-700">From Date</label>
+                        <label className="mb-1 block text-[11px] font-medium text-gray-600">From</label>
                         <input
                             type="date"
                             name="date_from"
                             value={filter.date_from}
                             onChange={handleFilterChange}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            className="h-7 w-full rounded border border-gray-300 px-2 text-[12px] focus:outline-none"
                         />
                     </div>
 
                     <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-700">To Date</label>
+                        <label className="mb-1 block text-[11px] font-medium text-gray-600">To</label>
                         <input
                             type="date"
                             name="date_to"
                             value={filter.date_to}
                             onChange={handleFilterChange}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            className="h-7 w-full rounded border border-gray-300 px-2 text-[12px] focus:outline-none"
                         />
                     </div>
 
-                    <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-700">Specific Category</label>
-                        <select
-                            name="category"
-                            value={filter.category}
-                            onChange={handleFilterChange}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    <div className="relative" ref={categoryRef}>
+                        <label className="mb-1 block text-[11px] font-medium text-gray-600">Category</label>
+                        <button
+                            type="button"
+                            onClick={() => setCategoryOpen((open) => !open)}
+                            className="flex h-7 w-full items-center justify-between gap-1 rounded border border-gray-300 bg-white px-2 text-left text-[12px] text-slate-800"
                         >
-                            <option value="">All Categories</option>
-                            <optgroup label="Expense Categories">
-                                {expenseCategories?.map((category) => (
-                                    <option key={`exp-${category.id}`} value={category.name}>
-                                        {category.name}
-                                    </option>
-                                ))}
-                            </optgroup>
-                            <optgroup label="Income Categories">
-                                {incomeCategories?.map((category) => (
-                                    <option key={`inc-${category.id}`} value={category.name}>
-                                        {category.name}
-                                    </option>
-                                ))}
-                            </optgroup>
-                        </select>
+                            <span className="truncate">{filter.category || 'All Categories'}</span>
+                            <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-slate-400 ${categoryOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {categoryOpen && (
+                            <div className="absolute right-0 z-30 mt-1 w-72 rounded border border-gray-200 bg-white shadow-lg">
+                                <input
+                                    ref={categorySearchRef}
+                                    type="text"
+                                    value={categoryQuery}
+                                    onChange={(event) => setCategoryQuery(event.target.value)}
+                                    placeholder="Search category"
+                                    className="h-7 w-full border-b border-gray-200 px-2 text-[12px] outline-none"
+                                />
+                                <div className="max-h-56 overflow-auto py-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => selectCategory('')}
+                                        className={`block w-full px-2 py-1 text-left text-[12px] hover:bg-slate-50 ${filter.category === '' ? 'bg-slate-100 font-medium' : ''}`}
+                                    >
+                                        All Categories
+                                    </button>
+                                    {filteredExpenseCategories.length > 0 && (
+                                        <>
+                                            <div className="px-2 pt-1.5 pb-0.5 text-[10px] font-medium tracking-wide text-slate-400 uppercase">
+                                                Expense
+                                            </div>
+                                            {filteredExpenseCategories.map((category) => (
+                                                <button
+                                                    key={`exp-${category.id}`}
+                                                    type="button"
+                                                    onClick={() => selectCategory(category.name)}
+                                                    className={`block w-full truncate px-2 py-1 text-left text-[12px] hover:bg-slate-50 ${filter.category === category.name ? 'bg-slate-100 font-medium' : ''}`}
+                                                >
+                                                    {category.name}
+                                                </button>
+                                            ))}
+                                        </>
+                                    )}
+                                    {filteredIncomeCategories.length > 0 && (
+                                        <>
+                                            <div className="px-2 pt-1.5 pb-0.5 text-[10px] font-medium tracking-wide text-slate-400 uppercase">
+                                                Income
+                                            </div>
+                                            {filteredIncomeCategories.map((category) => (
+                                                <button
+                                                    key={`inc-${category.id}`}
+                                                    type="button"
+                                                    onClick={() => selectCategory(category.name)}
+                                                    className={`block w-full truncate px-2 py-1 text-left text-[12px] hover:bg-slate-50 ${filter.category === category.name ? 'bg-slate-100 font-medium' : ''}`}
+                                                >
+                                                    {category.name}
+                                                </button>
+                                            ))}
+                                        </>
+                                    )}
+                                    {filteredExpenseCategories.length === 0 && filteredIncomeCategories.length === 0 && (
+                                        <div className="px-2 py-2 text-[12px] text-slate-500">No category found.</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 <div className="mt-3 flex justify-end">
                     <button
                         onClick={clearFilters}
-                        className="flex items-center gap-2 rounded-lg bg-gray-600 px-4 py-2 text-sm text-white transition-colors hover:bg-gray-700"
+                        className="inline-flex h-7 items-center gap-1 rounded bg-slate-700 px-2 text-[12px] text-white hover:bg-slate-800"
                     >
                         <RefreshCw className="h-4 w-4" />
                         Clear All Filters
@@ -359,42 +439,40 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
 
             {/* Data Table */}
             <div className="rounded-lg border bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4">
+                <div className="flex items-center justify-between border-b bg-slate-50 px-3 py-2">
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-800">Transaction Records</h3>
-                        <p className="mt-1 text-xs text-gray-600">
-                            Showing {transactions.data.length} of {totals.total_count} total filtered transactions
+                        <h3 className="text-[13px] font-semibold text-gray-800">Transactions</h3>
+                        <p className="text-[11px] text-gray-500">
+                            {transactions.data.length} of {totals.total_count}
                         </p>
                     </div>
-                    <div className="text-right">
-                        <div className="text-sm font-medium text-gray-700">
-                            Page {transactions.current_page} of {transactions.last_page}
-                        </div>
-                        <div className="mt-1 text-xs text-gray-500">{transactions.per_page} per page</div>
+                    <div className="text-right text-[11px] text-gray-500">
+                        Page {transactions.current_page} of {transactions.last_page}
                     </div>
                 </div>
 
                 {transactions.data && transactions.data.length > 0 ? (
                     <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full text-left text-[12px]">
                             <thead>
-                                <tr className="border-b-2 border-gray-200 bg-gray-100">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-700 uppercase">Trans. No</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-700 uppercase">Type</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-700 uppercase">Category</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold tracking-wider text-gray-700 uppercase">Amount</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-700 uppercase">Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold tracking-wider text-gray-700 uppercase">Description</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold tracking-wider text-gray-700 uppercase">Actions</th>
+                                <tr className="border-b border-gray-200 bg-slate-50 text-[11px] tracking-wide text-slate-500 uppercase">
+                                    <th className="px-3 py-1.5 font-medium">No</th>
+                                    <th className="px-3 py-1.5 font-medium">Type</th>
+                                    <th className="px-3 py-1.5 font-medium">Category</th>
+                                    <th className="px-3 py-1.5 text-right font-medium">Amount</th>
+                                    <th className="px-3 py-1.5 font-medium">Date</th>
+                                    <th className="px-3 py-1.5 font-medium">Description</th>
+                                    <th className="px-3 py-1.5 font-medium">Created by</th>
+                                    <th className="px-3 py-1.5 text-right font-medium">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200 bg-white">
-                                {transactions.data.map((transaction, index) => (
-                                    <tr key={transaction.id} className="transition-colors hover:bg-gray-50">
-                                        <td className="px-4 py-3 font-mono text-sm font-medium text-blue-600">{transaction.transaction_no}</td>
-                                        <td className="px-4 py-3">
+                            <tbody className="divide-y divide-gray-100 bg-white">
+                                {transactions.data.map((transaction) => (
+                                    <tr key={transaction.id} className="hover:bg-slate-50">
+                                        <td className="px-3 py-1.5 font-medium text-slate-800">{transaction.transaction_no}</td>
+                                        <td className="px-3 py-1.5">
                                             <span
-                                                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                                className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
                                                     transaction.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                                                 }`}
                                             >
@@ -406,19 +484,21 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                                                 {transaction.type === 'income' ? 'Income' : 'Expense'}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-sm font-medium text-gray-700">{transaction.category || 'Uncategorized'}</td>
+                                        <td className="px-3 py-1.5 text-slate-700">{transaction.category || '—'}</td>
                                         <td
-                                            className={`px-4 py-3 text-right font-mono text-sm font-bold ${
-                                                transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                                            className={`px-3 py-1.5 text-right font-medium tabular-nums ${
+                                                transaction.type === 'income' ? 'text-green-700' : 'text-red-700'
                                             }`}
                                         >
-                                            {transaction.type === 'income' ? '+' : '-'}৳{Number(transaction.amount).toLocaleString()}
+                                            {transaction.type === 'income' ? '+' : '−'}
+                                            {formatTaka(transaction.amount)}
                                         </td>
-                                        <td className="px-4 py-3 text-sm text-gray-600">{formatDate(transaction.transaction_date)}</td>
-                                        <td className="max-w-xs truncate px-4 py-3 text-sm text-gray-700" title={transaction.description}>
-                                            {transaction.description || 'No description'}
+                                        <td className="px-3 py-1.5 whitespace-nowrap text-slate-600">{formatDate(transaction.transaction_date)}</td>
+                                        <td className="max-w-[220px] truncate px-3 py-1.5 text-slate-600" title={transaction.description}>
+                                            {transaction.description || '—'}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="px-3 py-1.5 whitespace-nowrap text-slate-800">{transaction.created_by?.name || '—'}</td>
+                                        <td className="px-3 py-1.5">
                                             <div className="flex items-center justify-center gap-2">
                                                 {/* Edit Button */}
                                                 <button
@@ -466,17 +546,13 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                         </table>
                     </div>
                 ) : (
-                    <div className="py-16 text-center">
-                        <DollarSign className="mx-auto mb-4 h-16 w-16 text-gray-300" />
-                        <p className="text-lg font-medium text-gray-600">No transactions found</p>
-                        <p className="mt-2 text-sm text-gray-400">Try adjusting your filters or add a new transaction</p>
-                    </div>
+                    <div className="px-3 py-8 text-center text-[12px] text-slate-500">No transactions in this filter.</div>
                 )}
 
                 {/* Pagination */}
                 {transactions.last_page > 1 && (
-                    <div className="flex items-center justify-between border-t bg-gray-50 px-6 py-4">
-                        <div className="text-xs text-gray-600">
+                    <div className="flex items-center justify-between border-t bg-slate-50 px-3 py-1.5">
+                        <div className="text-[11px] text-gray-600">
                             Showing {(transactions.current_page - 1) * transactions.per_page + 1} to{' '}
                             {Math.min(transactions.current_page * transactions.per_page, transactions.total)} of {transactions.total} results
                         </div>
@@ -485,7 +561,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                             <button
                                 onClick={() => handlePagination(transactions.current_page - 1)}
                                 disabled={transactions.current_page === 1}
-                                className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="h-6 rounded border px-2 text-[11px] hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Previous
                             </button>
@@ -507,7 +583,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                                     <button
                                         key={pageNum}
                                         onClick={() => handlePagination(pageNum)}
-                                        className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                                        className={`h-6 rounded border px-2 text-[11px] ${
                                             pageNum === transactions.current_page
                                                 ? 'border-blue-600 bg-blue-600 text-white shadow-md'
                                                 : 'hover:bg-gray-100'
@@ -521,7 +597,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, expenseCatego
                             <button
                                 onClick={() => handlePagination(transactions.current_page + 1)}
                                 disabled={transactions.current_page === transactions.last_page}
-                                className="rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="h-6 rounded border px-2 text-[11px] hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Next
                             </button>

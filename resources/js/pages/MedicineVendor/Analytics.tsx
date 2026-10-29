@@ -19,6 +19,7 @@ import {
     Zap,
 } from 'lucide-react';
 import { useState } from 'react';
+import VendorTabs from './VendorTabs';
 
 interface TopVendor {
     name: string;
@@ -118,12 +119,13 @@ export default function VendorAnalytics({ topVendors, monthlyTrend, paymentMetho
         <AdminLayout>
             <Head title="Vendor Analytics Dashboard" />
 
-            <div className="space-y-6">
+            <div className="mx-auto max-w-6xl space-y-3">
+                <VendorTabs current="analytics" />
                 {/* Header */}
                 <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Vendor Analytics</h1>
-                        <p className="mt-1 text-gray-600">Comprehensive insights into vendor relationships and performance</p>
+                        <h1 className="text-[15px] font-semibold tracking-tight text-slate-900">Vendor analytics</h1>
+                        <p className="text-[12px] text-slate-500">Purchase and due totals for the selected month</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <button

@@ -7,6 +7,7 @@ import {
     Edit,
     Eye,
     Filter,
+    History,
     Minus,
     Package,
     Pill,
@@ -612,14 +613,23 @@ export default function Medicines({ medicines, filterOptions, stats, filters }: 
                                     )}
 
                                     {/* Actions */}
-                                    <div className="flex items-center gap-2 border-t border-gray-100 pt-4">
+                                    <div className="flex flex-wrap items-center gap-1 border-t border-gray-100 pt-3">
                                         <button
                                             onClick={() => viewMedicineDetails(medicine)}
-                                            className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                                            className="inline-flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
                                         >
-                                            <Eye className="h-4 w-4" />
+                                            <Eye className="h-3.5 w-3.5" />
                                             Details
                                         </button>
+
+                                        <Link
+                                            href={route('medicine-corner.medicine-history', medicine.id)}
+                                            className="inline-flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                                            title="Purchase history"
+                                        >
+                                            <History className="h-3.5 w-3.5" />
+                                            History
+                                        </Link>
 
                                         <Link
                                             href={`/medicine-corner/purchase?medicine_id=${medicine.id}`}

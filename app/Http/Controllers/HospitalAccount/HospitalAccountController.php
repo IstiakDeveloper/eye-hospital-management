@@ -29,8 +29,8 @@ class HospitalAccountController extends Controller
         $recentFundTransactions = HospitalFundTransaction::with('addedBy')
             ->latest()->take(5)->get();
 
-        // Add expense and income categories
-        $expenseCategories = HospitalExpenseCategory::where('is_active', true)->get();
+        // Add expense and income categories. Automatic purchase categories stay off this form.
+        $expenseCategories = HospitalExpenseCategory::query()->where('is_active', true)->forManualEntry()->orderBy('name')->get();
         $incomeCategories = HospitalIncomeCategory::where('is_active', true)->get();
 
         // Get unique investor names (purpose field)
@@ -111,6 +111,11 @@ class HospitalAccountController extends Controller
             return back()->withErrors(['amount' => 'Insufficient balance!']);
         }
 
+        HospitalExpenseCategory::ensureManualEntry(
+            $request->filled('expense_category_id') ? $request->integer('expense_category_id') : null,
+            $request->filled('category') ? $request->string('category')->toString() : null,
+        );
+
         // If expense_category_id is provided, get the category name from it
         $categoryName = $request->category;
         $categoryId = $request->expense_category_id;
@@ -145,7 +150,15 @@ class HospitalAccountController extends Controller
     public function editTransaction(HospitalTransaction $transaction)
     {
         $transaction->load(['expenseCategory', 'createdBy']);
-        $expenseCategories = HospitalExpenseCategory::where('is_active', true)->get();
+        $expenseCategories = HospitalExpenseCategory::query()->where('is_active', true)->forManualEntry()->orderBy('name')->get();
+
+        if ($transaction->expense_category_id && ! $expenseCategories->contains('id', $transaction->expense_category_id)) {
+            $currentCategory = HospitalExpenseCategory::query()->find($transaction->expense_category_id);
+
+            if ($currentCategory) {
+                $expenseCategories->prepend($currentCategory);
+            }
+        }
 
         return Inertia::render('HospitalAccount/EditTransaction', compact('transaction', 'expenseCategories'));
     }
@@ -160,6 +173,19 @@ class HospitalAccountController extends Controller
             'description' => 'required|string|max:500',
             'date' => 'required|date',
         ]);
+
+        if ($transaction->type === 'expense') {
+            $categoryId = $request->filled('expense_category_id') ? $request->integer('expense_category_id') : null;
+            $categoryName = $request->filled('category') ? $request->string('category')->toString() : null;
+            $resolvedId = $categoryId ?: HospitalExpenseCategory::query()->where('name', $categoryName)->value('id');
+            $unchanged = $resolvedId
+                ? (int) $transaction->expense_category_id === (int) $resolvedId
+                : $transaction->category === $categoryName;
+
+            if (! $unchanged) {
+                HospitalExpenseCategory::ensureManualEntry($categoryId, $categoryName);
+            }
+        }
 
         DB::transaction(function () use ($request, $transaction) {
             $oldAmount = $transaction->amount;
@@ -369,7 +395,7 @@ class HospitalAccountController extends Controller
 
     public function transactions(Request $request)
     {
-        $query = HospitalTransaction::with(['expenseCategory', 'incomeCategory', 'createdBy']);
+        $query = HospitalTransaction::with(['expenseCategory', 'incomeCategory', 'createdBy:id,name']);
 
         // Apply filters
         if ($request->type) {
@@ -562,7 +588,10 @@ class HospitalAccountController extends Controller
     // Categories (Both Income and Expense)
     public function categories()
     {
-        $expenseCategories = HospitalExpenseCategory::withCount('transactions')->get();
+        $expenseCategories = HospitalExpenseCategory::withCount('transactions')->get()
+            ->each(function (HospitalExpenseCategory $category): void {
+                $category->setAttribute('is_system', $category->isSystem());
+            });
         $incomeCategories = HospitalIncomeCategory::withCount('transactions')->get();
 
         return Inertia::render('HospitalAccount/Categories', compact('expenseCategories', 'incomeCategories'));
@@ -575,7 +604,10 @@ class HospitalAccountController extends Controller
             'name' => 'required|string|max:255|unique:hospital_expense_categories,name',
         ]);
 
-        HospitalExpenseCategory::create(['name' => $request->name]);
+        HospitalExpenseCategory::create([
+            'name' => $request->name,
+            'allows_manual_entry' => $request->boolean('allows_manual_entry', true),
+        ]);
 
         return back()->with('success', 'Expense category created successfully!');
     }
@@ -598,9 +630,25 @@ class HospitalAccountController extends Controller
         $request->validate([
             'name' => 'required|string|max:255|unique:hospital_expense_categories,name,'.$category->id,
             'is_active' => 'boolean',
+            'allows_manual_entry' => 'boolean',
         ]);
 
-        $category->update($request->only(['name', 'is_active']));
+        if ($category->isSystem() && $request->name !== $category->name) {
+            return back()->withErrors(['name' => 'This category name is used by automatic purchase and payment entries.']);
+        }
+
+        $updates = [
+            'name' => $category->isSystem() ? $category->name : $request->name,
+            'is_active' => $request->boolean('is_active'),
+        ];
+
+        if ($category->isSystem()) {
+            $updates['allows_manual_entry'] = false;
+        } elseif ($request->exists('allows_manual_entry')) {
+            $updates['allows_manual_entry'] = $request->boolean('allows_manual_entry');
+        }
+
+        $category->update($updates);
 
         return back()->with('success', 'Expense category updated successfully!');
     }

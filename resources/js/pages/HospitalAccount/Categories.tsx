@@ -7,6 +7,8 @@ interface Category {
     id: number;
     name: string;
     is_active: boolean;
+    allows_manual_entry?: boolean;
+    is_system?: boolean;
     transactions_count: number;
     total_spent?: number;
 }
@@ -23,6 +25,7 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
     const [formData, setFormData] = useState({
         name: '',
         is_active: true,
+        allows_manual_entry: true,
     });
 
     const handleSubmit = () => {
@@ -38,14 +41,14 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
                 onSuccess: () => {
                     setShowModal(false);
                     setEditingCategory(null);
-                    setFormData({ name: '', is_active: true });
+                    setFormData({ name: '', is_active: true, allows_manual_entry: true });
                 },
             });
         } else {
             router.post(route, formData, {
                 onSuccess: () => {
                     setShowModal(false);
-                    setFormData({ name: '', is_active: true });
+                    setFormData({ name: '', is_active: true, allows_manual_entry: true });
                 },
             });
         }
@@ -54,7 +57,11 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
     const handleEdit = (category: Category, type: 'expense' | 'income') => {
         setEditingCategory(category);
         setModalType(type);
-        setFormData({ name: category.name, is_active: category.is_active });
+        setFormData({
+            name: category.name,
+            is_active: category.is_active,
+            allows_manual_entry: type === 'expense' ? !category.is_system && category.allows_manual_entry !== false : true,
+        });
         setShowModal(true);
     };
 
@@ -70,7 +77,7 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
     const openAddModal = (type: 'expense' | 'income') => {
         setEditingCategory(null);
         setModalType(type);
-        setFormData({ name: '', is_active: true });
+        setFormData({ name: '', is_active: true, allows_manual_entry: true });
         setShowModal(true);
     };
 
@@ -170,6 +177,11 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
                                 <span className={`text-sm font-medium ${category.is_active ? 'text-green-600' : 'text-gray-400'}`}>
                                     {category.is_active ? 'Active' : 'Inactive'}
                                 </span>
+                                <span
+                                    className={`text-xs font-medium ${category.is_system || category.allows_manual_entry === false ? 'text-amber-700' : 'text-slate-500'}`}
+                                >
+                                    {category.is_system ? 'Automatic' : category.allows_manual_entry === false ? 'Manual entry off' : 'Manual entry'}
+                                </span>
                             </div>
                         </div>
                     ))}
@@ -192,10 +204,31 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
                                 type="text"
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className="w-full rounded-lg border px-3 py-2"
+                                className="w-full rounded-lg border px-3 py-2 disabled:bg-slate-100"
                                 placeholder="Enter category name"
+                                disabled={modalType === 'expense' && !!editingCategory?.is_system}
                             />
                         </div>
+
+                        {modalType === 'expense' && (
+                            <div className="mb-4">
+                                <label className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.allows_manual_entry}
+                                        onChange={(e) => setFormData({ ...formData, allows_manual_entry: e.target.checked })}
+                                        className="mr-2"
+                                        disabled={!!editingCategory?.is_system}
+                                    />
+                                    <span className="text-sm font-medium">Allow manual entry</span>
+                                </label>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    {editingCategory?.is_system
+                                        ? 'Purchase and payment already create this entry, so it stays out of Add Expense.'
+                                        : 'Turn this off to hide the category from Add Expense.'}
+                                </p>
+                            </div>
+                        )}
 
                         <div className="mb-6">
                             <label className="flex items-center">
@@ -221,7 +254,7 @@ const Categories: React.FC<CategoriesProps> = ({ expenseCategories, incomeCatego
                                 onClick={() => {
                                     setShowModal(false);
                                     setEditingCategory(null);
-                                    setFormData({ name: '', is_active: true });
+                                    setFormData({ name: '', is_active: true, allows_manual_entry: true });
                                 }}
                                 className="flex-1 rounded-lg bg-gray-300 py-2 text-gray-700 hover:bg-gray-400"
                             >
