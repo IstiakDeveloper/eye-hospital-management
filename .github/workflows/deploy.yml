@@ -66,7 +66,8 @@ jobs:
           test -f artisan
           test -f vendor/autoload.php
           test -f public/build/manifest.json
-          test -f public/manifest.webmanifest
+          test -f public/manifest.json
+          test -f public/sw.js
 
           echo "Laravel and Vite build verified"
 
@@ -94,16 +95,15 @@ jobs:
           mkdir -p deployment-package/build
           cp -a public/build/. deployment-package/build/
 
-          # Copy PWA assets & manifest to root for Hostinger root-level routing
-          cp -a public/manifest.webmanifest deployment-package/ 2>/dev/null || true
-          cp -a public/manifest.json deployment-package/ 2>/dev/null || true
-          cp -a public/sw.js deployment-package/ 2>/dev/null || true
-          cp -a public/sw-custom.js deployment-package/ 2>/dev/null || true
-          cp -r public/pwa deployment-package/ 2>/dev/null || true
-          cp -r public/.well-known deployment-package/ 2>/dev/null || true
-          cp -a public/favicon.ico deployment-package/ 2>/dev/null || true
-          cp -a public/logo.png deployment-package/ 2>/dev/null || true
-          cp -a public/logo.svg deployment-package/ 2>/dev/null || true
+          # Copy PWA assets to root for Hostinger root-level routing
+          cp -a public/manifest.json deployment-package/
+          cp -a public/sw.js deployment-package/
+          cp -a public/favicon.ico deployment-package/
+          cp -a public/logo.png deployment-package/
+          cp -a public/logo.svg deployment-package/
+          cp -a public/eye.png deployment-package/
+          cp -a public/robots.txt deployment-package/
+          cp -a public/icons deployment-package/
 
           # Preserve existing custom web entry files
           rm -f deployment-package/index.php
@@ -183,6 +183,8 @@ jobs:
           test -f "$STAGING/artisan"
           test -f "$STAGING/vendor/autoload.php"
           test -f "$STAGING/public/build/manifest.json"
+          test -f "$STAGING/public/manifest.json"
+          test -f "$STAGING/public/sw.js"
           test -f "$DEPLOY_PATH/.env"
 
           echo "Deploying application files..."
@@ -195,7 +197,6 @@ jobs:
             --exclude='bootstrap/cache/' \
             --exclude='index.php' \
             --exclude='.htaccess' \
-            --exclude='BackupSMP-10/' \
             --exclude='*.zip'
 
           cd "$DEPLOY_PATH"
