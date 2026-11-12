@@ -103,6 +103,48 @@ class AdvanceHouseRent extends Model
         return $deduction;
     }
 
+    public function reviseDeduction(
+        AdvanceHouseRentDeduction $deduction,
+        float $amount,
+        int $month,
+        int $year,
+        ?string $notes = null
+    ): AdvanceHouseRentDeduction {
+        if ((int) $deduction->advance_house_rent_id !== (int) $this->id) {
+            throw new \Exception('Deduction does not belong to this advance');
+        }
+
+        $delta = bcsub((string) $amount, (string) $deduction->amount, 2);
+
+        if (bccomp($delta, (string) $this->remaining_amount, 2) === 1) {
+            throw new \Exception('Deduction amount exceeds remaining advance balance');
+        }
+
+        $deduction->update([
+            'month' => $month,
+            'year' => $year,
+            'amount' => $amount,
+            'notes' => $notes,
+        ]);
+
+        $remaining = bcsub((string) $this->remaining_amount, $delta, 2);
+        $status = $this->status;
+
+        if (bccomp($remaining, '0', 2) <= 0) {
+            $status = 'exhausted';
+        } elseif ($this->status === 'exhausted') {
+            $status = 'active';
+        }
+
+        $this->update([
+            'used_amount' => bcadd((string) $this->used_amount, $delta, 2),
+            'remaining_amount' => $remaining,
+            'status' => $status,
+        ]);
+
+        return $deduction->refresh();
+    }
+
     public static function getActiveBalance(?string $floorType = null): float
     {
         $query = self::active();

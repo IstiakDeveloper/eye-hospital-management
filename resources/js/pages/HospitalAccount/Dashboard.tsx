@@ -1,7 +1,7 @@
 import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
 import { formatTaka, moneyAmount } from '@/lib/money';
 import { router } from '@inertiajs/react';
-import { MinusCircle, PlusCircle, Receipt, TrendingDown } from 'lucide-react';
+import { BarChart3, CreditCard, MinusCircle, PlusCircle, Receipt, TrendingDown, TrendingUp } from 'lucide-react';
 import React, { useState } from 'react';
 
 interface DashboardProps {
@@ -202,7 +202,8 @@ const Dashboard: React.FC<DashboardProps> = ({
     };
 
     const profit = moneyAmount(monthlyReport.profit);
-    const fieldClass = 'h-8 w-full rounded border border-slate-300 px-2 text-[12px] focus:border-slate-500 focus:outline-none';
+    const fieldClass =
+        'h-8 w-full rounded border border-slate-300 px-2 text-[12px] focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none';
     const noteClass = 'w-full rounded border border-slate-300 px-2 py-1.5 text-[12px] focus:border-slate-500 focus:outline-none';
 
     return (
@@ -217,64 +218,83 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <button
                             type="button"
                             onClick={() => setFundInModal(true)}
-                            className="inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2.5 text-[12px] hover:bg-slate-50"
+                            className="inline-flex h-7 items-center gap-1 rounded bg-green-600 px-2.5 text-[12px] text-white hover:bg-green-700"
                         >
                             <PlusCircle className="h-3.5 w-3.5" />
-                            Fund in
+                            Fund In
                         </button>
                         <button
                             type="button"
                             onClick={() => setFundOutModal(true)}
-                            className="inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2.5 text-[12px] hover:bg-slate-50"
+                            className="inline-flex h-7 items-center gap-1 rounded bg-red-600 px-2.5 text-[12px] text-white hover:bg-red-700"
                         >
                             <MinusCircle className="h-3.5 w-3.5" />
-                            Fund out
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setOtherIncomeModal(true)}
-                            className="inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2.5 text-[12px] hover:bg-slate-50"
-                        >
-                            <PlusCircle className="h-3.5 w-3.5" />
-                            Other income
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => router.visit(route('hospital-account.due-expenses.index'))}
-                            className="inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2.5 text-[12px] hover:bg-slate-50"
-                        >
-                            <Receipt className="h-3.5 w-3.5" />
-                            Due expense
+                            Fund Out
                         </button>
                         <button
                             type="button"
                             onClick={() => setExpenseModal(true)}
-                            className="inline-flex h-7 items-center gap-1 rounded bg-slate-800 px-2.5 text-[12px] text-white hover:bg-slate-700"
+                            className="inline-flex h-7 items-center gap-1 rounded bg-blue-600 px-2.5 text-[12px] text-white hover:bg-blue-700"
                         >
                             <TrendingDown className="h-3.5 w-3.5" />
-                            Add expense
+                            Add Expense
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setOtherIncomeModal(true)}
+                            className="inline-flex h-7 items-center gap-1 rounded bg-indigo-600 px-2.5 text-[12px] text-white hover:bg-indigo-700"
+                        >
+                            <PlusCircle className="h-3.5 w-3.5" />
+                            Other Income
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => router.visit(route('hospital-account.due-expenses.index'))}
+                            className="inline-flex h-7 items-center gap-1 rounded bg-amber-600 px-2.5 text-[12px] text-white hover:bg-amber-700"
+                        >
+                            <Receipt className="h-3.5 w-3.5" />
+                            Due Expense
                         </button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 divide-x divide-slate-200 overflow-hidden rounded border border-slate-200 bg-white sm:grid-cols-4">
-                    {[
-                        ['Balance', formatTaka(balance), 'text-slate-900'],
-                        ['Income', formatTaka(monthlyReport.income), 'text-emerald-700'],
-                        ['Expense', formatTaka(monthlyReport.expense), 'text-red-700'],
-                        ['Profit', formatTaka(monthlyReport.profit), profit >= 0 ? 'text-emerald-700' : 'text-red-700'],
-                    ].map(([label, value, tone]) => (
-                        <div key={label} className="px-3 py-2">
-                            <p className="text-[11px] text-slate-500">{label}</p>
-                            <p className={`text-[13px] font-semibold tabular-nums ${tone}`}>{value}</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="flex items-center justify-between rounded border border-blue-100 bg-white px-3 py-2">
+                        <div>
+                            <p className="text-[11px] font-medium text-gray-600">Current Balance</p>
+                            <p className="text-[15px] font-bold text-gray-900 tabular-nums">{formatTaka(balance)}</p>
                         </div>
-                    ))}
+                        <CreditCard className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex items-center justify-between rounded border border-green-100 bg-white px-3 py-2">
+                        <div>
+                            <p className="text-[11px] font-medium text-gray-600">Monthly Income</p>
+                            <p className="text-[15px] font-bold text-green-600 tabular-nums">{formatTaka(monthlyReport.income)}</p>
+                        </div>
+                        <TrendingUp className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="flex items-center justify-between rounded border border-red-100 bg-white px-3 py-2">
+                        <div>
+                            <p className="text-[11px] font-medium text-gray-600">Monthly Expense</p>
+                            <p className="text-[15px] font-bold text-red-600 tabular-nums">{formatTaka(monthlyReport.expense)}</p>
+                        </div>
+                        <TrendingDown className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div className="flex items-center justify-between rounded border border-blue-100 bg-white px-3 py-2">
+                        <div>
+                            <p className="text-[11px] font-medium text-gray-600">Monthly Profit</p>
+                            <p className={`text-[15px] font-bold tabular-nums ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {formatTaka(monthlyReport.profit)}
+                            </p>
+                        </div>
+                        <BarChart3 className="h-5 w-5 text-blue-600" />
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                    <section className="overflow-hidden rounded border border-slate-200 bg-white">
-                        <div className="border-b border-slate-200 px-3 py-2">
-                            <h2 className="text-[13px] font-semibold">Recent transactions</h2>
+                    <section className="overflow-hidden rounded border border-blue-100 bg-white">
+                        <div className="border-b border-blue-100 bg-blue-50 px-3 py-2">
+                            <h2 className="text-[13px] font-semibold text-blue-900">Recent Transactions</h2>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="min-w-full text-left text-[12px]">
@@ -303,7 +323,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                     {formatDate(transaction.transaction_date)}
                                                 </td>
                                                 <td
-                                                    className={`px-3 py-1.5 text-right font-medium tabular-nums ${transaction.type === 'income' ? 'text-emerald-700' : 'text-red-700'}`}
+                                                    className={`px-3 py-1.5 text-right font-medium tabular-nums ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}
                                                 >
                                                     {transaction.type === 'income' ? '+' : '−'}
                                                     {formatTaka(transaction.amount)}
@@ -316,9 +336,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                         </div>
                     </section>
 
-                    <section className="overflow-hidden rounded border border-slate-200 bg-white">
-                        <div className="border-b border-slate-200 px-3 py-2">
-                            <h2 className="text-[13px] font-semibold">Recent funds</h2>
+                    <section className="overflow-hidden rounded border border-green-100 bg-white">
+                        <div className="border-b border-green-100 bg-green-50 px-3 py-2">
+                            <h2 className="text-[13px] font-semibold text-green-900">Recent Fund Transactions</h2>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="min-w-full text-left text-[12px]">
@@ -345,7 +365,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                                 </td>
                                                 <td className="px-3 py-1.5 whitespace-nowrap text-slate-600">{formatDate(fund.date)}</td>
                                                 <td
-                                                    className={`px-3 py-1.5 text-right font-medium tabular-nums ${fund.type === 'fund_in' ? 'text-emerald-700' : 'text-red-700'}`}
+                                                    className={`px-3 py-1.5 text-right font-medium tabular-nums ${fund.type === 'fund_in' ? 'text-green-600' : 'text-red-600'}`}
                                                 >
                                                     {fund.type === 'fund_in' ? '+' : '−'}
                                                     {formatTaka(fund.amount)}
@@ -420,7 +440,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                             <button
                                 onClick={handleFundIn}
                                 disabled={!formData.amount || (!formData.investor_name && !formData.purpose) || !formData.description || loading}
-                                className="h-7 flex-1 rounded bg-slate-800 text-[12px] text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                className="h-7 flex-1 rounded bg-green-600 text-[12px] text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                             >
                                 {loading ? 'Adding...' : 'Add Fund'}
                             </button>
@@ -504,7 +524,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                     parseFloat(formData.amount) > balance ||
                                     loading
                                 }
-                                className="h-7 flex-1 rounded bg-slate-800 text-[12px] text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                className="h-7 flex-1 rounded bg-red-600 text-[12px] text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                             >
                                 {loading ? 'Processing...' : 'Withdraw'}
                             </button>
@@ -582,7 +602,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                     parseFloat(formData.amount) > balance ||
                                     loading
                                 }
-                                className="h-7 flex-1 rounded bg-slate-800 text-[12px] text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                className="h-7 flex-1 rounded bg-blue-600 text-[12px] text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                             >
                                 {loading ? 'Adding...' : 'Add Expense'}
                             </button>
@@ -652,7 +672,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                             <button
                                 onClick={handleOtherIncome}
                                 disabled={!formData.amount || !formData.income_category_id || !formData.description || loading}
-                                className="h-7 flex-1 rounded bg-slate-800 text-[12px] text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                className="h-7 flex-1 rounded bg-indigo-600 text-[12px] text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                             >
                                 {loading ? 'Adding...' : 'Add Income'}
                             </button>

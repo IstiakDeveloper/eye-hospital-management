@@ -2,6 +2,7 @@ import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
 import { router } from '@inertiajs/react';
 import { Calendar, CheckCircle, DollarSign, Home, Minus, Plus, TrendingDown } from 'lucide-react';
 import { useState } from 'react';
+import EditDeductionModal, { EditableDeduction } from './EditDeductionModal';
 
 interface AdvanceRent {
     id: number;
@@ -42,6 +43,7 @@ interface Props {
     totalUsed: number;
     monthlyDeductions: Record<number, number>;
     floor_type?: string;
+    canManageDeductions?: boolean;
 }
 
 const formatCurrency = (amount: number) => {
@@ -76,6 +78,7 @@ export default function AdvanceRentDashboard({
     totalUsed,
     monthlyDeductions,
     floor_type = '2_3_floor',
+    canManageDeductions = false,
 }: Props) {
     const [currentFloor, setCurrentFloor] = useState<string>(floor_type);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -83,6 +86,7 @@ export default function AdvanceRentDashboard({
     const [isAddLoading, setIsAddLoading] = useState(false);
     const [isDeductLoading, setIsDeductLoading] = useState(false);
     const [deductError, setDeductError] = useState<string | null>(null);
+    const [editingDeduction, setEditingDeduction] = useState<EditableDeduction | null>(null);
 
     const [addFormData, setAddFormData] = useState({
         amount: '',
@@ -314,6 +318,15 @@ export default function AdvanceRentDashboard({
                                         <div className="text-right">
                                             <p className="text-lg font-semibold text-red-600">{formatCurrency(deduction.amount)}</p>
                                             <p className="text-xs text-gray-500">by {deduction.deducted_by.name}</p>
+                                            {canManageDeductions && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditingDeduction(deduction)}
+                                                    className="mt-1 text-sm font-medium text-blue-600 hover:underline"
+                                                >
+                                                    Edit
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -508,6 +521,10 @@ export default function AdvanceRentDashboard({
                             </div>
                         </div>
                     </div>
+                )}
+
+                {editingDeduction && (
+                    <EditDeductionModal key={editingDeduction.id} deduction={editingDeduction} onClose={() => setEditingDeduction(null)} />
                 )}
             </div>
         </HospitalAccountLayout>

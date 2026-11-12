@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\HospitalAccount;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\HospitalAccount\UpdateAdvanceHouseRentDeductionRequest;
 use App\Models\AdvanceHouseRent;
 use App\Models\AdvanceHouseRentDeduction;
 use App\Models\HospitalAccount;
@@ -66,6 +67,7 @@ class AdvanceHouseRentController extends Controller
             'totalUsed' => $totalUsed,
             'monthlyDeductions' => $monthlyDeductions,
             'floorType' => $floorType,
+            'canManageDeductions' => $request->user()?->isSuperAdmin() ?? false,
         ]);
     }
 
@@ -137,17 +139,14 @@ class AdvanceHouseRentController extends Controller
             return back()->withErrors(['amount' => 'Deduction amount exceeds remaining advance balance!']);
         }
 
-        // Check if already deducted for this month/year and floor type
-        $existingDeduction = AdvanceHouseRentDeduction::where('month', $request->month)
-            ->where('year', $request->year)
-            ->whereHas('advanceHouseRent', function ($q) use ($request) {
-                $q->where('floor_type', $request->floor_type);
-            })
-            ->first();
+        $floorLabel = $request->floor_type === '4_floor' ? '4th Floor' : '2nd & 3rd Floor';
+        $existingCount = $this->floorMonthlyDeductionCount($request->floor_type, (int) $request->month, (int) $request->year);
 
-        if ($existingDeduction) {
-            $floorLabel = $request->floor_type === '4_floor' ? '4th Floor' : '2nd & 3rd Floor';
+        if ($existingCount >= 2) {
+            return back()->withErrors(['error' => "Rent for {$floorLabel} in this month already has 2 deductions!"]);
+        }
 
+        if ($existingCount >= 1 && ! $request->user()?->isSuperAdmin()) {
             return back()->withErrors(['error' => "Rent for {$floorLabel} in this month has already been deducted!"]);
         }
 
@@ -171,6 +170,51 @@ class AdvanceHouseRentController extends Controller
             DB::rollBack();
 
             return back()->withErrors(['error' => 'Failed to deduct rent: '.$e->getMessage()]);
+        }
+    }
+
+    public function update(UpdateAdvanceHouseRentDeductionRequest $request, AdvanceHouseRentDeduction $deduction)
+    {
+        $advance = $deduction->advanceHouseRent;
+
+        if (! $advance) {
+            return back()->withErrors(['error' => 'Advance rent for this deduction was not found.']);
+        }
+
+        $siblingCount = $this->floorMonthlyDeductionCount(
+            $advance->floor_type,
+            $request->integer('month'),
+            $request->integer('year'),
+            $deduction->id,
+        );
+
+        if ($siblingCount >= 2) {
+            $floorLabel = $advance->floor_type === '4_floor' ? '4th Floor' : '2nd & 3rd Floor';
+
+            return back()->withErrors(['error' => "{$floorLabel} already has 2 deductions in this month."]);
+        }
+
+        DB::beginTransaction();
+        try {
+            $advance->reviseDeduction(
+                deduction: $deduction,
+                amount: (float) $request->input('amount'),
+                month: $request->integer('month'),
+                year: $request->integer('year'),
+                notes: $request->filled('notes') ? $request->string('notes')->toString() : null,
+            );
+
+            DB::commit();
+
+            return back()->with('success', 'Deduction updated successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            if (str_contains($e->getMessage(), 'exceeds remaining')) {
+                return back()->withErrors(['amount' => 'Deduction amount exceeds remaining advance balance!']);
+            }
+
+            return back()->withErrors(['error' => 'Failed to update deduction: '.$e->getMessage()]);
         }
     }
 
@@ -267,6 +311,11 @@ class AdvanceHouseRentController extends Controller
                 'credit' => 0,
                 'debit' => $deduction->amount,
                 'type' => 'deduction',
+                'id' => $deduction->id,
+                'month' => $deduction->month,
+                'year' => $deduction->year,
+                'amount' => $deduction->amount,
+                'notes' => $deduction->notes,
             ]);
         }
 
@@ -282,13 +331,23 @@ class AdvanceHouseRentController extends Controller
                 'debit' => $totalDebit,
                 'balance' => $runningBalance,
                 'details' => $items->map(function ($item) {
-                    return [
+                    $detail = [
                         'description' => $item['description'],
                         'payment_number' => $item['payment_number'],
                         'credit' => $item['credit'],
                         'debit' => $item['debit'],
                         'type' => $item['type'],
                     ];
+
+                    if ($item['type'] === 'deduction') {
+                        $detail['id'] = $item['id'];
+                        $detail['month'] = $item['month'];
+                        $detail['year'] = $item['year'];
+                        $detail['amount'] = $item['amount'];
+                        $detail['notes'] = $item['notes'];
+                    }
+
+                    return $detail;
                 })->toArray(),
             ];
         })->sortKeys()->values()->toArray();
@@ -314,6 +373,7 @@ class AdvanceHouseRentController extends Controller
                 'floor_type' => $floorType,
             ],
             'years' => $years,
+            'canManageDeductions' => $request->user()?->isSuperAdmin() ?? false,
         ]);
     }
 
@@ -473,6 +533,18 @@ class AdvanceHouseRentController extends Controller
         }
 
         return $this->exportPDF($transactions, $previousBalance, $totalCredit, $totalDebit, $runningBalance, $periodTitle);
+    }
+
+    private function floorMonthlyDeductionCount(string $floorType, int $month, int $year, ?int $exceptId = null): int
+    {
+        return AdvanceHouseRentDeduction::query()
+            ->where('month', $month)
+            ->where('year', $year)
+            ->when($exceptId !== null, fn ($query) => $query->where('id', '!=', $exceptId))
+            ->whereHas('advanceHouseRent', function ($query) use ($floorType) {
+                $query->where('floor_type', $floorType);
+            })
+            ->count();
     }
 
     private function exportPDF($transactions, $previousBalance, $totalCredit, $totalDebit, $finalBalance, $periodTitle)

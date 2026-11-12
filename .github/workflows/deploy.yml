@@ -1,0 +1,244 @@
+
+name: Deploy Laravel to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eyehospital-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # 1. Checkout
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Setup PHP
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, curl, zip, pdo_mysql, bcmath, gd, intl
+          coverage: none
+          tools: composer:v2
+
+      # 3. Composer dependencies
+      - name: Install Composer Dependencies
+        run: |
+          composer validate --no-check-publish
+          composer install \
+            --no-dev \
+            --prefer-dist \
+            --no-interaction \
+            --no-progress \
+            --optimize-autoloader
+
+      # 4. Setup Node
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # 5. Install frontend dependencies
+      - name: Install NPM Dependencies
+        run: npm ci
+
+      # 6. Build Inertia / Vite
+      - name: Build Frontend
+        run: npm run build
+
+      # 7. Validate build
+      - name: Verify Build
+        run: |
+          test -f artisan
+          test -f vendor/autoload.php
+          test -f public/build/manifest.json
+          test -f public/manifest.webmanifest
+
+          echo "Laravel and Vite build verified"
+
+      # 8. Prepare deployment package
+      - name: Prepare Deployment Package
+        run: |
+          mkdir -p deployment-package
+
+          rsync -a ./ deployment-package/ \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='node_modules/' \
+            --exclude='deployment-package/' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='storage/' \
+            --exclude='tests/' \
+            --exclude='*.zip' \
+            --exclude='*.sql' \
+            --exclude='*.sql.gz' \
+            --exclude='public/storage/' \
+            --exclude='bootstrap/cache/*.php'
+
+          # Current Hostinger layout uses root /build
+          mkdir -p deployment-package/build
+          cp -a public/build/. deployment-package/build/
+
+          # Copy PWA assets & manifest to root for Hostinger root-level routing
+          cp -a public/manifest.webmanifest deployment-package/ 2>/dev/null || true
+          cp -a public/manifest.json deployment-package/ 2>/dev/null || true
+          cp -a public/sw.js deployment-package/ 2>/dev/null || true
+          cp -a public/sw-custom.js deployment-package/ 2>/dev/null || true
+          cp -r public/pwa deployment-package/ 2>/dev/null || true
+          cp -r public/.well-known deployment-package/ 2>/dev/null || true
+          cp -a public/favicon.ico deployment-package/ 2>/dev/null || true
+          cp -a public/logo.png deployment-package/ 2>/dev/null || true
+          cp -a public/logo.svg deployment-package/ 2>/dev/null || true
+
+          # Preserve existing custom web entry files
+          rm -f deployment-package/index.php
+          rm -f deployment-package/.htaccess
+
+          tar -czf deployment.tar.gz \
+            -C deployment-package .
+
+      # 9. Configure SSH
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$SSH_PRIVATE_KEY" \
+            > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          printf '%s\n' "$SSH_KNOWN_HOSTS" \
+            > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      # 10. Test SSH
+      - name: Verify SSH Connection
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=15 \
+            -p "$SSH_PORT" \
+            "$SSH_USER@$SSH_HOST" \
+            'echo "SSH connection verified"'
+
+      # 11. Upload package
+      - name: Upload Deployment Package
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          scp \
+            -o StrictHostKeyChecking=yes \
+            -P "$SSH_PORT" \
+            deployment.tar.gz \
+            "$SSH_USER@$SSH_HOST:~/eyehospital-deployment.tar.gz"
+
+      # 12. Deploy application
+      - name: Deploy to Hostinger
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -p "$SSH_PORT" \
+            "$SSH_USER@$SSH_HOST" \
+            bash -s -- "$DEPLOY_PATH" <<'REMOTE'
+          set -Eeuo pipefail
+
+          DEPLOY_PATH="$1"
+          PHP="/opt/alt/php84/usr/bin/php"
+          STAGING="$HOME/eyehospital-deploy-staging"
+
+          echo "Preparing staging directory..."
+
+          mkdir -p "$STAGING"
+          tar -xzf "$HOME/eyehospital-deployment.tar.gz" \
+            -C "$STAGING"
+
+          test -f "$STAGING/artisan"
+          test -f "$STAGING/vendor/autoload.php"
+          test -f "$STAGING/public/build/manifest.json"
+          test -f "$DEPLOY_PATH/.env"
+
+          echo "Deploying application files..."
+
+          rsync -a "$STAGING/" "$DEPLOY_PATH/" \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='storage/' \
+            --exclude='public/storage/' \
+            --exclude='bootstrap/cache/' \
+            --exclude='index.php' \
+            --exclude='.htaccess' \
+            --exclude='BackupSMP-10/' \
+            --exclude='*.zip'
+
+          cd "$DEPLOY_PATH"
+
+          echo "Clearing old package manifests..."
+          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+
+          echo "Discovering packages..."
+          "$PHP" artisan package:discover --ansi
+
+          echo "Running database migrations..."
+          "$PHP" artisan migrate --force --no-interaction
+
+          echo "Refreshing Laravel cache..."
+          "$PHP" artisan config:clear
+          "$PHP" artisan view:clear
+          "$PHP" artisan config:cache
+          "$PHP" artisan view:cache
+
+          rm -f bootstrap/cache/packages.php bootstrap/cache/services.php
+          "$PHP" artisan package:discover --ansi
+
+          echo "Refreshing Laravel cache..."
+
+          "$PHP" artisan config:clear
+          "$PHP" artisan view:clear
+          "$PHP" artisan cache:clear
+
+          "$PHP" artisan config:cache
+          "$PHP" artisan view:cache
+
+          echo "Cleaning temporary files..."
+
+          rm -rf "$STAGING"
+          rm -f "$HOME/eyehospital-deployment.tar.gz"
+
+          echo "Deployment completed successfully"
+          REMOTE
+
+      # 13. Summary
+      - name: Deployment Summary
+        run: |
+          echo "## Hostinger Deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "Status: Deployment commands completed" >> "$GITHUB_STEP_SUMMARY"
+          echo "Branch: $GITHUB_REF_NAME" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"

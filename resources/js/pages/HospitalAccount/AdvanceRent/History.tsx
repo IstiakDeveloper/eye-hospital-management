@@ -2,6 +2,7 @@ import HospitalAccountLayout from '@/layouts/HospitalAccountLayout';
 import { router } from '@inertiajs/react';
 import { ArrowLeft, Download, FileText, Filter, History as HistoryIcon } from 'lucide-react';
 import { useState } from 'react';
+import EditDeductionModal, { EditableDeduction } from './EditDeductionModal';
 
 interface TransactionDetail {
     description: string;
@@ -9,6 +10,11 @@ interface TransactionDetail {
     credit: number;
     debit: number;
     type: 'advance' | 'deduction';
+    id?: number;
+    month?: number;
+    year?: number;
+    amount?: number | string;
+    notes?: string | null;
 }
 
 interface Transaction {
@@ -28,6 +34,7 @@ interface Props {
         floor_type?: string;
     };
     years: number[];
+    canManageDeductions?: boolean;
 }
 
 const formatCurrency = (amount: number) => {
@@ -50,8 +57,9 @@ const getMonthName = (month: number) => {
     return months[month - 1];
 };
 
-export default function AdvanceRentHistory({ transactions, previousBalance, filters, years }: Props) {
+export default function AdvanceRentHistory({ transactions, previousBalance, filters, years, canManageDeductions = false }: Props) {
     const [currentFloor, setCurrentFloor] = useState<string>(filters.floor_type || '2_3_floor');
+    const [editingDeduction, setEditingDeduction] = useState<EditableDeduction | null>(null);
     const [selectedYear, setSelectedYear] = useState(filters.year || new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState<number | ''>(filters.month || '');
 
@@ -81,6 +89,22 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
 
     const handlePrint = () => {
         window.print();
+    };
+
+    const columnCount = canManageDeductions ? 7 : 6;
+
+    const openDeductionEditor = (detail: TransactionDetail) => {
+        if (!detail.id || !detail.month || !detail.year) {
+            return;
+        }
+
+        setEditingDeduction({
+            id: detail.id,
+            month: detail.month,
+            year: detail.year,
+            amount: detail.amount ?? detail.debit,
+            notes: detail.notes,
+        });
     };
 
     const totalCredit = transactions.reduce((sum, t) => sum + t.credit, 0);
@@ -219,6 +243,7 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
                                         <th className="p-3 text-right font-semibold text-green-700">Credit (৳)</th>
                                         <th className="p-3 text-right font-semibold text-red-700">Debit (৳)</th>
                                         <th className="p-3 text-right font-semibold text-blue-700">Balance (৳)</th>
+                                        {canManageDeductions && <th className="p-3 text-right font-semibold text-gray-700 print:hidden">Action</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -230,6 +255,7 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
                                         <td className="p-3 text-right">-</td>
                                         <td className="p-3 text-right">-</td>
                                         <td className="p-3 text-right font-bold text-blue-700">{formatCurrency(previousBalance)}</td>
+                                        {canManageDeductions && <td className="print:hidden" />}
                                     </tr>
 
                                     {transactions.length > 0 ? (
@@ -277,11 +303,32 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
                                                 <td className="p-3 text-right text-sm font-bold text-blue-700">
                                                     {formatCurrency(transaction.balance)}
                                                 </td>
+                                                {canManageDeductions && (
+                                                    <td className="p-3 text-right text-sm print:hidden">
+                                                        <div className="space-y-1">
+                                                            {transaction.details.map((detail, detailIndex) =>
+                                                                detail.type === 'deduction' ? (
+                                                                    <div key={detailIndex}>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => openDeductionEditor(detail)}
+                                                                            className="font-medium text-blue-600 hover:underline"
+                                                                        >
+                                                                            Edit
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div key={detailIndex}>-</div>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={6} className="py-12 text-center text-gray-500">
+                                            <td colSpan={columnCount} className="py-12 text-center text-gray-500">
                                                 No transactions found for this period
                                             </td>
                                         </tr>
@@ -296,6 +343,7 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
                                             <td className="p-3 text-right text-green-700">{formatCurrency(totalCredit)}</td>
                                             <td className="p-3 text-right text-red-700">{formatCurrency(totalDebit)}</td>
                                             <td className="p-3 text-right text-blue-700">{formatCurrency(finalBalance)}</td>
+                                            {canManageDeductions && <td className="print:hidden" />}
                                         </tr>
                                     )}
                                 </tbody>
@@ -322,6 +370,10 @@ export default function AdvanceRentHistory({ transactions, previousBalance, filt
                     </div>
                 </div>
             </div>
+
+            {editingDeduction && (
+                <EditDeductionModal key={editingDeduction.id} deduction={editingDeduction} onClose={() => setEditingDeduction(null)} />
+            )}
 
             <style>{`
                 @media print {

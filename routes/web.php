@@ -741,6 +741,7 @@ Route::middleware(['permission:hospital-account.view'])->prefix('hospital-accoun
         Route::post('/deduct', [AdvanceHouseRentController::class, 'deduct'])->name('deduct');
         Route::get('/history', [AdvanceHouseRentController::class, 'history'])->name('history');
         Route::get('/deductions', [AdvanceHouseRentController::class, 'deductions'])->name('deductions');
+        Route::put('/deductions/{deduction}', [AdvanceHouseRentController::class, 'update'])->name('deductions.update')->middleware('super-admin-only');
         Route::get('/export', [AdvanceHouseRentController::class, 'export'])->name('export');
     });
 

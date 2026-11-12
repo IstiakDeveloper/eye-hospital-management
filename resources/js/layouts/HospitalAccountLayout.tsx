@@ -171,7 +171,7 @@ const HospitalAccountLayout: React.FC<HospitalAccountLayoutProps> = ({ children,
                                     key={item.name}
                                     href={item.href}
                                     className={`flex items-center gap-1.5 border-b-2 px-2.5 py-2 text-[12px] font-medium whitespace-nowrap ${
-                                        item.current ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-800'
+                                        item.current ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-900'
                                     }`}
                                 >
                                     <Icon className="h-3.5 w-3.5" />
