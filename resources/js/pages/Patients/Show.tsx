@@ -1,4 +1,4 @@
-import AdminLayout from '@/Layouts/admin-layout';
+import AdminLayout from '@/layouts/admin-layout';
 import { formatDhakaDate, formatDhakaDateTime } from '@/utils/dhaka-time';
 import { Head, Link, router } from '@inertiajs/react';
 import {

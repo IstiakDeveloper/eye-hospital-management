@@ -1,6 +1,6 @@
-import { Button } from '@/Components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
-import AdminLayout from '@/Layouts/admin-layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import AdminLayout from '@/layouts/admin-layout';
 import { formatTime } from '@/lib/utils';
 import { Head, Link, router } from '@inertiajs/react';
 import {
