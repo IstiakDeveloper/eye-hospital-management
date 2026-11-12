@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Role;
 use App\Models\Permission;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -33,7 +34,7 @@ class RolePermissionController extends Controller
                 'edit_permission' => $authUser->hasPermission('permissions.edit'),
                 'delete_permission' => $authUser->hasPermission('permissions.delete'),
                 'assign_permissions' => $authUser->hasPermission('roles.assign-permissions'),
-            ]
+            ],
         ]);
     }
 
@@ -47,7 +48,7 @@ class RolePermissionController extends Controller
 
         return Inertia::render('RolePermission/CreateRole', [
             'permissions' => $permissions,
-            'permissionsByCategory' => $permissions->groupBy('category')
+            'permissionsByCategory' => $permissions->groupBy('category'),
         ]);
     }
 
@@ -70,7 +71,7 @@ class RolePermissionController extends Controller
         ]);
 
         // Attach permissions to role
-        if (!empty($validated['permissions'])) {
+        if (! empty($validated['permissions'])) {
             $role->permissions()->attach($validated['permissions']);
         }
 
@@ -101,7 +102,7 @@ class RolePermissionController extends Controller
     public function updateRole(Request $request, Role $role)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name,' . $role->id,
+            'name' => 'required|string|max:255|unique:roles,name,'.$role->id,
             'description' => 'nullable|string|max:500',
             'permissions' => 'nullable|array',
             'permissions.*' => 'exists:permissions,id',
@@ -114,6 +115,7 @@ class RolePermissionController extends Controller
 
         // Sync permissions
         $role->permissions()->sync($validated['permissions'] ?? []);
+        User::forgetInertiaPermissionCacheForRole($role->id);
 
         return redirect()->route('roles.index')
             ->with('success', 'Role updated successfully!');
@@ -153,7 +155,7 @@ class RolePermissionController extends Controller
             ->toArray();
 
         return Inertia::render('RolePermission/CreatePermission', [
-            'categories' => $categories
+            'categories' => $categories,
         ]);
     }
 
@@ -193,7 +195,7 @@ class RolePermissionController extends Controller
 
         return Inertia::render('RolePermission/EditPermission', [
             'permission' => $permission,
-            'categories' => $categories
+            'categories' => $categories,
         ]);
     }
 
@@ -204,7 +206,7 @@ class RolePermissionController extends Controller
     public function updatePermission(Request $request, Permission $permission)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:permissions,name,' . $permission->id,
+            'name' => 'required|string|max:255|unique:permissions,name,'.$permission->id,
             'display_name' => 'required|string|max:255',
             'description' => 'nullable|string|max:500',
             'category' => 'required|string|max:100',
@@ -222,9 +224,18 @@ class RolePermissionController extends Controller
      */
     public function destroyPermission(Permission $permission)
     {
+        $roleIds = $permission->roles()->pluck('roles.id');
+        $directUserIds = $permission->userPermissions()->pluck('user_id');
+
         // Detach from all roles and users
         $permission->roles()->detach();
         $permission->userPermissions()->delete();
+
+        $roleIds->each(fn ($roleId) => User::forgetInertiaPermissionCacheForRole((int) $roleId));
+        $directUserIds->each(function ($userId): void {
+            $user = User::query()->find($userId);
+            $user?->forgetInertiaPermissionCache();
+        });
 
         $permission->delete();
 
@@ -262,6 +273,7 @@ class RolePermissionController extends Controller
 
         // Sync permissions
         $role->permissions()->sync($validated['permissions']);
+        User::forgetInertiaPermissionCacheForRole($role->id);
 
         return redirect()->route('roles.index')
             ->with('success', "Permissions updated for role: {$role->name}");
@@ -274,7 +286,7 @@ class RolePermissionController extends Controller
     {
         return response()->json([
             'role' => $role->load('permissions'),
-            'permissions' => $role->permissions->pluck('id')->toArray()
+            'permissions' => $role->permissions->pluck('id')->toArray(),
         ]);
     }
 
@@ -504,13 +516,14 @@ class RolePermissionController extends Controller
         if ($superAdmin) {
             $allPermissions = Permission::where('name', '!=', '*')->get();
             $superAdmin->permissions()->syncWithoutDetaching($allPermissions->pluck('id'));
+            User::forgetInertiaPermissionCacheForRole($superAdmin->id);
         }
 
         return redirect()->route('roles.index')->with(
             'success',
             $newCount > 0
                 ? "Permissions synchronized successfully! {$newCount} new permission(s) added."
-                : "All system permissions are already up to date. No new permissions found."
+                : 'All system permissions are already up to date. No new permissions found.'
         );
     }
 }

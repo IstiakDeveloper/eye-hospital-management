@@ -66,8 +66,8 @@ class UserController extends Controller
             'filters' => $request->only(['search', 'role_id', 'is_active']),
             'can' => [
                 'create' => $isSuperAdmin || $hasEmpMgmt || $authUser->hasPermission('users.create'),
-                'edit' => $isSuperAdmin || ($authUser->hasPermission('users.edit') && !$hasEmpMgmt),
-                'delete' => $isSuperAdmin || ($authUser->hasPermission('users.delete') && !$hasEmpMgmt),
+                'edit' => $isSuperAdmin || ($authUser->hasPermission('users.edit') && ! $hasEmpMgmt),
+                'delete' => $isSuperAdmin || ($authUser->hasPermission('users.delete') && ! $hasEmpMgmt),
                 'view' => $isSuperAdmin || $hasEmpMgmt || $authUser->hasPermission('users.view'),
                 'manage_permissions' => $isSuperAdmin,
             ],
@@ -216,6 +216,8 @@ class UserController extends Controller
             return back()->with('error', 'Failed to update user.');
         }
 
+        $user->forgetInertiaPermissionCache();
+
         // Refresh user data
         $user = $user->fresh();
 
@@ -333,6 +335,8 @@ class UserController extends Controller
                 'granted' => $permission['granted'],
             ]);
         }
+
+        $user->forgetInertiaPermissionCache();
 
         return redirect()->route('users.show', $id)
             ->with('success', 'User permissions updated successfully!');

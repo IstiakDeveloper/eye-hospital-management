@@ -2,10 +2,12 @@
 
 namespace App\Http\Middleware;
 
-use Illuminate\Foundation\Inspiring;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
+use Inertia\Support\Header;
 use Tighten\Ziggy\Ziggy;
 
 class HandleInertiaRequests extends Middleware
@@ -38,12 +40,9 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
-
-        return [
+        $shared = [
             ...parent::share($request),
             'name' => config('app.name'),
-            'quote' => ['message' => trim($message), 'author' => trim($author)],
             'auth' => function () {
                 $user = Auth::user();
 
@@ -73,10 +72,6 @@ class HandleInertiaRequests extends Middleware
                     ],
                 ];
             },
-            'ziggy' => fn (): array => [
-                ...(new Ziggy)->toArray(),
-                'location' => $request->url(),
-            ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
 
             // Flash messages
@@ -88,6 +83,15 @@ class HandleInertiaRequests extends Middleware
                 'import_errors' => $request->session()->get('import_errors'),
             ],
         ];
+
+        if (! $request->headers->has(Header::INERTIA)) {
+            $shared['ziggy'] = fn (): array => [
+                ...(new Ziggy)->toArray(),
+                'location' => $request->url(),
+            ];
+        }
+
+        return $shared;
     }
 
     /**
@@ -98,9 +102,22 @@ class HandleInertiaRequests extends Middleware
      */
     private function getUserPermissions($user): array
     {
+        return Cache::remember(
+            User::inertiaPermissionCacheKey($user->id),
+            now()->addMinutes(10),
+            fn (): array => $this->resolveUserPermissions($user),
+        );
+    }
+
+    /**
+     * @param  \App\Models\User  $user
+     * @return array<string>
+     */
+    private function resolveUserPermissions($user): array
+    {
         // Super Admin has all permissions (indicated by wildcard)
         if ($user->role && $user->role->name === 'Super Admin') {
-            return ['*']; // Frontend will check for this wildcard
+            return ['*'];
         }
 
         if (! $user->role) {

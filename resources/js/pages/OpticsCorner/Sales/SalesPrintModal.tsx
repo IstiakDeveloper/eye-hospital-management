@@ -1,6 +1,5 @@
 import { AlertTriangle, Calendar, FileSpreadsheet, Printer, X } from 'lucide-react';
 import { useRef, useState } from 'react';
-import * as XLSX from 'xlsx';
 
 interface Sale {
     id: number;
@@ -233,7 +232,7 @@ export default function SalesPrintModal({ isOpen, onClose, sales }: SalesPrintMo
         }, 250);
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
         if (safeSales.length === 0) {
             alert('No sales to export!');
             return;
@@ -242,6 +241,7 @@ export default function SalesPrintModal({ isOpen, onClose, sales }: SalesPrintMo
         setExportingExcel(true);
 
         try {
+            const XLSX = await import('xlsx');
             const excelData = safeSales.map((sale: Sale, index: number) => ({
                 SL: index + 1,
                 'Transaction No': sale.transaction_no,

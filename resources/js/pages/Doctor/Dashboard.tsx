@@ -73,7 +73,7 @@ const DoctorDashboard: React.FC<Props> = ({ doctor, todaysActiveVisits, todaySta
                 preserveState: true,
                 preserveScroll: true,
             });
-        }, 10000);
+        }, 30000);
 
         return () => clearInterval(interval);
     }, []);

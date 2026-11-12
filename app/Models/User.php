@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 
 class User extends Authenticatable
@@ -240,6 +241,8 @@ class User extends Authenticatable
         $this->permissions()->syncWithoutDetaching([
             $permission->id => ['granted' => true],
         ]);
+
+        $this->forgetInertiaPermissionCache();
     }
 
     /**
@@ -254,6 +257,28 @@ class User extends Authenticatable
         $this->permissions()->syncWithoutDetaching([
             $permission->id => ['granted' => false],
         ]);
+
+        $this->forgetInertiaPermissionCache();
+    }
+
+    public static function inertiaPermissionCacheKey(int $userId): string
+    {
+        return 'inertia.user-permissions.'.$userId;
+    }
+
+    public function forgetInertiaPermissionCache(): void
+    {
+        Cache::forget(self::inertiaPermissionCacheKey($this->id));
+    }
+
+    public static function forgetInertiaPermissionCacheForRole(int $roleId): void
+    {
+        static::query()
+            ->where('role_id', $roleId)
+            ->pluck('id')
+            ->each(function ($id): void {
+                Cache::forget(static::inertiaPermissionCacheKey((int) $id));
+            });
     }
 
     /**

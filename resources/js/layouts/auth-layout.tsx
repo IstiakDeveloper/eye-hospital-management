@@ -15,7 +15,7 @@ export default function AuthLayout({ children, title, description }: AuthLayoutP
             <div className="flex w-full flex-col justify-center px-4 py-12 sm:px-6 lg:w-1/2 lg:flex-none lg:px-20 xl:px-24 relative z-10 bg-white/70 backdrop-blur-xl">
                 <div className="mx-auto w-full max-w-md">
                     <div className="flex items-center space-x-3 mb-10">
-                        <img src="/logo.png" alt="Eye Hospital Logo" className="h-10 w-10 object-contain shrink-0" />
+                        <img src="/logo.png" alt="Eye Hospital Logo" width={40} height={40} className="h-10 w-10 shrink-0 object-contain" />
                         <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-800 tracking-tight">
                             Eye Hospital
                         </span>

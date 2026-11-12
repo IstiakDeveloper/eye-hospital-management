@@ -134,10 +134,15 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
         });
     };
 
-    const filteredMedicines = medicines.filter(
-        (medicine) =>
-            medicine.name.toLowerCase().includes(searchTerm.toLowerCase()) || medicine.generic_name?.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
+    const trimmedMedicineSearch = searchTerm.trim().toLowerCase();
+    const filteredMedicines =
+        trimmedMedicineSearch === ''
+            ? []
+            : medicines.filter(
+                  (medicine) =>
+                      medicine.name.toLowerCase().includes(trimmedMedicineSearch) ||
+                      medicine.generic_name?.toLowerCase().includes(trimmedMedicineSearch),
+              );
 
     const addToCart = (medicine: Medicine) => {
         const availableStock = medicine.stocks?.find((s) => s.available_quantity > 0);
@@ -690,6 +695,12 @@ export default function POS({ medicines, recentCustomers, todaySalesCount, lastI
                         {/* Product Grid */}
                         <div className="flex-1 overflow-y-auto p-3">
                             <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                                {trimmedMedicineSearch === '' && (
+                                    <p className="col-span-full py-12 text-center text-sm text-gray-500">Type to search medicines.</p>
+                                )}
+                                {trimmedMedicineSearch !== '' && filteredMedicines.length === 0 && (
+                                    <p className="col-span-full py-12 text-center text-sm text-gray-500">No medicines match that search.</p>
+                                )}
                                 {filteredMedicines.map((medicine) => {
                                     const availableStock = medicine.stocks?.find((s) => s.available_quantity > 0);
                                     const cartItem = cart.find((item) => item.medicine_stock_id === availableStock?.id);

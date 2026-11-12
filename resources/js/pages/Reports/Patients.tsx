@@ -1,8 +1,6 @@
 import AdminLayout from '@/layouts/admin-layout';
 import { formatDhakaDate } from '@/utils/dhaka-time';
 import { Head, router } from '@inertiajs/react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import React, { useMemo, useState } from 'react';
 
 interface PatientBrief {
@@ -161,7 +159,9 @@ const PatientsReport: React.FC<Props> = ({ visits, summary, filters }) => {
         ]);
     }, [visits.data, visits.from]);
 
-    const buildPdf = () => {
+    const buildPdf = async () => {
+        const { default: jsPDF } = await import('jspdf');
+        const { default: autoTable } = await import('jspdf-autotable');
         const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
         const pageWidth = doc.internal.pageSize.getWidth();
         const centerX = pageWidth / 2;
@@ -251,13 +251,13 @@ const PatientsReport: React.FC<Props> = ({ visits, summary, filters }) => {
         return doc;
     };
 
-    const handleDownloadPdf = () => {
-        const doc = buildPdf();
+    const handleDownloadPdf = async () => {
+        const doc = await buildPdf();
         doc.save(`patient-visits-report-${new Date().toISOString().slice(0, 10)}.pdf`);
     };
 
-    const handlePrintPdf = () => {
-        const doc = buildPdf();
+    const handlePrintPdf = async () => {
+        const doc = await buildPdf();
         const url = doc.output('bloburl');
         const w = window.open(url, '_blank');
         if (!w) return;

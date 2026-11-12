@@ -2,7 +2,6 @@ import AdminLayout from '@/layouts/admin-layout';
 import { Head, Link, router } from '@inertiajs/react';
 import { CheckCircle, Clock, Edit, FileSpreadsheet, Filter, Package, Plus, Search, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import * as XLSX from 'xlsx';
 
 interface Sale {
     id: number;
@@ -157,7 +156,7 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
             preserveState: true,
             preserveScroll: true,
             only: ['sales'],
-            onSuccess: (page: any) => {
+            onSuccess: async (page: any) => {
                 const allSales = page.props.sales?.data || [];
 
                 if (allSales.length === 0) {
@@ -167,6 +166,7 @@ export default function SalesIndex({ sales, totalSales, totalDue, salesCount, fi
                 }
 
                 try {
+                    const XLSX = await import('xlsx');
                     const excelData = allSales.map((sale: Sale, index: number) => ({
                         SL: index + 1,
                         'Invoice No': sale.invoice_number,

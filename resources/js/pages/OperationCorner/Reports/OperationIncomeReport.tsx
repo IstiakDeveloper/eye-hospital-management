@@ -1,7 +1,6 @@
 import AdminLayout from '@/layouts/MainAccountLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
 
 interface ReportItem {
     sl: number;
@@ -66,7 +65,8 @@ export default function OperationIncomeReport({ reportData, summary, filters }: 
         window.print();
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
+        const XLSX = await import('xlsx');
         const excelData = [];
 
         excelData.push(['Operation Income Receipt Report']);

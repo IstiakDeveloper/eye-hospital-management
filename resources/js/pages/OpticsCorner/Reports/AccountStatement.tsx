@@ -1,7 +1,6 @@
 import AdminLayout from '@/layouts/OpticsAccountLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
 
 interface Transaction {
     id: number;
@@ -51,7 +50,8 @@ export default function AccountStatement({ transactions, summary, openingBalance
         // Placeholder for future export logic (Excel, CSV, etc.)
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
+        const XLSX = await import('xlsx');
         // Prepare data for Excel
         const excelData = [];
 

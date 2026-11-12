@@ -22,4 +22,20 @@ export default defineConfig({
             'ziggy-js': resolve(__dirname, 'vendor/tightenco/ziggy'),
         },
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (
+                        id.includes('node_modules/react/') ||
+                        id.includes('node_modules/react-dom/') ||
+                        id.includes('node_modules/scheduler/') ||
+                        id.includes('node_modules/@inertiajs/')
+                    ) {
+                        return 'vendor';
+                    }
+                },
+            },
+        },
+    },
 });

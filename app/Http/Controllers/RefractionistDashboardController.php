@@ -4,10 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Patient;
 use App\Models\PatientVisit;
-use App\Models\VisionTest;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class RefractionistDashboardController extends Controller
 {
@@ -69,6 +70,7 @@ class RefractionistDashboardController extends Controller
             ->get()
             ->map(function ($visit) {
                 $latestVisionTest = $visit->visionTests->first();
+
                 return [
                     'id' => $visit->id,
                     'visit_id' => $visit->visit_id,
@@ -81,7 +83,7 @@ class RefractionistDashboardController extends Controller
                     'vision_test_completed_at' => $visit->vision_test_completed_at,
                     'test_duration' => $visit->payment_completed_at && $visit->vision_test_completed_at
                         ? Carbon::parse($visit->payment_completed_at)
-                        ->diffInMinutes(Carbon::parse($visit->vision_test_completed_at)) . ' minutes'
+                            ->diffInMinutes(Carbon::parse($visit->vision_test_completed_at)).' minutes'
                         : null,
                     'vision_test_results' => $latestVisionTest ? [
                         'right_eye_sphere' => $latestVisionTest->right_eye_sphere,
@@ -139,7 +141,7 @@ class RefractionistDashboardController extends Controller
                 ]);
 
                 return back()->withErrors([
-                    'error' => "Visit payment is not completed yet. Status: {$visit->payment_status}, Paid: ৳{$visit->total_paid}, Due: ৳{$visit->total_due}"
+                    'error' => "Visit payment is not completed yet. Status: {$visit->payment_status}, Paid: ৳{$visit->total_paid}, Due: ৳{$visit->total_due}",
                 ]);
             }
         }
@@ -149,12 +151,11 @@ class RefractionistDashboardController extends Controller
             return back()->withErrors(['error' => 'Vision test already completed for this visit']);
         }
 
-
         try {
             // Update status to in_progress
             $visit->update([
                 'vision_test_status' => 'in_progress',
-                'overall_status' => 'vision_test'
+                'overall_status' => 'vision_test',
             ]);
 
             \Log::info('Vision test started successfully', [
@@ -163,7 +164,7 @@ class RefractionistDashboardController extends Controller
             ]);
 
             return redirect()->route('visiontests.create', ['patient' => $visit->patient_id])
-                ->with('success', 'Vision test started for ' . $visit->patient->name)
+                ->with('success', 'Vision test started for '.$visit->patient->name)
                 ->with('visit_id', $visit->id); // Pass visit ID in session
 
         } catch (\Exception $e) {
@@ -172,7 +173,7 @@ class RefractionistDashboardController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return back()->withErrors(['error' => 'Failed to start vision test: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Failed to start vision test: '.$e->getMessage()]);
         }
     }
 
@@ -319,6 +320,7 @@ class RefractionistDashboardController extends Controller
             ->groupBy('selected_doctor_id')
             ->map(function ($visits, $doctorId) {
                 $doctor = $visits->first()->selectedDoctor;
+
                 return [
                     'doctor_id' => $doctorId,
                     'doctor_name' => $doctor && $doctor->user ? $doctor->user->name : 'No Doctor',
@@ -326,7 +328,7 @@ class RefractionistDashboardController extends Controller
                     'avg_duration' => $visits->avg(function ($visit) {
                         return $visit->payment_completed_at && $visit->vision_test_completed_at
                             ? Carbon::parse($visit->payment_completed_at)
-                            ->diffInMinutes(Carbon::parse($visit->vision_test_completed_at))
+                                ->diffInMinutes(Carbon::parse($visit->vision_test_completed_at))
                             : 0;
                     }),
                 ];
@@ -346,12 +348,12 @@ class RefractionistDashboardController extends Controller
         $visits = PatientVisit::readyForVisionTest()
             ->with(['patient', 'selectedDoctor.user'])
             ->whereHas('patient', function ($query) use ($searchTerm) {
-                $query->where('name', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('phone', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('patient_id', 'like', '%' . $searchTerm . '%');
+                $query->where('name', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('phone', 'like', '%'.$searchTerm.'%')
+                    ->orWhere('patient_id', 'like', '%'.$searchTerm.'%');
             })
-            ->orWhere('visit_id', 'like', '%' . $searchTerm . '%')
-            ->orWhere('chief_complaint', 'like', '%' . $searchTerm . '%')
+            ->orWhere('visit_id', 'like', '%'.$searchTerm.'%')
+            ->orWhere('chief_complaint', 'like', '%'.$searchTerm.'%')
             ->orderBy('payment_completed_at', 'asc')
             ->get()
             ->map(function ($visit) {
@@ -374,43 +376,48 @@ class RefractionistDashboardController extends Controller
     /**
      * Calculate average waiting time for visits ready for vision test
      */
-    private function getAverageWaitingTime()
+    private function getAverageWaitingTime(): int
     {
-        $waitingVisits = PatientVisit::readyForVisionTest()
-            ->whereNotNull('payment_completed_at')
-            ->get();
-
-        if ($waitingVisits->isEmpty()) {
-            return 0;
-        }
-
-        $totalMinutes = $waitingVisits->sum(function ($visit) {
-            return Carbon::parse($visit->payment_completed_at)->diffInMinutes(now());
-        });
-
-        return round($totalMinutes / $waitingVisits->count());
+        return $this->averageMinuteDifference(
+            PatientVisit::readyForVisionTest()->whereNotNull('payment_completed_at'),
+            'payment_completed_at',
+            '?',
+            [now()],
+        );
     }
 
     /**
      * Calculate average test duration for a specific date
      */
-    private function getAverageTestDuration($date)
+    private function getAverageTestDuration($date): int
     {
-        $completedVisits = PatientVisit::whereDate('vision_test_completed_at', $date)
-            ->whereNotNull('payment_completed_at')
-            ->whereNotNull('vision_test_completed_at')
-            ->get();
+        $day = Carbon::parse($date);
 
-        if ($completedVisits->isEmpty()) {
-            return 0;
-        }
+        return $this->averageMinuteDifference(
+            PatientVisit::query()
+                ->whereBetween('vision_test_completed_at', [$day->copy()->startOfDay(), $day->copy()->endOfDay()])
+                ->whereNotNull('payment_completed_at')
+                ->whereNotNull('vision_test_completed_at'),
+            'payment_completed_at',
+            'vision_test_completed_at',
+        );
+    }
 
-        $totalMinutes = $completedVisits->sum(function ($visit) {
-            return Carbon::parse($visit->payment_completed_at)
-                ->diffInMinutes(Carbon::parse($visit->vision_test_completed_at));
-        });
+    /**
+     * @param  Builder<PatientVisit>  $query
+     * @param  array<int, mixed>  $bindings
+     */
+    private function averageMinuteDifference(Builder $query, string $startColumn, string $endSql, array $bindings = []): int
+    {
+        $expression = DB::getDriverName() === 'sqlite'
+            ? "AVG((julianday({$endSql}) - julianday({$startColumn})) * 1440)"
+            : "AVG(TIMESTAMPDIFF(SECOND, {$startColumn}, {$endSql}) / 60)";
 
-        return round($totalMinutes / $completedVisits->count());
+        $average = (clone $query)
+            ->selectRaw($expression.' as average_minutes', $bindings)
+            ->value('average_minutes');
+
+        return (int) round((float) ($average ?? 0));
     }
 
     /**
@@ -443,12 +450,6 @@ class RefractionistDashboardController extends Controller
 
         return back()->with('success', 'Visit notes updated successfully');
     }
-
-
-
-
-
-
 
     /**
      * Generate comprehensive performance report for refractionist
@@ -521,7 +522,7 @@ class RefractionistDashboardController extends Controller
                 $totalDuration = $visits->sum(function ($visit) {
                     return $visit->payment_completed_at && $visit->vision_test_completed_at
                         ? Carbon::parse($visit->payment_completed_at)
-                        ->diffInMinutes(Carbon::parse($visit->vision_test_completed_at))
+                            ->diffInMinutes(Carbon::parse($visit->vision_test_completed_at))
                         : 0;
                 });
 
@@ -586,23 +587,16 @@ class RefractionistDashboardController extends Controller
     /**
      * Get average test duration for date range
      */
-    private function getAverageTestDurationForRange($dateFrom, $dateTo)
+    private function getAverageTestDurationForRange($dateFrom, $dateTo): int
     {
-        $completedVisits = PatientVisit::whereBetween('vision_test_completed_at', [$dateFrom, $dateTo])
-            ->whereNotNull('payment_completed_at')
-            ->whereNotNull('vision_test_completed_at')
-            ->get();
-
-        if ($completedVisits->isEmpty()) {
-            return 0;
-        }
-
-        $totalMinutes = $completedVisits->sum(function ($visit) {
-            return Carbon::parse($visit->payment_completed_at)
-                ->diffInMinutes(Carbon::parse($visit->vision_test_completed_at));
-        });
-
-        return round($totalMinutes / $completedVisits->count());
+        return $this->averageMinuteDifference(
+            PatientVisit::query()
+                ->whereBetween('vision_test_completed_at', [$dateFrom, $dateTo])
+                ->whereNotNull('payment_completed_at')
+                ->whereNotNull('vision_test_completed_at'),
+            'payment_completed_at',
+            'vision_test_completed_at',
+        );
     }
 
     /**
@@ -676,11 +670,22 @@ class RefractionistDashboardController extends Controller
      */
     private function getAgeGroup($age)
     {
-        if ($age === null) return 'Unknown';
-        if ($age < 18) return 'Under 18';
-        if ($age < 30) return '18-29';
-        if ($age < 45) return '30-44';
-        if ($age < 60) return '45-59';
+        if ($age === null) {
+            return 'Unknown';
+        }
+        if ($age < 18) {
+            return 'Under 18';
+        }
+        if ($age < 30) {
+            return '18-29';
+        }
+        if ($age < 45) {
+            return '30-44';
+        }
+        if ($age < 60) {
+            return '45-59';
+        }
+
         return '60+';
     }
 }

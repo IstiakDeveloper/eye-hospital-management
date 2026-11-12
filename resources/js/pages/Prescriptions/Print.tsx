@@ -1776,7 +1776,7 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                             <div className="blank-header">
                                 <div className="blank-header-inner">
                                     <div className="blank-logo">
-                                        <img src="/logo.png" alt="Hospital Logo" />
+                                        <img src="/icons/icon-512x512.png" alt="Hospital Logo" />
                                     </div>
                                     <div className="blank-hospital-title">
                                         <div className="p">মৌসুমি (এনজিও) ও অংশীজনের যৌথ উদ্যোগে পরিচালিত</div>
@@ -2201,13 +2201,13 @@ export default function PrescriptionPrint({ prescription, print_metadata, user }
                 <div className="blank-prescription-container">
                     <div className="tpl-blank-page">
                         <div className="tpl-page-watermark" aria-hidden>
-                            <img src="/logo.png" alt="" width={280} height={280} decoding="async" />
+                            <img src="/icons/icon-512x512.png" alt="" width={280} height={280} decoding="async" />
                         </div>
 
                         <header className="tpl-header tpl-blank-layer">
                             <div className="tpl-header-brand">
                                 <div className="tpl-logo">
-                                    <img src="/logo.png" alt="" />
+                                    <img src="/icons/icon-512x512.png" alt="" />
                                 </div>
                                 <div className="tpl-header-text">
                                     <div className="tpl-hospital-name">Mousumi Eye Hospital</div>

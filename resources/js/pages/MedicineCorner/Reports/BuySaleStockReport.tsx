@@ -1,7 +1,6 @@
 import AdminLayout from '@/layouts/MainAccountLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
 
 interface ReportItem {
     id: number;
@@ -102,7 +101,8 @@ export default function BuySaleStockReport({ reportData: rawReportData, totals: 
         window.print();
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
+        const XLSX = await import('xlsx');
         // Prepare data for Excel
         const excelData = [];
 

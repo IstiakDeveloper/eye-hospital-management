@@ -1485,7 +1485,7 @@ export default function AdminLayout({ children, title = 'Dashboard' }: AdminLayo
                 {/* Logo */}
                 <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 bg-white px-4 sm:px-6">
                     <Link href={route(getDashboardRoute())} className="flex items-center gap-3">
-                        <img src="/logo.png" alt="Eye Hospital Logo" className="h-9 w-9 object-contain shrink-0" />
+                        <img src="/logo.png" alt="Eye Hospital Logo" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" />
                         <span className="text-xl font-extrabold tracking-tight text-slate-800">Eye Hospital</span>
                     </Link>
                     <button

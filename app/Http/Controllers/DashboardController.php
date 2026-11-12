@@ -2,25 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\HospitalAccount;
-use App\Models\MedicineAccount;
-use App\Models\OpticsAccount;
-use App\Models\OperationAccount;
-use App\Models\Patient;
-use App\Models\PatientVisit;
-use App\Models\Doctor;
 use App\Models\Appointment;
-use App\Models\Medicine;
-use App\Models\MedicineStock;
-use App\Models\Glasses;
-use App\Models\LensType;
 use App\Models\CompleteGlasses;
-use App\Models\PatientPayment;
+use App\Models\Doctor;
+use App\Models\Glasses;
+use App\Models\HospitalAccount;
+use App\Models\LensType;
+use App\Models\Medicine;
+use App\Models\MedicineAccount;
 use App\Models\MedicineSale;
+use App\Models\MedicineStock;
+use App\Models\OperationAccount;
+use App\Models\OpticsAccount;
+use App\Models\Patient;
+use App\Models\PatientPayment;
+use App\Models\PatientVisit;
 use App\Models\Prescription;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -36,28 +37,30 @@ class DashboardController extends Controller
         // Get account balances (always current)
         $accountBalances = $this->getAccountBalances();
 
-        // Get hospital overview with date filtering
-        $hospitalOverview = $this->getHospitalOverview($startDate, $endDate, $previousStartDate, $previousEndDate);
+        $snapshotKey = 'admin-dashboard:'.md5(implode('|', [
+            $startDate->toDateTimeString(),
+            $endDate->toDateTimeString(),
+            $previousStartDate->toDateTimeString(),
+            $previousEndDate->toDateTimeString(),
+        ]));
 
-        // Get medicine stock info with date filtering
-        $medicineStockInfo = $this->getMedicineStockInfo($startDate, $endDate, $previousStartDate, $previousEndDate);
-
-        // Get optics stock info with date filtering
-        $opticsStockInfo = $this->getOpticsStockInfo($startDate, $endDate, $previousStartDate, $previousEndDate);
-
-        // Get recent activities with date filtering
-        $recentActivities = $this->getRecentActivities($startDate, $endDate);
-
-        // Get period reports
-        $periodReports = $this->getPeriodReports($startDate, $endDate, $previousStartDate, $previousEndDate);
+        $snapshot = Cache::remember($snapshotKey, 60, function () use ($startDate, $endDate, $previousStartDate, $previousEndDate) {
+            return [
+                'hospitalOverview' => $this->getHospitalOverview($startDate, $endDate, $previousStartDate, $previousEndDate),
+                'medicineStockInfo' => $this->getMedicineStockInfo($startDate, $endDate, $previousStartDate, $previousEndDate),
+                'opticsStockInfo' => $this->getOpticsStockInfo($startDate, $endDate, $previousStartDate, $previousEndDate),
+                'recentActivities' => $this->getRecentActivities($startDate, $endDate),
+                'periodReports' => $this->getPeriodReports($startDate, $endDate, $previousStartDate, $previousEndDate),
+            ];
+        });
 
         return inertia('Dashboard/AdminDashboard', [
             'accountBalances' => $accountBalances,
-            'hospitalOverview' => $hospitalOverview,
-            'medicineStockInfo' => $medicineStockInfo,
-            'opticsStockInfo' => $opticsStockInfo,
-            'recentActivities' => $recentActivities,
-            'periodReports' => $periodReports,
+            'hospitalOverview' => $snapshot['hospitalOverview'],
+            'medicineStockInfo' => $snapshot['medicineStockInfo'],
+            'opticsStockInfo' => $snapshot['opticsStockInfo'],
+            'recentActivities' => $snapshot['recentActivities'],
+            'periodReports' => $snapshot['periodReports'],
             'dateRange' => [
                 'start' => $startDate->format('Y-m-d'),
                 'end' => $endDate->format('Y-m-d'),
@@ -375,7 +378,7 @@ class DashboardController extends Controller
         // OPD Income - From Hospital Account with income categories
         $opdIncome = DB::table('hospital_transactions')
             ->where('type', 'income')
-            ->whereIn('income_category_id', function($query) {
+            ->whereIn('income_category_id', function ($query) {
                 $query->select('id')
                     ->from('hospital_income_categories')
                     ->where('name', 'like', '%OPD%')
@@ -388,7 +391,7 @@ class DashboardController extends Controller
         // Medical Test Income
         $medicalTestIncome = DB::table('hospital_transactions')
             ->where('type', 'income')
-            ->whereIn('income_category_id', function($query) {
+            ->whereIn('income_category_id', function ($query) {
                 $query->select('id')
                     ->from('hospital_income_categories')
                     ->where('name', 'like', '%Medical Test%')
@@ -401,7 +404,7 @@ class DashboardController extends Controller
         // Medicine Income - From Hospital Account
         $medicineIncome = DB::table('hospital_transactions')
             ->where('type', 'income')
-            ->whereIn('income_category_id', function($query) {
+            ->whereIn('income_category_id', function ($query) {
                 $query->select('id')
                     ->from('hospital_income_categories')
                     ->where('name', 'like', '%Medicine%');
@@ -412,7 +415,7 @@ class DashboardController extends Controller
         // Optics Income - From Hospital Account
         $opticsIncome = DB::table('hospital_transactions')
             ->where('type', 'income')
-            ->whereIn('income_category_id', function($query) {
+            ->whereIn('income_category_id', function ($query) {
                 $query->select('id')
                     ->from('hospital_income_categories')
                     ->where('name', 'like', '%Optics%')
@@ -426,7 +429,7 @@ class DashboardController extends Controller
         // Operation Income - From Hospital Account
         $operationIncome = DB::table('hospital_transactions')
             ->where('type', 'income')
-            ->whereIn('income_category_id', function($query) {
+            ->whereIn('income_category_id', function ($query) {
                 $query->select('id')
                     ->from('hospital_income_categories')
                     ->where('name', 'like', '%Operation%')
@@ -441,7 +444,7 @@ class DashboardController extends Controller
         // Expenses by Category - From Hospital Account
         $hospitalExpense = DB::table('hospital_transactions')
             ->where('type', 'expense')
-            ->whereIn('expense_category_id', function($query) {
+            ->whereIn('expense_category_id', function ($query) {
                 $query->select('id')
                     ->from('hospital_expense_categories')
                     ->where('name', 'not like', '%Medicine%')
@@ -453,7 +456,7 @@ class DashboardController extends Controller
 
         $medicineExpense = DB::table('hospital_transactions')
             ->where('type', 'expense')
-            ->whereIn('expense_category_id', function($query) {
+            ->whereIn('expense_category_id', function ($query) {
                 $query->select('id')
                     ->from('hospital_expense_categories')
                     ->where('name', 'like', '%Medicine%');
@@ -463,7 +466,7 @@ class DashboardController extends Controller
 
         $opticsExpense = DB::table('hospital_transactions')
             ->where('type', 'expense')
-            ->whereIn('expense_category_id', function($query) {
+            ->whereIn('expense_category_id', function ($query) {
                 $query->select('id')
                     ->from('hospital_expense_categories')
                     ->where('name', 'like', '%Optics%')
@@ -475,7 +478,7 @@ class DashboardController extends Controller
 
         $operationExpense = DB::table('hospital_transactions')
             ->where('type', 'expense')
-            ->whereIn('expense_category_id', function($query) {
+            ->whereIn('expense_category_id', function ($query) {
                 $query->select('id')
                     ->from('hospital_expense_categories')
                     ->where('name', 'like', '%Operation%')
@@ -487,7 +490,7 @@ class DashboardController extends Controller
         // Previous Period for Growth Calculation
         $previousOpdIncome = DB::table('hospital_transactions')
             ->where('type', 'income')
-            ->whereIn('income_category_id', function($query) {
+            ->whereIn('income_category_id', function ($query) {
                 $query->select('id')
                     ->from('hospital_income_categories')
                     ->where('name', 'like', '%OPD%')
@@ -499,7 +502,7 @@ class DashboardController extends Controller
 
         $previousMedicalTestIncome = DB::table('hospital_transactions')
             ->where('type', 'income')
-            ->whereIn('income_category_id', function($query) {
+            ->whereIn('income_category_id', function ($query) {
                 $query->select('id')
                     ->from('hospital_income_categories')
                     ->where('name', 'like', '%Medical Test%')

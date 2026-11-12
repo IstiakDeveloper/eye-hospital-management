@@ -575,12 +575,12 @@
                     <tr>
                         <td class="logo-cell">
                             @php
-                                $logoPath = public_path('logo.png');
+                                $logoPath = public_path('icons/icon-512x512.png');
                                 $logoExists = file_exists($logoPath);
                             @endphp
 
                             @if ($logoExists)
-                                <img src="{{ public_path('logo.png') }}" alt="Hospital Logo">
+                                <img src="{{ public_path('icons/icon-512x512.png') }}" alt="Hospital Logo">
                             @else
                                 @php
                                     $base64Logo = null;

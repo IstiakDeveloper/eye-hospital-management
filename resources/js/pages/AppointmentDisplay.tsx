@@ -37,7 +37,7 @@ export default function AppointmentDisplay({ doctors: initialDoctors }) {
     useEffect(() => {
         const dataTimer = setInterval(() => {
             fetchAppointments();
-        }, 1000); // 30 seconds
+        }, 30000);
 
         return () => clearInterval(dataTimer);
     }, []);

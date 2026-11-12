@@ -85,7 +85,9 @@ export function PWAInstallPrompt() {
                     <img
                         src="/logo.png"
                         alt="Eye Hospital Logo"
-                        className="h-12 w-12 rounded-xl object-contain bg-white p-1 border border-white/20 shrink-0"
+                        width={48}
+                        height={48}
+                        className="h-12 w-12 shrink-0 rounded-xl border border-white/20 bg-white object-contain p-1"
                     />
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
@@ -127,7 +129,7 @@ export function PWAInstallPrompt() {
                     <div className="bg-white rounded-3xl p-6 max-w-sm w-full space-y-4 text-slate-900 shadow-2xl">
                         <div className="flex justify-between items-center">
                             <div className="flex items-center gap-2">
-                                <img src="/logo.png" alt="Logo" className="h-8 w-8 object-contain" />
+                                <img src="/logo.png" alt="Logo" width={32} height={32} className="h-8 w-8 object-contain" />
                                 <h3 className="font-extrabold text-base">Install on iPhone / iPad</h3>
                             </div>
                             <button onClick={handleDismiss} className="text-slate-400 hover:text-slate-700">

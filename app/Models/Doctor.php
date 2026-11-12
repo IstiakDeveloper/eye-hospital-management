@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Doctor extends Model
 {
@@ -68,7 +69,6 @@ class Doctor extends Model
         return $this->commissions()->sum('commission_amount');
     }
 
-
     /**
      * Get the prescriptions created by this doctor.
      */
@@ -98,10 +98,14 @@ class Doctor extends Model
 
     public function recentAppointments()
     {
+        $statusOrder = DB::getDriverName() === 'sqlite'
+            ? "CASE status WHEN 'processing' THEN 0 WHEN 'pending' THEN 1 WHEN 'cancelled' THEN 2 ELSE 3 END"
+            : "FIELD(status, 'processing', 'pending', 'cancelled')";
+
         return $this->hasMany(Appointment::class)
             ->with('patient')
             ->whereIn('status', ['pending', 'processing', 'cancelled'])
-            ->orderByRaw("FIELD(status, 'processing', 'pending', 'cancelled')")
+            ->orderByRaw($statusOrder)
             ->orderBy('created_at', 'desc');
     }
 }

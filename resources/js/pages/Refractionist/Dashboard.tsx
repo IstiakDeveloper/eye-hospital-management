@@ -79,7 +79,7 @@ const RefractionistDashboard: React.FC<Props> = ({ visitsForVisionTest, todaySta
                 preserveState: true,
                 preserveScroll: true,
             });
-        }, 10000); // 30 seconds
+        }, 30000);
 
         return () => clearInterval(interval);
     }, []);

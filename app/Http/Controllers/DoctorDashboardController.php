@@ -28,98 +28,126 @@ class DoctorDashboardController extends Controller
                 ->withErrors(['error' => 'Doctor profile not found.']);
         }
 
+        $dayStart = now()->startOfDay();
+        $dayEnd = now()->endOfDay();
+
         // Get today's ACTIVE visits for this doctor (not completed)
-        $todaysActiveVisits = PatientVisit::where('selected_doctor_id', $doctor->id)
-            ->whereDate('created_at', today())
+        $activeVisits = PatientVisit::where('selected_doctor_id', $doctor->id)
+            ->whereBetween('created_at', [$dayStart, $dayEnd])
             ->whereIn('overall_status', ['payment', 'vision_test', 'prescription']) // Only active statuses
             ->with(['patient', 'selectedDoctor.user', 'payments'])
             ->orderBy('created_at', 'asc')
-            ->get()
-            ->map(function ($visit, $index) {
-                $hasVisionTest = VisionTest::where('patient_id', $visit->patient_id)
-                    ->whereDate('test_date', today())
-                    ->exists();
+            ->get();
 
-                // Check prescription per visit (not per patient/day).
-                $hasPrescription = Prescription::where('visit_id', $visit->id)
-                    ->where('doctor_id', $visit->selected_doctor_id)
-                    ->exists();
+        $testedPatientIds = VisionTest::query()
+            ->whereIn('patient_id', $activeVisits->pluck('patient_id')->filter()->unique())
+            ->whereBetween('test_date', [$dayStart, $dayEnd])
+            ->pluck('patient_id')
+            ->flip();
 
-                return [
-                    'id' => $visit->id,
-                    'visit_id' => $visit->visit_id,
-                    'patient_database_id' => $visit->patient_id,
-                    'patient_id' => $visit->patient->patient_id,
-                    'patient_name' => $visit->patient->name,
-                    'patient_phone' => $visit->patient->phone,
-                    'patient_age' => $visit->patient->date_of_birth
-                        ? Carbon::parse($visit->patient->date_of_birth)->age
-                        : null,
-                    'patient_gender' => $visit->patient->gender,
-                    'chief_complaint' => $visit->chief_complaint,
-                    'medical_history' => $visit->patient->medical_history,
-                    'visit_date' => $visit->created_at->toISOString(),
-                    'overall_status' => $visit->overall_status,
-                    'payment_status' => $visit->payment_status,
-                    'vision_test_status' => $visit->vision_test_status,
-                    'has_vision_test' => $hasVisionTest,
-                    'has_prescription' => $hasPrescription,
-                    'waiting_time' => $visit->created_at->diffForHumans(),
-                    'serial_number' => $index + 1,
-                    'final_amount' => $visit->final_amount ?? 0,
-                    'total_paid' => $visit->total_paid ?? 0,
-                    'total_due' => $visit->total_due ?? 0,
-                ];
-            });
+        $prescribedVisitIds = Prescription::query()
+            ->whereIn('visit_id', $activeVisits->pluck('id'))
+            ->where('doctor_id', $doctor->id)
+            ->pluck('visit_id')
+            ->flip();
+
+        $todaysActiveVisits = $activeVisits->map(function ($visit, $index) use ($testedPatientIds, $prescribedVisitIds) {
+            $hasVisionTest = $testedPatientIds->has($visit->patient_id);
+            $hasPrescription = $prescribedVisitIds->has($visit->id);
+
+            return [
+                'id' => $visit->id,
+                'visit_id' => $visit->visit_id,
+                'patient_database_id' => $visit->patient_id,
+                'patient_id' => $visit->patient->patient_id,
+                'patient_name' => $visit->patient->name,
+                'patient_phone' => $visit->patient->phone,
+                'patient_age' => $visit->patient->date_of_birth
+                    ? Carbon::parse($visit->patient->date_of_birth)->age
+                    : null,
+                'patient_gender' => $visit->patient->gender,
+                'chief_complaint' => $visit->chief_complaint,
+                'medical_history' => $visit->patient->medical_history,
+                'visit_date' => $visit->created_at->toISOString(),
+                'overall_status' => $visit->overall_status,
+                'payment_status' => $visit->payment_status,
+                'vision_test_status' => $visit->vision_test_status,
+                'has_vision_test' => $hasVisionTest,
+                'has_prescription' => $hasPrescription,
+                'waiting_time' => $visit->created_at->diffForHumans(),
+                'serial_number' => $index + 1,
+                'final_amount' => $visit->final_amount ?? 0,
+                'total_paid' => $visit->total_paid ?? 0,
+                'total_due' => $visit->total_due ?? 0,
+            ];
+        });
 
         // Get today's statistics
         $todayStats = [
             'total_visits' => PatientVisit::where('selected_doctor_id', $doctor->id)
-                ->whereDate('created_at', today())
+                ->whereBetween('created_at', [$dayStart, $dayEnd])
                 ->count(),
             'completed_visits' => PatientVisit::where('selected_doctor_id', $doctor->id)
-                ->whereDate('created_at', today())
+                ->whereBetween('created_at', [$dayStart, $dayEnd])
                 ->where('overall_status', 'completed')
                 ->count(),
             'pending_prescriptions' => PatientVisit::where('selected_doctor_id', $doctor->id)
-                ->whereDate('created_at', today())
+                ->whereBetween('created_at', [$dayStart, $dayEnd])
                 ->where('overall_status', 'prescription')
                 ->where('payment_status', 'paid')
                 ->whereIn('vision_test_status', ['completed', 'skipped'])
-                ->whereDoesntHave('prescriptions', function ($query) use ($doctor) {
+                ->whereDoesntHave('prescriptions', function ($query) use ($doctor, $dayStart, $dayEnd) {
                     $query->where('doctor_id', $doctor->id)
-                        ->whereDate('created_at', today());
+                        ->whereBetween('created_at', [$dayStart, $dayEnd]);
                 })
                 ->count(),
             'prescriptions_written' => Prescription::where('doctor_id', $doctor->id)
-                ->whereDate('created_at', today())
+                ->whereBetween('created_at', [$dayStart, $dayEnd])
                 ->count(),
             'total_revenue' => PatientVisit::where('selected_doctor_id', $doctor->id)
-                ->whereDate('created_at', today())
+                ->whereBetween('created_at', [$dayStart, $dayEnd])
                 ->sum('doctor_fee'),
         ];
 
-        // Get recent prescriptions (without visit_id)
-        $recentPrescriptions = Prescription::where('doctor_id', $doctor->id)
-            ->with(['patient'])
+        $recentPrescriptionModels = Prescription::where('doctor_id', $doctor->id)
+            ->with(['patient', 'prescriptionMedicines'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
-            ->get()
-            ->map(function ($prescription) {
-                // Find related visit by patient and date
-                $relatedVisit = PatientVisit::where('patient_id', $prescription->patient_id)
-                    ->whereDate('created_at', $prescription->created_at->toDateString())
-                    ->first();
+            ->get();
 
-                return [
-                    'id' => $prescription->id,
-                    'patient_name' => $prescription->patient->name,
-                    'patient_id' => $prescription->patient->patient_id,
-                    'visit_id' => $relatedVisit ? $relatedVisit->visit_id : 'N/A',
-                    'created_at' => $prescription->created_at->format('M d, H:i'),
-                    'medicines_count' => $prescription->prescriptionMedicines->count(),
-                ];
-            });
+        $relatedVisits = collect();
+        if ($recentPrescriptionModels->isNotEmpty()) {
+            $relatedVisits = PatientVisit::query()
+                ->where(function ($query) use ($recentPrescriptionModels) {
+                    foreach ($recentPrescriptionModels as $prescription) {
+                        $query->orWhere(function ($inner) use ($prescription) {
+                            $inner->where('patient_id', $prescription->patient_id)
+                                ->whereBetween('created_at', [
+                                    $prescription->created_at->copy()->startOfDay(),
+                                    $prescription->created_at->copy()->endOfDay(),
+                                ]);
+                        });
+                    }
+                })
+                ->orderBy('id')
+                ->get()
+                ->groupBy('patient_id');
+        }
+
+        $recentPrescriptions = $recentPrescriptionModels->map(function ($prescription) use ($relatedVisits) {
+            $relatedVisit = $relatedVisits
+                ->get($prescription->patient_id, collect())
+                ->first(fn ($visit) => $visit->created_at->toDateString() === $prescription->created_at->toDateString());
+
+            return [
+                'id' => $prescription->id,
+                'patient_name' => $prescription->patient->name,
+                'patient_id' => $prescription->patient->patient_id,
+                'visit_id' => $relatedVisit ? $relatedVisit->visit_id : 'N/A',
+                'created_at' => $prescription->created_at->format('M d, H:i'),
+                'medicines_count' => $prescription->prescriptionMedicines->count(),
+            ];
+        });
 
         return Inertia::render('Doctor/Dashboard', [
             'doctor' => [

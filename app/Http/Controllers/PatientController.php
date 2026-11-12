@@ -303,43 +303,41 @@ class PatientController extends Controller
             }
         }
 
-        // Get patients with visits and calculate totals
-        $patients = $query->with(['visits' => function ($q) {
-            $q->with(['selectedDoctor', 'payments']);
-        }])
+        // Totals and the latest visit only. Doctor names come from one lookup, not every payment row.
+        $patients = $query
+            ->withCount('visits')
+            ->withSum('visits as visits_total_paid', 'total_paid')
+            ->with(['latestVisit.selectedDoctor.user', 'latestVisit.latestPayment'])
             ->orderBy('created_at', 'desc')
             ->paginate(15)
             ->withQueryString();
 
-        // Add calculated fields to each patient
-        $patients->getCollection()->transform(function ($patient) {
-            // Calculate total paid
-            $totalPaid = $patient->visits->sum('total_paid');
+        $patientIds = $patients->getCollection()->pluck('id');
+        $doctorNamesByPatient = $patientIds->isEmpty()
+            ? collect()
+            : DB::table('patient_visits')
+                ->join('doctors', 'doctors.id', '=', 'patient_visits.selected_doctor_id')
+                ->join('users', 'users.id', '=', 'doctors.user_id')
+                ->whereIn('patient_visits.patient_id', $patientIds)
+                ->select('patient_visits.patient_id', 'users.name')
+                ->distinct()
+                ->get()
+                ->groupBy('patient_id')
+                ->map(fn ($rows) => $rows->pluck('name')->filter()->unique()->values());
 
-            // Get most recent doctor (from latest visit)
-            $latestVisit = $patient->visits->sortByDesc('created_at')->first();
-            $lastDoctor = $latestVisit && $latestVisit->selectedDoctor
-                ? $latestVisit->selectedDoctor->name
-                : null;
+        $patients->getCollection()->transform(function ($patient) use ($doctorNamesByPatient) {
+            $latestVisit = $patient->latestVisit;
+            $latestPaymentDate = $latestVisit?->latestPayment?->payment_date;
 
-            $latestPaymentDate = $latestVisit?->payments
-                ?->sortByDesc('created_at')
-                ?->first()
-                ?->payment_date;
-
-            // Get all unique doctors this patient has visited
-            $allDoctors = $patient->visits
-                ->filter(fn ($v) => $v->selectedDoctor)
-                ->pluck('selectedDoctor.name')
-                ->unique()
-                ->values();
-
-            $patient->total_paid = $totalPaid;
-            $patient->last_doctor = $lastDoctor;
-            $patient->all_doctors = $allDoctors;
-            $patient->total_visits = $patient->visits->count();
+            $patient->total_paid = (float) ($patient->visits_total_paid ?? 0);
+            $patient->last_doctor = $latestVisit?->selectedDoctor?->name;
+            $patient->all_doctors = $doctorNamesByPatient->get($patient->id, collect())->values();
+            $patient->total_visits = (int) $patient->visits_count;
             $patient->registration_date = ($latestPaymentDate ?? $patient->created_at)?->toDateString();
             $patient->registration_date_source = $latestPaymentDate ? 'payment_date' : 'created_at';
+            $patient->unsetRelation('latestVisit');
+            $patient->offsetUnset('visits_count');
+            $patient->offsetUnset('visits_total_paid');
 
             return $patient;
         });

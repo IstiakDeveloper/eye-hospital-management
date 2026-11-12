@@ -1,7 +1,6 @@
 import AdminLayout from '@/layouts/OperationAccountLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
 
 interface DailyRow {
     date: string;
@@ -43,7 +42,8 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
         window.print();
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
+        const XLSX = await import('xlsx');
         const excelData = [];
         excelData.push(['Operation Daily Statement']);
         excelData.push([`Period: ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}`]);

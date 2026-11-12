@@ -1,23 +1,15 @@
-const CACHE_NAME = 'eye-hospital-pwa-v2';
-const STATIC_ASSETS = [
-    '/manifest.json',
-    '/logo.png',
-    '/icons/icon-192x192.png',
-    '/icons/icon-512x512.png',
-    '/icons/apple-touch-icon.png'
-];
+const CACHE_NAME = 'eye-hospital-pwa-v3';
+const ICON_URLS = ['/logo.png', '/icons/icon-192x192.png', '/icons/icon-512x512.png', '/icons/apple-touch-icon.png'];
 
-// Install event - Cache static assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(STATIC_ASSETS);
-        })
+            return cache.addAll(ICON_URLS);
+        }),
     );
     self.skipWaiting();
 });
 
-// Activate event - Clean up old caches
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
@@ -26,30 +18,22 @@ self.addEventListener('activate', (event) => {
                     if (cache !== CACHE_NAME) {
                         return caches.delete(cache);
                     }
-                })
+                }),
             );
-        })
+        }),
     );
     self.clients.claim();
 });
 
-// Fetch event - Network-first fallback to cache
 self.addEventListener('fetch', (event) => {
-    // Only handle GET requests
-    if (event.request.method !== 'GET') return;
+    if (event.request.method !== 'GET') {
+        return;
+    }
 
-    event.respondWith(
-        fetch(event.request)
-            .then((response) => {
-                // Return original response directly (including 302 redirects)
-                return response;
-            })
-            .catch(() => {
-                return caches.match(event.request).then((cachedResponse) => {
-                    if (cachedResponse) {
-                        return cachedResponse;
-                    }
-                });
-            })
-    );
+    const url = new URL(event.request.url);
+    if (url.origin !== self.location.origin || !ICON_URLS.includes(url.pathname)) {
+        return;
+    }
+
+    event.respondWith(caches.match(event.request).then((cachedResponse) => cachedResponse || fetch(event.request)));
 });

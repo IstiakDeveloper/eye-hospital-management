@@ -453,7 +453,7 @@ export default function VisionTestPrint({ visionTest, qrCodeBase64, isBlankRepor
                     <div className="header-content">
                         <div className="logo-container">
                             <img
-                                src="/logo.png"
+                                src="/icons/icon-512x512.png"
                                 alt="Hospital Logo"
                                 style={{
                                     width: '20mm',

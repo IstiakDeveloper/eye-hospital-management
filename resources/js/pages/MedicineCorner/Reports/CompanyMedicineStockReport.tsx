@@ -1,7 +1,6 @@
 import AdminLayout from '@/layouts/MainAccountLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
 
 interface MedicineItem {
     id: number;
@@ -83,7 +82,8 @@ export default function CompanyMedicineStockReport({ reportData, allManufacturer
         setTimeout(() => window.print(), 100);
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
+        const XLSX = await import('xlsx');
         const excelData: (string | number)[][] = [];
 
         excelData.push(['Medicine Company-wise Detailed Stock Report']);

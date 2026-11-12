@@ -55,6 +55,8 @@ class Role extends Model
         }
 
         $this->permissions()->syncWithoutDetaching([$permission->id]);
+
+        User::forgetInertiaPermissionCacheForRole($this->id);
     }
 
     /**
@@ -67,5 +69,7 @@ class Role extends Model
         }
 
         $this->permissions()->detach($permission->id);
+
+        User::forgetInertiaPermissionCacheForRole($this->id);
     }
 }

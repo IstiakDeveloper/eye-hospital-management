@@ -2,7 +2,6 @@ import AdminLayout from '@/layouts/MainAccountLayout';
 import { formatDhakaDate } from '@/utils/dhaka-time';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
 
 interface ReportItem {
     id: number;
@@ -63,7 +62,8 @@ export default function NewPatientIncomeReport({ reportData = [], totals, filter
         window.print();
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
+        const XLSX = await import('xlsx');
         const excelData = [];
 
         excelData.push(['New Patient Income Report']);

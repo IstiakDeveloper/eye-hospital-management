@@ -1,7 +1,6 @@
 import AdminLayout from '@/layouts/MedicineAccountLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import * as XLSX from 'xlsx';
 
 interface DailyRow {
     date: string;
@@ -45,7 +44,8 @@ export default function DailyStatement({ rows, totals, openingBalance, filters }
         router.get(route('medicine.reports.daily-statement'), { from_date: fromDate, to_date: toDate }, { preserveState: true });
     };
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
+        const XLSX = await import('xlsx');
         const excelData = [];
         excelData.push(['Medicine Bank Report - November 2025']);
         excelData.push([`Period: ${new Date(fromDate).toLocaleDateString()} to ${new Date(toDate).toLocaleDateString()}`]);

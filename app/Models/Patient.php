@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Patient extends Model
 {
@@ -23,7 +24,7 @@ class Patient extends Model
         'medical_history',
         'registered_by',
         'qr_code',
-        'qr_code_image_path'
+        'qr_code_image_path',
     ];
 
     // Prevent total_paid/total_due from being saved to database
@@ -41,7 +42,7 @@ class Patient extends Model
         parent::boot();
 
         static::creating(function ($patient) {
-            if (!$patient->patient_id) {
+            if (! $patient->patient_id) {
                 $patient->patient_id = static::generatePatientId();
             }
         });
@@ -63,14 +64,14 @@ class Patient extends Model
         return str_pad($sequence, 4, '0', STR_PAD_LEFT);
     }
 
-
     /**
      * Generate QR code
      */
     public function generateQrCode()
     {
-        $qrCode = 'EH-' . date('Ymd') . '-' . strtoupper(substr(md5($this->id . time()), 0, 6));
+        $qrCode = 'EH-'.date('Ymd').'-'.strtoupper(substr(md5($this->id.time()), 0, 6));
         $this->update(['qr_code' => $qrCode]);
+
         return $qrCode;
     }
 
@@ -105,6 +106,11 @@ class Patient extends Model
     public function currentVisit()
     {
         return $this->hasOne(PatientVisit::class)->latest();
+    }
+
+    public function latestVisit(): HasOne
+    {
+        return $this->hasOne(PatientVisit::class)->latestOfMany();
     }
 
     public function activeVisits()
@@ -179,6 +185,7 @@ class Patient extends Model
     public function getLastVisitDateAttribute()
     {
         $lastVisit = $this->visits()->latest()->first();
+
         return $lastVisit ? $lastVisit->created_at : null;
     }
 
